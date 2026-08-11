@@ -64,7 +64,15 @@ namespace DebugMenu
         public string Load(string key)
         {
             var path = PathFor(key);
-            return File.Exists(path) ? File.ReadAllText(path) : null;
+            try
+            {
+                return File.Exists(path) ? File.ReadAllText(path) : null;
+            }
+            catch (Exception exception) when (exception is IOException || exception is UnauthorizedAccessException)
+            {
+                Debug.LogWarning($"[DebugMenu] 保存値を読めなかった。未保存として続行する。\n{exception.Message}");
+                return null;
+            }
         }
 
         /// <inheritdoc/>
@@ -79,8 +87,9 @@ namespace DebugMenu
             // 読めないファイルが残る。
             File.WriteAllText(temporary, value);
 
-            if (File.Exists(path)) File.Delete(path);
-            File.Move(temporary, path);
+            // 既存の正常ファイルを先に消さず、同一ファイルシステム上で置き換える。
+            if (File.Exists(path)) File.Replace(temporary, path, null);
+            else File.Move(temporary, path);
         }
 
         /// <inheritdoc/>
@@ -250,8 +259,10 @@ namespace DebugMenu
             for (var i = 0; i < count; i++) stored[data.Keys[i]] = (data.Values[i], (DebugValueKind)data.Kinds[i]);
 
             var applied = 0;
+            var visited = new HashSet<DebugElement>();
             menu.VisitAll((_, element) =>
             {
+                if (!visited.Add(element)) return;
                 if (!element.IsSaveable) return;
                 if (!stored.TryGetValue(element.ResolveSaveKey(), out var entry)) return;
                 if (entry.Kind != element.ValueKind) return;
@@ -269,7 +280,12 @@ namespace DebugMenu
         public static void ResetAll(DebugMenuRoot menu)
         {
             if (menu == null) throw new ArgumentNullException(nameof(menu));
-            menu.VisitAll((_, element) => element.ResetToDefault());
+
+            var visited = new HashSet<DebugElement>();
+            menu.VisitAll((_, element) =>
+            {
+                if (visited.Add(element)) element.ResetToDefault();
+            });
         }
 
         private static void WriteFileAtomically(string path, byte[] bytes)
@@ -280,8 +296,10 @@ namespace DebugMenu
 
             var temporary = fullPath + ".tmp";
             File.WriteAllBytes(temporary, bytes);
-            if (File.Exists(fullPath)) File.Delete(fullPath);
-            File.Move(temporary, fullPath);
+
+            // 置換に失敗しても直前の正常ファイルを残す。
+            if (File.Exists(fullPath)) File.Replace(temporary, fullPath, null);
+            else File.Move(temporary, fullPath);
         }
     }
 }

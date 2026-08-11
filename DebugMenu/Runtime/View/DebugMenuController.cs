@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -96,7 +97,7 @@ namespace DebugMenu
             Menu.AddPage(_favorites.Page);
 
             _settings = new DebugMenuSettings(format: _settingsFormat);
-            if (_persistValues) _settings.Load(Menu);
+            if (_persistValues) LoadPersistedValues();
 
             _profiles = new DebugMenuProfiles(format: _settingsFormat);
             _settingsPage = new DebugMenuSettingsPage(Menu, _settings, _profiles);
@@ -122,26 +123,55 @@ namespace DebugMenu
 
         private void OnDestroy()
         {
-            _history?.Dispose();
-            _recentChanges?.Dispose();
-            _settingsPage?.Dispose();
-            if (Menu != null) Menu.VisibilityChanged -= OnVisibilityChanged;
-            if (_persistValues && _settings != null && Menu != null) _settings.Save(Menu);
-
-            if (_view != null)
+            try
             {
-                _view.CancelPointerInteractions();
-                _view.Root.RemoveFromHierarchy();
-                _view = null;
+                _history?.Dispose();
+                _recentChanges?.Dispose();
+                _settingsPage?.Dispose();
+                if (Menu != null) Menu.VisibilityChanged -= OnVisibilityChanged;
+                if (_persistValues && _settings != null && Menu != null) SavePersistedValues();
             }
+            finally
+            {
+                if (_view != null)
+                {
+                    _view.CancelPointerInteractions();
+                    _view.Root.RemoveFromHierarchy();
+                    _view = null;
+                }
 
-            RestoreTimeScale();
+                RestoreTimeScale();
+            }
         }
 
         private void OnDisable()
         {
             if (Menu != null && Menu.IsVisible) Menu.SetVisible(false);
             else RestoreTimeScale();
+        }
+
+        private void LoadPersistedValues()
+        {
+            try
+            {
+                _settings.Load(Menu);
+            }
+            catch (Exception exception)
+            {
+                Debug.LogWarning($"[DebugMenu] 起動時の保存値を読めなかった。既定値で続行する。\n{exception.Message}", this);
+            }
+        }
+
+        private void SavePersistedValues()
+        {
+            try
+            {
+                _settings.Save(Menu);
+            }
+            catch (Exception exception)
+            {
+                Debug.LogWarning($"[DebugMenu] 終了時の保存に失敗した。\n{exception.Message}", this);
+            }
         }
 
         private void Update()

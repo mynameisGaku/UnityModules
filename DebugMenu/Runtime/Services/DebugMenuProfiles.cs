@@ -74,13 +74,32 @@ namespace DebugMenu
             var normalized = NormalizeName(name, true);
             var existingIndex = FindNameIndex(normalized);
             var storageName = existingIndex >= 0 ? _names[existingIndex] : normalized;
-            var settings = CreateSettings(storageName);
-            var saved = settings.Save(menu);
-
-            if (existingIndex < 0)
+            var dataKey = ProfileDataKey(storageName);
+            var previousData = _storage.Load(dataKey);
+            var previousCatalog = existingIndex < 0 ? _storage.Load(CatalogKey) : null;
+            int saved;
+            try
             {
-                _names.Add(normalized);
-                SaveCatalog();
+                saved = CreateSettings(storageName).Save(menu);
+
+                if (existingIndex < 0)
+                {
+                    _names.Add(normalized);
+                    SaveCatalog();
+                }
+            }
+            catch
+            {
+                if (existingIndex < 0)
+                {
+                    var addedIndex = FindNameIndex(normalized);
+                    if (addedIndex >= 0) _names.RemoveAt(addedIndex);
+                }
+
+                // 値と一覧は別の保存単位なので、途中失敗時は両方を開始前へ戻す。
+                RestoreStorageBestEffort(dataKey, previousData);
+                if (existingIndex < 0) RestoreStorageBestEffort(CatalogKey, previousCatalog);
+                throw;
             }
 
             Changed?.Invoke();
@@ -115,9 +134,25 @@ namespace DebugMenu
             var index = FindNameIndex(NormalizeName(name, false));
             if (index < 0) return false;
 
-            CreateSettings(_names[index]).Delete();
+            var storedName = _names[index];
+            var dataKey = ProfileDataKey(storedName);
+            var previousData = _storage.Load(dataKey);
+            var previousCatalog = _storage.Load(CatalogKey);
             _names.RemoveAt(index);
-            SaveCatalog();
+            try
+            {
+                // 一覧を先に外す。途中停止しても、存在しない値を一覧から指さない。
+                SaveCatalog();
+                _storage.Delete(dataKey);
+            }
+            catch
+            {
+                _names.Insert(index, storedName);
+                RestoreStorageBestEffort(dataKey, previousData);
+                RestoreStorageBestEffort(CatalogKey, previousCatalog);
+                throw;
+            }
+
             Changed?.Invoke();
             return true;
         }
@@ -127,9 +162,35 @@ namespace DebugMenu
         {
             if (_names.Count == 0) return;
 
-            for (var i = 0; i < _names.Count; i++) CreateSettings(_names[i]).Delete();
+            var previousNames = new List<string>(_names);
+            var previousCatalog = _storage.Load(CatalogKey);
+            var dataKeys = new List<string>(previousNames.Count);
+            var previousData = new List<string>(previousNames.Count);
+            for (var i = 0; i < previousNames.Count; i++)
+            {
+                var dataKey = ProfileDataKey(previousNames[i]);
+                dataKeys.Add(dataKey);
+                previousData.Add(_storage.Load(dataKey));
+            }
+
             _names.Clear();
-            SaveCatalog();
+            try
+            {
+                SaveCatalog();
+                for (var i = 0; i < dataKeys.Count; i++) _storage.Delete(dataKeys[i]);
+            }
+            catch
+            {
+                _names.AddRange(previousNames);
+                for (var i = 0; i < dataKeys.Count; i++)
+                {
+                    RestoreStorageBestEffort(dataKeys[i], previousData[i]);
+                }
+
+                RestoreStorageBestEffort(CatalogKey, previousCatalog);
+                throw;
+            }
+
             Changed?.Invoke();
         }
 
@@ -140,16 +201,16 @@ namespace DebugMenu
             var hadNames = _names.Count > 0;
             _names.Clear();
 
-            var json = _storage.Load(CatalogKey);
-            if (string.IsNullOrEmpty(json))
-            {
-                if (hadNames) Changed?.Invoke();
-                return 0;
-            }
-
             DebugMenuProfileCatalog catalog;
             try
             {
+                var json = _storage.Load(CatalogKey);
+                if (string.IsNullOrEmpty(json))
+                {
+                    if (hadNames) Changed?.Invoke();
+                    return 0;
+                }
+
                 catalog = JsonUtility.FromJson<DebugMenuProfileCatalog>(json);
             }
             catch (Exception exception)
@@ -178,8 +239,10 @@ namespace DebugMenu
 
         private string CatalogKey => _keyPrefix + ".catalog";
 
+        private string ProfileDataKey(string name) => _keyPrefix + ".data." + EncodeName(name);
+
         private DebugMenuSettings CreateSettings(string name) =>
-            new DebugMenuSettings(_storage, _keyPrefix + ".data." + EncodeName(name), Format);
+            new DebugMenuSettings(_storage, ProfileDataKey(name), Format);
 
         private void SaveCatalog()
         {
@@ -192,6 +255,19 @@ namespace DebugMenu
             var catalog = new DebugMenuProfileCatalog();
             catalog.Names.AddRange(_names);
             _storage.Save(CatalogKey, JsonUtility.ToJson(catalog, true));
+        }
+
+        private void RestoreStorageBestEffort(string key, string previousValue)
+        {
+            try
+            {
+                if (previousValue == null) _storage.Delete(key);
+                else _storage.Save(key, previousValue);
+            }
+            catch (Exception exception)
+            {
+                Debug.LogWarning($"[DebugMenu] プロファイル保存の巻き戻しに失敗した: {key}\n{exception.Message}");
+            }
         }
 
         private int FindNameIndex(string name)

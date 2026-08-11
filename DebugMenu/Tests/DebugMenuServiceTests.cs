@@ -18,6 +18,18 @@ namespace DebugMenu.Tests
             public void Delete(string key) => _entries.Remove(key);
         }
 
+        /// <summary>既定値へ戻した回数を数える借用行。</summary>
+        private sealed class CountingResetElement : DebugElement
+        {
+            public CountingResetElement() : base("Reset Counter")
+            {
+                IsExpandable = false;
+            }
+
+            public int ResetCount { get; private set; }
+            public override void ResetToDefault() => ResetCount++;
+        }
+
         [TearDown]
         public void TearDown()
         {
@@ -355,6 +367,39 @@ namespace DebugMenu.Tests
             new DebugMenuSettings(storage).Load(loaded);
 
             Assert.IsTrue(element.Value, "明示したキーで復元できていない");
+        }
+
+        [Test]
+        public void Settings_ApplyVisitsBorrowedElementOnlyOnce()
+        {
+            var menu = new DebugMenuRoot();
+            var original = menu.AddPage("Gameplay");
+            var borrowed = menu.AddPage("Recent");
+            var element = original.Root.Int("count", 0).WithSaveKey("shared.count");
+            borrowed.Root.AddBorrowed(element);
+            var data = new DebugMenuSettingsData();
+            data.Keys.Add("shared.count");
+            data.Values.Add("42");
+            data.Kinds.Add((int)DebugValueKind.Int);
+
+            var applied = DebugMenuSettings.Apply(menu, data);
+
+            Assert.AreEqual(1, applied, "借用表示した同じ行を複数件として数えている");
+            Assert.AreEqual(42, element.Value);
+        }
+
+        [Test]
+        public void Settings_ResetAllVisitsBorrowedElementOnlyOnce()
+        {
+            var menu = new DebugMenuRoot();
+            var original = menu.AddPage("Gameplay");
+            var borrowed = menu.AddPage("Recent");
+            var element = original.Root.Add(new CountingResetElement());
+            borrowed.Root.AddBorrowed(element);
+
+            DebugMenuSettings.ResetAll(menu);
+
+            Assert.AreEqual(1, element.ResetCount, "借用表示した同じ行を複数回初期化している");
         }
 
         [Test]

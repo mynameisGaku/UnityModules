@@ -97,7 +97,10 @@ namespace DebugMenu
 
             try
             {
-                return TryDeserialize(new UTF8Encoding(false, true).GetString(bytes), out data, out format);
+                var text = new UTF8Encoding(false, true).GetString(bytes);
+                // BOM はファイル側の目印なので、形式ヘッダーを調べる前に外す。
+                if (text.Length > 0 && text[0] == '\uFEFF') text = text.Substring(1);
+                return TryDeserialize(text, out data, out format);
             }
             catch (DecoderFallbackException)
             {

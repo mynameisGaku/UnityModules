@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using NUnit.Framework;
 
 namespace DebugMenu.Tests
@@ -52,6 +53,27 @@ namespace DebugMenu.Tests
                 out var data,
                 out _));
             Assert.IsNull(data);
+        }
+
+        [Test]
+        public void FileDeserializer_StripsUtf8BomBeforeFormatDetection()
+        {
+            var source = new DebugMenuSettingsData();
+            source.Keys.Add("Gameplay/Count");
+            source.Values.Add("12");
+            source.Kinds.Add((int)DebugValueKind.Int);
+            var content = new UTF8Encoding(false).GetBytes(
+                DebugMenuSettingsSerializer.Serialize(source, DebugMenuSettingsFormat.Text));
+            var bytes = new byte[content.Length + 3];
+            bytes[0] = 0xEF;
+            bytes[1] = 0xBB;
+            bytes[2] = 0xBF;
+            Buffer.BlockCopy(content, 0, bytes, 3, content.Length);
+
+            Assert.IsTrue(DebugMenuSettingsSerializer.TryDeserializeFile(bytes, out var data, out var format));
+            Assert.AreEqual(DebugMenuSettingsFormat.Text, format);
+            Assert.AreEqual("Gameplay/Count", data.Keys[0]);
+            Assert.AreEqual("12", data.Values[0]);
         }
 
         [Test]

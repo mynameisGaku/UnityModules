@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.IO;
 using NUnit.Framework;
 
 namespace DebugMenu.Tests
@@ -15,6 +16,51 @@ namespace DebugMenu.Tests
             public string Load(string key) => _entries.TryGetValue(key, out var value) ? value : null;
             public void Save(string key, string value) => _entries[key] = value;
             public void Delete(string key) => _entries.Remove(key);
+        }
+
+        /// <summary>書き込み後または削除後に一度だけ失敗する保存先。</summary>
+        private sealed class FaultingStorage : IDebugMenuStorage
+        {
+            private readonly Dictionary<string, string> _entries = new Dictionary<string, string>();
+
+            public string FailAfterSaveKey { get; set; }
+            public string FailAfterDeleteKey { get; set; }
+            public string FailOnLoadKey { get; set; }
+            public int Count => _entries.Count;
+
+            public string Load(string key)
+            {
+                if (string.Equals(FailOnLoadKey, key, System.StringComparison.Ordinal)) throw new IOException("load failed");
+                return _entries.TryGetValue(key, out var value) ? value : null;
+            }
+
+            public void Save(string key, string value)
+            {
+                _entries[key] = value;
+                if (!string.Equals(FailAfterSaveKey, key, System.StringComparison.Ordinal)) return;
+
+                FailAfterSaveKey = null;
+                throw new IOException("save failed");
+            }
+
+            public void Delete(string key)
+            {
+                _entries.Remove(key);
+                if (!string.Equals(FailAfterDeleteKey, key, System.StringComparison.Ordinal)) return;
+
+                FailAfterDeleteKey = null;
+                throw new IOException("delete failed");
+            }
+
+            public string FindKeyContaining(string text)
+            {
+                foreach (var key in _entries.Keys)
+                {
+                    if (key.Contains(text)) return key;
+                }
+
+                return null;
+            }
         }
 
         [Test]
@@ -125,6 +171,82 @@ namespace DebugMenu.Tests
             var menu = new DebugMenuRoot();
 
             Assert.Throws<System.ArgumentException>(() => profiles.Save("   ", menu));
+        }
+
+        [Test]
+        public void Profiles_NewSaveRollsBackDataAndNameWhenCatalogWriteFails()
+        {
+            var storage = new FaultingStorage
+            {
+                FailAfterSaveKey = "debug-menu-profile.catalog",
+            };
+            var profiles = new DebugMenuProfiles(storage);
+            var menu = new DebugMenuRoot();
+            menu.AddPage("Gameplay").Root.Int("Count", 7);
+
+            var failed = false;
+            try
+            {
+                profiles.Save("Boss", menu);
+            }
+            catch (IOException)
+            {
+                failed = true;
+            }
+
+            Assert.IsTrue(failed, "カタログ保存失敗が呼び出し元へ返っていない");
+            Assert.AreEqual(0, profiles.Count);
+            Assert.AreEqual(0, storage.Count);
+            Assert.AreEqual(0, new DebugMenuProfiles(storage).Count);
+        }
+
+        [Test]
+        public void Profiles_DeleteRollsBackCatalogAndDataWhenDataDeleteFails()
+        {
+            var storage = new FaultingStorage();
+            var profiles = new DebugMenuProfiles(storage);
+            var menu = new DebugMenuRoot();
+            var value = menu.AddPage("Gameplay").Root.Int("Count", 7);
+            profiles.Save("Boss", menu);
+            storage.FailAfterDeleteKey = storage.FindKeyContaining(".data.");
+
+            var failed = false;
+            try
+            {
+                profiles.Delete("Boss");
+            }
+            catch (IOException)
+            {
+                failed = true;
+            }
+
+            Assert.IsTrue(failed, "値の削除失敗が呼び出し元へ返っていない");
+            Assert.IsTrue(profiles.Contains("Boss"));
+            var restored = new DebugMenuProfiles(storage);
+            Assert.IsTrue(restored.Contains("Boss"));
+            value.Value = 0;
+            Assert.IsTrue(restored.TryApply("Boss", menu, out var applied));
+            Assert.AreEqual(1, applied);
+            Assert.AreEqual(7, value.Value);
+        }
+
+        [Test]
+        public void Profiles_ReloadClearsNamesAndNotifiesWhenCatalogLoadFails()
+        {
+            var storage = new FaultingStorage();
+            var profiles = new DebugMenuProfiles(storage);
+            var menu = new DebugMenuRoot();
+            menu.AddPage("Gameplay").Root.Int("Count", 7);
+            profiles.Save("Boss", menu);
+            var changedCount = 0;
+            profiles.Changed += () => changedCount++;
+            storage.FailOnLoadKey = "debug-menu-profile.catalog";
+
+            var loaded = profiles.Reload();
+
+            Assert.AreEqual(0, loaded);
+            Assert.AreEqual(0, profiles.Count);
+            Assert.AreEqual(1, changedCount);
         }
     }
 }
