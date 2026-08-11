@@ -1,6 +1,6 @@
 # Debug Menu
 
-Unity の実行中に、値の変更、アクションの実行、状態監視、折れ線グラフ、HSV 色編集を行うランタイムデバッグメニューです。UI Toolkit で描画し、キーボードとマウスの両方から操作できます。
+Unity の実行中に、値・パス・数値配列の変更、アクションの実行、状態監視、折れ線グラフ、HSV 色編集を行うランタイムデバッグメニューです。UI Toolkit で描画し、キーボードとマウスの両方から操作できます。
 
 対応: **Unity 6000.0 以降**  
 依存: **Containers 1.0.0**（`com.studiogaku.containers`）
@@ -98,13 +98,13 @@ IL2CPP ではリフレクションだけから参照される登録メソッド�
 | 前後の最上位ページ | `[` / `]` | ヘッダーの左右ボタン |
 | お気に入り切り替え | `F` | 行の星をクリック |
 | 既定値へ戻す | `R` | — |
-| 直接文字入力 | `Enter` | 値欄をダブルクリック |
+| 直接文字入力 | `Enter` | Int / Float / Text / Path の値欄をダブルクリック |
 | 全体検索 | `Ctrl+F` | Searchページを開く |
 | Undo / Redo | `Ctrl+Z` / `Ctrl+Y` | — |
 
 範囲を設定した `Int` / `Float` はスライダーをクリックまたはドラッグできます。`Color` は色見本の左クリックで HSV 編集を即座に展開し、HSV 面、色相帯、必要ならアルファ帯をドラッグします。マウスホイールは UI Toolkit の一覧（`ListView`）をスクロールします。メニュー上の右クリックは、子ページなら親へ戻り、最上位ページならメニューを閉じます。
 
-直接入力は `Int`、`Float`、`Text` に対する `Enter`、または `Int`、`Float`、`Text`、`Color`、`Vector` の値欄ダブルクリックで始めます。入力文字、選択背景、カーソルは別々のテーマ色で描くため、全選択中も文字を確認できます。入力中は `Enter` で確定、`Esc` で破棄します。色は `#RRGGBB` / `#RRGGBBAA`、ベクトルは成分数と同じ個数のカンマ区切りです。
+直接入力は `Int`、`Float`、`Text`、`Path` に対する `Enter`、または `Int`、`Float`、`Text`、`Path`、`Color`、`Vector` の値欄ダブルクリックで始めます。入力文字、選択背景、カーソルは別々のテーマ色で描くため、全選択中も文字を確認できます。入力中は `Enter` で確定、`Esc` で破棄します。色は `#RRGGBB` / `#RRGGBBAA`、ベクトルは成分数と同じ個数のカンマ区切りです。
 
 ## 対応する行
 
@@ -116,6 +116,8 @@ IL2CPP ではリフレクションだけから参照される登録メソッド�
 | `Int` / `Float` | 数値変更、範囲・刻み幅・直接入力 |
 | `Enum` / `Choice` | 左右送り、または決定で展開する候補一覧から選択 |
 | `Text` | 文字列の直接入力 |
+| `Path` / `FilePath` / `FolderPath` | ファイル・フォルダーパスの直接入力、任意の存在確認・拡張子制限 |
+| `IntArray` / `FloatArray` | `IList<T>` を index ごとの数値行として展開・編集 |
 | `Color` | 16 進入力、HSV・アルファ編集 |
 | `Vector` / `DebugVector` | Vector3 の簡易追加、または 2〜4 成分の編集と一括入力 |
 | `Watch` | 文字列または数値の読み取り専用表示 |
@@ -124,11 +126,22 @@ IL2CPP ではリフレクションだけから参照される登録メソッド�
 
 `Describe` で選択行の説明、`WithUnit` で単位、`WarnOutside` で注意範囲、`WithShortcut` で行ショートカット、`WithSaveKey` で安定した保存キーを設定できます。
 
+```csharp
+page.FilePath("Config", () => _configPath, value => _configPath = value)
+    .WithExistingPathRequired()
+    .WithExtensions(".json", ".txt");
+
+page.IntArray("Spawn IDs", _spawnIds).WithRange(0, 9999).WithStep(10);
+page.FloatArray("Weights", _weights).WithRange(0f, 1f).WithDigits(3);
+```
+
+配列行は親を保存せず、`[0]`、`[1]` の子行だけを保存します。ページへ拡張メソッドで追加した配列は、元の `IList<T>` の長さが変わると表示行数も更新します。
+
 ## 未実装の機能
 
 現在未実装、またはサービスだけで通常画面へ未接続なのは次です。
 
-- Path 行、配列行、トースト、クリップボード用スナップショット
+- トースト、クリップボード用スナップショット
 - 標準ゲームパッド割り当て、実行中の Appearance ページ
 
 Color Picker は行内展開です。

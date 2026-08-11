@@ -15,6 +15,8 @@
 - チェック、色見本、変更ボタン、スライダー、Pickerの寸法比率をテーマへ公開。
 - `GraphBackground` と `GraphGrid` を実際のグラフ描画へ接続。
 - Bool、Int、Float、Enum、Text、Color、Vector、Action、Watch、Graph、Group、子ページ。
+- ファイル・フォルダーの直接入力、任意の存在確認・拡張子制限を持つ Path 行。
+- `IList<int>` / `IList<float>` を index ごとの既存数値行として展開し、長さ変更へ追従する配列行。
 - 数値スライダー、直接文字入力、HSV・アルファ編集、折れ線グラフ。
 - お気に入り、検索、Undo/Redo、値の保存・復元を支えるサービス API。
 - Enum の候補一覧を展開し、上下移動と決定で選べるコンボ操作。

@@ -62,12 +62,23 @@ IL2CPP では登録メソッドが静的参照されないため、各メソッ�
 | `Enum<TEnum>` | enum 宣言順の候補を左右送り、または展開一覧から選ぶ。 |
 | `Choice` | 文字列配列の候補を左右で選ぶ。 |
 | `Text` | 文字列を直接入力する。 |
+| `Path` / `FilePath` / `FolderPath` | string getter / setterへ接続し、ファイル・フォルダーパスを直接入力する。存在確認と拡張子制限は任意。 |
+| `IntArray` / `FloatArray` | `IList<int>` / `IList<float>` を index ごとの既存数値行として展開する。 |
 | `Color` | 16 進入力、HSV 面、色相帯、任意のアルファ帯。`ShowAlpha = false` は常に不透明にする。 |
 | `Vector` / `DebugVector` | `Vector` 拡張は Vector3、`DebugVector.Of` は Vector2 / Vector3 を追加する。公開コンストラクタでは 2〜4 成分を扱える。 |
 | `Watch` | 関数の戻り値を毎フレーム表示する。編集・保存はしない。 |
 | `Graph` | 表示中に数値標本を採取し、直近 N 件を折れ線表示する。編集・保存はしない。 |
 
 共通設定は `Describe`、`WithUnit`、`WarnOutside`、`WithShortcut`、`WithSaveKey` です。`Graph` では `SampleInterval`、`AutoScale`、`Min`、`Max`、`Digits`、`HeightRatio` も設定できます。
+
+```csharp
+page.FolderPath("Output", () => OutputPath, value => OutputPath = value)
+    .WithExistingPathRequired();
+page.IntArray("Enemy IDs", EnemyIds).WithRange(0, 9999);
+page.FloatArray("Blend", BlendWeights).WithRange(0f, 1f).WithStep(0.05f);
+```
+
+配列の親行は保存対象外で、`[index]` の子行だけが保存されます。外側で `IList<T>` の長さを変えた場合も子行を安全に増減し、ページへ追加した配列は表示行数を自動更新します。
 
 ## 入力
 
@@ -123,7 +134,7 @@ Controller の **Persist Values** が有効なら、起動時に読み込み、�
 Application.persistentDataPath/DebugMenu/
 ```
 
-保存対象は Bool、Int、Float、Enum / Choice、Text、Color、Vector など値を持つ行です。Action、Group、Watch、Graph は対象外です。キーを省略するとページと親子の表示名から生成されます。改名・移動後も同じ値を引き継ぐ行には `WithSaveKey` で安定キーを指定します。
+保存対象は Bool、Int、Float、Enum / Choice、Text、Path、Color、Vector、数値配列の各 index など値を持つ行です。Action、Group、数値配列の親、Watch、Graph は対象外です。キーを省略するとページと親子の表示名から生成されます。改名・移動後も同じ値を引き継ぐ行には `WithSaveKey` で安定キーを指定します。
 
 `DebugMenuSettings(IDebugMenuStorage, string, DebugMenuSettingsFormat)` を直接作ると、ファイル、`DebugMenuPlayerPrefsStorage`、独自ストレージを選べます。形式はJSON、Text、Binaryから選び、読み込み時は中身から自動判別します。`SaveAs` / `LoadFrom` は任意パスへ原子的に書き出し、または読み込みます。保存形式は改ざん防止や暗号化を目的としていません。
 
@@ -151,7 +162,7 @@ Play 中の Inspector 変更は `DebugMenuController` が表示へ反映しま�
 
 ## 未実装の機能
 
-Path／配列行、トースト、クリップボード用スナップショット、標準ゲームパッド割り当て、実行中Appearanceページは未実装です。Color Picker は行内展開です。
+トースト、クリップボード用スナップショット、標準ゲームパッド割り当て、実行中Appearanceページは未実装です。Color Picker は行内展開です。
 
 ## 製品版への境界
 
