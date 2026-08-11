@@ -1,0 +1,12 @@
+# Unity のアセットとメタファイルはテキストとして扱い、改行を正規化する。
+*.cs        text diff=csharp
+*.meta      text
+*.asmdef    text
+*.json      text
+*.md        text
+*.unity     text
+*.asset     text
+*.prefab    text
+
+# 改行は LF に統一する（.meta の差分が OS で揺れないように）。
+* text=auto eol=lf
