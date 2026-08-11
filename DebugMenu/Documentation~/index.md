@@ -117,15 +117,17 @@ Input System パッケージは任意です。`DebugMenuKeyboard` は `Unity.Inp
 
 ## 保存
 
-Controller の **Persist Values** が有効なら、起動時に読み込み、破棄時に保存します。既定の `DebugMenuFileStorage` は次へ JSON を置きます。
+Controller の **Persist Values** が有効なら、起動時に読み込み、破棄時に保存します。既定の `DebugMenuFileStorage` は次のフォルダーを使います。
 
 ```text
-Application.persistentDataPath/DebugMenu/debug-menu-settings.json
+Application.persistentDataPath/DebugMenu/
 ```
 
 保存対象は Bool、Int、Float、Enum / Choice、Text、Color、Vector など値を持つ行です。Action、Group、Watch、Graph は対象外です。キーを省略するとページと親子の表示名から生成されます。改名・移動後も同じ値を引き継ぐ行には `WithSaveKey` で安定キーを指定します。
 
-`DebugMenuSettings(IDebugMenuStorage, string)` を直接作ると、ファイル、`DebugMenuPlayerPrefsStorage`、独自ストレージを選べます。保存形式は改ざん防止や暗号化を目的としていません。
+`DebugMenuSettings(IDebugMenuStorage, string, DebugMenuSettingsFormat)` を直接作ると、ファイル、`DebugMenuPlayerPrefsStorage`、独自ストレージを選べます。形式はJSON、Text、Binaryから選び、読み込み時は中身から自動判別します。`SaveAs` / `LoadFrom` は任意パスへ原子的に書き出し、または読み込みます。保存形式は改ざん防止や暗号化を目的としていません。
+
+`Settings`ページにはプロファイル名、形式、任意ファイルパス、Save / Load / Delete / Save As / Load From / Reset Allがあります。保存済みプロファイルは一覧から適用できます。`Recent`ページは直近16件の変更を重複なしで表示し、借用している元の行を直接操作します。
 
 ## Pause とライフサイクル
 
@@ -149,7 +151,7 @@ Play 中の Inspector 変更は `DebugMenuController` が表示へ反映しま�
 
 ## 未実装の機能
 
-プロファイル、最近触った項目、Path／配列行、トースト、クリップボード用スナップショット、標準ゲームパッド割り当て、実行中Appearanceページ、3形式保存は未実装または画面へ未接続です。Color Picker は行内展開、保存形式はJSONです。
+Path／配列行、トースト、クリップボード用スナップショット、標準ゲームパッド割り当て、実行中Appearanceページは未実装です。Color Picker は行内展開です。
 
 ## 製品版への境界
 

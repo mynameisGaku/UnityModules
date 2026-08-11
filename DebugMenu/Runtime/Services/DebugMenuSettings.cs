@@ -134,11 +134,21 @@ namespace DebugMenu
         /// <summary>保存先と保存の単位を指定して作る。</summary>
         /// <param name="storage">保存先。省略するとファイル保存。</param>
         /// <param name="key">保存の単位を表すキー。</param>
-        public DebugMenuSettings(IDebugMenuStorage storage = null, string key = "debug-menu-settings")
+        public DebugMenuSettings(
+            IDebugMenuStorage storage = null,
+            string key = "debug-menu-settings",
+            DebugMenuSettingsFormat format = DebugMenuSettingsFormat.Json)
         {
             _storage = storage ?? new DebugMenuFileStorage();
             _key = key;
+            Format = format;
         }
+
+        /// <summary>次回の保存で使う形式。読み込み時は内容から自動判別する。</summary>
+        public DebugMenuSettingsFormat Format { get; set; }
+
+        /// <summary>最後に読み込めた内容の形式。</summary>
+        public DebugMenuSettingsFormat LastLoadedFormat { get; private set; } = DebugMenuSettingsFormat.Json;
 
         /// <summary>いまの値を集めて保存する。保存した行の数を返す。</summary>
         /// <param name="menu">対象のメニュー。</param>
@@ -146,21 +156,8 @@ namespace DebugMenu
         {
             if (menu == null) throw new ArgumentNullException(nameof(menu));
 
-            var data = new DebugMenuSettingsData();
-
-            menu.VisitAll((_, element) =>
-            {
-                if (!element.IsSaveable) return;
-
-                var snapshot = DebugValueSnapshot.Capture(element);
-                if (!snapshot.HasValue) return;
-
-                data.Keys.Add(element.ResolveSaveKey());
-                data.Values.Add(snapshot.ToStorageString());
-                data.Kinds.Add((int)snapshot.Kind);
-            });
-
-            _storage.Save(_key, JsonUtility.ToJson(data, true));
+            var data = Capture(menu);
+            _storage.Save(_key, DebugMenuSettingsSerializer.Serialize(data, Format));
             return data.Keys.Count;
         }
 
@@ -170,24 +167,82 @@ namespace DebugMenu
         {
             if (menu == null) throw new ArgumentNullException(nameof(menu));
 
-            var json = _storage.Load(_key);
-            if (string.IsNullOrEmpty(json)) return 0;
+            var serialized = _storage.Load(_key);
+            if (!DebugMenuSettingsSerializer.TryDeserialize(serialized, out var data, out var format)) return 0;
 
-            DebugMenuSettingsData data;
+            LastLoadedFormat = format;
+            return Apply(menu, data);
+        }
+
+        /// <summary>現在値を指定形式のファイルへ原子的に書き出す。</summary>
+        /// <param name="menu">保存対象。</param>
+        /// <param name="path">書き出す絶対または相対パス。</param>
+        /// <param name="format">書き出す形式。</param>
+        /// <returns>保存した行数。</returns>
+        public int SaveAs(DebugMenuRoot menu, string path, DebugMenuSettingsFormat format)
+        {
+            if (menu == null) throw new ArgumentNullException(nameof(menu));
+            if (string.IsNullOrWhiteSpace(path)) throw new ArgumentException("保存先を指定してください。", nameof(path));
+
+            var data = Capture(menu);
+            WriteFileAtomically(path, DebugMenuSettingsSerializer.SerializeFile(data, format));
+            return data.Keys.Count;
+        }
+
+        /// <summary>指定ファイルの形式を自動判別し、値を適用する。</summary>
+        /// <param name="menu">適用先。</param>
+        /// <param name="path">読み込むファイル。</param>
+        /// <returns>適用できた行数。ファイルが無い、または壊れていれば0。</returns>
+        public int LoadFrom(DebugMenuRoot menu, string path)
+        {
+            if (menu == null) throw new ArgumentNullException(nameof(menu));
+            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) return 0;
+
+            byte[] bytes;
             try
             {
-                data = JsonUtility.FromJson<DebugMenuSettingsData>(json);
+                bytes = File.ReadAllBytes(path);
             }
             catch (Exception exception)
             {
-                // 壊れた保存で起動が止まる方が困る。捨てて既定値で続ける。
-                Debug.LogWarning($"[DebugMenu] 保存された設定を読めなかった。既定値で続行する。\n{exception.Message}");
+                Debug.LogWarning($"[DebugMenu] 設定ファイルを読めなかった。\n{exception.Message}");
                 return 0;
             }
 
-            if (data == null || data.Keys == null) return 0;
+            if (!DebugMenuSettingsSerializer.TryDeserializeFile(bytes, out var data, out var format)) return 0;
+            LastLoadedFormat = format;
+            return Apply(menu, data);
+        }
 
-            // 3 本のリストが揃っていない保存は信用しない。
+        /// <summary>メニューの現在値を保存可能なデータへ集める。</summary>
+        public static DebugMenuSettingsData Capture(DebugMenuRoot menu)
+        {
+            if (menu == null) throw new ArgumentNullException(nameof(menu));
+
+            var data = new DebugMenuSettingsData();
+            var visited = new HashSet<DebugElement>();
+            menu.VisitAll((_, element) =>
+            {
+                // FavoritesやRecentは元の行を借用する。同じ実体は1回だけ保存する。
+                if (!visited.Add(element)) return;
+                if (!element.IsSaveable) return;
+
+                var snapshot = DebugValueSnapshot.Capture(element);
+                if (!snapshot.HasValue) return;
+
+                data.Keys.Add(element.ResolveSaveKey());
+                data.Values.Add(snapshot.ToStorageString());
+                data.Kinds.Add((int)snapshot.Kind);
+            });
+            return data;
+        }
+
+        /// <summary>保存データを同じキー・同じ型の行へ適用する。</summary>
+        public static int Apply(DebugMenuRoot menu, DebugMenuSettingsData data)
+        {
+            if (menu == null) throw new ArgumentNullException(nameof(menu));
+            if (data == null || data.Keys == null || data.Values == null || data.Kinds == null) return 0;
+
             var count = Mathf.Min(data.Keys.Count, Mathf.Min(data.Values.Count, data.Kinds.Count));
             if (count == 0) return 0;
 
@@ -199,15 +254,10 @@ namespace DebugMenu
             {
                 if (!element.IsSaveable) return;
                 if (!stored.TryGetValue(element.ResolveSaveKey(), out var entry)) return;
-
-                // 保存時と種類が変わっていたら書き戻さない。
-                // 型を変えた行に古い値を押し込むと、意味の違う値が入る。
                 if (entry.Kind != element.ValueKind) return;
-
                 if (!DebugValueSnapshot.TryParse(entry.Kind, entry.Value, out var snapshot)) return;
                 if (snapshot.Apply(element)) applied++;
             });
-
             return applied;
         }
 
@@ -220,6 +270,18 @@ namespace DebugMenu
         {
             if (menu == null) throw new ArgumentNullException(nameof(menu));
             menu.VisitAll((_, element) => element.ResetToDefault());
+        }
+
+        private static void WriteFileAtomically(string path, byte[] bytes)
+        {
+            var fullPath = Path.GetFullPath(path);
+            var directory = Path.GetDirectoryName(fullPath);
+            if (!string.IsNullOrEmpty(directory)) Directory.CreateDirectory(directory);
+
+            var temporary = fullPath + ".tmp";
+            File.WriteAllBytes(temporary, bytes);
+            if (File.Exists(fullPath)) File.Delete(fullPath);
+            File.Move(temporary, fullPath);
         }
     }
 }

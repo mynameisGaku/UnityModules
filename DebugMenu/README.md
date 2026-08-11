@@ -128,12 +128,10 @@ IL2CPP ではリフレクションだけから参照される登録メソッド�
 
 現在未実装、またはサービスだけで通常画面へ未接続なのは次です。
 
-- プロファイル切り替え、最近触った項目
 - Path 行、配列行、トースト、クリップボード用スナップショット
 - 標準ゲームパッド割り当て、実行中の Appearance ページ
-- Text / JSON / Binary の 3 形式保存と Save As / Load From
 
-Color Picker は行内展開です。保存は現在 JSON 形式です。
+Color Picker は行内展開です。
 
 ## 最上位ページと子ページ
 
@@ -154,11 +152,14 @@ page.AddChildPage(details, DebugAttachMode.Page);
 
 - **Pause While Visible: ON** — 表示中だけ `Time.timeScale = 0` にし、閉じたとき・無効化時・破棄時に元の値へ戻す。
 - **Persist Values: ON** — 起動時に読み込み、Controller の破棄時に保存する。
-- 保存先 — `Application.persistentDataPath/DebugMenu/debug-menu-settings.json`。
+- 保存先 — `Application.persistentDataPath/DebugMenu/`。
+- 保存形式 — JSON / 1行1項目のText / 型付きBinary。読み込み時は内容から自動判別する。
 
-表示名やページ位置を変える可能性がある行には `WithSaveKey` を指定してください。未指定時はページと親子の経路からキーを作るため、移動・改名後は以前の値を復元できません。保存内容はデバッグ用の平文 JSON であり、秘密情報の保管には使わないでください。
+表示名やページ位置を変える可能性がある行には `WithSaveKey` を指定してください。未指定時はページと親子の経路からキーを作るため、移動・改名後は以前の値を復元できません。保存内容はデバッグ用であり、秘密情報の保管には使わないでください。
 
 `DebugMenuSettings` を直接使えば `DebugMenuPlayerPrefsStorage` や独自の `IDebugMenuStorage` に差し替えられます。
+
+`Settings`ページではプロファイル名と形式を指定して現在値を保存・適用できます。保存済みプロファイルは一覧から即時適用できます。File欄には任意パスを入力でき、`Save As`は選択形式で書き出し、`Load From`は拡張子に依存せず内容から形式を判別します。`Recent`ページには直近16件の変更が重複なし・新しい順で並び、元の行と同じ実体をそのまま操作できます。
 
 ## 見た目を変える
 

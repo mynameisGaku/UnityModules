@@ -37,6 +37,9 @@ namespace DebugMenu
         [Tooltip("起動時に前回の値を読み込み、終了時に書き出す。")]
         [SerializeField] private bool _persistValues = true;
 
+        [Tooltip("通常保存とプロファイル保存で使う形式。読み込みは内容から自動判別する。")]
+        [SerializeField] private DebugMenuSettingsFormat _settingsFormat = DebugMenuSettingsFormat.Json;
+
         private UIDocument _document;
         private DebugMenuView _view;
         private DebugMenuInputRepeater _repeater;
@@ -44,6 +47,9 @@ namespace DebugMenu
         private DebugMenuFavorites _favorites;
         private DebugMenuHistory _history;
         private DebugMenuSearchPage _searchPage;
+        private DebugMenuProfiles _profiles;
+        private DebugMenuSettingsPage _settingsPage;
+        private DebugMenuRecentChanges _recentChanges;
 
         private float _savedTimeScale = 1f;
         private bool _ownsTimeScalePause;
@@ -63,6 +69,15 @@ namespace DebugMenu
         /// <summary>全ページを対象にする検索画面。</summary>
         public DebugMenuSearchPage SearchPage => _searchPage;
 
+        /// <summary>名前付き設定プロファイル。</summary>
+        public DebugMenuProfiles Profiles => _profiles;
+
+        /// <summary>最近変更した項目の一覧。</summary>
+        public DebugMenuRecentChanges RecentChanges => _recentChanges;
+
+        /// <summary>プロファイルと任意ファイル保存を操作するページ。</summary>
+        public DebugMenuSettingsPage SettingsPage => _settingsPage;
+
         /// <summary>
         /// 入力状態を埋める処理。差し替えれば任意の入力系に対応できる。
         /// 既定では Input System と旧 Input のうち使える方を自動で選ぶ。
@@ -80,14 +95,19 @@ namespace DebugMenu
             // お気に入りは最後に足す。先に足すと、まだ登録されていないページを拾えない。
             Menu.AddPage(_favorites.Page);
 
-            if (_persistValues)
-            {
-                _settings = new DebugMenuSettings();
-                _settings.Load(Menu);
-            }
+            _settings = new DebugMenuSettings(format: _settingsFormat);
+            if (_persistValues) _settings.Load(Menu);
+
+            _profiles = new DebugMenuProfiles(format: _settingsFormat);
+            _settingsPage = new DebugMenuSettingsPage(Menu, _settings, _profiles);
+            Menu.AddPage(_settingsPage.Page);
 
             _searchPage = new DebugMenuSearchPage(Menu);
             Menu.AddPage(_searchPage.Page);
+
+            _recentChanges = new DebugMenuRecentChanges();
+            _recentChanges.Attach(Menu);
+            Menu.AddPage(_recentChanges.Page);
 
             _history = new DebugMenuHistory();
             _history.Attach(Menu);
@@ -103,6 +123,8 @@ namespace DebugMenu
         private void OnDestroy()
         {
             _history?.Dispose();
+            _recentChanges?.Dispose();
+            _settingsPage?.Dispose();
             if (Menu != null) Menu.VisibilityChanged -= OnVisibilityChanged;
             if (_persistValues && _settings != null && Menu != null) _settings.Save(Menu);
 
