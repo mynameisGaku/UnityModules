@@ -1,0 +1,16 @@
+{
+    "name": "DebugMenu.Runtime",
+    "rootNamespace": "DebugMenu",
+    "references": [
+        "Containers.Runtime"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
