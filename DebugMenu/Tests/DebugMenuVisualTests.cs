@@ -46,6 +46,8 @@ namespace DebugMenu.Tests
             AssertColor(new Color(0.05f, 0.06f, 0.09f, 0.82f), theme.DescriptionBackground);
             AssertColor(new Color(0.45f, 0.55f, 0.70f, 0.85f), theme.DescriptionBorder);
             AssertColor(new Color(0.88f, 0.88f, 0.88f, 1f), theme.DescriptionText);
+            AssertColor(new Color(0.04f, 0.05f, 0.07f, 0.96f), theme.ToastBackground);
+            AssertColor(new Color(0.45f, 0.85f, 0.60f, 1f), theme.ToastSuccess);
         }
 
         [Test]
@@ -169,6 +171,42 @@ namespace DebugMenu.Tests
             AssertColor(theme.DescriptionBorder, panel.style.borderTopColor.value);
             Assert.That(panel.style.borderTopWidth.value, Is.EqualTo(1f).Within(Tolerance));
             AssertColor(theme.DescriptionText, description.style.color.value);
+        }
+
+        [Test]
+        public void MenuView_ShowsCurrentToastWithKindColor()
+        {
+            var menu = new DebugMenuRoot();
+            menu.AddPage("Gameplay");
+            var theme = new DebugMenuTheme();
+            var toasts = new DebugMenuToastService();
+            var view = new DebugMenuView(menu, theme, toasts);
+
+            toasts.Show("Saved", DebugMenuToastKind.Success);
+            view.Refresh();
+
+            var panel = view.Root.Q<VisualElement>("debug-menu-toast");
+            var label = view.Root.Q<Label>("debug-menu-toast-text");
+            Assert.AreEqual(DisplayStyle.Flex, panel.style.display.value);
+            Assert.AreEqual("Saved", label.text);
+            AssertColor(theme.ToastSuccess, label.style.color.value);
+            AssertColor(theme.ToastSuccess, panel.style.borderTopColor.value);
+        }
+
+        [Test]
+        public void MenuView_CreatesPointerLocalHoverDescription()
+        {
+            var menu = new DebugMenuRoot();
+            menu.AddPage("Gameplay");
+            var view = new DebugMenuView(menu);
+            var panel = view.Root.Q<VisualElement>("debug-menu-hover-tooltip");
+            var label = view.Root.Q<Label>("debug-menu-hover-tooltip-text");
+
+            Assert.NotNull(panel);
+            Assert.NotNull(label);
+            Assert.AreEqual(Position.Absolute, panel.style.position.value);
+            Assert.AreEqual(PickingMode.Ignore, panel.pickingMode);
+            Assert.AreEqual(DisplayStyle.None, panel.style.display.value);
         }
 
         [Test]
@@ -459,6 +497,30 @@ namespace DebugMenu.Tests
         }
 
         [Test]
+        public void ThemeMigration_RestoresToastAndHoverDefaultsForVersionOneData()
+        {
+            var theme = new DebugMenuTheme
+            {
+                ToastBackground = default,
+                ToastSuccess = default,
+                ToastMaxWidthRatio = 0f,
+                HoverTooltipOffsetRatio = 0f,
+                HoverTooltipMaxWidthRatio = 0f,
+            };
+            typeof(DebugMenuTheme)
+                .GetField("_sizeLayoutVersion", BindingFlags.Instance | BindingFlags.NonPublic)
+                ?.SetValue(theme, 1);
+
+            theme.OnAfterDeserialize();
+
+            AssertColor(new Color(0.04f, 0.05f, 0.07f, 0.96f), theme.ToastBackground);
+            AssertColor(new Color(0.45f, 0.85f, 0.60f, 1f), theme.ToastSuccess);
+            Assert.That(theme.ToastMaxWidthRatio, Is.EqualTo(0.5f).Within(Tolerance));
+            Assert.That(theme.HoverTooltipOffsetRatio, Is.EqualTo(0.6f).Within(Tolerance));
+            Assert.That(theme.HoverTooltipMaxWidthRatio, Is.EqualTo(0.45f).Within(Tolerance));
+        }
+
+        [Test]
         public void ApplyTheme_WaitsForActiveTextEditInsteadOfDiscardingInput()
         {
             var menu = new DebugMenuRoot();
@@ -670,6 +732,31 @@ namespace DebugMenu.Tests
             Assert.IsTrue(wheelReachedList, "WheelEvent は ListView の既定スクロールへ届く必要がある");
         }
 
+        [Test]
+        public void RowHover_ForwardsEnterMoveAndLeaveWithoutSelecting()
+        {
+            var selected = -1;
+            var phases = new System.Collections.Generic.List<bool>();
+            var view = new DebugRowView(
+                new DebugMenuTheme(),
+                index => selected = index,
+                null,
+                null,
+                null,
+                null,
+                null,
+                (index, hovered, position) => phases.Add(hovered));
+            view.Bind(new DebugRow(new DebugText("Name", "Player") { Description = "Current player name" }, 0), false, 2);
+            AttachToPanel(view);
+
+            SendPointerEnter(view);
+            SendPointerMove(view);
+            SendPointerLeave(view);
+
+            CollectionAssert.AreEqual(new[] { true, true, false }, phases);
+            Assert.AreEqual(-1, selected);
+        }
+
         private void AttachToPanel(VisualElement root)
         {
             if (_document == null)
@@ -720,6 +807,27 @@ namespace DebugMenu.Tests
                 evt.target = target;
                 target.SendEvent(evt);
             }
+        }
+
+        private static void SendPointerEnter(VisualElement target)
+        {
+            using var evt = PointerEnterEvent.GetPooled(new Event { type = EventType.MouseMove });
+            evt.target = target;
+            target.SendEvent(evt);
+        }
+
+        private static void SendPointerMove(VisualElement target)
+        {
+            using var evt = PointerMoveEvent.GetPooled(new Event { type = EventType.MouseMove });
+            evt.target = target;
+            target.SendEvent(evt);
+        }
+
+        private static void SendPointerLeave(VisualElement target)
+        {
+            using var evt = PointerLeaveEvent.GetPooled(new Event { type = EventType.MouseMove });
+            evt.target = target;
+            target.SendEvent(evt);
         }
 
         private static void SendGeometryChanged(VisualElement target, float width)

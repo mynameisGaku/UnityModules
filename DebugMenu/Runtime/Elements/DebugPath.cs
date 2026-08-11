@@ -17,6 +17,7 @@ namespace DebugMenu
         private readonly IReadOnlyList<string> _readOnlyExtensions;
 
         private string _stored;
+        private string _currentDirectory = string.Empty;
 
         /// <summary>ゲーム側の文字列を直接読み書きするパス行を作る。</summary>
         /// <param name="label">表示名。</param>
@@ -30,7 +31,7 @@ namespace DebugMenu
             _defaultValue = getter() ?? string.Empty;
             _readOnlyExtensions = _extensions.AsReadOnly();
             Mode = mode;
-            IsExpandable = false;
+            MarkerVisibility = DebugMarkerVisibility.Always;
         }
 
         /// <summary>行自身が値を抱えるパス行を作る。</summary>
@@ -43,7 +44,7 @@ namespace DebugMenu
             _defaultValue = _stored;
             _readOnlyExtensions = _extensions.AsReadOnly();
             Mode = mode;
-            IsExpandable = false;
+            MarkerVisibility = DebugMarkerVisibility.Always;
         }
 
         /// <summary>ファイルとフォルダーのどちらを受け付けるか。</summary>
@@ -58,6 +59,12 @@ namespace DebugMenu
         /// <summary>最後に入力を拒んだ理由。直近の入力が有効なら空。</summary>
         public string LastValidationError { get; private set; } = string.Empty;
 
+        /// <summary>ブラウザーが現在表示しているフォルダー。未展開なら空。</summary>
+        public string CurrentDirectory => _currentDirectory;
+
+        /// <summary>ブラウザー候補が組み直されたときに呼ばれる。</summary>
+        public event Action StructureChanged;
+
         /// <summary>現在のパス。代入時にも設定済みの検証を行う。</summary>
         public string Value
         {
@@ -70,6 +77,9 @@ namespace DebugMenu
 
         /// <inheritdoc/>
         public override bool CanTypeValue => true;
+
+        /// <summary>行決定は直接入力よりブラウザー展開を優先する。</summary>
+        public override bool PrefersDecide => true;
 
         /// <inheritdoc/>
         public override bool IsModified => !string.Equals(Value, _defaultValue, StringComparison.Ordinal);
@@ -90,23 +100,26 @@ namespace DebugMenu
         public DebugPath WithExtensions(params string[] extensions)
         {
             _extensions.Clear();
-            if (extensions == null) return this;
-
-            for (var i = 0; i < extensions.Length; i++)
+            if (extensions != null)
             {
-                var normalized = NormalizeExtension(extensions[i]);
-                if (string.IsNullOrEmpty(normalized)) continue;
-
-                var duplicate = false;
-                for (var j = 0; j < _extensions.Count; j++)
+                for (var i = 0; i < extensions.Length; i++)
                 {
-                    if (!string.Equals(_extensions[j], normalized, StringComparison.OrdinalIgnoreCase)) continue;
-                    duplicate = true;
-                    break;
-                }
+                    var normalized = NormalizeExtension(extensions[i]);
+                    if (string.IsNullOrEmpty(normalized)) continue;
 
-                if (!duplicate) _extensions.Add(normalized);
+                    var duplicate = false;
+                    for (var j = 0; j < _extensions.Count; j++)
+                    {
+                        if (!string.Equals(_extensions[j], normalized, StringComparison.OrdinalIgnoreCase)) continue;
+                        duplicate = true;
+                        break;
+                    }
+
+                    if (!duplicate) _extensions.Add(normalized);
+                }
             }
+
+            if (IsExpanded) RebuildBrowser();
 
             return this;
         }
@@ -171,6 +184,20 @@ namespace DebugMenu
         /// <inheritdoc/>
         public override string GetEditText() => Value;
 
+        /// <summary>ブラウザーの展開と折り畳みを切り替える。</summary>
+        public override void OnDecide()
+        {
+            if (IsExpanded)
+            {
+                CollapseBrowser();
+                return;
+            }
+
+            _currentDirectory = ResolveStartDirectory();
+            IsExpanded = true;
+            RebuildBrowser();
+        }
+
         /// <inheritdoc/>
         public override bool CommitEditText(string text) => TrySetValue(text);
 
@@ -179,6 +206,152 @@ namespace DebugMenu
         {
             LastValidationError = string.Empty;
             SetValueUnchecked(_defaultValue);
+        }
+
+        private void RebuildBrowser()
+        {
+            ClearChildren();
+
+            if (string.IsNullOrEmpty(_currentDirectory)) _currentDirectory = ResolveStartDirectory();
+
+            AddParentRow();
+            if (Mode == DebugPathMode.Folder)
+            {
+                Add(new DebugPathBrowserRow("Use This Folder", _currentDirectory, SelectCurrentFolder));
+            }
+
+            AddDirectoryRows();
+            if (Mode == DebugPathMode.File) AddFileRows();
+
+            StructureChanged?.Invoke();
+        }
+
+        private void AddParentRow()
+        {
+            try
+            {
+                var parent = Directory.GetParent(_currentDirectory);
+                if (parent == null) return;
+
+                var path = parent.FullName;
+                Add(new DebugPathBrowserRow("[..] Parent", path, () => NavigateTo(path)));
+            }
+            catch (Exception exception)
+            {
+                AddErrorRow("Parent", exception);
+            }
+        }
+
+        private void AddDirectoryRows()
+        {
+            try
+            {
+                var directories = Directory.GetDirectories(_currentDirectory);
+                Array.Sort(directories, StringComparer.OrdinalIgnoreCase);
+                for (var i = 0; i < directories.Length; i++)
+                {
+                    var path = directories[i];
+                    var name = Path.GetFileName(path);
+                    Add(new DebugPathBrowserRow("[Folder] " + name, path, () => NavigateTo(path)));
+                }
+            }
+            catch (Exception exception)
+            {
+                AddErrorRow("Folders", exception);
+            }
+        }
+
+        private void AddFileRows()
+        {
+            try
+            {
+                var files = Directory.GetFiles(_currentDirectory);
+                Array.Sort(files, StringComparer.OrdinalIgnoreCase);
+                for (var i = 0; i < files.Length; i++)
+                {
+                    var path = files[i];
+                    if (!IsAcceptedFile(path)) continue;
+
+                    var name = Path.GetFileName(path);
+                    Add(new DebugPathBrowserRow("[File] " + name, path, () => SelectFile(path)));
+                }
+            }
+            catch (Exception exception)
+            {
+                AddErrorRow("Files", exception);
+            }
+        }
+
+        private void NavigateTo(string directory)
+        {
+            _currentDirectory = directory ?? string.Empty;
+            RebuildBrowser();
+        }
+
+        private void SelectFile(string path)
+        {
+            if (TrySetValue(path)) CollapseBrowser();
+            else RebuildBrowser();
+        }
+
+        private void SelectCurrentFolder()
+        {
+            if (TrySetValue(_currentDirectory)) CollapseBrowser();
+            else RebuildBrowser();
+        }
+
+        private void CollapseBrowser()
+        {
+            IsExpanded = false;
+            _currentDirectory = string.Empty;
+            ClearChildren();
+            StructureChanged?.Invoke();
+        }
+
+        private void AddErrorRow(string operation, Exception exception)
+        {
+            var message = exception?.Message ?? "Unknown error";
+            Add(new DebugPathBrowserRow("[Error] " + operation, message));
+        }
+
+        private string ResolveStartDirectory()
+        {
+            var value = Value;
+            var candidate = value;
+
+            try
+            {
+                if (Mode == DebugPathMode.File && !Directory.Exists(candidate)) candidate = Path.GetDirectoryName(candidate);
+                if (string.IsNullOrWhiteSpace(candidate)) candidate = Directory.GetCurrentDirectory();
+
+                var fullPath = Path.GetFullPath(candidate);
+                while (!Directory.Exists(fullPath))
+                {
+                    var parent = Directory.GetParent(fullPath);
+                    if (parent == null) break;
+                    fullPath = parent.FullName;
+                }
+
+                if (Directory.Exists(fullPath)) return fullPath;
+            }
+            catch
+            {
+                // 無効な文字や存在しないドライブは、現在フォルダーへ戻して表示を続ける。
+            }
+
+            return Directory.GetCurrentDirectory();
+        }
+
+        private bool IsAcceptedFile(string path)
+        {
+            if (_extensions.Count == 0) return true;
+
+            for (var i = 0; i < _extensions.Count; i++)
+            {
+                if (path.EndsWith(_extensions[i], StringComparison.OrdinalIgnoreCase)) return true;
+            }
+
+            return false;
         }
 
         private void SetValueUnchecked(string value)

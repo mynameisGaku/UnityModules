@@ -72,6 +72,37 @@ namespace DebugMenu.Tests
         }
 
         [Test]
+        public void Array_NestedLengthChangeRefreshesPageWithoutPageEvent()
+        {
+            var values = new List<int> { 1 };
+            var page = new DebugPage("Gameplay");
+            var group = page.Root.Add(new DebugGroup("Nested", true));
+            var array = group.Add(new DebugIntArray("Values", values));
+            array.IsExpanded = true;
+            page.Invalidate();
+            Assert.AreEqual(3, page.VisibleRows.Count);
+
+            values.Add(2);
+            array.Tick(0f);
+
+            Assert.AreEqual(4, page.VisibleRows.Count);
+        }
+
+        [Test]
+        public void Page_ExpansionRefreshesVisibleRowsWithoutInvalidate()
+        {
+            var page = new DebugPage("Gameplay");
+            var group = page.Root.Add(new DebugGroup("Nested", false));
+            group.Add(new DebugElement("Child"));
+            page.Invalidate();
+            Assert.AreEqual(1, page.VisibleRows.Count);
+
+            group.IsExpanded = true;
+
+            Assert.AreEqual(2, page.VisibleRows.Count);
+        }
+
+        [Test]
         public void Array_ShrinkLeavesCachedChildSafe()
         {
             var values = new List<int> { 1, 2, 3 };

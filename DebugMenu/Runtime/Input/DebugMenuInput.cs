@@ -52,6 +52,9 @@ namespace DebugMenu
 
         /// <summary>取り消した値変更をやり直す。</summary>
         Redo,
+
+        /// <summary>メニューの表示を切り替える。</summary>
+        ToggleMenu,
     }
 
     /// <summary>
@@ -66,6 +69,9 @@ namespace DebugMenu
     /// </summary>
     public struct DebugMenuInputState
     {
+        /// <summary>メニューの表示切り替えが押されたか。</summary>
+        public bool ToggleMenu;
+
         /// <summary>上方向が押されているか。</summary>
         public bool Up;
 
@@ -115,6 +121,7 @@ namespace DebugMenu
         /// <param name="command">読む操作。</param>
         public bool IsHeld(DebugMenuCommand command) => command switch
         {
+            DebugMenuCommand.ToggleMenu => ToggleMenu,
             DebugMenuCommand.Up => Up,
             DebugMenuCommand.Down => Down,
             DebugMenuCommand.Left => Left,
@@ -132,6 +139,30 @@ namespace DebugMenu
             DebugMenuCommand.Redo => Redo,
             _ => false,
         };
+
+        /// <summary>2つの入力元を論理和で合成する。</summary>
+        /// <param name="first">1つ目の入力状態。</param>
+        /// <param name="second">2つ目の入力状態。</param>
+        public static DebugMenuInputState Combine(in DebugMenuInputState first, in DebugMenuInputState second) =>
+            new DebugMenuInputState
+            {
+                ToggleMenu = first.ToggleMenu || second.ToggleMenu,
+                Up = first.Up || second.Up,
+                Down = first.Down || second.Down,
+                Left = first.Left || second.Left,
+                Right = first.Right || second.Right,
+                Decide = first.Decide || second.Decide,
+                Cancel = first.Cancel || second.Cancel,
+                PageUp = first.PageUp || second.PageUp,
+                PageDown = first.PageDown || second.PageDown,
+                PreviousPage = first.PreviousPage || second.PreviousPage,
+                NextPage = first.NextPage || second.NextPage,
+                ToggleFavorite = first.ToggleFavorite || second.ToggleFavorite,
+                ResetValue = first.ResetValue || second.ResetValue,
+                Search = first.Search || second.Search,
+                Undo = first.Undo || second.Undo,
+                Redo = first.Redo || second.Redo,
+            };
     }
 
     /// <summary>
@@ -214,6 +245,7 @@ namespace DebugMenu
         /// </summary>
         private static DebugMenuCommand FirstHeld(in DebugMenuInputState state)
         {
+            if (state.ToggleMenu) return DebugMenuCommand.ToggleMenu;
             if (state.Decide) return DebugMenuCommand.Decide;
             if (state.Cancel) return DebugMenuCommand.Cancel;
             if (state.Search) return DebugMenuCommand.Search;
@@ -264,6 +296,9 @@ namespace DebugMenu
 
             switch (command)
             {
+                case DebugMenuCommand.ToggleMenu:
+                    menu.Toggle();
+                    break;
                 case DebugMenuCommand.Up:
                     menu.MoveCursor(-1);
                     break;

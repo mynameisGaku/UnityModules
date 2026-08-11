@@ -25,12 +25,16 @@ namespace DebugMenu
         private float _warnMin;
         private float _warnMax;
         private bool _hasWarnRange;
+        private bool _isExpanded;
 
         /// <summary>どこかの行の値が変わると増える版数。全体を走査せず変更を検知するために使う。</summary>
         private static uint _valueVersion;
 
         /// <summary>どこかの行のピン留めが変わると増える版数。</summary>
         private static uint _favoriteVersion;
+
+        /// <summary>どこかの行構造または展開状態が変わると増える版数。</summary>
+        private static uint _structureVersion;
 
         /// <summary>互換用の単一変更受け取り先。<see cref="SetChangeListener"/> で差し替える。</summary>
         private static Action<DebugElement> _changeListener;
@@ -84,7 +88,17 @@ namespace DebugMenu
         // ── 状態 ────────────────────────────────────────────────────────────
 
         /// <summary>子行を表示中か。</summary>
-        public bool IsExpanded { get; set; }
+        public bool IsExpanded
+        {
+            get => _isExpanded;
+            set
+            {
+                if (_isExpanded == value) return;
+
+                _isExpanded = value;
+                NotifyStructureChanged();
+            }
+        }
 
         /// <summary>決定キーでの開閉を許可するか。false でも <see cref="IsExpanded"/> は効く。</summary>
         public bool IsExpandable { get; set; } = true;
@@ -123,6 +137,7 @@ namespace DebugMenu
 
             _children.Add(child);
             child.Parent = this;
+            NotifyStructureChanged();
             return child;
         }
 
@@ -133,14 +148,18 @@ namespace DebugMenu
             if (child == null || !_children.Remove(child)) return false;
 
             child.Parent = null;
+            NotifyStructureChanged();
             return true;
         }
 
         /// <summary>子行を全て外す。</summary>
         public void ClearChildren()
         {
+            if (_children.Count == 0) return;
+
             for (var i = 0; i < _children.Count; i++) _children[i].Parent = null;
             _children.Clear();
+            NotifyStructureChanged();
         }
 
         /// <summary>
@@ -161,11 +180,18 @@ namespace DebugMenu
             if (child == null) throw new ArgumentNullException(nameof(child));
 
             _children.Add(child);
+            NotifyStructureChanged();
             return child;
         }
 
         /// <summary>借りている子を外す。<see cref="Parent"/> には触らない。</summary>
-        public void ClearBorrowedChildren() => _children.Clear();
+        public void ClearBorrowedChildren()
+        {
+            if (_children.Count == 0) return;
+
+            _children.Clear();
+            NotifyStructureChanged();
+        }
 
         /// <summary>この行を子に持つ行。保存キーの自動生成でたどる。</summary>
         public DebugElement Parent { get; private set; }
@@ -339,6 +365,9 @@ namespace DebugMenu
         /// <summary>値の版数。どこかで値が変わると増える。</summary>
         public static uint ValueVersion => _valueVersion;
 
+        /// <summary>行構造の版数。どこかで子行または展開状態が変わると増える。</summary>
+        public static uint StructureVersion => _structureVersion;
+
         /// <summary>
         /// 値が変わった行そのものを受け取る互換用の係を差す。差せるのは 1 つだけで、
         /// 上書きすると前の係は外れる。
@@ -370,6 +399,15 @@ namespace DebugMenu
             Changed?.Invoke();
             _changeListener?.Invoke(this);
             _changeSubscribers?.Invoke(this);
+        }
+
+        /// <summary>行構造または展開状態の変更を全ページへ知らせる。</summary>
+        private static void NotifyStructureChanged()
+        {
+            unchecked
+            {
+                _structureVersion++;
+            }
         }
 
         /// <summary>

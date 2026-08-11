@@ -1,6 +1,6 @@
 # Debug Menu
 
-Unity の実行中に、値・パス・数値配列の変更、アクションの実行、状態監視、折れ線グラフ、HSV 色編集を行うランタイムデバッグメニューです。UI Toolkit で描画し、キーボードとマウスの両方から操作できます。
+Unity の実行中に、値・パス・数値配列の変更、アクションの実行、状態監視、折れ線グラフ、HSV 色編集を行うランタイムデバッグメニューです。UI Toolkit で描画し、キーボード、マウス、標準ゲームパッドから操作できます。
 
 対応: **Unity 6000.0 以降**  
 依存: **Containers 1.0.0**（`com.studiogaku.containers`）
@@ -98,13 +98,15 @@ IL2CPP ではリフレクションだけから参照される登録メソッド�
 | 前後の最上位ページ | `[` / `]` | ヘッダーの左右ボタン |
 | お気に入り切り替え | `F` | 行の星をクリック |
 | 既定値へ戻す | `R` | — |
-| 直接文字入力 | `Enter` | Int / Float / Text / Path の値欄をダブルクリック |
+| 直接文字入力 | `Enter`（Int / Float / Text） | Int / Float / Text / Path の値欄をダブルクリック |
 | 全体検索 | `Ctrl+F` | Searchページを開く |
 | Undo / Redo | `Ctrl+Z` / `Ctrl+Y` | — |
 
 範囲を設定した `Int` / `Float` はスライダーをクリックまたはドラッグできます。`Color` は色見本の左クリックで HSV 編集を即座に展開し、HSV 面、色相帯、必要ならアルファ帯をドラッグします。マウスホイールは UI Toolkit の一覧（`ListView`）をスクロールします。メニュー上の右クリックは、子ページなら親へ戻り、最上位ページならメニューを閉じます。
 
-直接入力は `Int`、`Float`、`Text`、`Path` に対する `Enter`、または `Int`、`Float`、`Text`、`Path`、`Color`、`Vector` の値欄ダブルクリックで始めます。入力文字、選択背景、カーソルは別々のテーマ色で描くため、全選択中も文字を確認できます。入力中は `Enter` で確定、`Esc` で破棄します。色は `#RRGGBB` / `#RRGGBBAA`、ベクトルは成分数と同じ個数のカンマ区切りです。
+標準ゲームパッドでは、方向パッドまたは左スティックで移動、Southで決定、Eastで取消、左右ショルダーで前後の最上位ページへ移動し、Startでメニューを開閉します。
+
+直接入力は `Int`、`Float`、`Text` に対する `Enter`、または `Int`、`Float`、`Text`、`Path`、`Color`、`Vector` の値欄ダブルクリックで始めます。`Path` の行決定はメニュー内ブラウザーを開きます。入力文字、選択背景、カーソルは別々のテーマ色で描くため、全選択中も文字を確認できます。入力中は `Enter` で確定、`Esc` で破棄します。色は `#RRGGBB` / `#RRGGBBAA`、ベクトルは成分数と同じ個数のカンマ区切りです。
 
 ## 対応する行
 
@@ -116,7 +118,7 @@ IL2CPP ではリフレクションだけから参照される登録メソッド�
 | `Int` / `Float` | 数値変更、範囲・刻み幅・直接入力 |
 | `Enum` / `Choice` | 左右送り、または決定で展開する候補一覧から選択 |
 | `Text` | 文字列の直接入力 |
-| `Path` / `FilePath` / `FolderPath` | ファイル・フォルダーパスの直接入力、任意の存在確認・拡張子制限 |
+| `Path` / `FilePath` / `FolderPath` | インラインブラウザーと直接入力、任意の存在確認・拡張子制限 |
 | `IntArray` / `FloatArray` | `IList<T>` を index ごとの数値行として展開・編集 |
 | `Color` | 16 進入力、HSV・アルファ編集 |
 | `Vector` / `DebugVector` | Vector3 の簡易追加、または 2〜4 成分の編集と一括入力 |
@@ -135,16 +137,9 @@ page.IntArray("Spawn IDs", _spawnIds).WithRange(0, 9999).WithStep(10);
 page.FloatArray("Weights", _weights).WithRange(0f, 1f).WithDigits(3);
 ```
 
-配列行は親を保存せず、`[0]`、`[1]` の子行だけを保存します。ページへ拡張メソッドで追加した配列は、元の `IList<T>` の長さが変わると表示行数も更新します。
+`FilePath` のブラウザーはサブフォルダーと拡張子に合うファイルを表示し、`FolderPath` は `Use This Folder` で表示中のフォルダーを選びます。どちらも `[..] Parent` で親へ移動でき、列挙に失敗した場所ではエラー行を表示したまま操作を続けられます。
 
-## 未実装の機能
-
-現在未実装、またはサービスだけで通常画面へ未接続なのは次です。
-
-- トースト、クリップボード用スナップショット
-- 標準ゲームパッド割り当て、実行中の Appearance ページ
-
-Color Picker は行内展開です。
+配列行は親を保存せず、`[0]`、`[1]` の子行だけを保存します。元の `IList<T>` の長さや入れ子の展開状態が変わると、配置場所にかかわらず表示行数も更新します。
 
 ## 最上位ページと子ページ
 
@@ -172,17 +167,19 @@ page.AddChildPage(details, DebugAttachMode.Page);
 
 `DebugMenuSettings` を直接使えば `DebugMenuPlayerPrefsStorage` や独自の `IDebugMenuStorage` に差し替えられます。
 
-`Settings`ページではプロファイル名と形式を指定して現在値を保存・適用できます。保存済みプロファイルは一覧から即時適用できます。File欄には任意パスを入力でき、`Save As`は選択形式で書き出し、`Load From`は拡張子に依存せず内容から形式を判別します。`Recent`ページには直近16件の変更が重複なし・新しい順で並び、元の行と同じ実体をそのまま操作できます。
+`Settings`ページではプロファイル名と形式を指定して現在値を保存・適用できます。保存済みプロファイルは一覧から即時適用できます。File欄には任意パスを入力でき、`Save As`は選択形式で書き出し、`Load From`は拡張子に依存せず内容から形式を判別します。`Copy Menu Text`は現在の全ページをクリップボードへコピーし、各操作の成否は画面上の短い通知でも確認できます。`Recent`ページには直近16件の変更が重複なし・新しい順で並び、元の行と同じ実体をそのまま操作できます。
 
 ## 見た目を変える
 
 Controller の **Theme > 基本サイズ** には、文字を変える **Font Size** と、ボタン・チェック・入力欄・スライダー・グラフ・Pickerをまとめて拡縮する **Gui Scale** があります。文字が切れないよう、Font Size が拡縮後の行高を超える場合は行高も自動で広がります。個別に詰めたい場合は、その下の行高、値列、入力欄、スライダー、各操作部品の比率を変更します。Play 中に Inspector で変更した値は、文字入力の終了後に表示へ反映されます。
 
-コードからは次のように変更できます。`ApplyTheme()` は表示だけを再構築するため、現在ページ、カーソル、値は維持されます。
+トップレベルの `Appearance` ページでは、`Font Size`（8〜48）、`GUI Scale`、`Row Height`、`Panel Margin`、`Top Margin` を実行中に変更できます。`Compact` / `Standard` / `Large` のプリセットと、Controller生成時の値へ戻す `Reset` があり、通常の設定保存にも含まれます。スライダーや色選択面をドラッグしている間は表示を作り直さず、操作終了後にテーマを反映します。
+
+コードからは次のように変更できます。`RequestApplyTheme()` は入力イベントが終わった安全なタイミングで表示だけを再構築するため、現在ページ、カーソル、値は維持されます。即時反映が必要な既存コードでは `ApplyTheme()` も引き続き利用できます。
 
 ```csharp
 controller.Theme.SetSizes(fontSize: 24, guiScale: 1.25f);
-controller.ApplyTheme();
+controller.RequestApplyTheme();
 ```
 
 入力欄の文字、選択背景、カーソルは `InputFieldText`、`InputFieldSelection`、`InputFieldCursor` から個別に変更できます。既定値は白文字、青い選択背景、白いカーソルです。
@@ -191,9 +188,9 @@ controller.ApplyTheme();
 
 ## Input System と独自入力
 
-Input System は任意です。`Unity.InputSystem` が利用可能なら実行時に検出してキーボードを読み、利用できなければ旧 `UnityEngine.Input` へフォールバックします。このパッケージから Input System へのコンパイル時依存はありません。
+Input System は任意です。`Unity.InputSystem` が利用可能なら実行時に `Keyboard` と `Gamepad.current` を検出し、機種差を吸収した標準配置で読みます。利用できない場合は旧 `UnityEngine.Input` のキーボード、`Horizontal` / `Vertical`、一般的な十字キー軸名、Xbox互換の JoystickButton へ安全にフォールバックします。このパッケージから Input System へのコンパイル時依存はありません。既定入力ではキーボードとゲームパッドの状態を論理和で合成します。
 
-ゲームパッドや独自の入力レイヤーを使う場合は、`DebugMenuController.InputProvider` に `DebugMenuInputState` を返す関数を設定します。最上位ページ切り替えには `PreviousPage` / `NextPage` を使います。`InputProvider` はメニュー内操作だけを置き換え、既定の `F1` 開閉は別に読まれます。別デバイスで開閉する場合は、その入力側から `controller.Menu.Toggle()` を呼びます。
+独自の入力レイヤーを使う場合は、`DebugMenuController.InputProvider` に `DebugMenuInputState` を返す関数を設定します。最上位ページ切り替えには `PreviousPage` / `NextPage` を使います。差し替えた `InputProvider` は従来どおり表示中のメニュー操作時だけ呼ばれ、既定の `F1` 開閉は別に読まれます。別デバイスから開く場合は、その入力側から `controller.Menu.Toggle()` を呼びます。
 
 ## リリースビルドでの扱い
 

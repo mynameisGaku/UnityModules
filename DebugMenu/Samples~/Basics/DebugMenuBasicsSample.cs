@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using DebugMenu;
 using UnityEngine;
 using UnityEngine.Scripting;
@@ -11,6 +12,9 @@ namespace DebugMenu.Samples
         private static float _moveSpeed = 6f;
         private static Color _accentColor = new Color(0.20f, 0.65f, 1f, 1f);
         private static int _healCount;
+        private static string _outputFolder;
+        private static readonly List<int> SpawnIds = new List<int> { 100, 200, 300 };
+        private static readonly List<float> BlendWeights = new List<float> { 0.2f, 0.3f, 0.5f };
 
         /// <summary>プレイヤー向けの値変更と子ページを登録する。</summary>
         /// <param name="menu">登録先のデバッグメニュー。</param>
@@ -58,6 +62,12 @@ namespace DebugMenu.Samples
 
             diagnostics.Watch("Elapsed", () => Time.unscaledTime, 1).WithUnit("s");
             diagnostics.Watch("FPS", CurrentFps, 1).WarnOutside(30f, 240f);
+
+            _outputFolder ??= Application.persistentDataPath;
+            diagnostics.FolderPath("Output Folder", () => _outputFolder, value => _outputFolder = value)
+                .WithExistingPathRequired();
+            diagnostics.IntArray("Spawn IDs", SpawnIds).WithRange(0, 9999);
+            diagnostics.FloatArray("Blend Weights", BlendWeights).WithRange(0f, 1f).WithStep(0.05f);
 
             var graph = diagnostics.Graph("Frame Time", () => Time.unscaledDeltaTime * 1000f, 180)
                 .WithUnit("ms")

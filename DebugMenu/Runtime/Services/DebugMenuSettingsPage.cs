@@ -10,6 +10,7 @@ namespace DebugMenu
         private readonly DebugMenuRoot _menu;
         private readonly DebugMenuSettings _settings;
         private readonly DebugMenuProfiles _profiles;
+        private readonly DebugMenuToastService _toasts;
         private readonly TransientTextElement _profileNameElement;
         private readonly TransientTextElement _filePathElement;
         private readonly SettingsFormatElement _formatElement;
@@ -18,11 +19,16 @@ namespace DebugMenu
         private string _filePath;
 
         /// <summary>対象メニュー、通常保存、プロファイルサービスを指定して作る。</summary>
-        public DebugMenuSettingsPage(DebugMenuRoot menu, DebugMenuSettings settings, DebugMenuProfiles profiles)
+        public DebugMenuSettingsPage(
+            DebugMenuRoot menu,
+            DebugMenuSettings settings,
+            DebugMenuProfiles profiles,
+            DebugMenuToastService toasts = null)
         {
             _menu = menu ?? throw new ArgumentNullException(nameof(menu));
             _settings = settings ?? throw new ArgumentNullException(nameof(settings));
             _profiles = profiles ?? throw new ArgumentNullException(nameof(profiles));
+            _toasts = toasts;
 
             Page = new DebugPage("Settings")
             {
@@ -67,14 +73,12 @@ namespace DebugMenu
             try
             {
                 var count = _profiles.Save(_profileName, _menu);
-                LastResult = $"Profile '{_profileName}' saved ({count})";
-                Page.Description = LastResult;
+                SetResult($"Profile '{_profileName}' saved ({count})", DebugMenuToastKind.Success);
                 return count;
             }
             catch (Exception exception)
             {
-                LastResult = exception.Message;
-                Page.Description = LastResult;
+                SetResult(exception.Message, DebugMenuToastKind.Error);
                 return 0;
             }
         }
@@ -82,19 +86,37 @@ namespace DebugMenu
         /// <summary>入力名のプロファイルを適用する。</summary>
         public int LoadProfile()
         {
-            var applied = _profiles.TryApply(_profileName, _menu, out var count) ? count : 0;
-            LastResult = applied > 0 ? $"Profile '{_profileName}' loaded ({applied})" : $"Profile '{_profileName}' not found";
-            Page.Description = LastResult;
-            return applied;
+            try
+            {
+                var applied = _profiles.TryApply(_profileName, _menu, out var count) ? count : 0;
+                SetResult(
+                    applied > 0 ? $"Profile '{_profileName}' loaded ({applied})" : $"Profile '{_profileName}' not found",
+                    applied > 0 ? DebugMenuToastKind.Success : DebugMenuToastKind.Warning);
+                return applied;
+            }
+            catch (Exception exception)
+            {
+                SetResult(exception.Message, DebugMenuToastKind.Error);
+                return 0;
+            }
         }
 
         /// <summary>入力名のプロファイルを削除する。</summary>
         public bool DeleteProfile()
         {
-            var deleted = _profiles.Delete(_profileName);
-            LastResult = deleted ? $"Profile '{_profileName}' deleted" : $"Profile '{_profileName}' not found";
-            Page.Description = LastResult;
-            return deleted;
+            try
+            {
+                var deleted = _profiles.Delete(_profileName);
+                SetResult(
+                    deleted ? $"Profile '{_profileName}' deleted" : $"Profile '{_profileName}' not found",
+                    deleted ? DebugMenuToastKind.Success : DebugMenuToastKind.Warning);
+                return deleted;
+            }
+            catch (Exception exception)
+            {
+                SetResult(exception.Message, DebugMenuToastKind.Error);
+                return false;
+            }
         }
 
         /// <summary>現在値を指定パスへ現在形式で保存する。</summary>
@@ -103,14 +125,12 @@ namespace DebugMenu
             try
             {
                 var count = _settings.SaveAs(_menu, _filePath, _settings.Format);
-                LastResult = $"Saved {count}: {_filePath}";
-                Page.Description = LastResult;
+                SetResult($"Saved {count}: {_filePath}", DebugMenuToastKind.Success);
                 return count;
             }
             catch (Exception exception)
             {
-                LastResult = exception.Message;
-                Page.Description = LastResult;
+                SetResult(exception.Message, DebugMenuToastKind.Error);
                 return 0;
             }
         }
@@ -118,10 +138,27 @@ namespace DebugMenu
         /// <summary>指定パスから形式を自動判別して読み込む。</summary>
         public int LoadFrom()
         {
-            var count = _settings.LoadFrom(_menu, _filePath);
-            LastResult = count > 0 ? $"Loaded {count}: {_filePath}" : $"Could not load: {_filePath}";
-            Page.Description = LastResult;
-            return count;
+            try
+            {
+                var count = _settings.LoadFrom(_menu, _filePath);
+                SetResult(
+                    count > 0 ? $"Loaded {count}: {_filePath}" : $"Could not load: {_filePath}",
+                    count > 0 ? DebugMenuToastKind.Success : DebugMenuToastKind.Warning);
+                return count;
+            }
+            catch (Exception exception)
+            {
+                SetResult(exception.Message, DebugMenuToastKind.Error);
+                return 0;
+            }
+        }
+
+        /// <summary>現在のメニュー全体をテキスト化してOSのクリップボードへ入れる。</summary>
+        public string CopyMenuText()
+        {
+            var text = DebugMenuTextSnapshot.CopyToClipboard(_menu);
+            SetResult($"Copied menu text ({text.Length} chars)", DebugMenuToastKind.Success);
+            return text;
         }
 
         /// <summary>イベント購読を解除する。</summary>
@@ -152,7 +189,12 @@ namespace DebugMenu
             Page.Root.Add(_filePathElement);
             Page.Root.Add(new DebugAction("Save As", () => SaveAs()));
             Page.Root.Add(new DebugAction("Load From", () => LoadFrom()));
-            Page.Root.Add(new DebugAction("Reset All", () => DebugMenuSettings.ResetAll(_menu)));
+            Page.Root.Add(new DebugAction("Copy Menu Text", () => CopyMenuText()));
+            Page.Root.Add(new DebugAction("Reset All", () =>
+            {
+                DebugMenuSettings.ResetAll(_menu);
+                SetResult("Reset all values", DebugMenuToastKind.Success);
+            }));
 
             var group = Page.Root.Add(new DebugGroup("Saved Profiles") { IsExpanded = true });
             if (_profiles.Count == 0)
@@ -173,6 +215,13 @@ namespace DebugMenu
             }
 
             Page.Invalidate();
+        }
+
+        private void SetResult(string result, DebugMenuToastKind kind)
+        {
+            LastResult = result ?? string.Empty;
+            Page.Description = LastResult;
+            _toasts?.Show(LastResult, kind);
         }
 
         /// <summary>保存対象にしない一時文字列入力。</summary>

@@ -18,6 +18,7 @@ namespace DebugMenu
         private const float DoubleClickWindowSeconds = 0.5f;
 
         private readonly DebugMenuRoot _menu;
+        private readonly DebugMenuToastService _toasts;
         private readonly List<DebugRow> _rows = new List<DebugRow>();
 
         private readonly VisualElement _root;
@@ -30,6 +31,10 @@ namespace DebugMenu
         private readonly VisualElement _descriptionPanel;
         private readonly Label _description;
         private readonly Label _hints;
+        private readonly VisualElement _toastPanel;
+        private readonly Label _toastLabel;
+        private readonly VisualElement _hoverTooltip;
+        private readonly Label _hoverTooltipText;
         private readonly ListView _list;
 
         private int _lastCursor = -1;
@@ -38,13 +43,15 @@ namespace DebugMenu
         private float _lastClickTime = float.NegativeInfinity;
         private DebugRowView _editingRow;
         private bool _textInputEnded;
+        private Vector2 _hoverPointerLocal;
 
         /// <summary>メニューとテーマを指定して見た目を組み立てる。</summary>
         /// <param name="menu">映す対象。</param>
         /// <param name="theme">色と寸法。省略すると既定。</param>
-        public DebugMenuView(DebugMenuRoot menu, DebugMenuTheme theme = null)
+        public DebugMenuView(DebugMenuRoot menu, DebugMenuTheme theme = null, DebugMenuToastService toasts = null)
         {
             _menu = menu;
+            _toasts = toasts;
             Theme = theme ?? new DebugMenuTheme();
 
             _root = new VisualElement
@@ -273,6 +280,90 @@ namespace DebugMenu
 
             _descriptionPanel.Add(_description);
 
+            _toastPanel = new VisualElement
+            {
+                name = "debug-menu-toast",
+                style =
+                {
+                    position = Position.Absolute,
+                    right = Theme.EffectivePanelMargin,
+                    top = Theme.EffectiveTopMargin,
+                    maxWidth = Length.Percent(Mathf.Clamp01(Theme.ToastMaxWidthRatio) * 100f),
+                    paddingLeft = Theme.EffectiveRowHeight * 0.5f,
+                    paddingRight = Theme.EffectiveRowHeight * 0.5f,
+                    paddingTop = Theme.EffectiveRowHeight * 0.35f,
+                    paddingBottom = Theme.EffectiveRowHeight * 0.35f,
+                    backgroundColor = Theme.ToastBackground,
+                    borderTopWidth = 1f,
+                    borderBottomWidth = 1f,
+                    borderLeftWidth = 1f,
+                    borderRightWidth = 1f,
+                    display = DisplayStyle.None,
+                },
+            };
+
+            _toastLabel = new Label
+            {
+                name = "debug-menu-toast-text",
+                style =
+                {
+                    fontSize = Theme.EffectiveFontSize,
+                    whiteSpace = WhiteSpace.Normal,
+                    marginLeft = 0f,
+                    marginRight = 0f,
+                    marginTop = 0f,
+                    marginBottom = 0f,
+                    paddingLeft = 0f,
+                    paddingRight = 0f,
+                },
+            };
+            _toastPanel.Add(_toastLabel);
+
+            _hoverTooltip = new VisualElement
+            {
+                name = "debug-menu-hover-tooltip",
+                pickingMode = PickingMode.Ignore,
+                style =
+                {
+                    position = Position.Absolute,
+                    maxWidth = Length.Percent(Mathf.Clamp01(Theme.HoverTooltipMaxWidthRatio) * 100f),
+                    paddingLeft = Theme.EffectiveRowHeight * 0.5f,
+                    paddingRight = Theme.EffectiveRowHeight * 0.5f,
+                    paddingTop = Theme.EffectiveRowHeight * 0.35f,
+                    paddingBottom = Theme.EffectiveRowHeight * 0.35f,
+                    backgroundColor = Theme.DescriptionBackground,
+                    borderTopWidth = 1f,
+                    borderBottomWidth = 1f,
+                    borderLeftWidth = 1f,
+                    borderRightWidth = 1f,
+                    borderTopColor = Theme.DescriptionBorder,
+                    borderBottomColor = Theme.DescriptionBorder,
+                    borderLeftColor = Theme.DescriptionBorder,
+                    borderRightColor = Theme.DescriptionBorder,
+                    display = DisplayStyle.None,
+                },
+            };
+            _hoverTooltipText = new Label
+            {
+                name = "debug-menu-hover-tooltip-text",
+                pickingMode = PickingMode.Ignore,
+                style =
+                {
+                    color = Theme.DescriptionText,
+                    fontSize = Theme.EffectiveFontSize,
+                    whiteSpace = WhiteSpace.Normal,
+                    marginLeft = 0f,
+                    marginRight = 0f,
+                    marginTop = 0f,
+                    marginBottom = 0f,
+                    paddingLeft = 0f,
+                    paddingRight = 0f,
+                },
+            };
+            _hoverTooltip.Add(_hoverTooltipText);
+            _hoverTooltip.RegisterCallback<GeometryChangedEvent>(_ => PositionHoverTooltip());
+            _root.RegisterCallback<GeometryChangedEvent>(_ => PositionHoverTooltip());
+
             _root.Add(titleRow);
             _root.Add(titleSpacer);
             _root.Add(breadcrumbRow);
@@ -282,6 +373,8 @@ namespace DebugMenu
             _root.Add(_list);
             _root.Add(_descriptionPanel);
             _root.Add(_hints);
+            _root.Add(_toastPanel);
+            _root.Add(_hoverTooltip);
         }
 
         /// <summary>色と寸法。</summary>
@@ -303,6 +396,20 @@ namespace DebugMenu
 
         /// <summary>直接入力欄が開いているか。</summary>
         public bool IsEditingText => _editingRow != null && _editingRow.IsEditingText;
+
+        /// <summary>可視行のいずれかでポインター操作が続いているか。</summary>
+        public bool HasActivePointerInteraction
+        {
+            get
+            {
+                foreach (var row in _list.Query<DebugRowView>().Build())
+                {
+                    if (row.HasActivePointerInteraction) return true;
+                }
+
+                return false;
+            }
+        }
 
         /// <summary>非表示へ切り替える前に、可視行のドラッグと文字入力を全て終える。</summary>
         public void CancelPointerInteractions()
@@ -375,6 +482,7 @@ namespace DebugMenu
             _counter.text = _rows.Count == 0 ? string.Empty : $"{page.CursorIndex + 1} / {_rows.Count}";
             _description.text = _menu.CurrentDescription;
             _descriptionPanel.style.display = string.IsNullOrEmpty(_description.text) ? DisplayStyle.None : DisplayStyle.Flex;
+            RefreshToast();
 
             var canMovePage = _menu.Pages.Count > 1;
             _backPage.style.display = _menu.Depth > 0 ? DisplayStyle.Flex : DisplayStyle.None;
@@ -389,6 +497,31 @@ namespace DebugMenu
 
             // 値は毎フレーム変わりうるので、見えている行だけ映し直す。
             RefreshVisibleRows();
+        }
+
+        private void RefreshToast()
+        {
+            var toast = _toasts?.Current;
+            if (!toast.HasValue)
+            {
+                _toastPanel.style.display = DisplayStyle.None;
+                return;
+            }
+
+            var color = toast.Value.Kind switch
+            {
+                DebugMenuToastKind.Success => Theme.ToastSuccess,
+                DebugMenuToastKind.Warning => Theme.ToastWarning,
+                DebugMenuToastKind.Error => Theme.ToastError,
+                _ => Theme.ToastInfo,
+            };
+            _toastLabel.text = toast.Value.Message;
+            _toastLabel.style.color = color;
+            _toastPanel.style.borderTopColor = color;
+            _toastPanel.style.borderBottomColor = color;
+            _toastPanel.style.borderLeftColor = color;
+            _toastPanel.style.borderRightColor = color;
+            _toastPanel.style.display = DisplayStyle.Flex;
         }
 
         private void RefreshVisibleRows()
@@ -413,7 +546,15 @@ namespace DebugMenu
             row.Bind(_rows[index], index == _menu.CurrentPage?.CursorIndex, index);
         }
 
-        private VisualElement MakeRow() => new DebugRowView(Theme, SelectRow, ClickRow, ClickValue, DecideValue, AdjustRow, OnTextEditEnded);
+        private VisualElement MakeRow() => new DebugRowView(
+            Theme,
+            SelectRow,
+            ClickRow,
+            ClickValue,
+            DecideValue,
+            AdjustRow,
+            OnTextEditEnded,
+            OnHoverRow);
 
         private static void UnbindRow(VisualElement view, int index)
         {
@@ -427,6 +568,53 @@ namespace DebugMenu
 
             page.CursorIndex = index;
             ResetClickState();
+        }
+
+        private void OnHoverRow(int index, bool hovered, Vector2 position)
+        {
+            if (!hovered || index < 0 || index >= _rows.Count)
+            {
+                _hoverTooltip.style.display = DisplayStyle.None;
+                return;
+            }
+
+            var description = _rows[index].Element?.Description;
+            if (string.IsNullOrWhiteSpace(description))
+            {
+                _hoverTooltip.style.display = DisplayStyle.None;
+                return;
+            }
+
+            _hoverPointerLocal = _root.WorldToLocal(position);
+            _hoverTooltipText.text = description;
+            _hoverTooltip.style.display = DisplayStyle.Flex;
+            PositionHoverTooltip();
+        }
+
+        /// <summary>実寸が確定した吹き出しを、ポインターの近くかつ画面内へ配置する。</summary>
+        private void PositionHoverTooltip()
+        {
+            if (_hoverTooltip.style.display.value == DisplayStyle.None) return;
+
+            var rootWidth = _root.resolvedStyle.width;
+            var rootHeight = _root.resolvedStyle.height;
+            var tooltipWidth = _hoverTooltip.resolvedStyle.width;
+            var tooltipHeight = _hoverTooltip.resolvedStyle.height;
+            if (rootWidth <= 0f || rootHeight <= 0f ||
+                float.IsNaN(tooltipWidth) || float.IsInfinity(tooltipWidth) ||
+                float.IsNaN(tooltipHeight) || float.IsInfinity(tooltipHeight)) return;
+
+            var offset = Theme.EffectiveRowHeight * Theme.HoverTooltipOffsetRatio;
+            var left = _hoverPointerLocal.x + offset;
+            var top = _hoverPointerLocal.y + offset;
+
+            if (left + tooltipWidth > rootWidth) left = _hoverPointerLocal.x - tooltipWidth - offset;
+            if (top + tooltipHeight > rootHeight) top = _hoverPointerLocal.y - tooltipHeight - offset;
+
+            _hoverTooltip.style.right = StyleKeyword.Auto;
+            _hoverTooltip.style.bottom = StyleKeyword.Auto;
+            _hoverTooltip.style.left = Mathf.Clamp(left, 0f, Mathf.Max(0f, rootWidth - tooltipWidth));
+            _hoverTooltip.style.top = Mathf.Clamp(top, 0f, Mathf.Max(0f, rootHeight - tooltipHeight));
         }
 
         private void ClickRow(int index)

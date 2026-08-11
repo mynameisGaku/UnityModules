@@ -20,6 +20,7 @@ namespace DebugMenu
         private readonly Action<int> _decideValue;
         private readonly Action<int, int> _adjustRow;
         private readonly Action<DebugRowView> _editEnded;
+        private readonly Action<int, bool, Vector2> _hoverRow;
 
         private readonly VisualElement _modifiedMark;
         private readonly VisualElement _header;
@@ -57,7 +58,7 @@ namespace DebugMenu
 
         /// <summary>テーマを指定して行の見た目を作る。</summary>
         /// <param name="theme">色と寸法。</param>
-        public DebugRowView(DebugMenuTheme theme) : this(theme, null, null, null, null, null, null) { }
+        public DebugRowView(DebugMenuTheme theme) : this(theme, null, null, null, null, null, null, null) { }
 
         /// <summary>テーマとマウス操作の受け取り先を指定して行を作る。</summary>
         /// <param name="theme">色と寸法。</param>
@@ -65,7 +66,7 @@ namespace DebugMenu
         /// <param name="clickRow">クリックを選択または決定として処理する受け取り先。</param>
         /// <param name="adjustRow">左右ボタンで値を変える処理。</param>
         public DebugRowView(DebugMenuTheme theme, Action<int> selectRow, Action<int> clickRow, Action<int, int> adjustRow)
-            : this(theme, selectRow, clickRow, null, null, adjustRow, null) { }
+            : this(theme, selectRow, clickRow, null, null, adjustRow, null, null) { }
 
         /// <summary>値欄のクリックと文字編集終了の受け取り先も指定して行を作る。</summary>
         /// <param name="theme">色と寸法。</param>
@@ -81,7 +82,7 @@ namespace DebugMenu
             Action<int> clickValue,
             Action<int, int> adjustRow,
             Action<DebugRowView> editEnded)
-            : this(theme, selectRow, clickRow, clickValue, null, adjustRow, editEnded) { }
+            : this(theme, selectRow, clickRow, clickValue, null, adjustRow, editEnded, null) { }
 
         /// <summary>即時に決定する値の受け取り先も指定して行を作る。</summary>
         /// <param name="theme">色と寸法。</param>
@@ -99,6 +100,18 @@ namespace DebugMenu
             Action<int> decideValue,
             Action<int, int> adjustRow,
             Action<DebugRowView> editEnded)
+            : this(theme, selectRow, clickRow, clickValue, decideValue, adjustRow, editEnded, null) { }
+
+        /// <summary>行ホバーの開始、移動、終了も受け取る構成で行を作る。</summary>
+        public DebugRowView(
+            DebugMenuTheme theme,
+            Action<int> selectRow,
+            Action<int> clickRow,
+            Action<int> clickValue,
+            Action<int> decideValue,
+            Action<int, int> adjustRow,
+            Action<DebugRowView> editEnded,
+            Action<int, bool, Vector2> hoverRow)
         {
             _theme = theme;
             _editorTextColor = theme.InputFieldText;
@@ -108,6 +121,7 @@ namespace DebugMenu
             _decideValue = decideValue;
             _adjustRow = adjustRow;
             _editEnded = editEnded;
+            _hoverRow = hoverRow;
 
             var rowHeight = theme.EffectiveRowHeight;
             var fontSize = theme.EffectiveFontSize;
@@ -355,8 +369,9 @@ namespace DebugMenu
 
             _graph.RegisterCallback<PointerDownEvent>(OnExpandedContentPointerDown);
             _colorPicker.RegisterCallback<PointerDownEvent>(OnColorPickerPointerDown, TrickleDown.TrickleDown);
-            RegisterCallback<PointerEnterEvent>(evt => SetHover(true));
-            RegisterCallback<PointerLeaveEvent>(evt => SetHover(false));
+            RegisterCallback<PointerEnterEvent>(OnPointerEnter);
+            RegisterCallback<PointerMoveEvent>(OnPointerMove);
+            RegisterCallback<PointerLeaveEvent>(OnPointerLeave);
             RegisterCallback<GeometryChangedEvent>(OnGeometryChanged);
         }
 
@@ -369,6 +384,10 @@ namespace DebugMenu
         /// <summary>この行の直接入力欄が開いているか。</summary>
         public bool IsEditingText => _editingElement != null;
 
+        /// <summary>この行でスライダーまたは色選択面をドラッグしているか。</summary>
+        public bool HasActivePointerInteraction =>
+            _sliderPointerId >= 0 || _colorPicker.HasActivePointerInteraction;
+
         /// <summary>行の内容を映す。使い回されるので、ここでは確保しない。</summary>
         /// <param name="row">映す行。</param>
         /// <param name="selected">カーソルが乗っているか。</param>
@@ -376,8 +395,10 @@ namespace DebugMenu
         public void Bind(in DebugRow row, bool selected, int rowIndex)
         {
             var element = row.Element;
-            if (!ReferenceEquals(Element, element))
+            if (!ReferenceEquals(Element, element) || _rowIndex != rowIndex)
             {
+                if (_hovered) _hoverRow?.Invoke(_rowIndex, false, Vector2.zero);
+                _hovered = false;
                 CancelSliderDrag();
                 FinishTextEditBeforeRebind();
             }
@@ -587,6 +608,7 @@ namespace DebugMenu
         /// <summary>仮想化リストから外れる前に、進行中のポインター操作を終える。</summary>
         public void Unbind()
         {
+            if (_hovered) _hoverRow?.Invoke(_rowIndex, false, Vector2.zero);
             CancelPointerInteractions();
             FinishTextEditBeforeRebind();
             _colorPicker.Unbind();
@@ -1002,6 +1024,23 @@ namespace DebugMenu
 
             _hovered = hovered;
             ApplyVisualState();
+        }
+
+        private void OnPointerEnter(PointerEnterEvent evt)
+        {
+            SetHover(true);
+            _hoverRow?.Invoke(_rowIndex, true, evt.position);
+        }
+
+        private void OnPointerMove(PointerMoveEvent evt)
+        {
+            if (_hovered) _hoverRow?.Invoke(_rowIndex, true, evt.position);
+        }
+
+        private void OnPointerLeave(PointerLeaveEvent evt)
+        {
+            SetHover(false);
+            _hoverRow?.Invoke(_rowIndex, false, evt.position);
         }
 
         private void SetFavoriteHover(bool hovered)

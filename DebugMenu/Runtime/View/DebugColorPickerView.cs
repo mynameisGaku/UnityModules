@@ -20,6 +20,9 @@ namespace DebugMenu
         private int _dragPointerId = -1;
         private bool _boundShowAlpha;
 
+        /// <summary>色選択面がポインターを捕捉しているか。</summary>
+        public bool HasActivePointerInteraction => _dragPointerId >= 0;
+
         /// <summary>テーマを指定して HSV の描画領域を作る。</summary>
         /// <param name="theme">色と寸法。</param>
         public DebugColorPickerView(DebugMenuTheme theme)

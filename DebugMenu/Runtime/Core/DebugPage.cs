@@ -16,6 +16,7 @@ namespace DebugMenu
 
         private int _cursorIndex;
         private bool _rowsDirty = true;
+        private uint _lastStructureVersion;
 
         /// <summary>ページ名を指定して作る。</summary>
         /// <param name="name">ページ名。ページ一覧と保存キーに使う。</param>
@@ -51,7 +52,7 @@ namespace DebugMenu
         {
             get
             {
-                if (_rowsDirty) Rebuild();
+                EnsureRows();
                 return _visibleRows;
             }
         }
@@ -63,7 +64,7 @@ namespace DebugMenu
             {
                 // 読むときにも平坦化を確定させる。行が減ったあと VisibleRows を
                 // 誰も読まないまま位置だけを問われると、消えた行を指したまま返ってしまう。
-                if (_rowsDirty) Rebuild();
+                EnsureRows();
                 return _cursorIndex;
             }
             set
@@ -176,9 +177,15 @@ namespace DebugMenu
             _visibleRows.Clear();
             Flatten(Root, 0);
             _rowsDirty = false;
+            _lastStructureVersion = DebugElement.StructureVersion;
 
             // 行が減ってカーソルが外に出ることがあるので、ここで詰める。
             if (_cursorIndex >= _visibleRows.Count) _cursorIndex = Math.Max(0, _visibleRows.Count - 1);
+        }
+
+        private void EnsureRows()
+        {
+            if (_rowsDirty || _lastStructureVersion != DebugElement.StructureVersion) Rebuild();
         }
 
         private void Flatten(DebugElement element, int depth)

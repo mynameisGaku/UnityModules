@@ -16,7 +16,7 @@ namespace DebugMenu
     [Serializable]
     public sealed class DebugMenuTheme : ISerializationCallbackReceiver
     {
-        [SerializeField, HideInInspector] private int _sizeLayoutVersion = 1;
+        [SerializeField, HideInInspector] private int _sizeLayoutVersion = 2;
 
         [Header("基本サイズ")]
         [Tooltip("文字以外の GUI 寸法へ一括で掛ける倍率。1 が標準寸法。")]
@@ -248,6 +248,35 @@ namespace DebugMenu
         /// <summary>右下へ浮かせる説明文の色。</summary>
         public Color DescriptionText = new Color(0.88f, 0.88f, 0.88f, 1f);
 
+        [Header("通知")]
+        /// <summary>一時通知の背景。</summary>
+        public Color ToastBackground = new Color(0.04f, 0.05f, 0.07f, 0.96f);
+
+        /// <summary>通常通知の枠と文字。</summary>
+        public Color ToastInfo = new Color(0.60f, 0.75f, 0.95f, 1f);
+
+        /// <summary>成功通知の枠と文字。</summary>
+        public Color ToastSuccess = new Color(0.45f, 0.85f, 0.60f, 1f);
+
+        /// <summary>注意通知の枠と文字。</summary>
+        public Color ToastWarning = new Color(0.98f, 0.62f, 0.30f, 1f);
+
+        /// <summary>失敗通知の枠と文字。</summary>
+        public Color ToastError = new Color(1f, 0.38f, 0.38f, 1f);
+
+        /// <summary>通知欄の最大幅を画面幅に対する割合で表す。</summary>
+        [Range(0.1f, 1f)]
+        public float ToastMaxWidthRatio = 0.5f;
+
+        [Header("ホバー説明")]
+        /// <summary>ポインターと説明吹き出しの間隔。</summary>
+        [Min(0f)]
+        public float HoverTooltipOffsetRatio = 0.6f;
+
+        /// <summary>説明吹き出しの最大幅を画面幅に対する割合で表す。</summary>
+        [Range(0.1f, 1f)]
+        public float HoverTooltipMaxWidthRatio = 0.45f;
+
         /// <summary>古い Scene で未保存の 0 も標準倍率として扱う。</summary>
         public float EffectiveGuiScale => GuiScale > 0f ? Mathf.Clamp(GuiScale, 0.25f, 4f) : 1f;
 
@@ -291,42 +320,56 @@ namespace DebugMenu
         /// <inheritdoc/>
         public void OnBeforeSerialize()
         {
-            if (_sizeLayoutVersion <= 0) _sizeLayoutVersion = 1;
+            if (_sizeLayoutVersion < 2) _sizeLayoutVersion = 2;
         }
 
         /// <inheritdoc/>
         public void OnAfterDeserialize()
         {
-            if (_sizeLayoutVersion > 0) return;
+            if (_sizeLayoutVersion <= 0)
+            {
+                // 新しい寸法フィールドを持たない Scene / Prefab は全て 0 で届くため、
+                // 以前の固定値へ戻して見た目を保つ。
+                GuiScale = 1f;
+                MinimumLabelWidthRatio = 3f;
+                ColumnGapRatio = 0.35f;
+                RowEndPaddingRatio = 0.4f;
+                EditFieldMinimumWidthRatio = 4f;
+                NumericFieldMinimumWidthRatio = 2.5f;
+                SliderMinimumWidthRatio = 1f;
+                AdjustButtonWidthRatio = 0.38f;
+                HeaderButtonSizeRatio = 1f;
+                HeaderButtonGapRatio = 0.16f;
+                CheckboxSizeRatio = 0.55f;
+                ColorSwatchWidthRatio = 1.6f;
+                ColorSwatchHeightRatio = 0.55f;
+                SliderHeightRatio = 0.55f;
+                SliderRailHeightRatio = 0.12f;
+                ControlGapRatio = 0.35f;
+                InputHorizontalPaddingRatio = 0.25f;
+                ModifiedMarkWidthRatio = 0.12f;
+                ColorPickerWidthRatio = 1.1f;
+                ColorPickerPaddingRatio = 0.3f;
+                ExpandedContentInsetRatio = 2f;
+                ExpandedContentMinimumWidthRatio = 4f;
+                InputFieldText = Color.white;
+                InputFieldSelection = new Color(0.20f, 0.45f, 0.75f, 0.80f);
+                InputFieldCursor = Color.white;
+            }
 
-            // 新しい寸法フィールドを持たない Scene / Prefab は全て 0 で届くため、
-            // 以前の固定値へ戻して見た目を保つ。
-            GuiScale = 1f;
-            MinimumLabelWidthRatio = 3f;
-            ColumnGapRatio = 0.35f;
-            RowEndPaddingRatio = 0.4f;
-            EditFieldMinimumWidthRatio = 4f;
-            NumericFieldMinimumWidthRatio = 2.5f;
-            SliderMinimumWidthRatio = 1f;
-            AdjustButtonWidthRatio = 0.38f;
-            HeaderButtonSizeRatio = 1f;
-            HeaderButtonGapRatio = 0.16f;
-            CheckboxSizeRatio = 0.55f;
-            ColorSwatchWidthRatio = 1.6f;
-            ColorSwatchHeightRatio = 0.55f;
-            SliderHeightRatio = 0.55f;
-            SliderRailHeightRatio = 0.12f;
-            ControlGapRatio = 0.35f;
-            InputHorizontalPaddingRatio = 0.25f;
-            ModifiedMarkWidthRatio = 0.12f;
-            ColorPickerWidthRatio = 1.1f;
-            ColorPickerPaddingRatio = 0.3f;
-            ExpandedContentInsetRatio = 2f;
-            ExpandedContentMinimumWidthRatio = 4f;
-            InputFieldText = Color.white;
-            InputFieldSelection = new Color(0.20f, 0.45f, 0.75f, 0.80f);
-            InputFieldCursor = Color.white;
-            _sizeLayoutVersion = 1;
+            if (_sizeLayoutVersion < 2)
+            {
+                ToastBackground = new Color(0.04f, 0.05f, 0.07f, 0.96f);
+                ToastInfo = new Color(0.60f, 0.75f, 0.95f, 1f);
+                ToastSuccess = new Color(0.45f, 0.85f, 0.60f, 1f);
+                ToastWarning = new Color(0.98f, 0.62f, 0.30f, 1f);
+                ToastError = new Color(1f, 0.38f, 0.38f, 1f);
+                ToastMaxWidthRatio = 0.5f;
+                HoverTooltipOffsetRatio = 0.6f;
+                HoverTooltipMaxWidthRatio = 0.45f;
+            }
+
+            _sizeLayoutVersion = 2;
         }
     }
 }

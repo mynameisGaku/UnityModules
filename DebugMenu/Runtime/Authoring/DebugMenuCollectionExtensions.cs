@@ -16,6 +16,7 @@ namespace DebugMenu
         {
             if (page == null) throw new ArgumentNullException(nameof(page));
             var element = page.Root.Add(new DebugPath(label, mode, getter, setter));
+            element.StructureChanged += page.Invalidate;
             page.Invalidate();
             return element;
         }

@@ -62,7 +62,7 @@ IL2CPP では登録メソッドが静的参照されないため、各メソッ�
 | `Enum<TEnum>` | enum 宣言順の候補を左右送り、または展開一覧から選ぶ。 |
 | `Choice` | 文字列配列の候補を左右で選ぶ。 |
 | `Text` | 文字列を直接入力する。 |
-| `Path` / `FilePath` / `FolderPath` | string getter / setterへ接続し、ファイル・フォルダーパスを直接入力する。存在確認と拡張子制限は任意。 |
+| `Path` / `FilePath` / `FolderPath` | string getter / setterへ接続し、インラインブラウザーまたは値欄のダブルクリックでパスを編集する。存在確認と拡張子制限は任意。 |
 | `IntArray` / `FloatArray` | `IList<int>` / `IList<float>` を index ごとの既存数値行として展開する。 |
 | `Color` | 16 進入力、HSV 面、色相帯、任意のアルファ帯。`ShowAlpha = false` は常に不透明にする。 |
 | `Vector` / `DebugVector` | `Vector` 拡張は Vector3、`DebugVector.Of` は Vector2 / Vector3 を追加する。公開コンストラクタでは 2〜4 成分を扱える。 |
@@ -78,7 +78,9 @@ page.IntArray("Enemy IDs", EnemyIds).WithRange(0, 9999);
 page.FloatArray("Blend", BlendWeights).WithRange(0f, 1f).WithStep(0.05f);
 ```
 
-配列の親行は保存対象外で、`[index]` の子行だけが保存されます。外側で `IList<T>` の長さを変えた場合も子行を安全に増減し、ページへ追加した配列は表示行数を自動更新します。
+`Path` の決定操作はインラインブラウザーを展開します。Fileモードはサブフォルダーと拡張子に合うファイル、Folderモードはサブフォルダーと `Use This Folder` を表示します。`[..] Parent` で親へ移動でき、列挙例外はエラー行として表示します。
+
+配列の親行は保存対象外で、`[index]` の子行だけが保存されます。外側で `IList<T>` の長さを変えた場合も子行を安全に増減し、入れ子に配置した場合も表示行数を自動更新します。
 
 ## 入力
 
@@ -116,11 +118,18 @@ page.FloatArray("Blend", BlendWeights).WithRange(0f, 1f).WithStep(0.05f);
 
 入力欄は `Enter` またはフォーカス移動で確定し、`Esc` で破棄します。入力文字、選択背景、カーソルは別々のテーマ色で描きます。解釈できない入力は値へ反映せず、文字を警告色へ変えます。
 
+### ゲームパッド
+
+- 方向パッドまたは左スティックで行移動と値変更を行う。
+- Southで決定、Eastで取消を行う。
+- 左右ショルダーで前後の最上位ページへ移動する。
+- Startでメニューを開閉する。
+
 ### Input System
 
-Input System パッケージは任意です。`DebugMenuKeyboard` は `Unity.InputSystem.Keyboard` をリフレクションで検出し、利用できなければ旧 `UnityEngine.Input` を安全に試します。コンパイル時の Input System 参照はありません。
+Input System パッケージは任意です。`DebugMenuKeyboard` と既定ゲームパッド入力は `Unity.InputSystem.Keyboard` / `Gamepad.current` をリフレクションで検出し、利用できれば機種差を吸収した標準配置で読みます。利用できない場合は旧 `UnityEngine.Input` のキーボード、`Horizontal` / `Vertical`、一般的な十字キー軸名、Xbox互換の JoystickButtonを安全に試します。コンパイル時の Input System 参照はありません。既定のキーボード状態とゲームパッド状態は論理和で合成します。
 
-ゲームパッドやゲーム固有の入力を使う場合は、ビュー生成前に `DebugMenuController.InputProvider` へ `Func<DebugMenuInputState>` を渡します。`PreviousPage` と `NextPage` も状態へ含められます。`InputProvider` は表示中のメニュー操作用で、`F1` のトグル読み取りは置き換えません。独自デバイスから開閉する場合は `DebugMenuRoot.Toggle()` を呼びます。
+ゲーム固有の入力を使う場合は、ビュー生成前に `DebugMenuController.InputProvider` へ `Func<DebugMenuInputState>` を渡します。`PreviousPage` と `NextPage` も状態へ含められます。差し替えた `InputProvider` は表示中のメニュー操作用で、`F1` のトグル読み取りは置き換えません。独自デバイスから開く場合は `DebugMenuRoot.Toggle()` を呼びます。
 
 ## ショートカット
 
@@ -138,7 +147,7 @@ Application.persistentDataPath/DebugMenu/
 
 `DebugMenuSettings(IDebugMenuStorage, string, DebugMenuSettingsFormat)` を直接作ると、ファイル、`DebugMenuPlayerPrefsStorage`、独自ストレージを選べます。形式はJSON、Text、Binaryから選び、読み込み時は中身から自動判別します。`SaveAs` / `LoadFrom` は任意パスへ原子的に書き出し、または読み込みます。保存形式は改ざん防止や暗号化を目的としていません。
 
-`Settings`ページにはプロファイル名、形式、任意ファイルパス、Save / Load / Delete / Save As / Load From / Reset Allがあります。保存済みプロファイルは一覧から適用できます。`Recent`ページは直近16件の変更を重複なしで表示し、借用している元の行を直接操作します。
+`Settings`ページにはプロファイル名、形式、任意ファイルパス、Save / Load / Delete / Save As / Load From / Copy Menu Text / Reset Allがあります。保存済みプロファイルは一覧から適用できます。保存・読込・コピーなどの結果は画面上の短い通知にも表示します。`Recent`ページは直近16件の変更を重複なしで表示し、借用している元の行を直接操作します。
 
 ## Pause とライフサイクル
 
@@ -156,13 +165,11 @@ Application.persistentDataPath/DebugMenu/
 
 `DebugMenuTheme` は Inspector で Controller の **Theme** に展開されます。**Font Size** は文字、**Gui Scale** はボタン・チェック・入力欄・スライダー・グラフ・Pickerを含むGUI寸法を一括変更します。文字が切れないよう、Font Size が拡縮後の行高を超える場合は行高も自動で広がります。操作部品ごとの比率も同じ場所で上書きできます。
 
-Play 中の Inspector 変更は `DebugMenuController` が表示へ反映します。直接入力中は未確定文字を残し、入力の確定または取消後に再適用します。コードから変更した場合は `controller.Theme.SetSizes(24, 1.25f); controller.ApplyTheme();` のように `ApplyTheme()` を呼びます。表示だけを再構築するため、現在ページ、カーソル、値は維持されます。
+トップレベルの `Appearance` ページでは、`Font Size`（8〜48）、`GUI Scale`、`Row Height`、`Panel Margin`、`Top Margin` を実行中に変更できます。`Compact` / `Standard` / `Large` と、Controller生成時の値へ戻す `Reset` があり、各寸法は通常の設定保存で復元されます。
+
+Play 中の Inspector 変更は `DebugMenuController` が表示へ反映します。直接入力中とスライダー・色選択面のドラッグ中は現在の操作を残し、終了後に再適用します。コードから変更した場合は `controller.Theme.SetSizes(24, 1.25f); controller.RequestApplyTheme();` のように遅延反映を要求します。`ApplyTheme()` も互換用に利用できます。表示だけを再構築するため、現在ページ、カーソル、値は維持されます。
 
 入力欄は `InputFieldText`、`InputFieldSelection`、`InputFieldCursor` で文字、選択背景、カーソルを個別に設定します。
-
-## 未実装の機能
-
-トースト、クリップボード用スナップショット、標準ゲームパッド割り当て、実行中Appearanceページは未実装です。Color Picker は行内展開です。
 
 ## 製品版への境界
 

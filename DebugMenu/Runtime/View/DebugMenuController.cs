@@ -15,6 +15,8 @@ namespace DebugMenu
     [DisallowMultipleComponent]
     public sealed class DebugMenuController : MonoBehaviour
     {
+        private static readonly Func<DebugMenuInputState> DefaultInputProvider = ReadDefaultInput;
+
         [Header("表示")]
         [Tooltip("ランタイム UI Toolkit に必要。未設定なら Tools > Debug Menu から作れる。")]
         // Inspector から入るので明示的に null を代入しておく。
@@ -50,7 +52,9 @@ namespace DebugMenu
         private DebugMenuSearchPage _searchPage;
         private DebugMenuProfiles _profiles;
         private DebugMenuSettingsPage _settingsPage;
+        private DebugMenuAppearancePage _appearancePage;
         private DebugMenuRecentChanges _recentChanges;
+        private DebugMenuToastService _toasts;
 
         private float _savedTimeScale = 1f;
         private bool _ownsTimeScalePause;
@@ -79,9 +83,16 @@ namespace DebugMenu
         /// <summary>プロファイルと任意ファイル保存を操作するページ。</summary>
         public DebugMenuSettingsPage SettingsPage => _settingsPage;
 
+        /// <summary>実行中に文字とGUIの寸法を調整するページ。</summary>
+        public DebugMenuAppearancePage AppearancePage => _appearancePage;
+
+        /// <summary>設定操作などの短い結果を画面へ出す通知サービス。</summary>
+        public DebugMenuToastService Toasts => _toasts;
+
         /// <summary>
         /// 入力状態を埋める処理。差し替えれば任意の入力系に対応できる。
-        /// 既定では Input System と旧 Input のうち使える方を自動で選ぶ。
+        /// 差し替えた処理は従来どおり、メニュー表示中に操作を読むときだけ呼ばれる。
+        /// 既定処理だけは非表示中も Start を読み、メニューを開ける。
         /// </summary>
         public System.Func<DebugMenuInputState> InputProvider { get; set; }
 
@@ -90,17 +101,22 @@ namespace DebugMenu
             Menu = new DebugMenuRoot { PauseWhileVisible = _pauseWhileVisible };
             _repeater = new DebugMenuInputRepeater();
             _favorites = new DebugMenuFavorites();
+            _toasts = new DebugMenuToastService();
 
             DebugMenuAutoRegistrar.Populate(Menu);
 
-            // お気に入りは最後に足す。先に足すと、まだ登録されていないページを拾えない。
+            // お気に入りは自動登録の後に足し、登録済みページを全て拾えるようにする。
             Menu.AddPage(_favorites.Page);
+
+            // 保存値を復元できるよう、設定の読み込みより先に外観行を登録する。
+            _appearancePage = new DebugMenuAppearancePage(Theme, RequestApplyTheme);
+            Menu.AddPage(_appearancePage.Page);
 
             _settings = new DebugMenuSettings(format: _settingsFormat);
             if (_persistValues) LoadPersistedValues();
 
             _profiles = new DebugMenuProfiles(format: _settingsFormat);
-            _settingsPage = new DebugMenuSettingsPage(Menu, _settings, _profiles);
+            _settingsPage = new DebugMenuSettingsPage(Menu, _settings, _profiles, _toasts);
             Menu.AddPage(_settingsPage.Page);
 
             _searchPage = new DebugMenuSearchPage(Menu);
@@ -113,7 +129,7 @@ namespace DebugMenu
             _history = new DebugMenuHistory();
             _history.Attach(Menu);
 
-            InputProvider ??= ReadKeyboard;
+            InputProvider ??= DefaultInputProvider;
 
             Menu.VisibilityChanged += OnVisibilityChanged;
 
@@ -177,7 +193,9 @@ namespace DebugMenu
         private void Update()
         {
             if (Menu == null) return;
-            if (_themeRefreshPending && (_view == null || !_view.IsEditingText))
+            _toasts?.Tick(Time.unscaledDeltaTime);
+            if (_themeRefreshPending &&
+                (_view == null || (!_view.IsEditingText && !_view.HasActivePointerInteraction)))
             {
                 _themeRefreshPending = false;
                 ApplyTheme();
@@ -191,7 +209,11 @@ namespace DebugMenu
                 if (_view.TryBeginEditCurrent()) _beginSearchEditPending = false;
             }
 
-            if (DebugMenuKeyboard.WasPressed(_toggleKey)) Menu.Toggle();
+            var usesDefaultInput = ReferenceEquals(InputProvider, DefaultInputProvider);
+            var state = usesDefaultInput ? InputProvider() : default;
+            var toggleRequested = DebugMenuKeyboard.WasPressed(_toggleKey) || state.ToggleMenu;
+            state.ToggleMenu = false;
+            if (toggleRequested) Menu.Toggle();
 
             var textInputConsumed = _view.ConsumeTextInput();
             var shortcutInvoked = !textInputConsumed && Menu.TryInvokeShortcut(
@@ -206,7 +228,9 @@ namespace DebugMenu
                 return;
             }
 
-            var state = InputProvider();
+            // 差し替え入力は従来どおり、表示中にメニュー操作を読むときだけ呼ぶ。
+            if (!usesDefaultInput) state = InputProvider?.Invoke() ?? default;
+
             var command = _repeater.Poll(state, Time.unscaledDeltaTime);
             if (command == DebugMenuCommand.Search)
             {
@@ -236,7 +260,7 @@ namespace DebugMenu
             if (_view == null) return;
 
             // 入力途中の文字を捨てない。確定または取消の直後に Update から再適用する。
-            if (_view.IsEditingText)
+            if (_view.IsEditingText || _view.HasActivePointerInteraction)
             {
                 _themeRefreshPending = true;
                 return;
@@ -248,6 +272,9 @@ namespace DebugMenu
             _view = null;
             EnsureView();
         }
+
+        /// <summary>現在の入力イベントが終わった後でテーマを表示へ反映するよう要求する。</summary>
+        public void RequestApplyTheme() => _themeRefreshPending = true;
 
         /// <summary>全体検索ページを開き、次のレイアウト更新で検索語入力を始める。</summary>
         public void OpenSearch()
@@ -262,7 +289,7 @@ namespace DebugMenu
 
         private void OnValidate()
         {
-            if (Application.isPlaying) _themeRefreshPending = true;
+            if (Application.isPlaying) RequestApplyTheme();
         }
 
         private void UpdateVisibleMenu()
@@ -310,7 +337,7 @@ namespace DebugMenu
             var root = _document.rootVisualElement;
             if (root == null) return false;   // まだ組み上がっていない。次のフレームで再挑戦する。
 
-            _view = new DebugMenuView(Menu, Theme);
+            _view = new DebugMenuView(Menu, Theme, _toasts);
             root.Add(_view.Root);
 
             // 閉じている間は要素ごと外す。非表示でもレイアウトの計算は走るため。
@@ -361,7 +388,17 @@ namespace DebugMenu
         }
 
         /// <summary>
-        /// 既定の入力読み取り。Input System と旧 Input のうち使える方から読む。
+        /// 既定のキーボードとゲームパッド入力を論理和でまとめる。
+        /// </summary>
+        private static DebugMenuInputState ReadDefaultInput()
+        {
+            var keyboard = ReadKeyboard();
+            var gamepad = DebugMenuGamepad.Read();
+            return DebugMenuInputState.Combine(keyboard, gamepad);
+        }
+
+        /// <summary>
+        /// Input System と旧 Input のうち使える方からキーボードを読む。
         /// </summary>
         private static DebugMenuInputState ReadKeyboard()
         {
