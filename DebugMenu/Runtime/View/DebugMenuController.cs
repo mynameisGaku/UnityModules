@@ -42,17 +42,26 @@ namespace DebugMenu
         private DebugMenuInputRepeater _repeater;
         private DebugMenuSettings _settings;
         private DebugMenuFavorites _favorites;
+        private DebugMenuHistory _history;
+        private DebugMenuSearchPage _searchPage;
 
         private float _savedTimeScale = 1f;
         private bool _ownsTimeScalePause;
         private bool _pendingVisibleOnStart;
         private bool _themeRefreshPending;
+        private bool _beginSearchEditPending;
 
         /// <summary>メニュー本体。ページを直接足したいときに使う。</summary>
         public DebugMenuRoot Menu { get; private set; }
 
         /// <summary>色、文字サイズ、パネル寸法。ビュー生成前に変更する。</summary>
         public DebugMenuTheme Theme => _theme ??= new DebugMenuTheme();
+
+        /// <summary>値変更の取り消しとやり直しを管理する履歴。</summary>
+        public DebugMenuHistory History => _history;
+
+        /// <summary>全ページを対象にする検索画面。</summary>
+        public DebugMenuSearchPage SearchPage => _searchPage;
 
         /// <summary>
         /// 入力状態を埋める処理。差し替えれば任意の入力系に対応できる。
@@ -77,6 +86,12 @@ namespace DebugMenu
                 _settings.Load(Menu);
             }
 
+            _searchPage = new DebugMenuSearchPage(Menu);
+            Menu.AddPage(_searchPage.Page);
+
+            _history = new DebugMenuHistory();
+            _history.Attach(Menu);
+
             InputProvider ??= ReadKeyboard;
 
             Menu.VisibilityChanged += OnVisibilityChanged;
@@ -87,6 +102,7 @@ namespace DebugMenu
 
         private void OnDestroy()
         {
+            _history?.Dispose();
             if (Menu != null) Menu.VisibilityChanged -= OnVisibilityChanged;
             if (_persistValues && _settings != null && Menu != null) _settings.Save(Menu);
 
@@ -117,6 +133,12 @@ namespace DebugMenu
             SyncTimeScalePause();
             if (!EnsureView()) return;
 
+            if (_beginSearchEditPending && Menu.IsVisible)
+            {
+                _view.Refresh();
+                if (_view.TryBeginEditCurrent()) _beginSearchEditPending = false;
+            }
+
             if (DebugMenuKeyboard.WasPressed(_toggleKey)) Menu.Toggle();
 
             var textInputConsumed = _view.ConsumeTextInput();
@@ -134,7 +156,12 @@ namespace DebugMenu
 
             var state = InputProvider();
             var command = _repeater.Poll(state, Time.unscaledDeltaTime);
-            if (command == DebugMenuCommand.Decide && _view.TryBeginEditCurrent()) _repeater.Reset();
+            if (command == DebugMenuCommand.Search)
+            {
+                OpenSearch();
+                _repeater.Reset();
+            }
+            else if (command == DebugMenuCommand.Decide && _view.TryBeginEditCurrent()) _repeater.Reset();
             else if (command != DebugMenuCommand.None)
             {
                 if (command == DebugMenuCommand.PreviousPage || command == DebugMenuCommand.NextPage)
@@ -142,7 +169,7 @@ namespace DebugMenu
                     _view.CancelPointerInteractions();
                 }
 
-                DebugMenuCommandDispatcher.Dispatch(Menu, command);
+                DebugMenuCommandDispatcher.Dispatch(Menu, command, _history);
             }
 
             UpdateVisibleMenu();
@@ -168,6 +195,17 @@ namespace DebugMenu
             _view.Root.RemoveFromHierarchy();
             _view = null;
             EnsureView();
+        }
+
+        /// <summary>全体検索ページを開き、次のレイアウト更新で検索語入力を始める。</summary>
+        public void OpenSearch()
+        {
+            if (_searchPage == null || Menu == null) return;
+
+            _view?.CancelPointerInteractions();
+            _searchPage.Open();
+            _beginSearchEditPending = true;
+            _view?.Refresh();
         }
 
         private void OnValidate()
@@ -273,20 +311,35 @@ namespace DebugMenu
         /// <summary>
         /// 既定の入力読み取り。Input System と旧 Input のうち使える方から読む。
         /// </summary>
-        private static DebugMenuInputState ReadKeyboard() => new DebugMenuInputState
+        private static DebugMenuInputState ReadKeyboard()
         {
-            Up = DebugMenuKeyboard.IsHeld(KeyCode.UpArrow),
-            Down = DebugMenuKeyboard.IsHeld(KeyCode.DownArrow),
-            Left = DebugMenuKeyboard.IsHeld(KeyCode.LeftArrow),
-            Right = DebugMenuKeyboard.IsHeld(KeyCode.RightArrow),
-            Decide = DebugMenuKeyboard.WasPressed(KeyCode.Return) || DebugMenuKeyboard.WasPressed(KeyCode.KeypadEnter),
-            Cancel = DebugMenuKeyboard.WasPressed(KeyCode.Escape),
-            PageUp = DebugMenuKeyboard.IsHeld(KeyCode.PageUp),
-            PageDown = DebugMenuKeyboard.IsHeld(KeyCode.PageDown),
-            PreviousPage = DebugMenuKeyboard.WasPressed(KeyCode.LeftBracket),
-            NextPage = DebugMenuKeyboard.WasPressed(KeyCode.RightBracket),
-            ToggleFavorite = DebugMenuKeyboard.WasPressed(KeyCode.F),
-            ResetValue = DebugMenuKeyboard.WasPressed(KeyCode.R),
-        };
+            var control =
+                DebugMenuKeyboard.IsHeld(KeyCode.LeftControl) ||
+                DebugMenuKeyboard.IsHeld(KeyCode.RightControl) ||
+                DebugMenuKeyboard.IsHeld(KeyCode.LeftCommand) ||
+                DebugMenuKeyboard.IsHeld(KeyCode.RightCommand);
+            var shift = DebugMenuKeyboard.IsHeld(KeyCode.LeftShift) || DebugMenuKeyboard.IsHeld(KeyCode.RightShift);
+            var pressedF = DebugMenuKeyboard.WasPressed(KeyCode.F);
+            var pressedZ = DebugMenuKeyboard.WasPressed(KeyCode.Z);
+
+            return new DebugMenuInputState
+            {
+                Up = DebugMenuKeyboard.IsHeld(KeyCode.UpArrow),
+                Down = DebugMenuKeyboard.IsHeld(KeyCode.DownArrow),
+                Left = DebugMenuKeyboard.IsHeld(KeyCode.LeftArrow),
+                Right = DebugMenuKeyboard.IsHeld(KeyCode.RightArrow),
+                Decide = DebugMenuKeyboard.WasPressed(KeyCode.Return) || DebugMenuKeyboard.WasPressed(KeyCode.KeypadEnter),
+                Cancel = DebugMenuKeyboard.WasPressed(KeyCode.Escape),
+                PageUp = DebugMenuKeyboard.IsHeld(KeyCode.PageUp),
+                PageDown = DebugMenuKeyboard.IsHeld(KeyCode.PageDown),
+                PreviousPage = DebugMenuKeyboard.WasPressed(KeyCode.LeftBracket),
+                NextPage = DebugMenuKeyboard.WasPressed(KeyCode.RightBracket),
+                ToggleFavorite = !control && pressedF,
+                ResetValue = !control && DebugMenuKeyboard.WasPressed(KeyCode.R),
+                Search = control && pressedF,
+                Undo = control && !shift && pressedZ,
+                Redo = control && (DebugMenuKeyboard.WasPressed(KeyCode.Y) || shift && pressedZ),
+            };
+        }
     }
 }

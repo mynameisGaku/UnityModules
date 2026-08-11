@@ -17,6 +17,9 @@
 - Bool、Int、Float、Enum、Text、Color、Vector、Action、Watch、Graph、Group、子ページ。
 - 数値スライダー、直接文字入力、HSV・アルファ編集、折れ線グラフ。
 - お気に入り、検索、Undo/Redo、値の保存・復元を支えるサービス API。
+- Enum の候補一覧を展開し、上下移動と決定で選べるコンボ操作。
+- `Ctrl+F` の全体検索ページと検索結果から元の行への移動。
+- `Ctrl+Z` / `Ctrl+Y` による値変更の Undo / Redo。
 - Input System の任意検出と `DebugMenuInputState` による独自入力差し替え。
 - `[DebugMenuRegister]` による分散登録と IL2CPP 向け `[Preserve]` 運用。
 - `Tools > Debug Menu > Add To Scene` による PanelSettings と Controller のセットアップ。

@@ -43,6 +43,15 @@ namespace DebugMenu
 
         /// <summary>次の最上位ページへ切り替える。</summary>
         NextPage,
+
+        /// <summary>全体検索を開く。</summary>
+        Search,
+
+        /// <summary>直前の値変更を取り消す。</summary>
+        Undo,
+
+        /// <summary>取り消した値変更をやり直す。</summary>
+        Redo,
     }
 
     /// <summary>
@@ -93,6 +102,15 @@ namespace DebugMenu
         /// <summary>既定値へ戻すが押されているか。</summary>
         public bool ResetValue;
 
+        /// <summary>全体検索を開く操作が押されているか。</summary>
+        public bool Search;
+
+        /// <summary>取り消し操作が押されているか。</summary>
+        public bool Undo;
+
+        /// <summary>やり直し操作が押されているか。</summary>
+        public bool Redo;
+
         /// <summary>指定の操作が押されているかを読む。</summary>
         /// <param name="command">読む操作。</param>
         public bool IsHeld(DebugMenuCommand command) => command switch
@@ -109,6 +127,9 @@ namespace DebugMenu
             DebugMenuCommand.NextPage => NextPage,
             DebugMenuCommand.ToggleFavorite => ToggleFavorite,
             DebugMenuCommand.ResetValue => ResetValue,
+            DebugMenuCommand.Search => Search,
+            DebugMenuCommand.Undo => Undo,
+            DebugMenuCommand.Redo => Redo,
             _ => false,
         };
     }
@@ -195,6 +216,9 @@ namespace DebugMenu
         {
             if (state.Decide) return DebugMenuCommand.Decide;
             if (state.Cancel) return DebugMenuCommand.Cancel;
+            if (state.Search) return DebugMenuCommand.Search;
+            if (state.Undo) return DebugMenuCommand.Undo;
+            if (state.Redo) return DebugMenuCommand.Redo;
             if (state.ToggleFavorite) return DebugMenuCommand.ToggleFavorite;
             if (state.ResetValue) return DebugMenuCommand.ResetValue;
             if (state.PreviousPage) return DebugMenuCommand.PreviousPage;
@@ -226,6 +250,15 @@ namespace DebugMenu
         /// <param name="menu">対象のメニュー。</param>
         /// <param name="command">実行する操作。</param>
         public static void Dispatch(DebugMenuRoot menu, DebugMenuCommand command)
+        {
+            Dispatch(menu, command, null);
+        }
+
+        /// <summary>履歴操作を含む操作をメニューへ適用する。</summary>
+        /// <param name="menu">対象のメニュー。</param>
+        /// <param name="command">実行する操作。</param>
+        /// <param name="history">Undo / Redo の対象。履歴操作以外では null でよい。</param>
+        public static void Dispatch(DebugMenuRoot menu, DebugMenuCommand command, DebugMenuHistory history)
         {
             if (menu == null) return;
 
@@ -273,6 +306,12 @@ namespace DebugMenu
                     element?.ResetToDefault();
                     break;
                 }
+                case DebugMenuCommand.Undo:
+                    history?.Undo();
+                    break;
+                case DebugMenuCommand.Redo:
+                    history?.Redo();
+                    break;
             }
         }
     }

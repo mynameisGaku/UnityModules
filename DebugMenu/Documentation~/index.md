@@ -59,7 +59,7 @@ IL2CPP では登録メソッドが静的参照されないため、各メソッ�
 | `Bool` | 決定または左右で真偽値を反転する。 |
 | `Int` | `WithRange`、`WithStep`、整数の直接入力。 |
 | `Float` | `WithRange`、`WithStep`、`WithDigits`、Invariant Culture の直接入力。 |
-| `Enum<TEnum>` | enum 宣言順の候補を左右で選ぶ。 |
+| `Enum<TEnum>` | enum 宣言順の候補を左右送り、または展開一覧から選ぶ。 |
 | `Choice` | 文字列配列の候補を左右で選ぶ。 |
 | `Text` | 文字列を直接入力する。 |
 | `Color` | 16 進入力、HSV 面、色相帯、任意のアルファ帯。`ShowAlpha = false` は常に不透明にする。 |
@@ -84,6 +84,8 @@ IL2CPP では登録メソッドが静的参照されないため、各メソッ�
 | `[` / `]` | 前後の最上位ページ |
 | `F` | お気に入りの切り替え |
 | `R` | 現在行を既定値へ戻す |
+| `Ctrl+F` | 全体検索を開いて検索語の入力を始める |
+| `Ctrl+Z` / `Ctrl+Y` | 値変更の Undo / Redo |
 
 方向キーは押しっぱなしで反復し、一定時間後に加速します。`InputProvider` を差し替える場合も `DebugMenuInputRepeater` が同じ反復を適用します。
 
@@ -147,7 +149,7 @@ Play 中の Inspector 変更は `DebugMenuController` が表示へ反映しま�
 
 ## 未実装の機能
 
-コンボ展開、検索UI、標準Undo/Redo入力、プロファイル、最近触った項目、Path／配列行、トースト、クリップボード用スナップショット、標準ゲームパッド割り当て、実行中Appearanceページ、3形式保存は未実装またはサービスだけで画面へ未接続です。Color Picker は行内展開、保存形式はJSONです。
+プロファイル、最近触った項目、Path／配列行、トースト、クリップボード用スナップショット、標準ゲームパッド割り当て、実行中Appearanceページ、3形式保存は未実装または画面へ未接続です。Color Picker は行内展開、保存形式はJSONです。
 
 ## 製品版への境界
 

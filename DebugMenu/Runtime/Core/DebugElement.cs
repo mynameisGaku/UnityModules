@@ -194,6 +194,9 @@ namespace DebugMenu
         /// <summary>保存の対象にする行か。親の状態を映しているだけの行は false を返す。</summary>
         public virtual bool IsSaveable => true;
 
+        /// <summary>全体検索の索引へ載せる行か。検索UI自身のような補助行は false を返す。</summary>
+        public virtual bool IsSearchable => true;
+
         /// <summary>構築時の値から変えられているか。「どこを触ったか」の表示に使う。</summary>
         public virtual bool IsModified => false;
 

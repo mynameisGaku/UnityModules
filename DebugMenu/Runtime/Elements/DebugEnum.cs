@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace DebugMenu
 {
     /// <summary>
-    /// 決められた候補から 1 つ選ぶ行。左右キーで送る。
+    /// 決められた候補から 1 つ選ぶ行。左右キーで送り、決定で候補一覧を開く。
     /// <para>
     /// enum 型に縛らず候補の配列として扱うのは、難易度やステージ名のように
     /// enum ではないものも同じ見た目で選ばせたいため。
@@ -34,7 +34,7 @@ namespace DebugMenu
             _getter = getter ?? throw new ArgumentNullException(nameof(getter));
             _setter = setter ?? throw new ArgumentNullException(nameof(setter));
             _defaultIndex = Wrap(getter());
-            IsExpandable = false;
+            AddOptions();
         }
 
         /// <summary>候補を指定し、この行が選択位置を抱える形で作る。</summary>
@@ -48,7 +48,7 @@ namespace DebugMenu
 
             _stored = Wrap(initialIndex);
             _defaultIndex = _stored;
-            IsExpandable = false;
+            AddOptions();
         }
 
         /// <summary>
@@ -116,8 +116,8 @@ namespace DebugMenu
             Index = next < 0 ? next + _options.Length : next;
         }
 
-        /// <summary>決定でも次の候補へ送る。左右が使えない環境でも選べるようにするため。</summary>
-        public override void OnDecide() => OnAdjust(1);
+        /// <summary>決定で候補一覧を開閉する。</summary>
+        public override void OnDecide() => base.OnDecide();
 
         /// <inheritdoc/>
         public override void ResetToDefault() => Index = _defaultIndex;
@@ -144,6 +144,44 @@ namespace DebugMenu
             return true;
         }
 
+        /// <summary>親の値を映す候補行を構築する。</summary>
+        private void AddOptions()
+        {
+            for (var i = 0; i < _options.Length; i++) Add(new DebugEnumOption(this, i, _options[i]));
+        }
+
         private int Wrap(int index) => index < 0 ? 0 : index >= _options.Length ? _options.Length - 1 : index;
+    }
+
+    /// <summary>候補一覧の 1 行。値は親が持つため、保存対象にはしない。</summary>
+    internal sealed class DebugEnumOption : DebugElement
+    {
+        private readonly DebugEnum _owner;
+        private readonly int _index;
+
+        /// <summary>親と候補位置を指定して作る。</summary>
+        /// <param name="owner">選択値を持つ親。</param>
+        /// <param name="index">この行が表す候補位置。</param>
+        /// <param name="label">候補の表示名。</param>
+        public DebugEnumOption(DebugEnum owner, int index, string label) : base(label)
+        {
+            _owner = owner ?? throw new ArgumentNullException(nameof(owner));
+            _index = index;
+            IsExpandable = false;
+            MarkerVisibility = DebugMarkerVisibility.Never;
+        }
+
+        /// <inheritdoc/>
+        public override bool IsSaveable => false;
+
+        /// <inheritdoc/>
+        public override string GetValueText() => _owner.Index == _index ? "Selected" : string.Empty;
+
+        /// <summary>この候補を親へ設定し、一覧を閉じる。</summary>
+        public override void OnDecide()
+        {
+            _owner.Index = _index;
+            _owner.IsExpanded = false;
+        }
     }
 }

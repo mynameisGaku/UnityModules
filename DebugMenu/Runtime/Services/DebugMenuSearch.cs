@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Containers;
 using Containers.Spatial;
 
@@ -9,6 +10,9 @@ namespace DebugMenu
     {
         /// <summary>その行が属するページ。</summary>
         public readonly DebugPage Page;
+
+        /// <summary>その行へ到達する起点の最上位ページ。</summary>
+        public readonly DebugPage RootPage;
 
         /// <summary>見つかった行。</summary>
         public readonly DebugElement Element;
@@ -21,7 +25,18 @@ namespace DebugMenu
         /// <param name="element">見つかった行。</param>
         /// <param name="path">表示用の経路。</param>
         public DebugSearchHit(DebugPage page, DebugElement element, string path)
+            : this(page, page, element, path)
         {
+        }
+
+        /// <summary>起点ページ・所属ページ・行・経路を指定して作る。</summary>
+        /// <param name="rootPage">最上位の起点ページ。</param>
+        /// <param name="page">属するページ。</param>
+        /// <param name="element">見つかった行。</param>
+        /// <param name="path">表示用の経路。</param>
+        public DebugSearchHit(DebugPage rootPage, DebugPage page, DebugElement element, string path)
+        {
+            RootPage = rootPage;
             Page = page;
             Element = element;
             Path = path;
@@ -57,16 +72,13 @@ namespace DebugMenu
             _index.Clear();
             IndexedCount = 0;
 
-            menu.VisitAll((page, element) =>
+            var visited = new HashSet<DebugPage>();
+            var pages = menu.Pages;
+            for (var i = 0; i < pages.Count; i++)
             {
-                // 見出しや区切りは探しても意味が無い。
-                if (element is DebugGroup || element is DebugSeparator) return;
-
-                var hit = new DebugSearchHit(page, element, BuildPath(page, element));
-                IndexedCount++;
-
-                IndexWords(element.Label, hit);
-            });
+                var rootPage = pages[i];
+                IndexPage(rootPage, rootPage, rootPage.Name, visited);
+            }
         }
 
         /// <summary>
@@ -143,22 +155,50 @@ namespace DebugMenu
         private static bool IsSeparator(char character) =>
             character == ' ' || character == '_' || character == '.' || character == '/' || character == '-';
 
-        private static string BuildPath(DebugPage page, DebugElement element)
+        private void IndexPage(DebugPage rootPage, DebugPage page, string path, HashSet<DebugPage> visited)
         {
-            using var parts = TempList<string>.Rent();
+            if (page == null || !visited.Add(page)) return;
 
-            for (var node = element.Parent; node != null; node = node.Parent)
+            var children = page.Root.Children;
+            for (var i = 0; i < children.Count; i++)
             {
-                // ページの根は名前がページ名と同じなので二重に出さない。
-                if (node.Parent == null) break;
-                parts.List.Add(node.Label);
+                IndexElement(rootPage, page, children[i], path, visited);
+            }
+        }
+
+        private void IndexElement(
+            DebugPage rootPage,
+            DebugPage page,
+            DebugElement element,
+            string parentPath,
+            HashSet<DebugPage> visited)
+        {
+            if (element == null) return;
+
+            var label = element.DisplayLabel ?? string.Empty;
+            var path = string.IsNullOrEmpty(parentPath) || string.IsNullOrEmpty(label)
+                ? parentPath
+                : parentPath + " / " + label;
+
+            // 見出しや区切り、検索UI自身は候補にしない。子は引き続き辿る。
+            if (!(element is DebugGroup) && !(element is DebugSeparator) && element.IsSearchable)
+            {
+                var hit = new DebugSearchHit(rootPage, page, element, parentPath);
+                IndexedCount++;
+                IndexWords(label, hit);
             }
 
-            parts.List.Reverse();
+            if (element is DebugPageLink link)
+            {
+                IndexPage(rootPage, link.Target, path, visited);
+                return;
+            }
 
-            return parts.List.Count == 0
-                ? page.Name
-                : page.Name + " / " + string.Join(" / ", parts.List.ToArray());
+            var children = element.Children;
+            for (var i = 0; i < children.Count; i++)
+            {
+                IndexElement(rootPage, page, children[i], path, visited);
+            }
         }
     }
 }
