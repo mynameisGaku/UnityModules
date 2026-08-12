@@ -16,7 +16,40 @@ namespace DebugMenu
     [DisallowMultipleComponent]
     public sealed class DebugMenuController : MonoBehaviour
     {
+        private const float InputErrorLogIntervalSeconds = 5f;
+        private const int InputErrorLogCacheCapacity = 32;
+
         private static readonly Func<DebugMenuInputState> DefaultInputProvider = ReadDefaultInput;
+
+        /// <summary>入力プロバイダーと例外内容の組を、警告の抑制単位として保持する。</summary>
+        private readonly struct InputProviderErrorKey : IEquatable<InputProviderErrorKey>
+        {
+            public InputProviderErrorKey(Func<DebugMenuInputState> provider, string error)
+            {
+                Provider = provider;
+                Error = error;
+            }
+
+            private Func<DebugMenuInputState> Provider { get; }
+            private string Error { get; }
+
+            public bool Equals(InputProviderErrorKey other)
+            {
+                return ReferenceEquals(Provider, other.Provider) &&
+                       string.Equals(Error, other.Error, StringComparison.Ordinal);
+            }
+
+            public override bool Equals(object obj) => obj is InputProviderErrorKey other && Equals(other);
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    return ((Provider != null ? Provider.GetHashCode() : 0) * 397) ^
+                           StringComparer.Ordinal.GetHashCode(Error ?? string.Empty);
+                }
+            }
+        }
 
         [Header("表示")]
         [Tooltip("ランタイム UI Toolkit に必要。未設定なら Tools > Debug Menu から作れる。")]
@@ -56,6 +89,13 @@ namespace DebugMenu
         private DebugMenuAppearancePage _appearancePage;
         private DebugMenuRecentChanges _recentChanges;
         private DebugMenuToastService _toasts;
+
+        /// <summary>入力取得警告を再び出してよい実時間を、プロバイダーと例外内容ごとに保持する。</summary>
+        private readonly Dictionary<InputProviderErrorKey, float> _inputErrorNextLogTimes =
+            new Dictionary<InputProviderErrorKey, float>();
+
+        /// <summary>期限切れの警告抑制キーを列挙中に退避する。</summary>
+        private readonly List<InputProviderErrorKey> _expiredInputErrorKeys = new List<InputProviderErrorKey>();
 
         /// <summary>共有の一時停止管理へ渡す、このコントローラー固有の識別子。</summary>
         private readonly object _timeScalePauseOwner = new object();
@@ -213,8 +253,10 @@ namespace DebugMenu
                 if (_view.TryBeginEditCurrent()) _beginSearchEditPending = false;
             }
 
-            var usesDefaultInput = ReferenceEquals(InputProvider, DefaultInputProvider);
-            var state = usesDefaultInput ? InputProvider() : default;
+            var inputProvider = InputProvider;
+            var usesDefaultInput = ReferenceEquals(inputProvider, DefaultInputProvider);
+            var state = default(DebugMenuInputState);
+            if (usesDefaultInput) TryReadInputProvider(inputProvider, out state);
             var toggleRequested = DebugMenuKeyboard.WasPressed(_toggleKey) || state.ToggleMenu;
             state.ToggleMenu = false;
             if (toggleRequested) Menu.Toggle();
@@ -233,7 +275,7 @@ namespace DebugMenu
             }
 
             // 差し替え入力は従来どおり、表示中にメニュー操作を読むときだけ呼ぶ。
-            if (!usesDefaultInput) state = InputProvider?.Invoke() ?? default;
+            if (!usesDefaultInput) TryReadInputProvider(inputProvider, out state);
 
             var command = _repeater.Poll(state, Time.unscaledDeltaTime);
             if (command == DebugMenuCommand.Search)
@@ -253,6 +295,85 @@ namespace DebugMenu
             }
 
             UpdateVisibleMenu();
+        }
+
+        /// <summary>
+        /// 既定または差し替え入力を例外境界の内側で読む。
+        /// 失敗時は入力なしへ戻し、押しっぱなし状態を次の正常入力へ持ち越さない。
+        /// </summary>
+        /// <param name="provider">今フレームに読む入力プロバイダー。null は入力なしとして扱う。</param>
+        /// <param name="state">取得した入力状態。失敗時は全操作が解除された状態。</param>
+        /// <returns>正常に取得できたか。null は正常な入力なしとして true。</returns>
+        private bool TryReadInputProvider(Func<DebugMenuInputState> provider, out DebugMenuInputState state)
+        {
+            state = default;
+            if (provider == null) return true;
+
+            try
+            {
+                state = provider();
+                return true;
+            }
+            catch (Exception exception)
+            {
+                _repeater?.Reset();
+                LogInputProviderError(provider, exception);
+                return false;
+            }
+        }
+
+        /// <summary>同じプロバイダーの同じ例外を5秒に1回だけ、スタック情報付きで警告する。</summary>
+        private void LogInputProviderError(Func<DebugMenuInputState> provider, Exception exception)
+        {
+            var now = Time.realtimeSinceStartup;
+            var signature = exception.GetType().FullName + ": " + exception.Message;
+            var key = new InputProviderErrorKey(provider, signature);
+            if (_inputErrorNextLogTimes.TryGetValue(key, out var nextLogTime) && now < nextLogTime) return;
+
+            RemoveExpiredInputErrorLogs(now);
+            if (_inputErrorNextLogTimes.Count >= InputErrorLogCacheCapacity &&
+                !_inputErrorNextLogTimes.ContainsKey(key))
+            {
+                RemoveOldestInputErrorLog();
+            }
+
+            _inputErrorNextLogTimes[key] = now + InputErrorLogIntervalSeconds;
+            Debug.LogWarning(
+                $"[DebugMenu] 入力プロバイダーの読み取りに失敗した。入力なしとして続行する。\n{exception}",
+                this);
+        }
+
+        /// <summary>警告抑制の期限を過ぎた組を取り除き、差し替え済みプロバイダーを保持し続けない。</summary>
+        private void RemoveExpiredInputErrorLogs(float now)
+        {
+            _expiredInputErrorKeys.Clear();
+            foreach (var entry in _inputErrorNextLogTimes)
+            {
+                if (entry.Value <= now) _expiredInputErrorKeys.Add(entry.Key);
+            }
+
+            for (var i = 0; i < _expiredInputErrorKeys.Count; i++)
+            {
+                _inputErrorNextLogTimes.Remove(_expiredInputErrorKeys[i]);
+            }
+        }
+
+        /// <summary>短時間に異なる例外が続いても警告抑制キャッシュを一定数に保つ。</summary>
+        private void RemoveOldestInputErrorLog()
+        {
+            var found = false;
+            var oldestTime = float.MaxValue;
+            var oldestKey = default(InputProviderErrorKey);
+            foreach (var entry in _inputErrorNextLogTimes)
+            {
+                if (found && entry.Value >= oldestTime) continue;
+
+                found = true;
+                oldestTime = entry.Value;
+                oldestKey = entry.Key;
+            }
+
+            if (found) _inputErrorNextLogTimes.Remove(oldestKey);
         }
 
         /// <summary>

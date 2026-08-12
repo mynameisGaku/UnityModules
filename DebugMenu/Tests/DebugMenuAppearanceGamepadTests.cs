@@ -234,6 +234,93 @@ namespace DebugMenu.Tests
         }
 
         [Test]
+        public void Controller_InputProviderFailureIsIsolatedAndSameWarningIsSuppressed()
+        {
+            var gameObject = new GameObject("DebugMenuInputFailureIsolationTest");
+            gameObject.SetActive(false);
+            var controller = gameObject.AddComponent<DebugMenuController>();
+            WritePrivateField(controller, "_persistValues", false);
+
+            try
+            {
+                gameObject.SetActive(true);
+                InvokePrivateMethod(controller, "Awake");
+                WritePrivateField(controller, "_view", new DebugMenuView(controller.Menu, controller.Theme, controller.Toasts));
+                controller.Menu.SetVisible(true);
+
+                var calls = 0;
+                controller.InputProvider = () =>
+                {
+                    calls++;
+                    throw new InvalidOperationException("input provider failed");
+                };
+
+                UnityEngine.TestTools.LogAssert.Expect(
+                    LogType.Warning,
+                    new System.Text.RegularExpressions.Regex(
+                        @"(?s)\[DebugMenu\].*入力プロバイダー.*InvalidOperationException.*input provider failed"));
+
+                Assert.DoesNotThrow(() => InvokeUpdate(controller));
+                Assert.DoesNotThrow(() => InvokeUpdate(controller));
+                Assert.AreEqual(2, calls);
+                Assert.IsTrue(controller.Menu.IsVisible, "入力取得の失敗でメニューが閉じている");
+                UnityEngine.TestTools.LogAssert.NoUnexpectedReceived();
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(gameObject);
+            }
+        }
+
+        [Test]
+        public void Controller_InputProviderRecoveryAcceptsHeldCommandAsNewInput()
+        {
+            var gameObject = new GameObject("DebugMenuInputRecoveryTest");
+            gameObject.SetActive(false);
+            var controller = gameObject.AddComponent<DebugMenuController>();
+            WritePrivateField(controller, "_persistValues", false);
+
+            try
+            {
+                gameObject.SetActive(true);
+                InvokePrivateMethod(controller, "Awake");
+                WritePrivateField(controller, "_view", new DebugMenuView(controller.Menu, controller.Theme, controller.Toasts));
+
+                var page = controller.Menu.AddPage("Input Recovery");
+                page.Root.Add(new DebugElement("First"));
+                page.Root.Add(new DebugElement("Second"));
+                page.Root.Add(new DebugElement("Third"));
+                controller.Menu.SetRootPage(page);
+                controller.Menu.SetVisible(true);
+
+                var shouldThrow = false;
+                controller.InputProvider = () =>
+                {
+                    if (shouldThrow) throw new InvalidOperationException("temporary input failure");
+                    return new DebugMenuInputState { Down = true };
+                };
+
+                InvokeUpdate(controller);
+                Assert.AreEqual(1, page.CursorIndex);
+
+                shouldThrow = true;
+                UnityEngine.TestTools.LogAssert.Expect(
+                    LogType.Warning,
+                    new System.Text.RegularExpressions.Regex(@"(?s)\[DebugMenu\].*入力プロバイダー.*temporary input failure"));
+                Assert.DoesNotThrow(() => InvokeUpdate(controller));
+                Assert.AreEqual(1, page.CursorIndex, "取得失敗時に直前の入力を再利用している");
+
+                shouldThrow = false;
+                InvokeUpdate(controller);
+                Assert.AreEqual(2, page.CursorIndex, "回復後の入力を押しっぱなしの続きとして捨てている");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(gameObject);
+            }
+        }
+
+        [Test]
         public void ApplyTheme_WaitsForActivePointerInteraction()
         {
             var gameObject = new GameObject("DebugMenuPointerThemeApplyTest");
