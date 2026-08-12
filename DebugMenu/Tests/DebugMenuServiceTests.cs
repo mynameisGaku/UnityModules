@@ -269,6 +269,63 @@ namespace DebugMenu.Tests
             Assert.AreEqual(2, second.Count, "別の履歴を外したときに受け取りまで切れている");
         }
 
+        [Test]
+        public void History_IgnoresElementsOwnedByAnotherMenu()
+        {
+            var ownMenu = new DebugMenuRoot();
+            var ownElement = ownMenu.AddPage("Own").Root.Int("count", 0);
+            var otherMenu = new DebugMenuRoot();
+            var otherElement = otherMenu.AddPage("Other").Root.Int("count", 0);
+
+            using var history = new DebugMenuHistory();
+            history.Attach(ownMenu);
+
+            otherElement.Value = 1;
+            otherElement.Value = 2;
+            Assert.AreEqual(0, history.Count, "別メニューの変更が履歴へ混ざっている");
+
+            ownElement.Value = 1;
+            Assert.AreEqual(1, history.Count, "接続したメニューの変更まで除外されている");
+        }
+
+        [Test]
+        public void History_RefreshTracksElementsAddedAfterAttach()
+        {
+            var menu = new DebugMenuRoot();
+            var page = menu.AddPage("Gameplay");
+            using var history = new DebugMenuHistory();
+            history.Attach(menu);
+
+            var element = page.Root.Int("late", 3);
+            history.Refresh();
+            element.Value = 7;
+
+            Assert.IsTrue(history.Undo());
+            Assert.AreEqual(3, element.Value, "後から足した行の初期値へ戻っていない");
+        }
+
+        [Test]
+        public void History_ReattachClearsCommandsFromPreviousMenu()
+        {
+            var firstMenu = new DebugMenuRoot();
+            var firstElement = firstMenu.AddPage("First").Root.Int("count", 0);
+            var secondMenu = new DebugMenuRoot();
+            var secondElement = secondMenu.AddPage("Second").Root.Int("count", 10);
+            using var history = new DebugMenuHistory();
+
+            history.Attach(firstMenu);
+            firstElement.Value = 1;
+            Assert.IsTrue(history.CanUndo);
+
+            history.Attach(secondMenu);
+            Assert.IsFalse(history.CanUndo, "前のメニューの履歴が接続先変更後も残っている");
+
+            secondElement.Value = 11;
+            Assert.IsTrue(history.Undo());
+            Assert.AreEqual(10, secondElement.Value);
+            Assert.AreEqual(1, firstElement.Value, "前のメニューまで書き換えた");
+        }
+
         // ── 設定の保存と復元 ────────────────────────────────────────────────
 
         [Test]

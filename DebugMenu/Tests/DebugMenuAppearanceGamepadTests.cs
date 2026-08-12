@@ -1,7 +1,9 @@
 using System;
+using System.Collections;
 using System.Reflection;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.TestTools;
 using UnityEngine.UIElements;
 
 namespace DebugMenu.Tests
@@ -9,6 +11,9 @@ namespace DebugMenu.Tests
     public sealed class DebugMenuAppearanceGamepadTests
     {
         private const float Tolerance = 0.0001f;
+
+        [SetUp]
+        public void SetUp() => InvokePrivateStaticMethod(typeof(DebugMenuController).Assembly, "DebugMenu.DebugMenuPauseCoordinator", "Reset");
 
         [Test]
         public void GamepadSample_MapsDirectionsAndStandardButtons()
@@ -261,6 +266,137 @@ namespace DebugMenu.Tests
             }
         }
 
+        [Test]
+        public void Controllers_RestoreTimeScaleAfterLastPauseOwnerCloses()
+        {
+            var firstObject = new GameObject("DebugMenuFirstPauseOwner");
+            var secondObject = new GameObject("DebugMenuSecondPauseOwner");
+            firstObject.SetActive(false);
+            secondObject.SetActive(false);
+            var first = firstObject.AddComponent<DebugMenuController>();
+            var second = secondObject.AddComponent<DebugMenuController>();
+            WritePrivateField(first, "_persistValues", false);
+            WritePrivateField(second, "_persistValues", false);
+            var original = Time.timeScale;
+
+            try
+            {
+                Time.timeScale = 0.75f;
+                InvokePrivateMethod(first, "Awake");
+                InvokePrivateMethod(second, "Awake");
+
+                first.Menu.SetVisible(true);
+                second.Menu.SetVisible(true);
+                Assert.That(Time.timeScale, Is.EqualTo(0f).Within(Tolerance));
+
+                first.Menu.SetVisible(false);
+                Assert.That(Time.timeScale, Is.EqualTo(0f).Within(Tolerance), "別の表示中メニューを無視して再開した");
+
+                second.Menu.SetVisible(false);
+                Assert.That(Time.timeScale, Is.EqualTo(0.75f).Within(Tolerance));
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(firstObject);
+                UnityEngine.Object.DestroyImmediate(secondObject);
+                Time.timeScale = original;
+            }
+        }
+
+        [Test]
+        public void Controller_DoesNotOverwriteExternalTimeScaleChangeOnRelease()
+        {
+            var gameObject = new GameObject("DebugMenuExternalTimeScaleTest");
+            gameObject.SetActive(false);
+            var controller = gameObject.AddComponent<DebugMenuController>();
+            WritePrivateField(controller, "_persistValues", false);
+            var original = Time.timeScale;
+
+            try
+            {
+                Time.timeScale = 0.8f;
+                InvokePrivateMethod(controller, "Awake");
+                controller.Menu.SetVisible(true);
+                Assert.That(Time.timeScale, Is.EqualTo(0f).Within(Tolerance));
+
+                Time.timeScale = 0.35f;
+                controller.Menu.SetVisible(false);
+
+                Assert.That(Time.timeScale, Is.EqualTo(0.35f).Within(Tolerance), "外部の時間倍率を古い値で上書きした");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(gameObject);
+                Time.timeScale = original;
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator Controller_DestroyWhileVisibleRestoresTimeScale()
+        {
+            yield return new EnterPlayMode();
+
+            var gameObject = new GameObject("DebugMenuDestroyedPauseOwner");
+            var controller = gameObject.AddComponent<DebugMenuController>();
+            WritePrivateField(controller, "_persistValues", false);
+            var original = Time.timeScale;
+
+            try
+            {
+                Time.timeScale = 0.65f;
+                controller.Menu.SetVisible(true);
+                Assert.That(Time.timeScale, Is.EqualTo(0f).Within(Tolerance));
+
+                UnityEngine.Object.DestroyImmediate(gameObject);
+                gameObject = null;
+
+                Assert.That(Time.timeScale, Is.EqualTo(0.65f).Within(Tolerance), "表示中の破棄で時間倍率を戻していない");
+            }
+            finally
+            {
+                if (gameObject != null) UnityEngine.Object.DestroyImmediate(gameObject);
+                Time.timeScale = original;
+            }
+
+            yield return new ExitPlayMode();
+        }
+
+        [UnityTest]
+        public IEnumerator Controllers_DestroyingOneOwnerKeepsPauseUntilLastOwnerCloses()
+        {
+            yield return new EnterPlayMode();
+
+            var firstObject = new GameObject("DebugMenuDestroyedFirstPauseOwner");
+            var secondObject = new GameObject("DebugMenuRemainingPauseOwner");
+            var first = firstObject.AddComponent<DebugMenuController>();
+            var second = secondObject.AddComponent<DebugMenuController>();
+            WritePrivateField(first, "_persistValues", false);
+            WritePrivateField(second, "_persistValues", false);
+            var original = Time.timeScale;
+
+            try
+            {
+                Time.timeScale = 0.55f;
+                first.Menu.SetVisible(true);
+                second.Menu.SetVisible(true);
+
+                UnityEngine.Object.DestroyImmediate(firstObject);
+                firstObject = null;
+                Assert.That(Time.timeScale, Is.EqualTo(0f).Within(Tolerance), "残る所有者を無視して時間を再開した");
+
+                second.Menu.SetVisible(false);
+                Assert.That(Time.timeScale, Is.EqualTo(0.55f).Within(Tolerance), "最後の所有者が閉じても時間倍率を戻していない");
+            }
+            finally
+            {
+                if (firstObject != null) UnityEngine.Object.DestroyImmediate(firstObject);
+                UnityEngine.Object.DestroyImmediate(secondObject);
+                Time.timeScale = original;
+            }
+
+            yield return new ExitPlayMode();
+        }
+
         private static int FindPageIndex(DebugMenuRoot menu, string name)
         {
             for (var i = 0; i < menu.Pages.Count; i++)
@@ -281,6 +417,15 @@ namespace DebugMenu.Tests
             var method = target.GetType().GetMethod(methodName, BindingFlags.Instance | BindingFlags.NonPublic);
             Assert.NotNull(method, $"{methodName} が見つからない");
             method.Invoke(target, null);
+        }
+
+        private static void InvokePrivateStaticMethod(Assembly assembly, string typeName, string methodName)
+        {
+            var type = assembly.GetType(typeName);
+            Assert.NotNull(type, $"{typeName} が見つからない");
+            var method = type.GetMethod(methodName, BindingFlags.Static | BindingFlags.NonPublic);
+            Assert.NotNull(method, $"{methodName} が見つからない");
+            method.Invoke(null, null);
         }
 
         private static T ReadPrivateField<T>(object target, string fieldName)

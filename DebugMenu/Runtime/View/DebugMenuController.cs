@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -56,7 +57,9 @@ namespace DebugMenu
         private DebugMenuRecentChanges _recentChanges;
         private DebugMenuToastService _toasts;
 
-        private float _savedTimeScale = 1f;
+        /// <summary>共有の一時停止管理へ渡す、このコントローラー固有の識別子。</summary>
+        private readonly object _timeScalePauseOwner = new object();
+
         private bool _ownsTimeScalePause;
         private bool _pendingVisibleOnStart;
         private bool _themeRefreshPending;
@@ -193,6 +196,7 @@ namespace DebugMenu
         private void Update()
         {
             if (Menu == null) return;
+            _history?.Refresh();
             _toasts?.Tick(Time.unscaledDeltaTime);
             if (_themeRefreshPending &&
                 (_view == null || (!_view.IsEditingText && !_view.HasActivePointerInteraction)))
@@ -372,10 +376,13 @@ namespace DebugMenu
                 return;
             }
 
-            if (_ownsTimeScalePause) return;
+            if (_ownsTimeScalePause)
+            {
+                DebugMenuPauseCoordinator.KeepPaused(_timeScalePauseOwner);
+                return;
+            }
 
-            _savedTimeScale = Time.timeScale;
-            Time.timeScale = 0f;
+            DebugMenuPauseCoordinator.Acquire(_timeScalePauseOwner);
             _ownsTimeScalePause = true;
         }
 
@@ -383,7 +390,7 @@ namespace DebugMenu
         {
             if (!_ownsTimeScalePause) return;
 
-            Time.timeScale = _savedTimeScale;
+            DebugMenuPauseCoordinator.Release(_timeScalePauseOwner);
             _ownsTimeScalePause = false;
         }
 
@@ -430,5 +437,73 @@ namespace DebugMenu
                 Redo = control && (DebugMenuKeyboard.WasPressed(KeyCode.Y) || shift && pressedZ),
             };
         }
+    }
+
+    /// <summary>
+    /// 複数のデバッグメニューによる一時停止をまとめ、最後の所有者が離れたときだけ復元する。
+    /// </summary>
+    internal static class DebugMenuPauseCoordinator
+    {
+        /// <summary>一時停止を要求しているコントローラーごとの識別子。</summary>
+        private static readonly HashSet<object> Owners = new HashSet<object>();
+
+        /// <summary>全所有者が離れたときに戻す時間倍率。</summary>
+        private static float _resumeTimeScale = 1f;
+
+        /// <summary>再生開始時に前回の所有情報を捨てる。</summary>
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void Reset()
+        {
+            Owners.Clear();
+            _resumeTimeScale = Time.timeScale;
+        }
+
+        /// <summary>一時停止の所有権を得る。既に所有している識別子は数え直さない。</summary>
+        /// <param name="owner">コントローラーごとに固定された識別子。</param>
+        public static void Acquire(object owner)
+        {
+            if (owner == null || !Owners.Add(owner)) return;
+
+            if (Owners.Count == 1) _resumeTimeScale = Time.timeScale;
+            KeepPaused();
+        }
+
+        /// <summary>
+        /// 所有中の停止を維持する。外部が非ゼロ値へ変えた場合はその値を復元先として覚え直す。
+        /// </summary>
+        /// <param name="owner">所有権を確認する識別子。</param>
+        public static void KeepPaused(object owner)
+        {
+            if (owner == null || !Owners.Contains(owner)) return;
+            KeepPaused();
+        }
+
+        /// <summary>所有権を返す。最後の所有者なら、停止値をまだ所有している場合だけ復元する。</summary>
+        /// <param name="owner">返す所有権の識別子。</param>
+        public static void Release(object owner)
+        {
+            if (owner == null || !Owners.Remove(owner)) return;
+
+            if (Owners.Count > 0)
+            {
+                KeepPaused();
+                return;
+            }
+
+            // 外部が停止値を上書き済みなら、その値を尊重して古い倍率を戻さない。
+            if (Mathf.Approximately(Time.timeScale, 0f)) Time.timeScale = _resumeTimeScale;
+            _resumeTimeScale = Time.timeScale;
+        }
+
+        /// <summary>外部の非ゼロ変更を復元先へ移してから、表示中の停止をかけ直す。</summary>
+        private static void KeepPaused()
+        {
+            var current = Time.timeScale;
+            if (Mathf.Approximately(current, 0f)) return;
+
+            _resumeTimeScale = current;
+            Time.timeScale = 0f;
+        }
+
     }
 }

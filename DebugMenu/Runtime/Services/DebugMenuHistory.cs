@@ -21,6 +21,15 @@ namespace DebugMenu
         private readonly Dictionary<DebugElement, DebugValueSnapshot> _lastSeen =
             new Dictionary<DebugElement, DebugValueSnapshot>();
 
+        /// <summary>接続したメニューに属する値行。別メニューから届く全体通知をここで除外する。</summary>
+        private readonly HashSet<DebugElement> _scope = new HashSet<DebugElement>();
+
+        /// <summary>現在接続しているメニュー。</summary>
+        private DebugMenuRoot _menu;
+
+        /// <summary>スコープを最後に組み直した行構造の版数。</summary>
+        private uint _scopeStructureVersion;
+
         private bool _attached;
 
         /// <summary>取り消しと、やり直しの最中か。控えを取らないための印。</summary>
@@ -54,13 +63,10 @@ namespace DebugMenu
             if (menu == null) throw new ArgumentNullException(nameof(menu));
             if (_attached) Detach();
 
-            // 変更が来たときに「前の値」を出せるよう、いまの値を全部控えておく。
-            _lastSeen.Clear();
-            menu.VisitAll((_, element) =>
-            {
-                var snapshot = DebugValueSnapshot.Capture(element);
-                if (snapshot.HasValue) _lastSeen[element] = snapshot;
-            });
+            // 接続先を替えた後に、前のメニューの行を Undo できてはいけない。
+            _stack.Clear();
+            _menu = menu;
+            Refresh(true);
 
             DebugElement.AddChangeListener(OnElementChanged);
             _attached = true;
@@ -73,7 +79,16 @@ namespace DebugMenu
 
             DebugElement.RemoveChangeListener(OnElementChanged);
             _attached = false;
+            _menu = null;
+            _scope.Clear();
+            _lastSeen.Clear();
         }
+
+        /// <summary>
+        /// 接続後に追加または削除された行を追跡範囲へ反映する。
+        /// 行構造が変わっていなければ走査しないため、毎フレーム呼んでもよい。
+        /// </summary>
+        public void Refresh() => Refresh(false);
 
         /// <summary>直前の変更を取り消す。</summary>
         public bool Undo()
@@ -114,6 +129,9 @@ namespace DebugMenu
             // 取り消し・やり直しで起きた変更まで控えると、履歴が無限に増える。
             if (_applying) return;
 
+            Refresh(false);
+            if (!_scope.Contains(element)) return;
+
             var current = DebugValueSnapshot.Capture(element);
             if (!current.HasValue) return;
 
@@ -130,6 +148,33 @@ namespace DebugMenu
             if (previous.Equals(current)) return;
 
             _stack.Push(new ValueChangeCommand(this, element, previous, current));
+        }
+
+        /// <summary>接続中メニューの値行だけをスコープと直前値へ反映する。</summary>
+        /// <param name="force">版数が同じでも組み直すなら true。</param>
+        private void Refresh(bool force)
+        {
+            if (_menu == null) return;
+            if (!force && _scopeStructureVersion == DebugElement.StructureVersion) return;
+
+            _scope.Clear();
+            _menu.VisitAll((_, element) =>
+            {
+                var snapshot = DebugValueSnapshot.Capture(element);
+                if (!snapshot.HasValue) return;
+
+                _scope.Add(element);
+                if (!_lastSeen.ContainsKey(element)) _lastSeen[element] = snapshot;
+            });
+
+            using var removed = TempList<DebugElement>.Rent();
+            foreach (var pair in _lastSeen)
+            {
+                if (!_scope.Contains(pair.Key)) removed.List.Add(pair.Key);
+            }
+
+            for (var i = 0; i < removed.List.Count; i++) _lastSeen.Remove(removed.List[i]);
+            _scopeStructureVersion = DebugElement.StructureVersion;
         }
 
         /// <summary>1 回分の値変更。行の実体を指しているので、戻すと元の場所にも反映される。</summary>
