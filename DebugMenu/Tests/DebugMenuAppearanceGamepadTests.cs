@@ -1,9 +1,7 @@
 using System;
-using System.Collections;
 using System.Reflection;
 using NUnit.Framework;
 using UnityEngine;
-using UnityEngine.TestTools;
 using UnityEngine.UIElements;
 
 namespace DebugMenu.Tests
@@ -331,12 +329,11 @@ namespace DebugMenu.Tests
             }
         }
 
-        [UnityTest]
-        public IEnumerator Controller_DestroyWhileVisibleRestoresTimeScale()
+        [Test]
+        public void Controller_DestroyWhileVisibleRestoresTimeScale()
         {
-            yield return new EnterPlayMode();
-
             var gameObject = new GameObject("DebugMenuDestroyedPauseOwner");
+            gameObject.SetActive(false);
             var controller = gameObject.AddComponent<DebugMenuController>();
             WritePrivateField(controller, "_persistValues", false);
             var original = Time.timeScale;
@@ -344,11 +341,11 @@ namespace DebugMenu.Tests
             try
             {
                 Time.timeScale = 0.65f;
+                InvokePrivateMethod(controller, "Awake");
                 controller.Menu.SetVisible(true);
                 Assert.That(Time.timeScale, Is.EqualTo(0f).Within(Tolerance));
 
-                UnityEngine.Object.DestroyImmediate(gameObject);
-                gameObject = null;
+                InvokePrivateMethod(controller, "OnDestroy");
 
                 Assert.That(Time.timeScale, Is.EqualTo(0.65f).Within(Tolerance), "表示中の破棄で時間倍率を戻していない");
             }
@@ -357,17 +354,15 @@ namespace DebugMenu.Tests
                 if (gameObject != null) UnityEngine.Object.DestroyImmediate(gameObject);
                 Time.timeScale = original;
             }
-
-            yield return new ExitPlayMode();
         }
 
-        [UnityTest]
-        public IEnumerator Controllers_DestroyingOneOwnerKeepsPauseUntilLastOwnerCloses()
+        [Test]
+        public void Controllers_DestroyingOneOwnerKeepsPauseUntilLastOwnerCloses()
         {
-            yield return new EnterPlayMode();
-
             var firstObject = new GameObject("DebugMenuDestroyedFirstPauseOwner");
             var secondObject = new GameObject("DebugMenuRemainingPauseOwner");
+            firstObject.SetActive(false);
+            secondObject.SetActive(false);
             var first = firstObject.AddComponent<DebugMenuController>();
             var second = secondObject.AddComponent<DebugMenuController>();
             WritePrivateField(first, "_persistValues", false);
@@ -377,11 +372,12 @@ namespace DebugMenu.Tests
             try
             {
                 Time.timeScale = 0.55f;
+                InvokePrivateMethod(first, "Awake");
+                InvokePrivateMethod(second, "Awake");
                 first.Menu.SetVisible(true);
                 second.Menu.SetVisible(true);
 
-                UnityEngine.Object.DestroyImmediate(firstObject);
-                firstObject = null;
+                InvokePrivateMethod(first, "OnDestroy");
                 Assert.That(Time.timeScale, Is.EqualTo(0f).Within(Tolerance), "残る所有者を無視して時間を再開した");
 
                 second.Menu.SetVisible(false);
@@ -393,8 +389,6 @@ namespace DebugMenu.Tests
                 UnityEngine.Object.DestroyImmediate(secondObject);
                 Time.timeScale = original;
             }
-
-            yield return new ExitPlayMode();
         }
 
         private static int FindPageIndex(DebugMenuRoot menu, string name)
