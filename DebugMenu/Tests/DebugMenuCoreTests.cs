@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using Containers;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
@@ -1493,7 +1492,7 @@ namespace DebugMenu.Tests
             broken.SetLabelProvider(() => throw new System.InvalidOperationException("label failed"));
             page.Root.Add(new DebugBool("Healthy", true));
             var search = new DebugMenuSearch();
-            var results = new FastList<DebugSearchHit>();
+            var results = new List<DebugSearchHit>();
 
             LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*ラベル取得"));
             Assert.DoesNotThrow(() => search.Rebuild(menu));

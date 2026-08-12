@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using System.Reflection;
-using Containers;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
@@ -98,6 +97,74 @@ namespace DebugMenu.Tests
                     var action = _onMetadata;
                     _onMetadata = null;
                     action?.Invoke();
+                    return false;
+                }
+            }
+        }
+
+        /// <summary>検索対象判定だけを一時的に失敗させる独自行。</summary>
+        private sealed class ThrowingSearchMetadataElement : DebugElement
+        {
+            public ThrowingSearchMetadataElement(string label) : base(label) { }
+
+            public bool ThrowOnSearchable { get; set; }
+            public override bool IsSearchable => ThrowOnSearchable
+                ? throw new System.InvalidOperationException("searchable metadata failed")
+                : true;
+        }
+
+        /// <summary>検索走査のCountまたはindex取得を一時的に失敗させる親行。</summary>
+        private sealed class ThrowingSearchChildrenElement : DebugElement
+        {
+            private sealed class ThrowingList : IReadOnlyList<DebugElement>
+            {
+                private readonly ThrowingSearchChildrenElement _owner;
+                private readonly IReadOnlyList<DebugElement> _source;
+
+                public ThrowingList(ThrowingSearchChildrenElement owner, IReadOnlyList<DebugElement> source)
+                {
+                    _owner = owner;
+                    _source = source;
+                }
+
+                public int Count => _owner.ThrowOnCount
+                    ? throw new System.InvalidOperationException("search children count failed")
+                    : _source.Count;
+
+                public DebugElement this[int index] => _owner.ThrowOnIndex
+                    ? throw new System.InvalidOperationException("search children index failed")
+                    : _source[index];
+
+                public IEnumerator<DebugElement> GetEnumerator() => _source.GetEnumerator();
+                System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
+            }
+
+            private readonly IReadOnlyList<DebugElement> _children;
+
+            public ThrowingSearchChildrenElement(string label) : base(label)
+            {
+                _children = new ThrowingList(this, base.Children);
+            }
+
+            public bool ThrowOnCount { get; set; }
+            public bool ThrowOnIndex { get; set; }
+            public bool ThrowOnChildren { get; set; }
+            public override IReadOnlyList<DebugElement> Children => ThrowOnChildren
+                ? throw new System.InvalidOperationException("search children getter failed")
+                : _children;
+        }
+
+        /// <summary>検索対象判定中に任意処理を再入させる独自行。</summary>
+        private sealed class ReentrantSearchElement : DebugElement
+        {
+            public ReentrantSearchElement(string label) : base(label) { }
+
+            public System.Action OnSearchable { get; set; }
+            public override bool IsSearchable
+            {
+                get
+                {
+                    OnSearchable?.Invoke();
                     return false;
                 }
             }
@@ -273,11 +340,11 @@ namespace DebugMenu.Tests
             var search = new DebugMenuSearch();
             search.Rebuild(menu);
 
-            using var hits = TempList<DebugSearchHit>.Rent();
-            search.Query("speed", hits.List);
+            var hits = new List<DebugSearchHit>();
+            search.Query("speed", hits);
 
-            Assert.AreEqual(1, hits.List.Count, "後ろの語から引けていない");
-            Assert.AreEqual("Move Speed", hits.List[0].Element.Label);
+            Assert.AreEqual(1, hits.Count, "後ろの語から引けていない");
+            Assert.AreEqual("Move Speed", hits[0].Element.Label);
         }
 
         [Test]
@@ -290,10 +357,10 @@ namespace DebugMenu.Tests
             var search = new DebugMenuSearch();
             search.Rebuild(menu);
 
-            using var hits = TempList<DebugSearchHit>.Rent();
-            search.Query("fire", hits.List);
+            var hits = new List<DebugSearchHit>();
+            search.Query("fire", hits);
 
-            Assert.AreEqual(1, hits.List.Count, "同じ行が複数回返っている");
+            Assert.AreEqual(1, hits.Count, "同じ行が複数回返っている");
         }
 
         [Test]
@@ -306,11 +373,11 @@ namespace DebugMenu.Tests
             var search = new DebugMenuSearch();
             search.Rebuild(menu);
 
-            using var hits = TempList<DebugSearchHit>.Rent();
-            search.Query("player", hits.List);
+            var hits = new List<DebugSearchHit>();
+            search.Query("player", hits);
 
-            Assert.AreEqual(1, hits.List.Count, "見出しまで検索結果に出ている");
-            Assert.AreEqual("Player Health", hits.List[0].Element.Label);
+            Assert.AreEqual(1, hits.Count, "見出しまで検索結果に出ている");
+            Assert.AreEqual("Player Health", hits[0].Element.Label);
         }
 
         [Test]
@@ -322,10 +389,311 @@ namespace DebugMenu.Tests
             var search = new DebugMenuSearch();
             search.Rebuild(menu);
 
-            using var hits = TempList<DebugSearchHit>.Rent();
-            search.Query("  ", hits.List);
+            var hits = new List<DebugSearchHit>();
+            search.Query("  ", hits);
 
-            Assert.AreEqual(0, hits.List.Count);
+            Assert.AreEqual(0, hits.Count);
+        }
+
+        [TestCase("render")]
+        [TestCase("MODE")]
+        [TestCase("quality")]
+        [TestCase("ultra")]
+        [TestCase("fast")]
+        public void Search_MatchesCaseInsensitivePrefixesAfterSeparators(string query)
+        {
+            var menu = new DebugMenuRoot();
+            menu.AddPage("Graphics").Root.Bool("Render_Mode-Quality/Ultra.Fast", false);
+            var search = new DebugMenuSearch();
+            search.Rebuild(menu);
+            var hits = new List<DebugSearchHit>();
+
+            search.Query(query, hits);
+
+            Assert.AreEqual(1, hits.Count, query);
+        }
+
+        [Test]
+        public void Search_MatchesJapanesePrefix()
+        {
+            var menu = new DebugMenuRoot();
+            menu.AddPage("描画").Root.Bool("影 品質", false);
+            var search = new DebugMenuSearch();
+            search.Rebuild(menu);
+            var hits = new List<DebugSearchHit>();
+
+            search.Query("品", hits);
+
+            Assert.AreEqual(1, hits.Count);
+            Assert.AreEqual("影 品質", hits[0].Element.Label);
+        }
+
+        [Test]
+        public void Search_OrdersWordsOrdinallyAndKeepsBucketRegistrationOrder()
+        {
+            var menu = new DebugMenuRoot();
+            var page = menu.AddPage("Gameplay");
+            page.Root.Bool("Zulu caramel", false);
+            page.Root.Bool("First cargo", false);
+            page.Root.Bool("Second cargo", false);
+            var search = new DebugMenuSearch();
+            search.Rebuild(menu);
+            var hits = new List<DebugSearchHit>();
+
+            search.Query("car", hits);
+
+            CollectionAssert.AreEqual(
+                new[] { "Zulu caramel", "First cargo", "Second cargo" },
+                new[] { hits[0].Element.Label, hits[1].Element.Label, hits[2].Element.Label });
+        }
+
+        [Test]
+        public void Search_AppendsWithoutClearingAndHonorsTotalLimit()
+        {
+            var menu = new DebugMenuRoot();
+            var page = menu.AddPage("Gameplay");
+            var first = page.Root.Bool("Target Alpha", false);
+            page.Root.Bool("Target Beta", false);
+            var existingElement = new DebugBool("Existing", false);
+            var existing = new DebugSearchHit(page, existingElement, "Existing");
+            var search = new DebugMenuSearch();
+            search.Rebuild(menu);
+            var hits = new List<DebugSearchHit> { existing };
+
+            search.Query("target", hits, 2);
+
+            Assert.AreEqual(2, hits.Count);
+            Assert.AreSame(existingElement, hits[0].Element);
+            Assert.AreSame(first, hits[1].Element);
+        }
+
+        [Test]
+        public void Search_DoesNotDuplicateAnElementAlreadyInResults()
+        {
+            var menu = new DebugMenuRoot();
+            var page = menu.AddPage("Gameplay");
+            var target = page.Root.Bool("Target", false);
+            var search = new DebugMenuSearch();
+            search.Rebuild(menu);
+            var hits = new List<DebugSearchHit>
+            {
+                new DebugSearchHit(page, target, "Gameplay"),
+            };
+
+            search.Query("target", hits);
+
+            Assert.AreEqual(1, hits.Count);
+        }
+
+        [Test]
+        public void Search_RebuildHandlesCyclicPageGraph()
+        {
+            var menu = new DebugMenuRoot();
+            var root = menu.AddPage("Root");
+            var child = new DebugPage("Child");
+            root.Root.Bool("CycleValue Root", false);
+            child.Root.Bool("CycleValue Child", false);
+            root.AddChildPage(child, DebugAttachMode.Page, "ToChild");
+            child.AddChildPage(root, DebugAttachMode.Page, "ToRoot");
+            var search = new DebugMenuSearch();
+            var hits = new List<DebugSearchHit>();
+
+            Assert.DoesNotThrow(() => search.Rebuild(menu));
+            search.Query("cyclevalue", hits);
+
+            Assert.AreEqual(2, hits.Count);
+        }
+
+        [Test]
+        public void Search_QueryUsesBclCollectionBoundary()
+        {
+            var method = typeof(DebugMenuSearch).GetMethod(nameof(DebugMenuSearch.Query));
+
+            Assert.NotNull(method);
+            Assert.AreEqual(typeof(ICollection<DebugSearchHit>), method.GetParameters()[1].ParameterType);
+        }
+
+        [Test]
+        public void Search_BorrowedViewsUseOnlyTheOriginalOwnerPath()
+        {
+            var menu = new DebugMenuRoot();
+            var borrowedPage = menu.AddPage("Borrowed First");
+            var originalPage = menu.AddPage("Original");
+            var target = originalPage.Root.Bool("Canonical Target", false);
+            borrowedPage.Root.Add(new DebugGroup("Favorites")).AddBorrowed(target);
+            borrowedPage.Root.Add(new DebugGroup("Recent")).AddBorrowed(target);
+            var search = new DebugMenuSearch();
+            var hits = new List<DebugSearchHit>();
+
+            search.Rebuild(menu);
+            search.Query("canonical", hits);
+
+            Assert.AreEqual(1, hits.Count);
+            Assert.AreSame(target, hits[0].Element);
+            Assert.AreSame(originalPage, hits[0].RootPage);
+            Assert.AreSame(originalPage, hits[0].Page);
+            Assert.AreEqual("Original", hits[0].Path);
+        }
+
+        [Test]
+        public void Search_TopLevelPageLinkUsesTargetOwnCanonicalPath()
+        {
+            var menu = new DebugMenuRoot();
+            var shortcutPage = menu.AddPage("Shortcut First");
+            var targetPage = new DebugPage("Canonical Page");
+            var target = targetPage.Root.Bool("Linked Canonical Target", false);
+            shortcutPage.AddChildPage(targetPage, DebugAttachMode.Page, "To Canonical");
+            menu.AddPage(targetPage);
+            var search = new DebugMenuSearch();
+            var hits = new List<DebugSearchHit>();
+
+            search.Rebuild(menu);
+            search.Query("linked", hits);
+
+            Assert.AreEqual(1, hits.Count);
+            Assert.AreSame(target, hits[0].Element);
+            Assert.AreSame(targetPage, hits[0].RootPage);
+            Assert.AreSame(targetPage, hits[0].Page);
+            Assert.AreEqual("Canonical Page", hits[0].Path);
+        }
+
+        [Test]
+        public void Search_RebuildSkipsThrowingMetadataAndRecovers()
+        {
+            var menu = new DebugMenuRoot();
+            var page = menu.AddPage("Gameplay");
+            var broken = page.Root.Add(new ThrowingSearchMetadataElement("Broken Search"));
+            broken.ThrowOnSearchable = true;
+            var healthy = page.Root.Bool("Healthy Search", false);
+            var search = new DebugMenuSearch();
+            var hits = new List<DebugSearchHit>();
+
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*検索対象確認"));
+            Assert.DoesNotThrow(() => search.Rebuild(menu));
+            search.Query("healthy", hits);
+
+            Assert.AreEqual(1, hits.Count);
+            Assert.AreSame(healthy, hits[0].Element);
+            Assert.IsTrue(broken.HasReadError);
+
+            broken.ThrowOnSearchable = false;
+            hits.Clear();
+            search.Rebuild(menu);
+            search.Query("broken", hits);
+
+            Assert.AreEqual(1, hits.Count);
+            Assert.AreSame(broken, hits[0].Element);
+            Assert.IsFalse(broken.HasReadError);
+        }
+
+        [TestCase(0)]
+        [TestCase(1)]
+        [TestCase(2)]
+        public void Search_RebuildSkipsThrowingChildBranchAndRecovers(int failureMode)
+        {
+            var menu = new DebugMenuRoot();
+            var page = menu.AddPage("Gameplay");
+            var brokenParent = page.Root.Add(new ThrowingSearchChildrenElement("Broken Branch"));
+            var recoveredChild = brokenParent.Add(new DebugBool("Recovered Child", false));
+            var healthy = page.Root.Bool("Healthy Sibling", false);
+            brokenParent.ThrowOnChildren = failureMode == 0;
+            brokenParent.ThrowOnCount = failureMode == 1;
+            brokenParent.ThrowOnIndex = failureMode == 2;
+            var search = new DebugMenuSearch();
+            var hits = new List<DebugSearchHit>();
+
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*検索構造取得"));
+            Assert.DoesNotThrow(() => search.Rebuild(menu));
+            search.Query("healthy", hits);
+
+            Assert.AreEqual(1, hits.Count);
+            Assert.AreSame(healthy, hits[0].Element);
+            Assert.IsTrue(brokenParent.HasReadError);
+
+            brokenParent.ThrowOnChildren = false;
+            brokenParent.ThrowOnCount = false;
+            brokenParent.ThrowOnIndex = false;
+            hits.Clear();
+            search.Rebuild(menu);
+            search.Query("recovered", hits);
+
+            Assert.AreEqual(1, hits.Count);
+            Assert.AreSame(recoveredChild, hits[0].Element);
+            Assert.IsFalse(brokenParent.HasReadError);
+        }
+
+        [Test]
+        public void Search_RebuildCoalescesOneShotReentryAndIndexesLatestStructure()
+        {
+            var menu = new DebugMenuRoot();
+            var page = menu.AddPage("Gameplay");
+            var trigger = page.Root.Add(new ReentrantSearchElement("Rebuild Trigger"));
+            var search = new DebugMenuSearch();
+            search.Rebuild(menu);
+            DebugElement latest = null;
+            trigger.OnSearchable = () =>
+            {
+                trigger.OnSearchable = null;
+                latest = page.Root.Bool("Reentrant Latest", false);
+                search.Rebuild(menu);
+            };
+
+            Assert.DoesNotThrow(() => search.Rebuild(menu));
+            var latestHits = new List<DebugSearchHit>();
+            search.Query("reentrant", latestHits);
+
+            Assert.AreEqual(1, latestHits.Count, "再入要求後の構造が2世代目へ反映されていない");
+            Assert.AreSame(latest, latestHits[0].Element);
+        }
+
+        [Test]
+        public void Search_QueryDuringRebuildUsesPreviousCompletedIndex()
+        {
+            var menu = new DebugMenuRoot();
+            var page = menu.AddPage("Gameplay");
+            var trigger = page.Root.Add(new ReentrantSearchElement("Query Trigger"));
+            var publishedTail = page.Root.Bool("Published Tail", false);
+            var search = new DebugMenuSearch();
+            search.Rebuild(menu);
+            var publishedCountDuringBuild = -1;
+            DebugElement publishedElementDuringBuild = null;
+            trigger.OnSearchable = () =>
+            {
+                trigger.OnSearchable = null;
+                var published = new List<DebugSearchHit>();
+                search.Query("published", published);
+                publishedCountDuringBuild = published.Count;
+                if (published.Count > 0) publishedElementDuringBuild = published[0].Element;
+            };
+
+            Assert.DoesNotThrow(() => search.Rebuild(menu));
+
+            Assert.AreEqual(1, publishedCountDuringBuild, "構築途中の索引がQueryへ公開された");
+            Assert.AreSame(publishedTail, publishedElementDuringBuild);
+        }
+
+        [Test]
+        public void Search_RebuildBoundsRepeatedSelfRequestsToTwoPasses()
+        {
+            var menu = new DebugMenuRoot();
+            var page = menu.AddPage("Gameplay");
+            var trigger = page.Root.Add(new ReentrantSearchElement("Repeated Trigger"));
+            var healthy = page.Root.Bool("Healthy Bounded", false);
+            var search = new DebugMenuSearch();
+            var requestCount = 0;
+            trigger.OnSearchable = () =>
+            {
+                requestCount++;
+                search.Rebuild(menu);
+            };
+
+            Assert.DoesNotThrow(() => search.Rebuild(menu));
+            var hits = new List<DebugSearchHit>();
+            search.Query("healthy", hits);
+
+            Assert.AreEqual(2, requestCount, "自己要求が最大2世代へ集約されていない");
+            Assert.AreEqual(1, hits.Count);
+            Assert.AreSame(healthy, hits[0].Element);
         }
 
         // ── 取り消し ────────────────────────────────────────────────────────

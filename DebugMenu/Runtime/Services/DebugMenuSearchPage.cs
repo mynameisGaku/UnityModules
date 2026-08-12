@@ -1,5 +1,5 @@
 using System;
-using Containers;
+using System.Collections.Generic;
 
 namespace DebugMenu
 {
@@ -10,7 +10,7 @@ namespace DebugMenu
 
         private readonly DebugMenuRoot _menu;
         private readonly DebugMenuSearch _search = new DebugMenuSearch();
-        private readonly FastList<DebugSearchHit> _hits = new FastList<DebugSearchHit>();
+        private readonly List<DebugSearchHit> _hits = new List<DebugSearchHit>();
         private readonly DebugSearchQuery _queryElement;
 
         private string _query = string.Empty;

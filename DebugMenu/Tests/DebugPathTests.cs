@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using NUnit.Framework;
 
@@ -245,7 +246,7 @@ namespace DebugMenu.Tests
 
             var search = new DebugMenuSearch();
             search.Rebuild(menu);
-            var results = new Containers.FastList<DebugSearchHit>();
+            var results = new List<DebugSearchHit>();
             search.Query("HiddenCandidate", results);
             Assert.AreEqual(0, results.Count);
         }
