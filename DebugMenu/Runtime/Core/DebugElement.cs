@@ -108,14 +108,26 @@ namespace DebugMenu
         /// </summary>
         public string DisplayLabel => _labelProvider != null ? _labelProvider() : Label;
 
-        /// <summary>表示用の取得処理が失敗しているか。失敗した行だけをエラー表示へ切り替えるために使う。</summary>
-        public bool HasReadError => !string.IsNullOrEmpty(_readErrorOperation);
+        /// <summary>この行の取得、設定、操作のいずれかが失敗しているか。</summary>
+        public bool HasError => !string.IsNullOrEmpty(_readErrorOperation);
 
-        /// <summary>行へ出す短いエラー表示。例外本文はログへ出し、メニューの幅を圧迫しない。</summary>
-        public string ReadErrorText => HasReadError ? "ERROR: " + _readErrorOperation : string.Empty;
+        /// <summary>この行で最後に発生したエラー表示。</summary>
+        public string ErrorText => HasError ? "ERROR: " + _readErrorOperation : string.Empty;
 
-        /// <summary>最後に失敗した取得処理の例外メッセージ。独自Viewで詳細を出す場合に使う。</summary>
-        public string ReadErrorMessage => _readErrorMessage;
+        /// <summary>この行で最後に発生した例外メッセージ。</summary>
+        public string ErrorMessage => _readErrorMessage;
+
+        /// <summary>旧API。取得以外のエラーも含むため <see cref="HasError"/> を使う。</summary>
+        public bool HasReadError => HasError;
+
+        /// <summary>旧API。取得・設定・操作を含む行エラーの短い表示を返す。</summary>
+        public string ReadErrorText => ErrorText;
+
+        /// <summary>旧API。最後に失敗した取得・設定・操作の例外メッセージを返す。</summary>
+        public string ReadErrorMessage => ErrorMessage;
+
+        /// <summary>直近の失敗が値設定で、取得は継続できる状態か。</summary>
+        internal bool HasWriteError => string.Equals(_readErrorOperation, "値設定", StringComparison.Ordinal);
 
         /// <summary>
         /// 表示名を毎フレーム作る関数を差す。監視値をそのまま名前に出したいとき
@@ -154,6 +166,57 @@ namespace DebugMenu
             {
                 value = default;
                 ReportReadError("値取得", exception);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// 利用側の設定関数を例外境界の内側で呼ぶ。失敗した行だけをエラー表示にし、
+        /// 他の行の操作、設定復元、ポインター処理を止めない。
+        /// </summary>
+        /// <typeparam name="T">設定する値の型。</typeparam>
+        /// <param name="setter">利用側の設定関数。</param>
+        /// <param name="value">設定する値。</param>
+        /// <returns>設定関数が正常に完了したなら true。</returns>
+        protected bool TryWriteExternalValue<T>(Action<T> setter, T value)
+        {
+            try
+            {
+                setter(value);
+                ClearReadError("値設定");
+                return true;
+            }
+            catch (Exception exception)
+            {
+                ReportReadError("値設定", exception);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// 下位の行から親の設定処理へ書き込む。親が失敗をfalseで返した場合も、
+        /// 下位の行自身を失敗状態にして成功通知を出さない。
+        /// </summary>
+        /// <typeparam name="T">設定する値の型。</typeparam>
+        /// <param name="setter">成功可否を返す設定処理。</param>
+        /// <param name="value">設定する値。</param>
+        /// <returns>設定処理が成功したなら true。</returns>
+        protected bool TryWriteExternalValue<T>(Func<T, bool> setter, T value)
+        {
+            try
+            {
+                if (!setter(value))
+                {
+                    ReportReadError("値設定", new InvalidOperationException("関連する値の設定に失敗した。"));
+                    return false;
+                }
+
+                ClearReadError("値設定");
+                return true;
+            }
+            catch (Exception exception)
+            {
+                ReportReadError("値設定", exception);
                 return false;
             }
         }
@@ -350,6 +413,44 @@ namespace DebugMenu
         /// <param name="delta">左で -1、右で +1。</param>
         public virtual void OnAdjust(int delta) { }
 
+        /// <summary>独自行の決定処理を安全に実行し、失敗した行だけをエラー状態にする。</summary>
+        /// <returns>決定処理が正常に完了したなら true。</returns>
+        internal bool TryDecideSafely()
+        {
+            try
+            {
+                ClearReadError("値設定", false);
+                OnDecide();
+                if (!HasError) _nextReadErrorLogTime = 0f;
+                return !HasError;
+            }
+            catch (Exception exception)
+            {
+                ReportReadError("値設定", exception);
+                return false;
+            }
+        }
+
+        /// <summary>独自行の調整処理を安全に実行し、失敗した行だけをエラー状態にする。</summary>
+        /// <param name="delta">左で -1、右で +1。</param>
+        /// <returns>調整処理が正常に完了したなら true。</returns>
+        internal bool TryAdjustSafely(int delta)
+        {
+            try
+            {
+                if (!IsAdjustable) return false;
+                ClearReadError("値設定", false);
+                OnAdjust(delta);
+                if (!HasError) _nextReadErrorLogTime = 0f;
+                return !HasError;
+            }
+            catch (Exception exception)
+            {
+                ReportReadError("値設定", exception);
+                return false;
+            }
+        }
+
         /// <summary>左右キーで値が変わる行か。描画側が矢印を出すかの判定に使う。</summary>
         public virtual bool IsAdjustable => false;
 
@@ -367,6 +468,24 @@ namespace DebugMenu
 
         /// <summary>値を構築時の状態へ戻す。値を持たない行は何もしない。</summary>
         public virtual void ResetToDefault() { }
+
+        /// <summary>独自行の既定値復元を安全に実行し、失敗した行だけをエラー状態にする。</summary>
+        /// <returns>復元処理が正常に完了したなら true。</returns>
+        internal bool TryResetToDefaultSafely()
+        {
+            try
+            {
+                ClearReadError("値設定", false);
+                ResetToDefault();
+                if (!HasError) _nextReadErrorLogTime = 0f;
+                return !HasError;
+            }
+            catch (Exception exception)
+            {
+                ReportReadError("値設定", exception);
+                return false;
+            }
+        }
 
         /// <summary>画面に出ている行だけ毎フレーム呼ばれる。グラフが標本を溜めるのに使う。</summary>
         /// <param name="deltaSeconds">前フレームからの経過秒。</param>
@@ -405,6 +524,24 @@ namespace DebugMenu
         /// <param name="ratio">下限を 0、上限を 1 とした位置。範囲外は端へ丸める。</param>
         public virtual bool TrySetRatio(float ratio) => false;
 
+        /// <summary>独自行のスライダー書込も例外境界の内側で行う。</summary>
+        /// <param name="ratio">下限を 0、上限を 1 とした位置。</param>
+        /// <returns>値を反映できたなら true。</returns>
+        internal bool TrySetRatioSafely(float ratio)
+        {
+            try
+            {
+                var applied = TrySetRatio(ratio);
+                if (applied) ClearReadError("値設定");
+                return applied;
+            }
+            catch (Exception exception)
+            {
+                ReportReadError("値設定", exception);
+                return false;
+            }
+        }
+
         /// <summary>選択位置と候補数。描画側の「n/m」表示に使う。</summary>
         /// <param name="index">選択位置（0 起点）。</param>
         /// <param name="count">候補の総数。</param>
@@ -430,6 +567,24 @@ namespace DebugMenu
         /// <summary>打ち終えた文字列を値へ反映する。解釈できなければ false（呼び出し側が元の値を保つ）。</summary>
         /// <param name="text">打ち終えた文字列。</param>
         public virtual bool CommitEditText(string text) => false;
+
+        /// <summary>独自行の文字入力確定も例外境界の内側で行う。</summary>
+        /// <param name="text">打ち終えた文字列。</param>
+        /// <returns>値を反映できたなら true。</returns>
+        internal bool CommitEditTextSafely(string text)
+        {
+            try
+            {
+                var applied = CommitEditText(text);
+                if (applied) ClearReadError("値設定");
+                return applied;
+            }
+            catch (Exception exception)
+            {
+                ReportReadError("値設定", exception);
+                return false;
+            }
+        }
 
         // ── 値の出し入れ（保存・復元とゲーム側からの書き込みに使う） ─────────
 
@@ -738,10 +893,10 @@ namespace DebugMenu
         }
 
         /// <summary>
-        /// 表示用の取得処理で起きた例外をこの行へ記録する。
+        /// 値取得・設定・操作を含む行処理で起きた例外をこの行へ記録する。
         /// 例外の文言が変化しても、同じ行からのログは一定時間に1回だけ出す。
         /// </summary>
-        /// <param name="operation">失敗した取得処理。</param>
+        /// <param name="operation">失敗した行処理。</param>
         /// <param name="exception">利用側の処理から出た例外。</param>
         internal void ReportReadError(string operation, Exception exception)
         {
@@ -758,14 +913,15 @@ namespace DebugMenu
             Debug.LogWarning($"[DebugMenu] 行 '{ResolveSaveKey()}' の{operation}に失敗した。行をエラー表示にして続行する。\n{details}");
         }
 
-        /// <summary>同じ取得処理が回復したときだけ、その処理のエラー表示を解除する。</summary>
-        /// <param name="operation">正常に完了した取得処理。</param>
-        internal void ClearReadError(string operation)
+        /// <summary>同じ行処理が回復したときだけ、その処理のエラー表示を解除する。</summary>
+        /// <param name="operation">正常に完了した行処理。</param>
+        internal void ClearReadError(string operation, bool resetLogRate = true)
         {
             if (!string.Equals(_readErrorOperation, operation, StringComparison.Ordinal)) return;
 
             _readErrorOperation = string.Empty;
             _readErrorMessage = string.Empty;
+            if (resetLogRate) _nextReadErrorLogTime = 0f;
         }
 
         /// <summary>行構造または展開状態の変更を全ページへ知らせる。</summary>

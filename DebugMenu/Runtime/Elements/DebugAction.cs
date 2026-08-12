@@ -1,5 +1,4 @@
 using System;
-using UnityEngine;
 
 namespace DebugMenu
 {
@@ -28,17 +27,7 @@ namespace DebugMenu
         /// <summary>保存対象にしない。値を持たないため。</summary>
         public override bool IsSaveable => false;
 
-        /// <summary>処理を走らせる。例外はログへ出して飲み込み、メニューを生かしたままにする。</summary>
-        public override void OnDecide()
-        {
-            try
-            {
-                _action();
-            }
-            catch (Exception exception)
-            {
-                Debug.LogException(exception);
-            }
-        }
+        /// <summary>処理を走らせる。例外の隔離と行エラー化は共通の決定操作入口が担う。</summary>
+        public override void OnDecide() => _action();
     }
 }

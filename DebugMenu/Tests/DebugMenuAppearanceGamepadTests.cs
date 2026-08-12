@@ -2,6 +2,7 @@ using System;
 using System.Reflection;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.TestTools;
 using UnityEngine.UIElements;
 
 namespace DebugMenu.Tests
@@ -171,6 +172,91 @@ namespace DebugMenu.Tests
             Assert.That(theme.PanelMargin, Is.EqualTo(7f).Within(Tolerance));
             Assert.That(theme.TopMargin, Is.EqualTo(9f).Within(Tolerance));
             Assert.AreEqual(2, requests);
+        }
+
+        [TestCase(0, 32f)]
+        [TestCase(1, 1.5f)]
+        [TestCase(2, 36f)]
+        [TestCase(3, 42f)]
+        [TestCase(4, 30f)]
+        public void AppearanceValue_ApplyCallbackFailureRollsBackAndAllowsRetry(int rowIndex, float requestedValue)
+        {
+            var theme = new DebugMenuTheme
+            {
+                FontSize = 17,
+                GuiScale = 0.9f,
+                RowHeight = 21f,
+                PanelMargin = 7f,
+                TopMargin = 9f,
+            };
+            var throwOnApply = true;
+            var requests = 0;
+            var appearance = new DebugMenuAppearancePage(theme, () =>
+            {
+                requests++;
+                if (throwOnApply) throw new InvalidOperationException("appearance apply failed");
+            });
+            var row = appearance.Page.Root.Children[rowIndex];
+
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値設定"));
+            var failed = rowIndex == 0
+                ? row.TrySetInt(Mathf.RoundToInt(requestedValue))
+                : row.TrySetFloat(requestedValue);
+
+            Assert.IsFalse(failed);
+            Assert.AreEqual(17, theme.FontSize);
+            Assert.That(theme.GuiScale, Is.EqualTo(0.9f).Within(Tolerance));
+            Assert.That(theme.RowHeight, Is.EqualTo(21f).Within(Tolerance));
+            Assert.That(theme.PanelMargin, Is.EqualTo(7f).Within(Tolerance));
+            Assert.That(theme.TopMargin, Is.EqualTo(9f).Within(Tolerance));
+            Assert.IsTrue(row.HasError);
+
+            throwOnApply = false;
+            var recovered = rowIndex == 0
+                ? row.TrySetInt(Mathf.RoundToInt(requestedValue))
+                : row.TrySetFloat(requestedValue);
+
+            Assert.IsTrue(recovered, "同じ値を指定した再試行が早期returnされた");
+            Assert.AreEqual(2, requests);
+            Assert.IsFalse(row.HasError);
+        }
+
+        [Test]
+        public void AppearancePreset_ApplyCallbackFailureRollsBackAllValuesAndAllowsRetry()
+        {
+            var theme = new DebugMenuTheme
+            {
+                FontSize = 17,
+                GuiScale = 0.9f,
+                RowHeight = 21f,
+                PanelMargin = 7f,
+                TopMargin = 9f,
+            };
+            var throwOnApply = true;
+            var appearance = new DebugMenuAppearancePage(theme, () =>
+            {
+                if (throwOnApply) throw new InvalidOperationException("preset apply failed");
+            });
+            var menu = new DebugMenuRoot();
+            menu.AddPage(appearance.Page);
+            var presets = appearance.Page.Root.Children[5];
+            var compact = presets.Children[0];
+            Assert.IsTrue(appearance.Page.FocusOn(compact));
+
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値設定"));
+            Assert.DoesNotThrow(menu.Decide);
+            Assert.AreEqual(17, theme.FontSize);
+            Assert.That(theme.GuiScale, Is.EqualTo(0.9f).Within(Tolerance));
+            Assert.That(theme.RowHeight, Is.EqualTo(21f).Within(Tolerance));
+            Assert.That(theme.PanelMargin, Is.EqualTo(7f).Within(Tolerance));
+            Assert.That(theme.TopMargin, Is.EqualTo(9f).Within(Tolerance));
+            Assert.IsTrue(compact.HasError);
+
+            throwOnApply = false;
+            menu.Decide();
+            Assert.AreEqual(14, theme.FontSize);
+            Assert.That(theme.GuiScale, Is.EqualTo(0.85f).Within(Tolerance));
+            Assert.IsFalse(compact.HasError);
         }
 
         [Test]

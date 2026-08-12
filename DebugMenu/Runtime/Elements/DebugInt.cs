@@ -15,6 +15,7 @@ namespace DebugMenu
     {
         private readonly Func<int> _getter;
         private readonly Action<int> _setter;
+        private readonly Func<int, bool> _trySetter;
         private int _defaultValue;
         private bool _hasDefaultValue;
 
@@ -35,6 +36,24 @@ namespace DebugMenu
             }
             IsExpandable = false;
         }
+
+        /// <summary>親の複合値へ書き込み、親側の失敗を子行へ返せる成分行を作る。</summary>
+        private DebugInt(string label, Func<int> getter, Func<int, bool> trySetter) : base(label)
+        {
+            _getter = getter ?? throw new ArgumentNullException(nameof(getter));
+            _trySetter = trySetter ?? throw new ArgumentNullException(nameof(trySetter));
+            if (TryReadExternalValue(getter, out var initialValue))
+            {
+                _defaultValue = initialValue;
+                _hasDefaultValue = true;
+            }
+
+            IsExpandable = false;
+        }
+
+        /// <summary>親の設定失敗を子行の操作結果へ伝播する内部用の整数行を作る。</summary>
+        internal static DebugInt CreateChecked(string label, Func<int> getter, Func<int, bool> trySetter) =>
+            new DebugInt(label, getter, trySetter);
 
         /// <summary>この行が値を抱える形で作る。</summary>
         /// <param name="label">左カラムへ出す表示名。</param>
@@ -69,7 +88,7 @@ namespace DebugMenu
                 var clamped = current < Min ? Min : current > Max ? Max : current;
                 if (current != clamped)
                 {
-                    _setter(clamped);
+                    if (!TryWriteExternalValue(_setter, clamped)) return this;
                     NotifyChanged();
                 }
             }
@@ -118,7 +137,9 @@ namespace DebugMenu
         public override void OnAdjust(int delta)
         {
             if (!TryGetCurrent(out var value)) return;
-            TrySetValue(value + Step * delta, value);
+            var adjusted = (long)value + (long)Step * delta;
+            var saturated = adjusted < int.MinValue ? int.MinValue : adjusted > int.MaxValue ? int.MaxValue : (int)adjusted;
+            TrySetValue(saturated, value);
         }
 
         /// <inheritdoc/>
@@ -224,10 +245,25 @@ namespace DebugMenu
         private bool TrySetValue(int value, int current)
         {
             var clamped = value < Min ? Min : value > Max ? Max : value;
-            if (current == clamped) return true;
+            if (current == clamped)
+            {
+                ClearReadError("値設定");
+                return true;
+            }
 
-            if (_setter != null) _setter(clamped);
-            else _stored = clamped;
+            if (_trySetter != null)
+            {
+                if (!TryWriteExternalValue(_trySetter, clamped)) return false;
+            }
+            else if (_setter != null)
+            {
+                if (!TryWriteExternalValue(_setter, clamped)) return false;
+            }
+            else
+            {
+                _stored = clamped;
+                ClearReadError("値設定");
+            }
 
             NotifyChanged();
             return true;

@@ -121,7 +121,16 @@ namespace DebugMenu
         {
             SyncChildren();
             var children = base.Children;
-            for (var i = 0; i < children.Count; i++) children[i].ResetToDefault();
+            var failed = 0;
+            for (var i = 0; i < children.Count; i++)
+            {
+                if (!children[i].TryResetToDefaultSafely()) failed++;
+            }
+
+            if (failed > 0)
+            {
+                ReportReadError("値設定", new InvalidOperationException($"{failed} 件の配列要素を既定値へ戻せなかった。"));
+            }
         }
 
         private bool SyncChildren()
@@ -138,7 +147,7 @@ namespace DebugMenu
             while (children.Count < _values.Count)
             {
                 var index = children.Count;
-                var child = new DebugFloat($"[{index}]", () => GetValue(index), value => SetValue(index, value));
+                var child = DebugFloat.CreateChecked($"[{index}]", () => GetValue(index), value => SetValue(index, value));
                 Configure(child);
                 Add(child);
                 changed = true;
@@ -161,15 +170,16 @@ namespace DebugMenu
             child.Max = Max;
             child.Step = Step;
             child.Digits = Digits;
-            child.Value = child.Value;
+            if (child.TryGetFloat(out var value)) child.TrySetFloat(value);
         }
 
         private float GetValue(int index) => index >= 0 && index < _values.Count ? _values[index] : 0f;
 
-        private void SetValue(int index, float value)
+        private bool SetValue(int index, float value)
         {
-            if (index < 0 || index >= _values.Count) return;
+            if (index < 0 || index >= _values.Count) return false;
             _values[index] = value;
+            return true;
         }
     }
 }

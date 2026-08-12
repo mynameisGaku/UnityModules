@@ -166,10 +166,11 @@ namespace DebugMenu
                 // ローカルへ写さないと、全ての子行が最後の添字を掴む。
                 var axis = i;
 
-                var component = new DebugFloat(
+                var component = DebugFloat.CreateChecked(
                     ComponentNames[axis],
                     () => Value[axis],
-                    v => TrySetComponent(axis, v));
+                    v => TrySetComponent(axis, v),
+                    false);
 
                 components[axis] = Add(component);
             }
@@ -206,22 +207,33 @@ namespace DebugMenu
 
         private bool TrySetValue(Vector4 value, Vector4 current)
         {
-            if (current == value) return true;
+            if (current == value)
+            {
+                ClearReadError("値設定");
+                return true;
+            }
 
-            if (_setter != null) _setter(value);
-            else _stored = value;
+            if (_setter != null)
+            {
+                if (!TryWriteExternalValue(_setter, value)) return false;
+            }
+            else
+            {
+                _stored = value;
+                ClearReadError("値設定");
+            }
 
             NotifyChanged();
             return true;
         }
 
-        private void TrySetComponent(int axis, float value)
+        private bool TrySetComponent(int axis, float value)
         {
-            if (!TryGetCurrent(out var next)) return;
+            if (!TryGetCurrent(out var next)) return false;
 
             var current = next;
             next[axis] = value;
-            TrySetValue(next, current);
+            return TrySetValue(next, current);
         }
     }
 }

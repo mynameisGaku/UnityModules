@@ -11,6 +11,42 @@ namespace DebugMenu.Tests
     {
         private const float Tolerance = 0.001f;
 
+        private sealed class ThrowingRatioElement : DebugElement
+        {
+            public ThrowingRatioElement() : base("Custom Ratio") { }
+
+            public bool ThrowOnSet { get; set; } = true;
+            public float Ratio { get; private set; } = 0.5f;
+            public override bool IsAdjustable => true;
+            public override DebugValueKind ValueKind => DebugValueKind.Float;
+            public override string GetValueText() => Ratio.ToString("F1");
+
+            public override bool TryGetRatio(out float ratio)
+            {
+                ratio = Ratio;
+                return true;
+            }
+
+            public override bool TrySetRatio(float ratio)
+            {
+                if (ThrowOnSet) throw new System.InvalidOperationException("custom ratio failed");
+                Ratio = ratio;
+                return true;
+            }
+        }
+
+        private sealed class ThrowingTextCommitElement : DebugElement
+        {
+            public ThrowingTextCommitElement() : base("Custom Text") { }
+
+            public override bool CanTypeValue => true;
+            public override DebugValueKind ValueKind => DebugValueKind.Text;
+            public override string GetValueText() => "before";
+            public override string GetEditText() => "before";
+            public override bool CommitEditText(string text) =>
+                throw new System.InvalidOperationException("custom text setter failed");
+        }
+
         private GameObject _panelObject;
         private PanelSettings _panelSettings;
         private UIDocument _document;
@@ -363,6 +399,167 @@ namespace DebugMenu.Tests
             Assert.IsFalse(view.HasActivePointerInteraction);
             Assert.AreEqual(0, setterCalls);
             AssertErrorControlsDisabled(view);
+        }
+
+        [Test]
+        public void SliderPointer_CustomSetterExceptionStopsDragAndAllowsRetry()
+        {
+            var element = new ThrowingRatioElement();
+            var view = new DebugRowView(new DebugMenuTheme());
+            view.Bind(new DebugRow(element, 0), false, 0);
+            AttachToPanel(view);
+
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値設定"));
+            Assert.DoesNotThrow(() => SendPointerDown(view.Q<VisualElement>("debug-menu-slider"), 0));
+
+            Assert.IsTrue(element.HasReadError);
+            Assert.IsFalse(view.HasActivePointerInteraction);
+            view.Bind(new DebugRow(element, 0), false, 0);
+            Assert.AreEqual(DisplayStyle.Flex, view.Q<VisualElement>("debug-menu-slider").style.display.value);
+        }
+
+        [Test]
+        public void SliderPointer_MoveSetterFailureReleasesCaptureAndAllowsNextDown()
+        {
+            var element = new ThrowingRatioElement { ThrowOnSet = false };
+            var view = new DebugRowView(new DebugMenuTheme());
+            view.Bind(new DebugRow(element, 0), false, 0);
+            AttachToPanel(view);
+            var slider = view.Q<VisualElement>("debug-menu-slider");
+
+            SendPointerDownAt(slider, slider.worldBound.center);
+            Assert.IsTrue(view.HasActivePointerInteraction);
+            element.ThrowOnSet = true;
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値設定"));
+            Assert.DoesNotThrow(() => SendPointerMoveAt(slider, slider.worldBound.center + Vector2.right));
+
+            Assert.IsFalse(view.HasActivePointerInteraction);
+            Assert.AreEqual(DisplayStyle.Flex, view.Q<Label>("debug-menu-error").style.display.value);
+
+            element.ThrowOnSet = false;
+            SendPointerDownAt(slider, slider.worldBound.center);
+            Assert.IsTrue(view.HasActivePointerInteraction);
+            SendPointerUpAt(slider, slider.worldBound.center);
+            Assert.IsFalse(element.HasError);
+        }
+
+        [Test]
+        public void TextEdit_CustomCommitExceptionEndsEditorAndAllowsRetry()
+        {
+            var element = new ThrowingTextCommitElement();
+            var view = new DebugRowView(new DebugMenuTheme());
+            view.Bind(new DebugRow(element, 0), false, 0);
+            AttachToPanel(view);
+            Assert.IsTrue(view.BeginTextEdit());
+            view.Q<TextField>("debug-menu-editor").value = "after";
+
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値設定"));
+            var committed = true;
+            Assert.DoesNotThrow(() => committed = view.CommitTextEdit());
+
+            Assert.IsFalse(committed);
+            Assert.IsTrue(view.IsEditingText);
+            Assert.IsTrue(element.HasReadError);
+            Assert.AreEqual("ERROR: 値設定", element.ReadErrorText);
+            AssertColor(new DebugMenuTheme().Warning, view.Q<TextField>("debug-menu-editor").style.color.value);
+            Assert.AreEqual(DisplayStyle.Flex, view.Q<Label>("debug-menu-error").style.display.value);
+            StringAssert.Contains("custom text setter failed", view.tooltip);
+            view.Bind(new DebugRow(element, 0), false, 0);
+            Assert.IsTrue(view.BeginTextEdit(), "値設定エラー後に入力欄を再試行できない");
+        }
+
+        [Test]
+        public void Checkbox_SetterFailureKeepsControlForRecovery()
+        {
+            var throwOnWrite = true;
+            var value = false;
+            var element = new DebugBool("God Mode", () => value, next =>
+            {
+                if (throwOnWrite) throw new System.InvalidOperationException("checkbox setter failed");
+                value = next;
+            });
+            var view = new DebugRowView(new DebugMenuTheme());
+            view.Bind(new DebugRow(element, 0), false, 0);
+            AttachToPanel(view);
+
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値設定"));
+            Assert.IsFalse(element.TrySetBool(true));
+            view.Bind(new DebugRow(element, 0), false, 0);
+            Assert.AreEqual(DisplayStyle.Flex, view.Q<VisualElement>("debug-menu-checkbox").style.display.value);
+            Assert.IsNull(view.Q<Label>("debug-menu-value"), "Bool行へ通常の文字値欄を追加している");
+            Assert.AreEqual(DisplayStyle.Flex, view.Q<Label>("debug-menu-error").style.display.value);
+            AssertColor(new DebugMenuTheme().Warning, view.Q<Label>("debug-menu-label").style.color.value);
+            StringAssert.Contains("checkbox setter failed", view.tooltip);
+
+            throwOnWrite = false;
+            Assert.IsTrue(element.TrySetBool(true));
+            view.Bind(new DebugRow(element, 0), false, 0);
+            Assert.IsFalse(element.HasReadError);
+            Assert.AreEqual(DisplayStyle.Flex, view.Q<VisualElement>("debug-menu-checkmark").style.display.value);
+        }
+
+        [Test]
+        public void Color_SetterFailureKeepsSwatchAndPickerForRecovery()
+        {
+            var throwOnWrite = true;
+            var value = Color.red;
+            var element = new DebugColor("Tint", () => value, next =>
+            {
+                if (throwOnWrite) throw new System.InvalidOperationException("color setter failed");
+                value = next;
+            })
+            {
+                IsExpanded = true,
+            };
+            var view = new DebugRowView(new DebugMenuTheme());
+            view.Bind(new DebugRow(element, 0), false, 0);
+
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値設定"));
+            Assert.IsFalse(element.CommitEditText("#00FF00"));
+            view.Bind(new DebugRow(element, 0), false, 0);
+            Assert.AreEqual(DisplayStyle.Flex, view.Q<VisualElement>("debug-menu-color-swatch").style.display.value);
+            Assert.AreEqual(DisplayStyle.Flex, view.Q<DebugColorPickerView>().style.display.value);
+
+            throwOnWrite = false;
+            Assert.IsTrue(element.CommitEditText("#00FF00"));
+            view.Bind(new DebugRow(element, 0), false, 0);
+            Assert.IsFalse(element.HasReadError);
+        }
+
+        [Test]
+        public void PathAndVector_SetterFailureKeepsTextEntryForRecovery()
+        {
+            var throwOnWrite = true;
+            var pathValue = "before.txt";
+            var vectorValue = new Vector4(1f, 2f, 0f, 0f);
+            var path = new DebugPath("Path", DebugPathMode.File, () => pathValue, next =>
+            {
+                if (throwOnWrite) throw new System.InvalidOperationException("path setter failed");
+                pathValue = next;
+            });
+            var vector = new DebugVector("Vector", 2, () => vectorValue, next =>
+            {
+                if (throwOnWrite) throw new System.InvalidOperationException("vector setter failed");
+                vectorValue = next;
+            });
+
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値設定"));
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値設定"));
+            Assert.IsFalse(path.CommitEditText("after.txt"));
+            Assert.IsFalse(vector.CommitEditText("3, 4"));
+
+            var pathView = new DebugRowView(new DebugMenuTheme());
+            pathView.Bind(new DebugRow(path, 0), false, 0);
+            Assert.IsTrue(pathView.BeginTextEdit(), "パスの設定失敗後に入力欄を再試行できない");
+            var vectorView = new DebugRowView(new DebugMenuTheme());
+            vectorView.Bind(new DebugRow(vector, 0), false, 0);
+            Assert.IsTrue(vectorView.BeginTextEdit(), "ベクトルの設定失敗後に入力欄を再試行できない");
+
+            throwOnWrite = false;
+            Assert.IsTrue(path.CommitEditText("after.txt"));
+            Assert.IsTrue(vector.CommitEditText("3, 4"));
+            Assert.IsFalse(path.HasReadError);
+            Assert.IsFalse(vector.HasReadError);
         }
 
         [Test]
@@ -862,6 +1059,92 @@ namespace DebugMenu.Tests
             Assert.IsFalse(element.HasReadError, "取得元の回復後も色選択面のエラーが残っている");
         }
 
+        [UnityTest]
+        public System.Collections.IEnumerator ColorPicker_PointerDownSetterFailureDoesNotCapturePointer()
+        {
+            var colorValue = Color.red;
+            var element = new DebugColor(
+                "Tint",
+                () => colorValue,
+                _ => throw new System.InvalidOperationException("pointer down setter failed"))
+            {
+                IsExpanded = true,
+            };
+            var picker = CreateAttachedColorPicker(element);
+            yield return null;
+            AssertPickerHasLayout(picker);
+
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値設定"));
+            Assert.DoesNotThrow(() => SendPointerDownAt(picker, picker.worldBound.center));
+
+            Assert.IsFalse(picker.HasActivePointerInteraction);
+            Assert.IsFalse(picker.HasPointerCapture(PointerId.mousePointerId));
+            Assert.IsTrue(element.HasReadError);
+            Assert.AreEqual(Color.red, colorValue);
+        }
+
+        [UnityTest]
+        public System.Collections.IEnumerator ColorPicker_PointerMoveSetterFailureReleasesCapture()
+        {
+            var throwOnWrite = false;
+            var colorValue = Color.red;
+            var element = new DebugColor("Tint", () => colorValue, value =>
+            {
+                if (throwOnWrite) throw new System.InvalidOperationException("pointer move setter failed");
+                colorValue = value;
+            })
+            {
+                IsExpanded = true,
+            };
+            var picker = CreateAttachedColorPicker(element);
+            yield return null;
+            AssertPickerHasLayout(picker);
+            var start = picker.worldBound.center;
+
+            SendPointerDownAt(picker, start);
+            Assert.IsTrue(picker.HasActivePointerInteraction);
+            Assert.IsTrue(picker.HasPointerCapture(PointerId.mousePointerId));
+
+            throwOnWrite = true;
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値設定"));
+            Assert.DoesNotThrow(() => SendPointerMoveAt(picker, start + Vector2.right * 12f));
+
+            Assert.IsFalse(picker.HasActivePointerInteraction);
+            Assert.IsFalse(picker.HasPointerCapture(PointerId.mousePointerId));
+            Assert.IsTrue(element.HasReadError);
+        }
+
+        [UnityTest]
+        public System.Collections.IEnumerator ColorPicker_PointerUpSetterFailureReleasesCapture()
+        {
+            var throwOnWrite = false;
+            var colorValue = Color.red;
+            var element = new DebugColor("Tint", () => colorValue, value =>
+            {
+                if (throwOnWrite) throw new System.InvalidOperationException("pointer up setter failed");
+                colorValue = value;
+            })
+            {
+                IsExpanded = true,
+            };
+            var picker = CreateAttachedColorPicker(element);
+            yield return null;
+            AssertPickerHasLayout(picker);
+            var start = picker.worldBound.center;
+
+            SendPointerDownAt(picker, start);
+            Assert.IsTrue(picker.HasActivePointerInteraction);
+            Assert.IsTrue(picker.HasPointerCapture(PointerId.mousePointerId));
+
+            throwOnWrite = true;
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値設定"));
+            Assert.DoesNotThrow(() => SendPointerUpAt(picker, start + Vector2.left * 12f));
+
+            Assert.IsFalse(picker.HasActivePointerInteraction);
+            Assert.IsFalse(picker.HasPointerCapture(PointerId.mousePointerId));
+            Assert.IsTrue(element.HasReadError);
+        }
+
         [Test]
         public void Root_RightClickReturnsThenClosesAtTopLevel()
         {
@@ -948,6 +1231,24 @@ namespace DebugMenu.Tests
             Assert.NotNull(root.panel, "イベント検証は実パネルへ接続してから行う");
         }
 
+        private DebugColorPickerView CreateAttachedColorPicker(DebugColor element)
+        {
+            var host = new VisualElement();
+            host.style.width = 480f;
+            host.style.height = 320f;
+            var picker = new DebugColorPickerView(new DebugMenuTheme());
+            host.Add(picker);
+            AttachToPanel(host);
+            picker.Bind(element);
+            return picker;
+        }
+
+        private static void AssertPickerHasLayout(DebugColorPickerView picker)
+        {
+            Assert.Greater(picker.contentRect.width, 2f, "色選択面の横幅が確定していない");
+            Assert.Greater(picker.contentRect.height, 2f, "色選択面の高さが確定していない");
+        }
+
         private static void AssertLength(float expected, StyleLength actual)
         {
             Assert.AreEqual(LengthUnit.Pixel, actual.value.unit);
@@ -1019,6 +1320,36 @@ namespace DebugMenu.Tests
             Assert.NotNull(target.panel, "PointerDownEvent は実パネルへ接続した要素へ送る");
             var systemEvent = new Event { type = EventType.MouseDown, button = button };
             using (var evt = PointerDownEvent.GetPooled(systemEvent))
+            {
+                evt.target = target;
+                target.SendEvent(evt);
+            }
+        }
+
+        private static void SendPointerDownAt(VisualElement target, Vector2 position)
+        {
+            var systemEvent = new Event { type = EventType.MouseDown, button = 0, mousePosition = position };
+            using (var evt = PointerDownEvent.GetPooled(systemEvent))
+            {
+                evt.target = target;
+                target.SendEvent(evt);
+            }
+        }
+
+        private static void SendPointerMoveAt(VisualElement target, Vector2 position)
+        {
+            var systemEvent = new Event { type = EventType.MouseDrag, button = 0, mousePosition = position };
+            using (var evt = PointerMoveEvent.GetPooled(systemEvent))
+            {
+                evt.target = target;
+                target.SendEvent(evt);
+            }
+        }
+
+        private static void SendPointerUpAt(VisualElement target, Vector2 position)
+        {
+            var systemEvent = new Event { type = EventType.MouseUp, button = 0, mousePosition = position };
+            using (var evt = PointerUpEvent.GetPooled(systemEvent))
             {
                 evt.target = target;
                 target.SendEvent(evt);

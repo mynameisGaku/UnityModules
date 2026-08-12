@@ -70,15 +70,17 @@ namespace DebugMenu
 
                 if (!TryGetColor(out var color))
                 {
+                    return;
+                }
+
+                if (Mathf.Approximately(color.a, 1f))
+                {
                     _showAlpha = false;
                     return;
                 }
 
-                _showAlpha = value;
-                if (Mathf.Approximately(color.a, 1f)) return;
-
                 color.a = 1f;
-                WriteValue(color);
+                if (WriteValue(color)) _showAlpha = false;
             }
         }
 
@@ -110,13 +112,21 @@ namespace DebugMenu
             return true;
         }
 
-        private void WriteValue(Color value)
+        private bool WriteValue(Color value)
         {
-            if (_setter != null) _setter(value);
-            else _stored = value;
+            if (_setter != null)
+            {
+                if (!TryWriteExternalValue(_setter, value)) return false;
+            }
+            else
+            {
+                _stored = value;
+                ClearReadError("値設定");
+            }
 
             SyncHsvFrom(value);
             NotifyChanged();
+            return true;
         }
 
         /// <summary>選択中の色相（0〜1）。</summary>
@@ -139,7 +149,13 @@ namespace DebugMenu
         /// <param name="brightness">明度（0〜1）。</param>
         public void SetHsv(float hue, float saturation, float brightness)
         {
-            if (!TryGetColor(out var current)) return;
+            TrySetHsv(hue, saturation, brightness);
+        }
+
+        /// <summary>HSVを書き換え、利用側の設定関数まで正常に完了したかを返す。</summary>
+        internal bool TrySetHsv(float hue, float saturation, float brightness)
+        {
+            if (!TryGetColor(out var current)) return false;
 
             var nextHue = Mathf.Repeat(hue, 1f);
             var nextSaturation = Mathf.Clamp01(saturation);
@@ -147,23 +163,36 @@ namespace DebugMenu
             var rgb = Color.HSVToRGB(nextHue, nextSaturation, nextBrightness);
             rgb.a = ShowAlpha ? current.a : 1f;
 
-            if (current != rgb) WriteValue(rgb);
+            if (current != rgb && !WriteValue(rgb)) return false;
+            if (current == rgb) ClearReadError("値設定");
 
-            // 利用側 setter が失敗した場合はここへ到達しない。表示上の HSV も未反映のまま保つ。
             _hue = nextHue;
             _saturation = nextSaturation;
             _brightness = nextBrightness;
+            return true;
         }
 
         /// <summary>アルファだけを書き換える。</summary>
         /// <param name="alpha">不透明度（0〜1）。</param>
         public void SetAlpha(float alpha)
         {
-            if (!TryGetColor(out var color)) return;
+            TrySetAlpha(alpha);
+        }
+
+        /// <summary>アルファを書き換え、利用側の設定関数まで正常に完了したかを返す。</summary>
+        internal bool TrySetAlpha(float alpha)
+        {
+            if (!TryGetColor(out var color)) return false;
 
             var current = color;
             color.a = ShowAlpha ? Mathf.Clamp01(alpha) : 1f;
-            if (current != color) WriteValue(color);
+            if (current == color)
+            {
+                ClearReadError("値設定");
+                return true;
+            }
+
+            return WriteValue(color);
         }
 
         /// <inheritdoc/>
@@ -272,13 +301,15 @@ namespace DebugMenu
 
         private bool TrySetValue(Color value, Color current)
         {
-
             var next = value;
             if (!ShowAlpha) next.a = 1f;
-            if (current == next) return true;
+            if (current == next)
+            {
+                ClearReadError("値設定");
+                return true;
+            }
 
-            WriteValue(next);
-            return true;
+            return WriteValue(next);
         }
 
         private void CaptureDefaultIfNeeded(Color value)

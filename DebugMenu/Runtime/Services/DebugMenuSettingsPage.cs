@@ -192,8 +192,12 @@ namespace DebugMenu
             Page.Root.Add(new DebugAction("Copy Menu Text", () => CopyMenuText()));
             Page.Root.Add(new DebugAction("Reset All", () =>
             {
-                DebugMenuSettings.ResetAll(_menu);
-                SetResult("Reset all values", DebugMenuToastKind.Success);
+                var result = DebugMenuSettings.ResetAll(_menu);
+                SetResult(
+                    result.IsSuccess
+                        ? $"Reset all values ({result.SucceededCount})"
+                        : $"Reset values: {result.SucceededCount}/{result.TotalCount} succeeded, {result.FailedCount} failed",
+                    result.IsSuccess ? DebugMenuToastKind.Success : DebugMenuToastKind.Warning);
             }));
 
             var group = Page.Root.Add(new DebugGroup("Saved Profiles") { IsExpanded = true });
@@ -272,8 +276,8 @@ namespace DebugMenu
             public override void OnAdjust(int delta)
             {
                 var count = 3;
-                var next = ((int)_format + delta) % count;
-                Set(next < 0 ? (DebugMenuSettingsFormat)(next + count) : (DebugMenuSettingsFormat)next);
+                var next = ((long)_format + delta) % count;
+                Set((DebugMenuSettingsFormat)(next < 0 ? next + count : next));
             }
 
             public override bool TryGetSelection(out int index, out int count)
@@ -286,8 +290,8 @@ namespace DebugMenu
             public void Set(DebugMenuSettingsFormat format)
             {
                 if (_format == format) return;
-                _format = format;
                 _setter(format);
+                _format = format;
             }
         }
 

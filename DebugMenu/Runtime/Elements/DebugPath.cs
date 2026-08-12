@@ -385,10 +385,22 @@ namespace DebugMenu
 
         private bool SetValueUnchecked(string value, string current)
         {
-            if (string.Equals(current, value, StringComparison.Ordinal)) return true;
+            if (string.Equals(current, value, StringComparison.Ordinal))
+            {
+                ClearReadError("値設定");
+                return true;
+            }
 
-            if (_setter != null) _setter(value);
-            else _stored = value;
+            if (_setter != null)
+            {
+                if (!TryWriteExternalValue(_setter, value)) return false;
+            }
+            else
+            {
+                _stored = value;
+                ClearReadError("値設定");
+            }
+
             NotifyChanged();
             return true;
         }

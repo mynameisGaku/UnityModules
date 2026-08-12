@@ -115,63 +115,73 @@ namespace DebugMenu
         {
             var next = Mathf.Clamp(value, MinimumFontSize, MaximumFontSize);
             if (_theme.FontSize == next) return;
-
-            _theme.FontSize = next;
-            _requestApplyTheme();
+            ApplyValues(new AppearanceValues(next, _theme.GuiScale, _theme.RowHeight, _theme.PanelMargin, _theme.TopMargin));
         }
 
         private void SetGuiScale(float value)
         {
             var next = Mathf.Clamp(value, MinimumGuiScale, MaximumGuiScale);
             if (Mathf.Approximately(_theme.GuiScale, next)) return;
-
-            _theme.GuiScale = next;
-            _requestApplyTheme();
+            ApplyValues(new AppearanceValues(_theme.FontSize, next, _theme.RowHeight, _theme.PanelMargin, _theme.TopMargin));
         }
 
         private void SetRowHeight(float value)
         {
             var next = Mathf.Clamp(value, MinimumRowHeight, MaximumRowHeight);
             if (Mathf.Approximately(_theme.RowHeight, next)) return;
-
-            _theme.RowHeight = next;
-            _requestApplyTheme();
+            ApplyValues(new AppearanceValues(_theme.FontSize, _theme.GuiScale, next, _theme.PanelMargin, _theme.TopMargin));
         }
 
         private void SetPanelMargin(float value)
         {
             var next = Mathf.Clamp(value, 0f, MaximumMargin);
             if (Mathf.Approximately(_theme.PanelMargin, next)) return;
-
-            _theme.PanelMargin = next;
-            _requestApplyTheme();
+            ApplyValues(new AppearanceValues(_theme.FontSize, _theme.GuiScale, _theme.RowHeight, next, _theme.TopMargin));
         }
 
         private void SetTopMargin(float value)
         {
             var next = Mathf.Clamp(value, 0f, MaximumMargin);
             if (Mathf.Approximately(_theme.TopMargin, next)) return;
-
-            _theme.TopMargin = next;
-            _requestApplyTheme();
+            ApplyValues(new AppearanceValues(_theme.FontSize, _theme.GuiScale, _theme.RowHeight, _theme.PanelMargin, next));
         }
 
         private void ApplyValues(in AppearanceValues values)
         {
+            var next = new AppearanceValues(
+                Mathf.Clamp(values.FontSize, MinimumFontSize, MaximumFontSize),
+                Mathf.Clamp(values.GuiScale, MinimumGuiScale, MaximumGuiScale),
+                Mathf.Clamp(values.RowHeight, MinimumRowHeight, MaximumRowHeight),
+                Mathf.Clamp(values.PanelMargin, 0f, MaximumMargin),
+                Mathf.Clamp(values.TopMargin, 0f, MaximumMargin));
             var changed =
-                _theme.FontSize != values.FontSize ||
-                !Mathf.Approximately(_theme.GuiScale, values.GuiScale) ||
-                !Mathf.Approximately(_theme.RowHeight, values.RowHeight) ||
-                !Mathf.Approximately(_theme.PanelMargin, values.PanelMargin) ||
-                !Mathf.Approximately(_theme.TopMargin, values.TopMargin);
+                _theme.FontSize != next.FontSize ||
+                !Mathf.Approximately(_theme.GuiScale, next.GuiScale) ||
+                !Mathf.Approximately(_theme.RowHeight, next.RowHeight) ||
+                !Mathf.Approximately(_theme.PanelMargin, next.PanelMargin) ||
+                !Mathf.Approximately(_theme.TopMargin, next.TopMargin);
             if (!changed) return;
 
-            _theme.FontSize = Mathf.Clamp(values.FontSize, MinimumFontSize, MaximumFontSize);
-            _theme.GuiScale = Mathf.Clamp(values.GuiScale, MinimumGuiScale, MaximumGuiScale);
-            _theme.RowHeight = Mathf.Clamp(values.RowHeight, MinimumRowHeight, MaximumRowHeight);
-            _theme.PanelMargin = Mathf.Clamp(values.PanelMargin, 0f, MaximumMargin);
-            _theme.TopMargin = Mathf.Clamp(values.TopMargin, 0f, MaximumMargin);
-            _requestApplyTheme();
+            var previous = AppearanceValues.Capture(_theme);
+            AssignValues(next);
+            try
+            {
+                _requestApplyTheme();
+            }
+            catch
+            {
+                AssignValues(previous);
+                throw;
+            }
+        }
+
+        private void AssignValues(in AppearanceValues values)
+        {
+            _theme.FontSize = values.FontSize;
+            _theme.GuiScale = values.GuiScale;
+            _theme.RowHeight = values.RowHeight;
+            _theme.PanelMargin = values.PanelMargin;
+            _theme.TopMargin = values.TopMargin;
         }
 
         /// <summary>Reset用に保持する5つの寸法値。</summary>

@@ -234,14 +234,22 @@ namespace DebugMenu
             {
                 // FavoritesやRecentは元の行を借用する。同じ実体は1回だけ保存する。
                 if (!visited.Add(element)) return;
-                if (!element.IsSaveable) return;
+                try
+                {
+                    if (!element.IsSaveable) return;
+                    if (!DebugValueSnapshot.TryCapture(element, out var snapshot)) return;
+                    if (!snapshot.HasValue) return;
 
-                if (!DebugValueSnapshot.TryCapture(element, out var snapshot)) return;
-                if (!snapshot.HasValue) return;
-
-                data.Keys.Add(element.ResolveSaveKey());
-                data.Values.Add(snapshot.ToStorageString());
-                data.Kinds.Add((int)snapshot.Kind);
+                    var key = element.ResolveSaveKey();
+                    var value = snapshot.ToStorageString();
+                    data.Keys.Add(key);
+                    data.Values.Add(value);
+                    data.Kinds.Add((int)snapshot.Kind);
+                }
+                catch (Exception exception)
+                {
+                    element.ReportReadError("値取得", exception);
+                }
             });
             return data;
         }
@@ -256,18 +264,31 @@ namespace DebugMenu
             if (count == 0) return 0;
 
             var stored = new Dictionary<string, (string Value, DebugValueKind Kind)>(count);
-            for (var i = 0; i < count; i++) stored[data.Keys[i]] = (data.Values[i], (DebugValueKind)data.Kinds[i]);
+            for (var i = 0; i < count; i++)
+            {
+                var key = data.Keys[i];
+                var kind = (DebugValueKind)data.Kinds[i];
+                if (string.IsNullOrWhiteSpace(key) || kind == DebugValueKind.None || !Enum.IsDefined(typeof(DebugValueKind), kind)) continue;
+
+                stored[key] = (data.Values[i], kind);
+            }
 
             var applied = 0;
             var visited = new HashSet<DebugElement>();
             menu.VisitAll((_, element) =>
             {
                 if (!visited.Add(element)) return;
-                if (!element.IsSaveable) return;
-                if (!stored.TryGetValue(element.ResolveSaveKey(), out var entry)) return;
-                if (entry.Kind != element.ValueKind) return;
-                if (!DebugValueSnapshot.TryParse(entry.Kind, entry.Value, out var snapshot)) return;
-                if (snapshot.Apply(element)) applied++;
+                try
+                {
+                    if (!element.IsSaveable) return;
+                    if (!stored.TryGetValue(element.ResolveSaveKey(), out var entry)) return;
+                    if (!DebugValueSnapshot.TryParse(entry.Kind, entry.Value, out var snapshot)) return;
+                    if (snapshot.Apply(element)) applied++;
+                }
+                catch (Exception exception)
+                {
+                    element.ReportReadError("値設定", exception);
+                }
             });
             return applied;
         }
@@ -275,17 +296,35 @@ namespace DebugMenu
         /// <summary>保存されている内容を消す。</summary>
         public void Delete() => _storage.Delete(_key);
 
-        /// <summary>全ての行を既定値へ戻す。保存の中身には触らない。</summary>
+        /// <summary>保存対象で値を持つ行を1実体につき1回だけ既定値へ戻す。保存の中身には触らない。</summary>
         /// <param name="menu">対象のメニュー。</param>
-        public static void ResetAll(DebugMenuRoot menu)
+        /// <returns>対象値行、成功、失敗の件数。</returns>
+        public static DebugMenuResetResult ResetAll(DebugMenuRoot menu)
         {
             if (menu == null) throw new ArgumentNullException(nameof(menu));
 
             var visited = new HashSet<DebugElement>();
+            var succeeded = 0;
+            var failed = 0;
             menu.VisitAll((_, element) =>
             {
-                if (visited.Add(element)) element.ResetToDefault();
+                if (!visited.Add(element)) return;
+                try
+                {
+                    if (!element.IsSaveable || element.ValueKind == DebugValueKind.None) return;
+                }
+                catch (Exception exception)
+                {
+                    element.ReportReadError("値設定", exception);
+                    failed++;
+                    return;
+                }
+
+                if (element.TryResetToDefaultSafely()) succeeded++;
+                else failed++;
             });
+
+            return new DebugMenuResetResult(succeeded + failed, succeeded, failed);
         }
 
         private static void WriteFileAtomically(string path, byte[] bytes)

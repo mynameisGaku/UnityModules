@@ -1,7 +1,9 @@
 using System.Collections.Generic;
+using System.Reflection;
 using Containers;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.TestTools;
 
 namespace DebugMenu.Tests
 {
@@ -27,10 +29,41 @@ namespace DebugMenu.Tests
             }
 
             public int ResetCount { get; private set; }
+            public override DebugValueKind ValueKind => DebugValueKind.Int;
             public override void ResetToDefault() => ResetCount++;
         }
 
         /// <summary>履歴の読取経路だけを失敗させられる値行。</summary>
+        /// <summary>独自行の初期化例外が後続行へ波及しないことを調べる。</summary>
+        private sealed class ThrowingResetElement : DebugElement
+        {
+            public ThrowingResetElement() : base("Throwing Reset") { }
+
+            public override DebugValueKind ValueKind => DebugValueKind.Int;
+            public override void ResetToDefault() => throw new System.InvalidOperationException("reset failed");
+        }
+
+        /// <summary>保存対象判定または値種別の取得を失敗させる独自行。</summary>
+        private sealed class ThrowingMetadataElement : DebugElement
+        {
+            public ThrowingMetadataElement(string label) : base(label) { }
+
+            public bool ThrowOnSaveable { get; set; }
+            public bool ThrowOnKind { get; set; }
+            public override bool IsSaveable => ThrowOnSaveable
+                ? throw new System.InvalidOperationException("saveable metadata failed")
+                : true;
+            public override DebugValueKind ValueKind => ThrowOnKind
+                ? throw new System.InvalidOperationException("kind metadata failed")
+                : DebugValueKind.Int;
+            public override bool TryGetInt(out int value)
+            {
+                value = 1;
+                return true;
+            }
+            public override bool TrySetInt(int value) => true;
+        }
+
         private sealed class ThrowingHistoryElement : DebugElement
         {
             private int _value;
@@ -596,9 +629,12 @@ namespace DebugMenu.Tests
             var element = original.Root.Add(new CountingResetElement());
             borrowed.Root.AddBorrowed(element);
 
-            DebugMenuSettings.ResetAll(menu);
+            var result = DebugMenuSettings.ResetAll(menu);
 
             Assert.AreEqual(1, element.ResetCount, "借用表示した同じ行を複数回初期化している");
+            Assert.AreEqual(1, result.TotalCount);
+            Assert.AreEqual(1, result.SucceededCount);
+            Assert.AreEqual(0, result.FailedCount);
         }
 
         [Test]
@@ -612,10 +648,13 @@ namespace DebugMenu.Tests
             flag.Value = true;
             count.Value = 99;
 
-            DebugMenuSettings.ResetAll(menu);
+            var result = DebugMenuSettings.ResetAll(menu);
 
             Assert.IsFalse(flag.Value);
             Assert.AreEqual(5, count.Value);
+            Assert.AreEqual(2, result.TotalCount);
+            Assert.AreEqual(2, result.SucceededCount);
+            Assert.AreEqual(0, result.FailedCount);
         }
 
         // ── 値の写し ────────────────────────────────────────────────────────
@@ -658,5 +697,270 @@ namespace DebugMenu.Tests
             Assert.IsTrue(snapshot.Apply(element));
             Assert.AreEqual(new Vector3(1.5f, -2.25f, 3f), value);
         }
+        [Test]
+        public void Vector_SettingsAndHistoryTrackOnlyParentValue()
+        {
+            var value = new Vector3(1f, 2f, 3f);
+            var menu = new DebugMenuRoot();
+            var vector = DebugVector.Of("Position", () => value, next => value = next);
+            menu.AddPage("Gameplay").Root.Add(vector);
+
+            var data = DebugMenuSettings.Capture(menu);
+
+            Assert.AreEqual(1, data.Keys.Count, "Vector親と成分を重複保存している");
+            Assert.AreEqual(vector.ResolveSaveKey(), data.Keys[0]);
+            for (var i = 0; i < vector.Children.Count; i++) Assert.IsFalse(vector.Children[i].IsSaveable);
+
+            using var history = new DebugMenuHistory();
+            history.Attach(menu);
+            Assert.IsTrue(((DebugFloat)vector.Children[0]).TrySetFloat(8f));
+            Assert.AreEqual(1, history.Count, "Vector親と成分を重複して履歴へ積んでいる");
+        }
+
+        [Test]
+        public void Settings_ApplyContinuesAfterSetterFailure()
+        {
+            var failingValue = 1;
+            var healthyValue = 2;
+            var menu = new DebugMenuRoot();
+            var root = menu.AddPage("Gameplay").Root;
+            var failing = root.Add(new DebugInt(
+                "Failing",
+                () => failingValue,
+                _ => throw new System.InvalidOperationException("settings setter failed"))
+                .WithSaveKey("failing"));
+            root.Add(new DebugInt("Healthy", () => healthyValue, value => healthyValue = value).WithSaveKey("healthy"));
+            var data = new DebugMenuSettingsData();
+            data.Keys.Add("failing");
+            data.Values.Add("10");
+            data.Kinds.Add((int)DebugValueKind.Int);
+            data.Keys.Add("healthy");
+            data.Values.Add("20");
+            data.Kinds.Add((int)DebugValueKind.Int);
+
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値設定"));
+            var applied = 0;
+            Assert.DoesNotThrow(() => applied = DebugMenuSettings.Apply(menu, data));
+
+            Assert.AreEqual(1, applied, "失敗した行を適用件数へ含めたか、後続行へ進んでいない");
+            Assert.AreEqual(1, failingValue);
+            Assert.AreEqual(20, healthyValue);
+            Assert.IsTrue(failing.HasReadError);
+        }
+
+        [Test]
+        public void Settings_ApplySkipsInvalidEntriesAndAppliesLaterValidValue()
+        {
+            var menu = new DebugMenuRoot();
+            var healthy = menu.AddPage("Gameplay").Root.Int("Healthy", 1).WithSaveKey("healthy");
+            var data = new DebugMenuSettingsData();
+            data.Keys.Add(null);
+            data.Values.Add("8");
+            data.Kinds.Add((int)DebugValueKind.Int);
+            data.Keys.Add("   ");
+            data.Values.Add("9");
+            data.Kinds.Add((int)DebugValueKind.Int);
+            data.Keys.Add("invalid-kind");
+            data.Values.Add("10");
+            data.Kinds.Add(999);
+            data.Keys.Add("healthy");
+            data.Values.Add("12");
+            data.Kinds.Add((int)DebugValueKind.Int);
+
+            var applied = 0;
+            Assert.DoesNotThrow(() => applied = DebugMenuSettings.Apply(menu, data));
+
+            Assert.AreEqual(1, applied);
+            Assert.AreEqual(12, healthy.Value);
+        }
+
+        [Test]
+        public void Settings_MetadataExceptionsSkipOnlyFailingRows()
+        {
+            var menu = new DebugMenuRoot();
+            var root = menu.AddPage("Gameplay").Root;
+            var captureFailure = root.Add(new ThrowingMetadataElement("Capture") { ThrowOnSaveable = true });
+            var healthy = root.Int("Healthy", 4).WithSaveKey("healthy");
+
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値取得"));
+            var captured = DebugMenuSettings.Capture(menu);
+            Assert.AreEqual(1, captured.Keys.Count);
+            Assert.AreEqual("healthy", captured.Keys[0]);
+            Assert.IsTrue(captureFailure.HasError);
+
+            var applyFailure = root.Add(new ThrowingMetadataElement("Apply") { ThrowOnKind = true });
+            applyFailure.SaveKey = "bad-kind";
+            var data = new DebugMenuSettingsData();
+            data.Keys.Add("bad-kind");
+            data.Values.Add("9");
+            data.Kinds.Add((int)DebugValueKind.Int);
+            data.Keys.Add("healthy");
+            data.Values.Add("12");
+            data.Kinds.Add((int)DebugValueKind.Int);
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値設定"));
+
+            var applied = DebugMenuSettings.Apply(menu, data);
+
+            Assert.AreEqual(1, applied);
+            Assert.AreEqual(12, healthy.Value);
+            Assert.IsTrue(applyFailure.HasError);
+        }
+
+        [Test]
+        public void Settings_ResetMetadataExceptionCountsFailureAndContinues()
+        {
+            var menu = new DebugMenuRoot();
+            var root = menu.AddPage("Gameplay").Root;
+            root.Add(new ThrowingMetadataElement("Metadata") { ThrowOnKind = true });
+            var healthy = root.Int("Healthy", 3);
+            healthy.Value = 8;
+
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値設定"));
+            var result = DebugMenuSettings.ResetAll(menu);
+
+            Assert.AreEqual(2, result.TotalCount);
+            Assert.AreEqual(1, result.SucceededCount);
+            Assert.AreEqual(1, result.FailedCount);
+            Assert.AreEqual(3, healthy.Value);
+        }
+
+        [Test]
+        public void Settings_ResetAllCountsNoValueRowsAsZeroAndVectorParentOnce()
+        {
+            var empty = new DebugMenuRoot();
+            var emptyRoot = empty.AddPage("Empty").Root;
+            emptyRoot.Group("Group", group => group.Action("Action", () => { }));
+
+            var emptyResult = DebugMenuSettings.ResetAll(empty);
+
+            Assert.AreEqual(0, emptyResult.TotalCount);
+            Assert.AreEqual(0, emptyResult.SucceededCount);
+            Assert.AreEqual(0, emptyResult.FailedCount);
+
+            var value = new Vector3(1f, 2f, 3f);
+            var setterCalls = 0;
+            var menu = new DebugMenuRoot();
+            var vector = DebugVector.Of("Position", () => value, next =>
+            {
+                setterCalls++;
+                value = next;
+            });
+            menu.AddPage("Gameplay").Root.Add(vector);
+            Assert.IsTrue(((DebugFloat)vector.Children[0]).TrySetFloat(8f));
+            var beforeReset = setterCalls;
+
+            var result = DebugMenuSettings.ResetAll(menu);
+
+            Assert.AreEqual(1, setterCalls - beforeReset, "Vector親と成分を二重に復元している");
+            Assert.AreEqual(1, result.TotalCount);
+            Assert.AreEqual(1, result.SucceededCount);
+            Assert.AreEqual(0, result.FailedCount);
+            Assert.AreEqual(new Vector3(1f, 2f, 3f), value);
+        }
+
+        [Test]
+        public void Settings_ResetAllContinuesAfterBuiltInAndCustomFailures()
+        {
+            var throwOnWrite = false;
+            var failingValue = 1;
+            var menu = new DebugMenuRoot();
+            var root = menu.AddPage("Gameplay").Root;
+            root.Add(new ThrowingResetElement());
+            var failing = root.Add(new DebugInt("Failing", () => failingValue, value =>
+            {
+                if (throwOnWrite) throw new System.InvalidOperationException("reset setter failed");
+                failingValue = value;
+            }));
+            var healthy = root.Int("Healthy", 5);
+            failingValue = 9;
+            healthy.Value = 12;
+            throwOnWrite = true;
+
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値設定"));
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値設定"));
+            DebugMenuResetResult result = default;
+            Assert.DoesNotThrow(() => result = DebugMenuSettings.ResetAll(menu));
+
+            Assert.AreEqual(9, failingValue);
+            Assert.IsTrue(failing.HasReadError);
+            Assert.AreEqual(5, healthy.Value, "失敗行より後ろの既定値復元が止まっている");
+            Assert.AreEqual(3, result.TotalCount);
+            Assert.AreEqual(1, result.SucceededCount);
+            Assert.AreEqual(2, result.FailedCount);
+        }
+
+        [Test]
+        public void SettingsFormat_CallbackFailureDoesNotCommitAndSameValueCanRetry()
+        {
+            var nested = typeof(DebugMenuSettingsPage).GetNestedType("SettingsFormatElement", BindingFlags.NonPublic);
+            Assert.NotNull(nested);
+            var throwOnSet = true;
+            var applied = DebugMenuSettingsFormat.Text;
+            System.Action<DebugMenuSettingsFormat> setter = format =>
+            {
+                if (throwOnSet) throw new System.InvalidOperationException("format setter failed");
+                applied = format;
+            };
+            var element = (DebugElement)System.Activator.CreateInstance(
+                nested,
+                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
+                null,
+                new object[] { DebugMenuSettingsFormat.Text, setter },
+                null);
+            var set = nested.GetMethod("Set", BindingFlags.Instance | BindingFlags.Public);
+            Assert.NotNull(set);
+
+            Assert.Throws<TargetInvocationException>(() => set.Invoke(element, new object[] { DebugMenuSettingsFormat.Json }));
+            Assert.AreEqual("Text", element.GetValueText());
+            Assert.AreEqual(DebugMenuSettingsFormat.Text, applied);
+
+            throwOnSet = false;
+            Assert.DoesNotThrow(() => set.Invoke(element, new object[] { DebugMenuSettingsFormat.Json }));
+            Assert.AreEqual("Json", element.GetValueText());
+            Assert.AreEqual(DebugMenuSettingsFormat.Json, applied);
+        }
+
+        [Test]
+        public void SettingsPage_ResetAllShowsWarningAndCountsOnPartialFailure()
+        {
+            var throwOnWrite = false;
+            var failingValue = 1;
+            var menu = new DebugMenuRoot();
+            var root = menu.AddPage("Gameplay").Root;
+            root.Add(new DebugInt("Failing", () => failingValue, next =>
+            {
+                if (throwOnWrite) throw new System.InvalidOperationException("reset page failed");
+                failingValue = next;
+            }));
+            var healthy = root.Int("Healthy", 5);
+            failingValue = 8;
+            healthy.Value = 9;
+            throwOnWrite = true;
+            var storage = new MemoryStorage();
+            var toasts = new DebugMenuToastService();
+            using var page = new DebugMenuSettingsPage(
+                menu,
+                new DebugMenuSettings(storage),
+                new DebugMenuProfiles(storage),
+                toasts);
+            DebugElement reset = null;
+            for (var i = 0; i < page.Page.Root.Children.Count; i++)
+            {
+                if (page.Page.Root.Children[i].Label == "Reset All") reset = page.Page.Root.Children[i];
+            }
+            Assert.NotNull(reset);
+            menu.AddPage(page.Page);
+            menu.SetRootPage(page.Page);
+            Assert.IsTrue(page.Page.FocusOn(reset));
+
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値設定"));
+            Assert.DoesNotThrow(menu.Decide, "ResetAll自身は行ごとの失敗を集約して完了する");
+
+            Assert.AreEqual(5, healthy.Value);
+            Assert.AreEqual(DebugMenuToastKind.Warning, toasts.Current?.Kind);
+            StringAssert.Contains("1/2 succeeded, 1 failed", toasts.Current?.Message);
+            StringAssert.Contains("1/2 succeeded, 1 failed", page.LastResult);
+        }
+
     }
 }

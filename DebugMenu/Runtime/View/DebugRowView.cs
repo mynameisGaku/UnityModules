@@ -29,6 +29,7 @@ namespace DebugMenu
         private readonly Label _marker;
         private readonly Label _label;
         private readonly VisualElement _valueControls;
+        private readonly Label _errorBadge;
         private readonly Label _value;
         private readonly TextField _editor;
         private VisualElement _editorInput;
@@ -200,6 +201,12 @@ namespace DebugMenu
                 },
             };
 
+            _errorBadge = MakeLabel(theme, theme.Warning);
+            _errorBadge.name = "debug-menu-error";
+            _errorBadge.text = "ERROR";
+            _errorBadge.style.flexShrink = 0f;
+            _errorBadge.style.marginRight = controlGap;
+
             _swatch = new VisualElement
             {
                 name = "debug-menu-color-swatch",
@@ -252,6 +259,7 @@ namespace DebugMenu
             };
 
             _checkmark = MakeLabel(theme, theme.Value);
+            _checkmark.name = "debug-menu-checkmark";
             _checkmark.text = "✓";
             _checkmark.style.position = Position.Absolute;
             _checkmark.style.left = 0f;
@@ -419,9 +427,10 @@ namespace DebugMenu
             try
             {
                 element.ClearReadError("行表示");
+                var hasWriteError = element.HasWriteError;
                 if (!element.TryGetDisplayLabel(out var displayLabel) ||
                     !element.TryGetDisplayValueText(out var valueText) ||
-                    element.HasReadError)
+                    (element.HasReadError && !hasWriteError))
                 {
                     ApplyReadErrorState(element, displayLabel);
                     ApplyResponsiveLayout(resolvedStyle.width);
@@ -429,6 +438,8 @@ namespace DebugMenu
                 }
 
                 SetValueInteractionEnabled(true);
+                tooltip = hasWriteError ? element.ErrorMessage : string.Empty;
+                _errorBadge.style.display = hasWriteError ? DisplayStyle.Flex : DisplayStyle.None;
                 _marker.text = element.ShouldShowMarker
                     ? element.IsExpandable ? element.IsExpanded ? "▼" : "▶" : "―"
                     : string.Empty;
@@ -526,6 +537,8 @@ namespace DebugMenu
             }
 
             EnsureValueLayout(ValueLayoutKind.Standard);
+            tooltip = element.ErrorMessage;
+            _errorBadge.style.display = DisplayStyle.Flex;
             _marker.text = element.ShouldShowMarker
                 ? element.IsExpandable ? element.IsExpanded ? "▼" : "▶" : "―"
                 : string.Empty;
@@ -556,7 +569,7 @@ namespace DebugMenu
         /// <summary>取得失敗を検出した時点で、残りの表示処理を止めてエラー状態へ切り替える。</summary>
         private bool ApplyReadErrorIfNeeded(DebugElement element, string displayLabel)
         {
-            if (element == null || !element.HasReadError) return false;
+            if (element == null || !element.HasReadError || element.HasWriteError) return false;
 
             ApplyReadErrorState(element, displayLabel);
             return true;
@@ -753,7 +766,7 @@ namespace DebugMenu
         /// <returns>入力可能な行で、入力欄を開けたなら true。</returns>
         public bool BeginTextEdit()
         {
-            if (Element == null || Element.HasReadError || !Element.CanTypeValue) return false;
+            if (Element == null || (Element.HasReadError && !Element.HasWriteError) || !Element.CanTypeValue) return false;
             if (ReferenceEquals(_editingElement, Element)) return true;
 
             FinishTextEditBeforeRebind();
@@ -800,7 +813,7 @@ namespace DebugMenu
         {
             if (evt.button != 0 || _rowIndex < 0) return;
 
-            if (Element != null && Element.HasReadError)
+            if (Element != null && Element.HasReadError && !Element.HasWriteError)
             {
                 _selectRow?.Invoke(_rowIndex);
                 evt.StopPropagation();
@@ -815,7 +828,7 @@ namespace DebugMenu
         {
             if (evt.button != 0 || _rowIndex < 0) return;
 
-            if (Element != null && Element.HasReadError)
+            if (Element != null && Element.HasReadError && !Element.HasWriteError)
             {
                 _selectRow?.Invoke(_rowIndex);
                 evt.StopPropagation();
@@ -829,7 +842,7 @@ namespace DebugMenu
         private void OnImmediateValuePointerDown(PointerDownEvent evt)
         {
             if (evt.button != 0 || _rowIndex < 0 || Element == null) return;
-            if (Element.HasReadError)
+            if (Element.HasReadError && !Element.HasWriteError)
             {
                 evt.StopPropagation();
                 return;
@@ -854,7 +867,7 @@ namespace DebugMenu
         private void OnAdjustPointerDown(PointerDownEvent evt, int delta)
         {
             if (evt.button != 0 || _rowIndex < 0 || Element == null || !Element.IsAdjustable) return;
-            if (Element.HasReadError)
+            if (Element.HasReadError && !Element.HasWriteError)
             {
                 evt.StopPropagation();
                 return;
@@ -866,7 +879,7 @@ namespace DebugMenu
 
         private void OnSliderPointerDown(PointerDownEvent evt)
         {
-            if (evt.button != 0 || Element == null || Element.HasReadError) return;
+            if (evt.button != 0 || Element == null || (Element.HasReadError && !Element.HasWriteError)) return;
 
             bool hasRatio;
             try
@@ -949,11 +962,21 @@ namespace DebugMenu
             var width = _sliderTrack.resolvedStyle.width;
             if (width <= 0f || element == null) return false;
 
-            var applied = element.TrySetRatio(Mathf.Clamp01(localX / width));
-            if (!element.HasReadError) return applied;
+            var applied = element.TrySetRatioSafely(Mathf.Clamp01(localX / width));
+            if (applied) return true;
+
+            CancelSliderDrag();
+            if (element.HasWriteError)
+            {
+                tooltip = element.ErrorMessage;
+                _errorBadge.style.display = DisplayStyle.Flex;
+                ApplyVisualState();
+                return false;
+            }
+
+            if (!element.HasReadError) return false;
 
             ApplyReadErrorState(element, element.Label);
-            CancelSliderDrag();
             return false;
         }
 
@@ -999,9 +1022,9 @@ namespace DebugMenu
             var element = _editingElement;
             if (element == null) return true;
 
-            if (commit && !element.CommitEditText(_editor.value))
+            if (commit && !element.CommitEditTextSafely(_editor.value))
             {
-                if (element.HasReadError)
+                if (element.HasReadError && !element.HasWriteError)
                 {
                     ApplyReadErrorState(element, element.Label);
                     ApplyResponsiveLayout(resolvedStyle.width);
@@ -1009,6 +1032,10 @@ namespace DebugMenu
                 }
 
                 SetEditorTextColor(_theme.Warning);
+                tooltip = element.ErrorMessage;
+                _errorBadge.style.display = DisplayStyle.Flex;
+                _label.style.color = _theme.Warning;
+                _marker.style.color = _theme.Warning;
                 schedule.Execute(() =>
                 {
                     if (IsEditingText) _editor.Focus();
@@ -1072,7 +1099,7 @@ namespace DebugMenu
             if (!IsEditingText && element != null)
             {
                 var hasRatio = element.TryGetRatio(out var ratio);
-                if (element.HasReadError)
+                if (element.HasReadError && !element.HasWriteError)
                 {
                     _sliderTrack.style.display = DisplayStyle.None;
                     return;
@@ -1150,6 +1177,7 @@ namespace DebugMenu
 
             _valueLayout = layout;
             _valueControls.Clear();
+            _valueControls.Add(_errorBadge);
             var gap = _theme.EffectiveRowHeight * _theme.ControlGapRatio;
             _decrease.style.marginLeft = 0f;
             _decrease.style.marginRight = gap;
@@ -1289,6 +1317,7 @@ namespace DebugMenu
 
             _label.style.color = labelColor;
             _marker.style.color = labelColor;
+            _errorBadge.style.color = _theme.Warning;
             _value.style.color = valueColor;
             _decrease.style.color = valueColor;
             _increase.style.color = valueColor;
@@ -1313,6 +1342,7 @@ namespace DebugMenu
 
         private Color ResolveLabelColor(DebugElement element)
         {
+            if (element.HasWriteError) return _theme.Warning;
             if (element.TextColor.HasValue) return element.TextColor.Value;
             if (element is DebugGroup || element is DebugSeparator) return _theme.GroupText;
 
@@ -1321,6 +1351,7 @@ namespace DebugMenu
 
         private Color ResolveValueColor(DebugElement element)
         {
+            if (element.HasWriteError) return _theme.Warning;
             if (element.IsValueWarned) return _theme.Warning;
             if (element.ValueColor.HasValue) return element.ValueColor.Value;
 

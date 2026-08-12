@@ -33,7 +33,68 @@ namespace DebugMenu.Tests
             public override string GetValueText() => throw new InvalidOperationException("provider failed");
         }
 
-        // ── 平坦化 ──────────────────────────────────────────────────────────
+        private sealed class RecoverableWriteElement : DebugElement
+        {
+            public RecoverableWriteElement() : base("Recoverable Write") { }
+
+            public bool ThrowOnWrite { get; set; }
+            public int Value { get; private set; }
+            public override DebugValueKind ValueKind => DebugValueKind.Int;
+
+            public override bool TrySetInt(int value)
+            {
+                if (ThrowOnWrite) throw new InvalidOperationException("custom setter failed");
+
+                Value = value;
+                return true;
+            }
+        }
+
+        private sealed class ThrowingOperationElement : DebugElement
+        {
+            public ThrowingOperationElement() : base("Throwing Operation")
+            {
+                IsExpandable = false;
+                IsAdjustableValue = true;
+            }
+
+            public bool ThrowOnOperation { get; set; }
+            public bool IsAdjustableValue { get; set; }
+            public int DecideCount { get; private set; }
+            public int AdjustCount { get; private set; }
+            public int ResetCount { get; private set; }
+            public override bool IsAdjustable => IsAdjustableValue;
+
+            public override void OnDecide()
+            {
+                if (ThrowOnOperation) throw new InvalidOperationException("decide failed");
+                DecideCount++;
+            }
+
+            public override void OnAdjust(int delta)
+            {
+                if (ThrowOnOperation) throw new InvalidOperationException("adjust failed");
+                AdjustCount += delta;
+            }
+
+            public override void ResetToDefault()
+            {
+                if (ThrowOnOperation) throw new InvalidOperationException("reset failed");
+                ResetCount++;
+            }
+        }
+
+        private sealed class ThrowingAdjustabilityElement : DebugElement
+        {
+            public ThrowingAdjustabilityElement() : base("Throwing Adjustability") { }
+
+            public bool ThrowOnCheck { get; set; }
+            public int AdjustCount { get; private set; }
+            public override bool IsAdjustable => ThrowOnCheck
+                ? throw new InvalidOperationException("adjustability failed")
+                : true;
+            public override void OnAdjust(int delta) => AdjustCount += delta;
+        }
 
         [Test]
         public void Flatten_HidesChildrenOfCollapsedGroup()
@@ -480,6 +541,44 @@ namespace DebugMenu.Tests
             Assert.AreEqual(Sparse.Third, value, "enum の値ではなく宣言順で送るべき");
         }
 
+        [Test]
+        public void Enum_AdjustUsesOverflowSafeWrapping()
+        {
+            var element = new DebugEnum("mode", new[] { "A", "B", "C" }, 1);
+
+            element.OnAdjust(int.MaxValue);
+            Assert.AreEqual("C", element.GetValueText());
+            element.OnAdjust(int.MinValue);
+            Assert.AreEqual("A", element.GetValueText());
+        }
+
+        [Test]
+        public void EnumOption_SetterFailureMarksOptionAndAllowsRetry()
+        {
+            var throwOnWrite = true;
+            var value = 0;
+            var owner = new DebugEnum("mode", new[] { "A", "B" }, () => value, next =>
+            {
+                if (throwOnWrite) throw new InvalidOperationException("enum option failed");
+                value = next;
+            });
+            var option = owner.Children[1];
+            option.Shortcut = KeyCode.F7;
+            var menu = new DebugMenuRoot();
+            menu.AddPage("Enum").Root.Add(owner);
+
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値設定"));
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値設定"));
+            Assert.IsFalse(menu.TryInvokeShortcut(KeyCode.F7));
+            Assert.AreEqual(0, value);
+            Assert.IsTrue(option.HasError);
+
+            throwOnWrite = false;
+            Assert.IsTrue(menu.TryInvokeShortcut(KeyCode.F7));
+            Assert.AreEqual(1, value);
+            Assert.IsFalse(option.HasError);
+        }
+
         // ── 共通の飾り ──────────────────────────────────────────────────────
 
         [Test]
@@ -585,7 +684,6 @@ namespace DebugMenu.Tests
             Assert.AreEqual("7", text);
             Assert.IsFalse(element.HasReadError);
         }
-
 
         [Test]
         public void RecoveredGetter_DisplayCapturesRealDefaultAcrossAllValueKinds()
@@ -795,14 +893,338 @@ namespace DebugMenu.Tests
         }
 
         [Test]
-        public void ValueOperations_SetterExceptionsRemainVisibleToCaller()
+        public void ValueOperations_SetterExceptionsAreIsolatedForAllValueTypesAndRecover()
         {
-            var integer = new DebugInt(
-                "Integer",
-                () => 4,
-                _ => throw new InvalidOperationException("setter failed"));
+            var throwOnWrite = false;
+            var changedCount = 0;
+            var booleanValue = true;
+            var integerValue = 4;
+            var floatValue = 0.4f;
+            var enumValue = 0;
+            var textValue = "before";
+            var pathValue = "before.txt";
+            var vectorValue = new Vector4(1f, 1f, 0f, 0f);
+            var colorValue = Color.red;
 
-            Assert.Throws<InvalidOperationException>(() => integer.OnAdjust(1));
+            var boolean = new DebugBool("Boolean", () => booleanValue, value =>
+            {
+                if (throwOnWrite) throw new InvalidOperationException("boolean setter failed");
+                booleanValue = value;
+            });
+            var integer = new DebugInt("Integer", () => integerValue, value =>
+            {
+                if (throwOnWrite) throw new InvalidOperationException("integer setter failed");
+                integerValue = value;
+            }).WithRange(0, 10);
+            var number = new DebugFloat("Float", () => floatValue, value =>
+            {
+                if (throwOnWrite) throw new InvalidOperationException("float setter failed");
+                floatValue = value;
+            }).WithRange(0f, 1f);
+            var choice = new DebugEnum("Choice", new[] { "A", "B" }, () => enumValue, value =>
+            {
+                if (throwOnWrite) throw new InvalidOperationException("enum setter failed");
+                enumValue = value;
+            });
+            var text = new DebugText("Text", () => textValue, value =>
+            {
+                if (throwOnWrite) throw new InvalidOperationException("text setter failed");
+                textValue = value;
+            });
+            var path = new DebugPath("Path", DebugPathMode.File, () => pathValue, value =>
+            {
+                if (throwOnWrite) throw new InvalidOperationException("path setter failed");
+                pathValue = value;
+            });
+            var vector = new DebugVector("Vector", 2, () => vectorValue, value =>
+            {
+                if (throwOnWrite) throw new InvalidOperationException("vector setter failed");
+                vectorValue = value;
+            });
+            var vectorComponent = vector.GetComponent(0);
+            var color = new DebugColor("Color", () => colorValue, value =>
+            {
+                if (throwOnWrite) throw new InvalidOperationException("color setter failed");
+                colorValue = value;
+            });
+
+            var elements = new DebugElement[] { boolean, integer, number, choice, text, path, vector, color };
+            var writes = new Func<bool>[]
+            {
+                () => boolean.TrySetBool(false),
+                () => integer.TrySetRatio(0.8f),
+                () => number.CommitEditText("0.8"),
+                () => choice.TrySetInt(1),
+                () => text.CommitEditText("after"),
+                () => path.CommitEditText("after.txt"),
+                () => vector.CommitEditText("2, 3"),
+                () => color.CommitEditText("#00FF00"),
+            };
+            for (var i = 0; i < elements.Length; i++) elements[i].Changed += () => changedCount++;
+
+            var versionBeforeFailure = DebugElement.ValueVersion;
+            throwOnWrite = true;
+            ExpectValueSetterWarnings(elements.Length);
+            for (var i = 0; i < writes.Length; i++)
+            {
+                var applied = true;
+                Assert.DoesNotThrow(() => applied = writes[i]());
+                Assert.IsFalse(applied, $"{elements[i].Label} が設定失敗を成功扱いした");
+                Assert.AreEqual("ERROR: 値設定", elements[i].ReadErrorText);
+            }
+
+            Assert.AreEqual(0, changedCount, "設定失敗でChangedが発火した");
+            Assert.AreEqual(versionBeforeFailure, DebugElement.ValueVersion, "設定失敗で値の版数が進んだ");
+            Assert.IsTrue(booleanValue);
+            Assert.AreEqual(4, integerValue);
+            Assert.That(floatValue, Is.EqualTo(0.4f).Within(0.0001f));
+            Assert.AreEqual(0, enumValue);
+            Assert.AreEqual("before", textValue);
+            Assert.AreEqual("before.txt", pathValue);
+            Assert.AreEqual(new Vector4(1f, 1f, 0f, 0f), vectorValue);
+            Assert.AreEqual(Color.red, colorValue);
+
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値設定"));
+            Assert.IsFalse(vectorComponent.TrySetFloat(5f));
+            Assert.IsTrue(vectorComponent.HasReadError);
+            Assert.AreEqual(0, changedCount, "親の設定失敗を子成分が成功通知した");
+            Assert.AreEqual(versionBeforeFailure, DebugElement.ValueVersion, "子成分の設定失敗で値の版数が進んだ");
+
+            throwOnWrite = false;
+            for (var i = 0; i < writes.Length; i++)
+            {
+                Assert.IsTrue(writes[i](), $"{elements[i].Label} が設定元の回復後も書き込めない");
+                Assert.IsFalse(elements[i].HasReadError, $"{elements[i].Label} の設定エラーが回復後も残っている");
+            }
+
+            Assert.AreEqual(elements.Length, changedCount);
+            Assert.AreEqual(versionBeforeFailure + (uint)elements.Length, DebugElement.ValueVersion);
+            Assert.IsFalse(booleanValue);
+            Assert.AreEqual(8, integerValue);
+            Assert.That(floatValue, Is.EqualTo(0.8f).Within(0.0001f));
+            Assert.AreEqual(1, enumValue);
+            Assert.AreEqual("after", textValue);
+            Assert.AreEqual("after.txt", pathValue);
+            Assert.AreEqual(new Vector4(2f, 3f, 0f, 0f), vectorValue);
+            Assert.AreEqual(Color.green, colorValue);
+            Assert.IsTrue(vectorComponent.TrySetFloat(6f));
+            Assert.IsFalse(vectorComponent.HasReadError);
+            Assert.That(vectorValue.x, Is.EqualTo(6f).Within(0.0001f));
+        }
+
+        [Test]
+        public void ValueOperations_RangeClampSetterExceptionsDoNotNotifyAndRecover()
+        {
+            var throwOnWrite = true;
+            var integerValue = 20;
+            var floatValue = 2f;
+            var changedCount = 0;
+            var integer = new DebugInt("Integer", () => integerValue, value =>
+            {
+                if (throwOnWrite) throw new InvalidOperationException("integer range setter failed");
+                integerValue = value;
+            });
+            var number = new DebugFloat("Float", () => floatValue, value =>
+            {
+                if (throwOnWrite) throw new InvalidOperationException("float range setter failed");
+                floatValue = value;
+            });
+            integer.Changed += () => changedCount++;
+            number.Changed += () => changedCount++;
+            var version = DebugElement.ValueVersion;
+
+            ExpectValueSetterWarnings(2);
+            Assert.DoesNotThrow(() => integer.WithRange(0, 10));
+            Assert.DoesNotThrow(() => number.WithRange(0f, 1f));
+
+            Assert.AreEqual(20, integerValue);
+            Assert.That(floatValue, Is.EqualTo(2f).Within(0.0001f));
+            Assert.AreEqual(0, changedCount);
+            Assert.AreEqual(version, DebugElement.ValueVersion);
+
+            throwOnWrite = false;
+            integer.WithRange(0, 10);
+            number.WithRange(0f, 1f);
+
+            Assert.AreEqual(10, integerValue);
+            Assert.That(floatValue, Is.EqualTo(1f).Within(0.0001f));
+            Assert.AreEqual(2, changedCount);
+            Assert.IsFalse(integer.HasReadError);
+            Assert.IsFalse(number.HasReadError);
+        }
+
+        [Test]
+        public void ValueSnapshot_CustomSetterExceptionReturnsFalseAndCanRecover()
+        {
+            var snapshot = DebugValueSnapshot.Capture(new DebugInt("Source", 7));
+            var target = new RecoverableWriteElement { ThrowOnWrite = true };
+
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値設定"));
+            var applied = true;
+            Assert.DoesNotThrow(() => applied = snapshot.Apply(target));
+
+            Assert.IsFalse(applied);
+            Assert.IsTrue(target.HasReadError);
+
+            target.ThrowOnWrite = false;
+            Assert.IsTrue(snapshot.Apply(target));
+            Assert.AreEqual(7, target.Value);
+            Assert.IsFalse(target.HasReadError);
+        }
+
+        [Test]
+        public void Root_CustomOperationExceptionsAreIsolatedAndRecover()
+        {
+            var menu = new DebugMenuRoot();
+            var page = menu.AddPage("Operations");
+            var element = page.Root.Add(new ThrowingOperationElement { ThrowOnOperation = true });
+            element.Shortcut = KeyCode.F5;
+
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値設定"));
+            Assert.DoesNotThrow(menu.Decide);
+            Assert.DoesNotThrow(() => menu.Adjust(1));
+            Assert.IsFalse(menu.TryInvokeShortcut(KeyCode.F5), "例外で実行できていないショートカットを成功扱いした");
+
+            Assert.IsTrue(element.HasReadError);
+            Assert.AreEqual(0, element.DecideCount);
+            Assert.AreEqual(0, element.AdjustCount);
+
+            element.ThrowOnOperation = false;
+            menu.Decide();
+            menu.Adjust(2);
+            Assert.IsTrue(menu.TryInvokeShortcut(KeyCode.F5));
+
+            Assert.IsFalse(element.HasReadError);
+            Assert.AreEqual(2, element.DecideCount);
+            Assert.AreEqual(2, element.AdjustCount);
+        }
+
+        [Test]
+        public void Action_ExceptionUsesCommonRowErrorBoundaryAndRecovers()
+        {
+            var throwOnAction = true;
+            var callCount = 0;
+            var menu = new DebugMenuRoot();
+            var action = menu.AddPage("Actions").Root.Action("Run", () =>
+            {
+                if (throwOnAction) throw new InvalidOperationException("action failed");
+                callCount++;
+            }).WithShortcut(KeyCode.F6);
+
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値設定"));
+            Assert.DoesNotThrow(menu.Decide);
+            Assert.IsFalse(menu.TryInvokeShortcut(KeyCode.F6), "同じ行の抑制期間中でも失敗結果は返す必要がある");
+            Assert.IsTrue(action.HasError);
+            Assert.AreEqual(0, callCount);
+
+            throwOnAction = false;
+            Assert.IsTrue(menu.TryInvokeShortcut(KeyCode.F6));
+            Assert.IsFalse(action.HasError);
+            Assert.AreEqual(1, callCount);
+        }
+
+        [Test]
+        public void Root_BuiltInSetterFailuresRemainVisibleAndRecover()
+        {
+            var throwOnWrite = true;
+            var boolValue = false;
+            var intValue = 1;
+            var menu = new DebugMenuRoot();
+            var page = menu.AddPage("Built In");
+            var boolean = page.Root.Add(new DebugBool("Boolean", () => boolValue, value =>
+            {
+                if (throwOnWrite) throw new InvalidOperationException("decide setter failed");
+                boolValue = value;
+            }));
+            var integer = page.Root.Add(new DebugInt("Integer", () => intValue, value =>
+            {
+                if (throwOnWrite) throw new InvalidOperationException("adjust setter failed");
+                intValue = value;
+            }));
+
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値設定"));
+            menu.Decide();
+            Assert.AreEqual("ERROR: 値設定", boolean.ReadErrorText, "OnDecide内部のsetter失敗を安全入口が消した");
+            Assert.IsFalse(boolValue);
+
+            page.MoveCursor(1);
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値設定"));
+            menu.Adjust(1);
+            Assert.AreEqual("ERROR: 値設定", integer.ReadErrorText, "OnAdjust内部のsetter失敗を安全入口が消した");
+            Assert.AreEqual(1, intValue);
+
+            throwOnWrite = false;
+            page.MoveCursor(-1);
+            menu.Decide();
+            page.MoveCursor(1);
+            menu.Adjust(1);
+
+            Assert.IsTrue(boolValue);
+            Assert.AreEqual(2, intValue);
+            Assert.IsFalse(boolean.HasReadError);
+            Assert.IsFalse(integer.HasReadError);
+        }
+
+        [Test]
+        public void WriteError_LogRateLimitResetsAfterSuccessfulRecovery()
+        {
+            var throwOnWrite = true;
+            var value = 1;
+            var element = new DebugInt("Count", () => value, next =>
+            {
+                if (throwOnWrite) throw new InvalidOperationException("rate limited setter failed");
+                value = next;
+            });
+
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値設定"));
+            Assert.IsFalse(element.TrySetInt(2));
+            Assert.IsFalse(element.TrySetInt(2), "連続失敗は結果だけfalseでログを抑制する");
+
+            throwOnWrite = false;
+            Assert.IsTrue(element.TrySetInt(2));
+            throwOnWrite = true;
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値設定"));
+            Assert.IsFalse(element.TrySetInt(3), "回復後の再発は新しい失敗として報告する");
+        }
+
+        [Test]
+        public void Root_GetterFailureDuringAdjustRemainsFailureUntilRecovery()
+        {
+            var throwOnRead = false;
+            var value = 1;
+            var menu = new DebugMenuRoot();
+            var element = menu.AddPage("Getter").Root.Add(new DebugInt(
+                "Integer",
+                () => throwOnRead ? throw new InvalidOperationException("adjust getter failed") : value,
+                next => value = next));
+            throwOnRead = true;
+
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値取得"));
+            Assert.DoesNotThrow(() => menu.Adjust(1));
+            Assert.IsTrue(element.HasReadError);
+            Assert.AreEqual(1, value);
+
+            throwOnRead = false;
+            menu.Adjust(1);
+            Assert.AreEqual(2, value);
+            Assert.IsFalse(element.HasReadError);
+        }
+
+        [Test]
+        public void Root_AdjustabilityExceptionIsIsolatedAndRecovers()
+        {
+            var menu = new DebugMenuRoot();
+            var element = menu.AddPage("Metadata").Root.Add(new ThrowingAdjustabilityElement { ThrowOnCheck = true });
+
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値設定"));
+            Assert.DoesNotThrow(() => menu.Adjust(2));
+            Assert.IsTrue(element.HasError);
+            Assert.AreEqual(0, element.AdjustCount);
+
+            element.ThrowOnCheck = false;
+            menu.Adjust(2);
+            Assert.IsFalse(element.HasError);
+            Assert.AreEqual(2, element.AdjustCount);
         }
 
         [Test]
@@ -900,6 +1322,56 @@ namespace DebugMenu.Tests
             Assert.AreEqual(1f, element.Value.a);
             Assert.AreEqual("#1A334C", element.GetValueText());
             Assert.IsFalse(element.IsModified);
+        }
+
+        [Test]
+        public void Color_ShowAlphaFailureKeepsPreviousModeAndAllowsRetry()
+        {
+            var throwOnRead = false;
+            var throwOnWrite = false;
+            var value = new Color(0.1f, 0.2f, 0.3f, 0.25f);
+            var element = new DebugColor(
+                "team",
+                () => throwOnRead ? throw new InvalidOperationException("alpha getter failed") : value,
+                next =>
+                {
+                    if (throwOnWrite) throw new InvalidOperationException("alpha setter failed");
+                    value = next;
+                });
+
+            throwOnRead = true;
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値取得"));
+            element.ShowAlpha = false;
+            Assert.IsTrue(element.ShowAlpha);
+
+            throwOnRead = false;
+            throwOnWrite = true;
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値設定"));
+            element.ShowAlpha = false;
+            Assert.IsTrue(element.ShowAlpha);
+            Assert.AreEqual(0.25f, value.a, 0.0001f);
+
+            throwOnWrite = false;
+            element.ShowAlpha = false;
+            Assert.IsFalse(element.ShowAlpha);
+            Assert.AreEqual(1f, value.a, 0.0001f);
+            Assert.IsFalse(element.HasError);
+        }
+
+        [Test]
+        public void Int_AdjustSaturatesAtIntegerBoundsWithoutOverflow()
+        {
+            var positive = new DebugInt("positive", int.MaxValue - 1).WithStep(int.MaxValue);
+            var negative = new DebugInt("negative", int.MinValue + 1).WithStep(int.MaxValue);
+            var ranged = new DebugInt("ranged", 9).WithRange(0, 10).WithStep(int.MaxValue);
+
+            positive.OnAdjust(int.MaxValue);
+            negative.OnAdjust(int.MinValue);
+            ranged.OnAdjust(int.MaxValue);
+
+            Assert.AreEqual(int.MaxValue, positive.Value);
+            Assert.AreEqual(int.MinValue, negative.Value);
+            Assert.AreEqual(10, ranged.Value);
         }
 
         [Test]
@@ -1132,6 +1604,23 @@ namespace DebugMenu.Tests
             Assert.AreEqual(5, element.Value, "既定値に戻っていない");
         }
 
+        [Test]
+        public void Dispatcher_CustomResetExceptionIsIsolatedAndRecovers()
+        {
+            var menu = new DebugMenuRoot();
+            var page = menu.AddPage("Root");
+            var element = page.Root.Add(new ThrowingOperationElement { ThrowOnOperation = true });
+
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値設定"));
+            Assert.DoesNotThrow(() => DebugMenuCommandDispatcher.Dispatch(menu, DebugMenuCommand.ResetValue));
+            Assert.IsTrue(element.HasReadError);
+            Assert.AreEqual(0, element.ResetCount);
+
+            element.ThrowOnOperation = false;
+            DebugMenuCommandDispatcher.Dispatch(menu, DebugMenuCommand.ResetValue);
+            Assert.AreEqual(1, element.ResetCount);
+            Assert.IsFalse(element.HasReadError);
+        }
 
         private static T ReadOrThrow<T>(T value, bool shouldThrow)
         {
@@ -1144,6 +1633,14 @@ namespace DebugMenu.Tests
             for (var i = 0; i < count; i++)
             {
                 LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値取得"));
+            }
+        }
+
+        private static void ExpectValueSetterWarnings(int count)
+        {
+            for (var i = 0; i < count; i++)
+            {
+                LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値設定"));
             }
         }
 

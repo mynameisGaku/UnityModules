@@ -122,7 +122,13 @@ namespace DebugMenu
 
             _dragColor = _color;
             _dragPointerId = evt.pointerId;
-            ApplyPointerPosition(evt.localPosition);
+            if (!ApplyPointerPosition(evt.localPosition))
+            {
+                CancelDrag();
+                evt.StopPropagation();
+                return;
+            }
+
             this.CapturePointer(evt.pointerId);
             evt.StopPropagation();
         }
@@ -131,7 +137,7 @@ namespace DebugMenu
         {
             if (_dragTarget == DragTarget.None || !this.HasPointerCapture(evt.pointerId)) return;
 
-            ApplyPointerPosition(evt.localPosition);
+            if (!ApplyPointerPosition(evt.localPosition)) CancelDrag();
             evt.StopPropagation();
         }
 
@@ -139,11 +145,14 @@ namespace DebugMenu
         {
             if (!this.HasPointerCapture(evt.pointerId)) return;
 
-            ApplyPointerPosition(evt.localPosition);
-            _dragPointerId = -1;
-            _dragColor = null;
-            _dragTarget = DragTarget.None;
-            this.ReleasePointer(evt.pointerId);
+            if (!ApplyPointerPosition(evt.localPosition))
+            {
+                CancelDrag();
+                evt.StopPropagation();
+                return;
+            }
+
+            CancelDrag();
             evt.StopPropagation();
         }
 
@@ -187,10 +196,10 @@ namespace DebugMenu
             return DragTarget.None;
         }
 
-        private void ApplyPointerPosition(Vector2 position)
+        private bool ApplyPointerPosition(Vector2 position)
         {
             var color = _dragColor;
-            if (color == null) return;
+            if (color == null) return false;
 
             GetPickerRects(out var hsvRect, out var hueRect, out var alphaRect);
             switch (_dragTarget)
@@ -199,24 +208,27 @@ namespace DebugMenu
                 {
                     var saturation = Mathf.InverseLerp(hsvRect.xMin, hsvRect.xMax, position.x);
                     var brightness = 1f - Mathf.InverseLerp(hsvRect.yMin, hsvRect.yMax, position.y);
-                    color.SetHsv(color.Hue, saturation, brightness);
+                    if (!color.TrySetHsv(color.Hue, saturation, brightness)) return false;
                     break;
                 }
                 case DragTarget.Hue:
                 {
                     var hue = Mathf.InverseLerp(hueRect.xMin, hueRect.xMax, position.x);
-                    color.SetHsv(hue, color.Saturation, color.Brightness);
+                    if (!color.TrySetHsv(hue, color.Saturation, color.Brightness)) return false;
                     break;
                 }
                 case DragTarget.Alpha:
                 {
                     var alpha = Mathf.InverseLerp(alphaRect.xMin, alphaRect.xMax, position.x);
-                    color.SetAlpha(alpha);
+                    if (!color.TrySetAlpha(alpha)) return false;
                     break;
                 }
+                default:
+                    return false;
             }
 
             MarkDirtyRepaint();
+            return true;
         }
 
         private void GetPickerRects(out Rect hsvRect, out Rect hueRect, out Rect alphaRect)

@@ -1,11 +1,47 @@
 using System.Collections.Generic;
 using NUnit.Framework;
+using UnityEngine;
+using UnityEngine.TestTools;
 
 namespace DebugMenu.Tests
 {
     /// <summary>整数・小数配列行の展開、書き込み、長さ追従、保存境界を検証する。</summary>
     public sealed class DebugArrayTests
     {
+        private sealed class TrackingList<T> : IList<T>
+        {
+            private readonly List<T> _values;
+
+            public TrackingList(params T[] values) => _values = new List<T>(values);
+            public int ThrowIndex { get; set; } = -1;
+            public int ThrowGetIndex { get; set; } = -1;
+            public int SetCount { get; private set; }
+            public T this[int index]
+            {
+                get => index == ThrowGetIndex
+                    ? throw new System.InvalidOperationException("array getter failed")
+                    : _values[index];
+                set
+                {
+                    if (index == ThrowIndex) throw new System.InvalidOperationException("array setter failed");
+                    SetCount++;
+                    _values[index] = value;
+                }
+            }
+            public int Count => _values.Count;
+            public bool IsReadOnly => false;
+            public void Add(T item) => _values.Add(item);
+            public void Clear() => _values.Clear();
+            public bool Contains(T item) => _values.Contains(item);
+            public void CopyTo(T[] array, int arrayIndex) => _values.CopyTo(array, arrayIndex);
+            public IEnumerator<T> GetEnumerator() => _values.GetEnumerator();
+            public int IndexOf(T item) => _values.IndexOf(item);
+            public void Insert(int index, T item) => _values.Insert(index, item);
+            public bool Remove(T item) => _values.Remove(item);
+            public void RemoveAt(int index) => _values.RemoveAt(index);
+            System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
+        }
+
         [Test]
         public void IntArray_ExpandsIntoWritableIntRows()
         {
@@ -114,6 +150,117 @@ namespace DebugMenu.Tests
             Assert.AreEqual(2, array.Children.Count);
             Assert.DoesNotThrow(() => removed.OnAdjust(1));
             CollectionAssert.AreEqual(new[] { 1, 2 }, values);
+        }
+
+        [Test]
+        public void Array_StaleChildrenRejectWritesWithoutChangeNotificationAndCanRecoverAfterGrow()
+        {
+            var intValues = new List<int> { 1, 2 };
+            var floatValues = new List<float> { 1f, 2f };
+            var intArray = new DebugIntArray("Ints", intValues);
+            var floatArray = new DebugFloatArray("Floats", floatValues);
+            var staleInt = (DebugInt)intArray.Children[1];
+            var staleFloat = (DebugFloat)floatArray.Children[1];
+            var changed = 0;
+            DebugElement.SetChangeListener(_ => changed++);
+            var valueVersion = DebugElement.ValueVersion;
+            intValues.RemoveAt(1);
+            floatValues.RemoveAt(1);
+            intArray.Refresh();
+            floatArray.Refresh();
+
+            try
+            {
+                LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値設定"));
+                LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値設定"));
+                Assert.IsFalse(staleInt.TrySetInt(7));
+                Assert.IsFalse(staleFloat.TrySetFloat(7f));
+                Assert.AreEqual(0, changed);
+                Assert.AreEqual(valueVersion, DebugElement.ValueVersion);
+
+                intValues.Add(2);
+                floatValues.Add(2f);
+                Assert.IsTrue(staleInt.TrySetInt(7));
+                Assert.IsTrue(staleFloat.TrySetFloat(7f));
+                Assert.IsFalse(staleInt.HasError);
+                Assert.IsFalse(staleFloat.HasError);
+                CollectionAssert.AreEqual(new[] { 1, 7 }, intValues);
+                CollectionAssert.AreEqual(new[] { 1f, 7f }, floatValues);
+            }
+            finally
+            {
+                DebugElement.SetChangeListener(null);
+            }
+        }
+
+        [Test]
+        public void Array_ConfigureGetterFailuresAreIsolatedAndRecoverWithClamp()
+        {
+            var ints = new TrackingList<int>(20);
+            var floats = new TrackingList<float>(2f);
+            var intArray = new DebugIntArray("Ints", ints);
+            var floatArray = new DebugFloatArray("Floats", floats);
+            ints.ThrowGetIndex = 0;
+            floats.ThrowGetIndex = 0;
+
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値取得"));
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値取得"));
+            Assert.DoesNotThrow(() => intArray.WithRange(0, 10));
+            Assert.DoesNotThrow(() => floatArray.WithRange(0f, 1f));
+            Assert.IsTrue(intArray.Children[0].HasError);
+            Assert.IsTrue(floatArray.Children[0].HasError);
+
+            ints.ThrowGetIndex = -1;
+            floats.ThrowGetIndex = -1;
+            intArray.WithRange(0, 10);
+            floatArray.WithRange(0f, 1f);
+
+            Assert.AreEqual(10, ints[0]);
+            Assert.AreEqual(1f, floats[0]);
+            Assert.IsFalse(intArray.Children[0].HasError);
+            Assert.IsFalse(floatArray.Children[0].HasError);
+        }
+
+        [Test]
+        public void Array_ParentResetContinuesAfterChildFailureAndReportsFailure()
+        {
+            var values = new TrackingList<int>(1, 2);
+            var menu = new DebugMenuRoot();
+            var page = menu.AddPage("Arrays");
+            var array = page.Root.Add(new DebugIntArray("Values", values));
+            ((DebugInt)array.Children[0]).Value = 8;
+            ((DebugInt)array.Children[1]).Value = 9;
+            values.ThrowIndex = 0;
+
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値設定"));
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値設定"));
+            Assert.DoesNotThrow(() => DebugMenuCommandDispatcher.Dispatch(menu, DebugMenuCommand.ResetValue));
+            Assert.AreEqual(8, values[0]);
+            Assert.AreEqual(2, values[1], "失敗した要素より後ろの復元が止まっている");
+            Assert.IsTrue(array.HasError);
+
+            values.ThrowIndex = -1;
+            DebugMenuCommandDispatcher.Dispatch(menu, DebugMenuCommand.ResetValue);
+            Assert.AreEqual(1, values[0]);
+            Assert.IsFalse(array.HasError);
+        }
+
+        [Test]
+        public void SettingsResetAll_ResetsEachArrayIndexOnceAndCountsOnlyValues()
+        {
+            var values = new TrackingList<int>(1, 2);
+            var menu = new DebugMenuRoot();
+            var array = menu.AddPage("Arrays").Root.Add(new DebugIntArray("Values", values));
+            ((DebugInt)array.Children[0]).Value = 8;
+            ((DebugInt)array.Children[1]).Value = 9;
+            var beforeReset = values.SetCount;
+
+            var result = DebugMenuSettings.ResetAll(menu);
+
+            Assert.AreEqual(2, values.SetCount - beforeReset, "配列親と子の両方から二重に復元した");
+            Assert.AreEqual(2, result.TotalCount);
+            Assert.AreEqual(2, result.SucceededCount);
+            Assert.AreEqual(0, result.FailedCount);
         }
 
         [Test]

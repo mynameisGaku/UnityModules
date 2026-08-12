@@ -8,6 +8,30 @@ namespace DebugMenu.Tests
 {
     public sealed class DebugMenuSettingsFormatTests
     {
+        [TestCase("1", true)]
+        [TestCase("0", false)]
+        [TestCase("true", true)]
+        [TestCase("TRUE", true)]
+        [TestCase("false", false)]
+        [TestCase("FALSE", false)]
+        public void BoolSnapshot_ParsesOnlyDocumentedTokens(string text, bool expected)
+        {
+            Assert.IsTrue(DebugValueSnapshot.TryParse(DebugValueKind.Bool, text, out var snapshot));
+            var target = new DebugBool("flag", !expected);
+            Assert.IsTrue(snapshot.Apply(target));
+            Assert.AreEqual(expected, target.Value);
+        }
+
+        [TestCase(null)]
+        [TestCase("")]
+        [TestCase("yes")]
+        [TestCase("2")]
+        [TestCase(" false ")]
+        public void BoolSnapshot_RejectsUnknownOrPaddedTokens(string text)
+        {
+            Assert.IsFalse(DebugValueSnapshot.TryParse(DebugValueKind.Bool, text, out _));
+        }
+
         [Test]
         public void TextFormat_RoundTripsEscapedValues()
         {

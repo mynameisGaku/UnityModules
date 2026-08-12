@@ -121,12 +121,22 @@ namespace DebugMenu
 
         private bool TrySetValue(string value, string current)
         {
-
             var next = value ?? string.Empty;
-            if (string.Equals(current, next, StringComparison.Ordinal)) return true;
+            if (string.Equals(current, next, StringComparison.Ordinal))
+            {
+                ClearReadError("値設定");
+                return true;
+            }
 
-            if (_setter != null) _setter(next);
-            else _stored = next;
+            if (_setter != null)
+            {
+                if (!TryWriteExternalValue(_setter, next)) return false;
+            }
+            else
+            {
+                _stored = next;
+                ClearReadError("値設定");
+            }
 
             NotifyChanged();
             return true;

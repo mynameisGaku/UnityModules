@@ -127,24 +127,30 @@ namespace DebugMenu
         {
             if (element == null || !HasValue) return false;
 
-            // 種類が食い違う相手へ書き戻すと、意味の違う値が入る。
-            if (element.ValueKind != Kind) return false;
-
-            switch (Kind)
+            try
             {
-                case DebugValueKind.Bool:
-                    return element.TrySetBool(_boolValue);
-                case DebugValueKind.Int:
-                case DebugValueKind.Enum:
-                    return element.TrySetInt(_intValue);
-                case DebugValueKind.Float:
-                    return element.TrySetFloat(_floatValue);
-                case DebugValueKind.Text:
-                case DebugValueKind.Color:
-                case DebugValueKind.Vector:
-                    return element.CommitEditText(_textValue);
-                default:
-                    return false;
+                // 種類が食い違う相手へ書き戻すと、意味の違う値が入る。
+                if (element.ValueKind != Kind) return false;
+
+                var applied = Kind switch
+                {
+                    DebugValueKind.Bool => element.TrySetBool(_boolValue),
+                    DebugValueKind.Int => element.TrySetInt(_intValue),
+                    DebugValueKind.Enum => element.TrySetInt(_intValue),
+                    DebugValueKind.Float => element.TrySetFloat(_floatValue),
+                    DebugValueKind.Text => element.CommitEditTextSafely(_textValue),
+                    DebugValueKind.Color => element.CommitEditTextSafely(_textValue),
+                    DebugValueKind.Vector => element.CommitEditTextSafely(_textValue),
+                    _ => false,
+                };
+
+                if (applied) element.ClearReadError("値設定");
+                return applied;
+            }
+            catch (Exception exception)
+            {
+                element.ReportReadError("値設定", exception);
+                return false;
             }
         }
 
@@ -171,15 +177,28 @@ namespace DebugMenu
 
         /// <summary>保存用の文字列から復元する。</summary>
         /// <param name="kind">値の種類。</param>
-        /// <param name="text">保存されていた文字列。</param>
+        /// <param name="text">保存されていた文字列。Boolは1/0または大文字小文字を区別しないtrue/falseだけを受け付ける。</param>
         /// <param name="snapshot">復元した写し。</param>
         public static bool TryParse(DebugValueKind kind, string text, out DebugValueSnapshot snapshot)
         {
             switch (kind)
             {
                 case DebugValueKind.Bool:
-                    snapshot = new DebugValueSnapshot(kind, text == "1" || string.Equals(text, "true", StringComparison.OrdinalIgnoreCase), 0, 0f, null);
-                    return true;
+                    if (string.Equals(text, "1", StringComparison.Ordinal) ||
+                        string.Equals(text, "true", StringComparison.OrdinalIgnoreCase))
+                    {
+                        snapshot = new DebugValueSnapshot(kind, true, 0, 0f, null);
+                        return true;
+                    }
+
+                    if (string.Equals(text, "0", StringComparison.Ordinal) ||
+                        string.Equals(text, "false", StringComparison.OrdinalIgnoreCase))
+                    {
+                        snapshot = new DebugValueSnapshot(kind, false, 0, 0f, null);
+                        return true;
+                    }
+
+                    break;
 
                 case DebugValueKind.Int:
                 case DebugValueKind.Enum:

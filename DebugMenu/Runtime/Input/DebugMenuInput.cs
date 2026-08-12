@@ -338,7 +338,7 @@ namespace DebugMenu
                 case DebugMenuCommand.ResetValue:
                 {
                     var element = menu.CurrentPage?.CurrentElement;
-                    element?.ResetToDefault();
+                    element?.TryResetToDefaultSafely();
                     break;
                 }
                 case DebugMenuCommand.Undo:

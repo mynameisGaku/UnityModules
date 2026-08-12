@@ -173,7 +173,7 @@ namespace DebugMenu
                 return;
             }
 
-            element.OnDecide();
+            element.TryDecideSafely();
             CurrentPage.Invalidate();
         }
 
@@ -188,9 +188,9 @@ namespace DebugMenu
         public void Adjust(int delta)
         {
             var element = CurrentPage?.CurrentElement;
-            if (element == null || !element.IsAdjustable) return;
+            if (element == null) return;
 
-            element.OnAdjust(delta);
+            element.TryAdjustSafely(delta);
         }
 
         /// <summary>
@@ -227,6 +227,7 @@ namespace DebugMenu
 
             if (found == null) return false;
 
+            var succeeded = true;
             if (found is DebugPageLink link && link.Mode == DebugAttachMode.Page)
             {
                 SetRootPage(rootPage);
@@ -234,12 +235,12 @@ namespace DebugMenu
             }
             else
             {
-                found.OnDecide();
+                succeeded = found.TryDecideSafely();
             }
 
             owningPage.Invalidate();
             if (!ReferenceEquals(owningPage, rootPage)) rootPage.Invalidate();
-            return true;
+            return succeeded;
         }
 
         private static bool TryFindShortcut(

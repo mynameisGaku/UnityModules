@@ -86,6 +86,12 @@ page.FloatArray("Blend", BlendWeights).WithRange(0f, 1f).WithStep(0.05f);
 
 配列の親行は保存対象外で、`[index]` の子行だけが保存されます。外側で `IList<T>` の長さを変えた場合も子行を安全に増減し、入れ子に配置した場合も表示行数を自動更新します。
 
+利用側の getter、setter、`Action` の例外は行単位で隔離されます。状態は `HasError`、`ErrorText`、`ErrorMessage` から取得できます。値設定エラーでは操作部品を残し、同じUIから再試行できます。正常な再試行はエラーを解除し、失敗した書き込みは変更通知へ含めません。
+
+`DebugMenuSettings.ResetAll` は `IsSaveable == true` かつ `ValueKind != None` の行を、借用表示を除いて1実体につき1回だけ復元し、対象・成功・失敗件数を `DebugMenuResetResult` で返します。配列は各 index、Vector は親だけが対象です。
+
+保存文字列のBool値は `1` / `0` / `true` / `false` のみ受け付けます。`true` / `false` は大文字小文字を区別せず、前後空白や別名は不正値として適用しません。
+
 ## 入力
 
 ### キーボード

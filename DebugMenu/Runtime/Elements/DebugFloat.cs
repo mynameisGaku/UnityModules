@@ -15,6 +15,8 @@ namespace DebugMenu
     {
         private readonly Func<float> _getter;
         private readonly Action<float> _setter;
+        private readonly Func<float, bool> _trySetter;
+        private readonly bool _isSaveable = true;
         private float _defaultValue;
         private bool _hasDefaultValue;
 
@@ -35,6 +37,29 @@ namespace DebugMenu
             }
             IsExpandable = false;
         }
+
+        /// <summary>親の複合値へ書き込み、親側の失敗を子行へ返せる成分行を作る。</summary>
+        private DebugFloat(string label, Func<float> getter, Func<float, bool> trySetter, bool isSaveable) : base(label)
+        {
+            _getter = getter ?? throw new ArgumentNullException(nameof(getter));
+            _trySetter = trySetter ?? throw new ArgumentNullException(nameof(trySetter));
+            _isSaveable = isSaveable;
+            if (TryReadExternalValue(getter, out var initialValue))
+            {
+                _defaultValue = initialValue;
+                _hasDefaultValue = true;
+            }
+
+            IsExpandable = false;
+        }
+
+        /// <summary>親の設定失敗を子行の操作結果へ伝播する内部用の小数行を作る。</summary>
+        internal static DebugFloat CreateChecked(
+            string label,
+            Func<float> getter,
+            Func<float, bool> trySetter,
+            bool isSaveable = true) =>
+            new DebugFloat(label, getter, trySetter, isSaveable);
 
         /// <summary>この行が値を抱える形で作る。</summary>
         /// <param name="label">左カラムへ出す表示名。</param>
@@ -72,7 +97,7 @@ namespace DebugMenu
                 var clamped = Mathf.Clamp(current, Min, Max);
                 if (!Mathf.Approximately(current, clamped))
                 {
-                    _setter(clamped);
+                    if (!TryWriteValue(clamped)) return this;
                     NotifyChanged();
                 }
             }
@@ -112,6 +137,9 @@ namespace DebugMenu
 
         /// <inheritdoc/>
         public override DebugValueKind ValueKind => DebugValueKind.Float;
+
+        /// <inheritdoc/>
+        public override bool IsSaveable => _isSaveable;
 
         /// <inheritdoc/>
         public override bool IsAdjustable => true;
@@ -219,12 +247,26 @@ namespace DebugMenu
             var clamped = Mathf.Clamp(value, Min, Max);
 
             // 完全一致で弾くと、丸め誤差で毎回通知が飛ぶ。表示桁で見て同じなら変化なしとする。
-            if (Mathf.Approximately(current, clamped)) return true;
+            if (Mathf.Approximately(current, clamped))
+            {
+                ClearReadError("値設定");
+                return true;
+            }
 
-            if (_setter != null) _setter(clamped);
-            else _stored = clamped;
+            if (!TryWriteValue(clamped)) return false;
 
             NotifyChanged();
+            return true;
+        }
+
+        /// <summary>通常の設定関数と、親へ失敗を返す設定処理を同じ入口から呼ぶ。</summary>
+        private bool TryWriteValue(float value)
+        {
+            if (_trySetter != null) return TryWriteExternalValue(_trySetter, value);
+            if (_setter != null) return TryWriteExternalValue(_setter, value);
+
+            _stored = value;
+            ClearReadError("値設定");
             return true;
         }
     }

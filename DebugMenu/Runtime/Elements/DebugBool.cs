@@ -144,10 +144,21 @@ namespace DebugMenu
 
         private bool TrySetValue(bool value, bool current)
         {
-            if (current == value) return true;
+            if (current == value)
+            {
+                ClearReadError("値設定");
+                return true;
+            }
 
-            if (_setter != null) _setter(value);
-            else _stored = value;
+            if (_setter != null)
+            {
+                if (!TryWriteExternalValue(_setter, value)) return false;
+            }
+            else
+            {
+                _stored = value;
+                ClearReadError("値設定");
+            }
 
             NotifyChanged();
             return true;

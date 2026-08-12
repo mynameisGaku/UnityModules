@@ -159,6 +159,7 @@ namespace DebugMenu
             _scope.Clear();
             _menu.VisitAll((_, element) =>
             {
+                if (!element.IsSaveable || element.ValueKind == DebugValueKind.None) return;
                 if (!DebugValueSnapshot.TryCapture(element, out var snapshot) || !snapshot.HasValue) return;
 
                 _scope.Add(element);

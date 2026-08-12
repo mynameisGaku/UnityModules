@@ -116,8 +116,8 @@ namespace DebugMenu
         {
             if (!TryGetIndex(out var index)) return;
 
-            var next = (index + delta) % _options.Length;
-            TrySetIndex(next < 0 ? next + _options.Length : next, index);
+            var next = ((long)index + delta) % _options.Length;
+            TrySetIndex((int)(next < 0 ? next + _options.Length : next), index);
         }
 
         /// <summary>決定で候補一覧を開閉する。</summary>
@@ -192,10 +192,21 @@ namespace DebugMenu
         private bool TrySetIndex(int index, int current)
         {
             var wrapped = Wrap(index);
-            if (current == wrapped) return true;
+            if (current == wrapped)
+            {
+                ClearReadError("値設定");
+                return true;
+            }
 
-            if (_setter != null) _setter(wrapped);
-            else _stored = wrapped;
+            if (_setter != null)
+            {
+                if (!TryWriteExternalValue(_setter, wrapped)) return false;
+            }
+            else
+            {
+                _stored = wrapped;
+                ClearReadError("値設定");
+            }
 
             NotifyChanged();
             return true;
@@ -229,7 +240,14 @@ namespace DebugMenu
         /// <summary>この候補を親へ設定し、一覧を閉じる。</summary>
         public override void OnDecide()
         {
-            if (_owner.TrySetInt(_index)) _owner.IsExpanded = false;
+            if (_owner.TrySetInt(_index))
+            {
+                _owner.IsExpanded = false;
+                ClearReadError("値設定");
+                return;
+            }
+
+            ReportReadError("値設定", new InvalidOperationException("候補を設定できなかった。"));
         }
     }
 }
