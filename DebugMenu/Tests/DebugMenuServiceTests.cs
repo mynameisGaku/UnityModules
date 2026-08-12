@@ -406,6 +406,68 @@ namespace DebugMenu.Tests
             Assert.AreEqual(0, history.Count);
         }
 
+        [Test]
+        public void ChangeNotification_ThrowingInstanceObserverDoesNotBlockLaterObserversOrServices()
+        {
+            var menu = new DebugMenuRoot();
+            var element = menu.AddPage("Gameplay").Root.Int("count", 0);
+            using var recent = new DebugMenuRecentChanges();
+            using var history = new DebugMenuHistory();
+            recent.Attach(menu);
+            history.Attach(menu);
+
+            var laterObserverCount = 0;
+            element.Changed += () => throw new System.InvalidOperationException("instance observer failed");
+            element.Changed += () => laterObserverCount++;
+
+            UnityEngine.TestTools.LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*変更通知先.*行イベント"));
+            Assert.DoesNotThrow(() => element.Value = 1);
+            Assert.DoesNotThrow(() => element.Value = 2);
+
+            Assert.AreEqual(2, laterObserverCount);
+            Assert.AreEqual(2, history.Count);
+            Assert.AreEqual(1, recent.Count);
+            Assert.IsFalse(element.HasReadError);
+        }
+
+        [Test]
+        public void ChangeNotification_ThrowingServiceObserverDoesNotBlockFollowingService()
+        {
+            var menu = new DebugMenuRoot();
+            var element = menu.AddPage("Gameplay").Root.Int("count", 0);
+            using var recent = new DebugMenuRecentChanges();
+            using var history = new DebugMenuHistory();
+            recent.Attach(menu);
+            recent.Changed += () => throw new System.InvalidOperationException("recent observer failed");
+            history.Attach(menu);
+
+            UnityEngine.TestTools.LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*変更通知先.*サービスリスナー"));
+            Assert.DoesNotThrow(() => element.Value = 1);
+
+            Assert.AreEqual(1, recent.Count);
+            Assert.AreEqual(1, history.Count);
+            Assert.IsFalse(element.HasReadError);
+        }
+
+        [Test]
+        public void ChangeNotification_ThrowingCompatibilityListenerDoesNotBlockServices()
+        {
+            var menu = new DebugMenuRoot();
+            var element = menu.AddPage("Gameplay").Root.Int("count", 0);
+            using var recent = new DebugMenuRecentChanges();
+            using var history = new DebugMenuHistory();
+            DebugElement.SetChangeListener(_ => throw new System.InvalidOperationException("listener failed"));
+            recent.Attach(menu);
+            history.Attach(menu);
+
+            UnityEngine.TestTools.LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*変更通知先.*互換リスナー"));
+            Assert.DoesNotThrow(() => element.Value = 1);
+
+            Assert.AreEqual(1, history.Count);
+            Assert.AreEqual(1, recent.Count);
+            Assert.IsFalse(element.HasReadError);
+        }
+
         // ── 設定の保存と復元 ────────────────────────────────────────────────
 
         [Test]

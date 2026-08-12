@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Containers;
 using UnityEngine;
 
@@ -19,11 +21,34 @@ namespace DebugMenu
     /// </summary>
     public class DebugElement
     {
+        /// <summary>通知先を強参照せず、失敗ログの間引き単位を識別する。</summary>
+        private readonly struct ChangeObserverKey : IEquatable<ChangeObserverKey>
+        {
+            private readonly int _methodIdentity;
+            private readonly int _targetIdentity;
+
+            public ChangeObserverKey(Delegate observer)
+            {
+                _methodIdentity = observer.Method.GetHashCode();
+                _targetIdentity = observer.Target == null ? 0 : RuntimeHelpers.GetHashCode(observer.Target);
+            }
+
+            public bool Equals(ChangeObserverKey other) =>
+                _methodIdentity == other._methodIdentity && _targetIdentity == other._targetIdentity;
+
+            public override bool Equals(object obj) => obj is ChangeObserverKey other && Equals(other);
+
+            public override int GetHashCode() => unchecked((_methodIdentity * 397) ^ _targetIdentity);
+        }
+
         private const float ReadErrorLogIntervalSeconds = 5f;
+        private const float ChangeObserverErrorLogIntervalSeconds = 5f;
 
         private readonly FastList<DebugElement> _children = new FastList<DebugElement>();
+        private Action[] _changedObservers = Array.Empty<Action>();
 
         private Func<string> _labelProvider;
+        private Dictionary<ChangeObserverKey, float> _nextChangeObserverErrorLogTimes;
         private string _readErrorOperation = string.Empty;
         private string _readErrorMessage = string.Empty;
         private float _nextReadErrorLogTime;
@@ -42,10 +67,10 @@ namespace DebugMenu
         private static uint _structureVersion;
 
         /// <summary>互換用の単一変更受け取り先。<see cref="SetChangeListener"/> で差し替える。</summary>
-        private static Action<DebugElement> _changeListener;
+        private static Action<DebugElement>[] _changeListeners = Array.Empty<Action<DebugElement>>();
 
         /// <summary>複数のサービスが並行して受け取るための変更受け取り先。</summary>
-        private static Action<DebugElement> _changeSubscribers;
+        private static Action<DebugElement>[] _changeSubscribers = Array.Empty<Action<DebugElement>>();
 
         /// <summary>表示名と副題を指定して作る。</summary>
         /// <param name="label">左カラムへ出す表示名。</param>
@@ -229,7 +254,11 @@ namespace DebugMenu
         public KeyCode Shortcut { get; set; } = KeyCode.None;
 
         /// <summary>値が変わったときに呼ばれる。</summary>
-        public event Action Changed;
+        public event Action Changed
+        {
+            add => _changedObservers = AddObservers(_changedObservers, value);
+            remove => _changedObservers = RemoveObservers(_changedObservers, value);
+        }
 
         // ── 子行 ────────────────────────────────────────────────────────────
 
@@ -505,13 +534,16 @@ namespace DebugMenu
         /// 上書きすると前の係は外れる。
         /// </summary>
         /// <param name="listener">受け取る係。null で解除。</param>
-        public static void SetChangeListener(Action<DebugElement> listener) => _changeListener = listener;
+        public static void SetChangeListener(Action<DebugElement> listener) =>
+            _changeListeners = ExpandObservers(listener);
 
         /// <summary>サービス用の変更受け取り先を追加する。</summary>
-        internal static void AddChangeListener(Action<DebugElement> listener) => _changeSubscribers += listener;
+        internal static void AddChangeListener(Action<DebugElement> listener) =>
+            _changeSubscribers = AddObservers(_changeSubscribers, listener);
 
         /// <summary>追加済みのサービス用受け取り先だけを外す。</summary>
-        internal static void RemoveChangeListener(Action<DebugElement> listener) => _changeSubscribers -= listener;
+        internal static void RemoveChangeListener(Action<DebugElement> listener) =>
+            _changeSubscribers = RemoveObservers(_changeSubscribers, listener);
 
         /// <summary>展開マーカーを出すべきか。</summary>
         public bool ShouldShowMarker => MarkerVisibility switch
@@ -528,9 +560,181 @@ namespace DebugMenu
         protected void NotifyChanged()
         {
             _valueVersion++;
-            Changed?.Invoke();
-            _changeListener?.Invoke(this);
-            _changeSubscribers?.Invoke(this);
+            InvokeObservers(_changedObservers, "行イベント");
+            InvokeObservers(_changeListeners, "互換リスナー");
+            InvokeObservers(_changeSubscribers, "サービスリスナー");
+        }
+
+        /// <summary>引数なしの通知先を1件ずつ呼び、失敗しても後続へ進む。</summary>
+        private void InvokeObservers(Action[] observers, string channel)
+        {
+            for (var i = 0; i < observers.Length; i++)
+            {
+                var observer = observers[i];
+                try
+                {
+                    observer();
+                    ClearChangeObserverError(observer);
+                }
+                catch (Exception exception)
+                {
+                    ReportChangeObserverError(channel, observer, exception);
+                }
+            }
+        }
+
+        /// <summary>行を受け取る通知先を1件ずつ呼び、失敗しても後続へ進む。</summary>
+        private void InvokeObservers(Action<DebugElement>[] observers, string channel)
+        {
+            for (var i = 0; i < observers.Length; i++)
+            {
+                var observer = observers[i];
+                try
+                {
+                    observer(this);
+                    ClearChangeObserverError(observer);
+                }
+                catch (Exception exception)
+                {
+                    ReportChangeObserverError(channel, observer, exception);
+                }
+            }
+        }
+
+        /// <summary>通知先の失敗を行と購読処理の組み合わせごとに間引いて記録する。</summary>
+        private void ReportChangeObserverError(string channel, Delegate observer, Exception exception)
+        {
+            var now = Time.realtimeSinceStartup;
+            var key = new ChangeObserverKey(observer);
+            if (_nextChangeObserverErrorLogTimes != null &&
+                _nextChangeObserverErrorLogTimes.TryGetValue(key, out var nextLogTime) &&
+                now < nextLogTime)
+            {
+                return;
+            }
+
+            _nextChangeObserverErrorLogTimes ??= new Dictionary<ChangeObserverKey, float>();
+            _nextChangeObserverErrorLogTimes[key] = now + ChangeObserverErrorLogIntervalSeconds;
+
+            var method = observer.Method;
+            var ownerName = method.DeclaringType?.FullName ?? "不明な型";
+            Debug.LogWarning(
+                $"[DebugMenu] 行 '{ResolveSaveKey()}' の変更通知先 '{ownerName}.{method.Name}' ({channel}) が失敗した。他の通知先へ続行する。\n{exception}");
+        }
+
+        /// <summary>回復した通知先のログ制限を解除する。</summary>
+        private void ClearChangeObserverError(Delegate observer)
+        {
+            _nextChangeObserverErrorLogTimes?.Remove(new ChangeObserverKey(observer));
+        }
+
+        /// <summary>複合デリゲートを個別の通知先へ展開する。</summary>
+        private static Action<DebugElement>[] ExpandObservers(Action<DebugElement> observer)
+        {
+            if (observer == null) return Array.Empty<Action<DebugElement>>();
+
+            var invocationList = observer.GetInvocationList();
+            var result = new Action<DebugElement>[invocationList.Length];
+            for (var i = 0; i < invocationList.Length; i++) result[i] = (Action<DebugElement>)invocationList[i];
+            return result;
+        }
+
+        /// <summary>引数なしの通知先を購読順の末尾へ追加する。</summary>
+        private static Action[] AddObservers(Action[] observers, Action observer)
+        {
+            if (observer == null) return observers;
+
+            var additions = observer.GetInvocationList();
+            var result = new Action[observers.Length + additions.Length];
+            Array.Copy(observers, result, observers.Length);
+            for (var i = 0; i < additions.Length; i++) result[observers.Length + i] = (Action)additions[i];
+            return result;
+        }
+
+        /// <summary>行を受け取る通知先を購読順の末尾へ追加する。</summary>
+        private static Action<DebugElement>[] AddObservers(Action<DebugElement>[] observers, Action<DebugElement> observer)
+        {
+            if (observer == null) return observers;
+
+            var additions = observer.GetInvocationList();
+            var result = new Action<DebugElement>[observers.Length + additions.Length];
+            Array.Copy(observers, result, observers.Length);
+            for (var i = 0; i < additions.Length; i++) result[observers.Length + i] = (Action<DebugElement>)additions[i];
+            return result;
+        }
+
+        /// <summary>引数なしの通知先から、最後に一致する購読列を外す。</summary>
+        private static Action[] RemoveObservers(Action[] observers, Action observer)
+        {
+            if (observer == null || observers.Length == 0) return observers;
+
+            var removals = observer.GetInvocationList();
+            var start = FindLastObserverSequence(observers, removals);
+            if (start < 0) return observers;
+
+            var resultLength = observers.Length - removals.Length;
+            if (resultLength == 0) return Array.Empty<Action>();
+
+            var result = new Action[resultLength];
+            Array.Copy(observers, 0, result, 0, start);
+            Array.Copy(observers, start + removals.Length, result, start, observers.Length - start - removals.Length);
+            return result;
+        }
+
+        /// <summary>行を受け取る通知先から、最後に一致する購読列を外す。</summary>
+        private static Action<DebugElement>[] RemoveObservers(Action<DebugElement>[] observers, Action<DebugElement> observer)
+        {
+            if (observer == null || observers.Length == 0) return observers;
+
+            var removals = observer.GetInvocationList();
+            var start = FindLastObserverSequence(observers, removals);
+            if (start < 0) return observers;
+
+            var resultLength = observers.Length - removals.Length;
+            if (resultLength == 0) return Array.Empty<Action<DebugElement>>();
+
+            var result = new Action<DebugElement>[resultLength];
+            Array.Copy(observers, 0, result, 0, start);
+            Array.Copy(observers, start + removals.Length, result, start, observers.Length - start - removals.Length);
+            return result;
+        }
+
+        /// <summary>引数なし通知先の末尾側から、解除対象と同じ並びを探す。</summary>
+        private static int FindLastObserverSequence(Action[] observers, Delegate[] removals)
+        {
+            for (var start = observers.Length - removals.Length; start >= 0; start--)
+            {
+                var matches = true;
+                for (var i = 0; i < removals.Length; i++)
+                {
+                    if (observers[start + i] == (Action)removals[i]) continue;
+                    matches = false;
+                    break;
+                }
+
+                if (matches) return start;
+            }
+
+            return -1;
+        }
+
+        /// <summary>行を受け取る通知先の末尾側から、解除対象と同じ並びを探す。</summary>
+        private static int FindLastObserverSequence(Action<DebugElement>[] observers, Delegate[] removals)
+        {
+            for (var start = observers.Length - removals.Length; start >= 0; start--)
+            {
+                var matches = true;
+                for (var i = 0; i < removals.Length; i++)
+                {
+                    if (observers[start + i] == (Action<DebugElement>)removals[i]) continue;
+                    matches = false;
+                    break;
+                }
+
+                if (matches) return start;
+            }
+
+            return -1;
         }
 
         /// <summary>
