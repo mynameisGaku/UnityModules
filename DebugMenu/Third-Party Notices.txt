@@ -1,0 +1,11 @@
+Third-Party Notices
+===================
+
+このパッケージ本体には、第三者が制作したコード、フォント、音声、画像、映像その他のコンポーネントを同梱していません。
+
+別パッケージとして必要な依存:
+
+- Containers 1.0.0 (`com.studiogaku.containers`)
+  Debug Menu と同じ公開者が提供する別パッケージです。Containers に含まれる利用条件と第三者通知は、Containers パッケージ側のファイルを確認してください。
+
+Unity Editor、UI Toolkit、UnityEngine API は Unity の実行環境から利用し、このパッケージ内へ再配布していません。

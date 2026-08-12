@@ -3,7 +3,12 @@
   "version": "1.0.0",
   "displayName": "Debug Menu",
   "description": "Runtime UI Toolkit 上で、ゲーム中の値変更、アクション実行、監視グラフ、HSV 色編集をキーボードとマウスから行うデバッグメニュー。",
-  "unity": "6000.0",
+  "unity": "6000.5",
+  "unityRelease": "7f1",
+  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/blob/dev/DebugMenu/Documentation~/index.md",
+  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/dev/DebugMenu/CHANGELOG.md",
+  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/dev/DebugMenu/LICENSE.md",
+  "license": "Refer to LICENSE.md file",
   "keywords": [
     "debug",
     "runtime",
@@ -13,7 +18,8 @@
   ],
   "author": {
     "name": "StudioGaku",
-    "email": "gaku.fujimoto.business@gmail.com"
+    "email": "gaku.fujimoto.business@gmail.com",
+    "url": "https://github.com/mynameisGaku/UnityModules"
   },
   "dependencies": {
     "com.studiogaku.containers": "1.0.0"

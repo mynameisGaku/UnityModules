@@ -2,8 +2,12 @@
 
 Unity の実行中に、値・パス・数値配列の変更、アクションの実行、状態監視、折れ線グラフ、HSV 色編集を行うランタイムデバッグメニューです。UI Toolkit で描画し、キーボード、マウス、標準ゲームパッドから操作できます。
 
-対応: **Unity 6000.0 以降**  
-依存: **Containers 1.0.0**（`com.studiogaku.containers`）
+- 対応下限: **Unity 6000.5.7f1**
+- 検証済み: **Unity 6000.5.7f1 / Windows Editor**
+- 必須依存: **Containers 1.0.0**（`com.studiogaku.containers`）
+- 任意依存: **Input System**（未導入時は旧 Input へフォールバック）
+
+上記以外の Unity バージョン、OS、Player プラットフォームは未検証です。導入先の対象環境で Play Mode と Player ビルドを確認してください。
 
 ## インストール
 
@@ -24,13 +28,15 @@ Package Manager の **Add package from git URL**、または `Packages/manifest.
 ```json
 {
   "dependencies": {
-    "com.studiogaku.containers": "https://github.com/mynameisGaku/UnityModules.git?path=/Containers#main",
-    "com.studiogaku.debug-menu": "https://github.com/mynameisGaku/UnityModules.git?path=/DebugMenu#main"
+    "com.studiogaku.containers": "https://github.com/mynameisGaku/UnityModules.git?path=/Containers#dev",
+    "com.studiogaku.debug-menu": "https://github.com/mynameisGaku/UnityModules.git?path=/DebugMenu#dev"
   }
 }
 ```
 
 同じ名前の依存パッケージを別のレジストリから導入済みなら、`com.studiogaku.containers` 1.0.0 を満たす構成でも使えます。
+
+`1.0.0` は未リリースのため、上記は開発確認用の `dev` ブランチです。公開版では配布ページに記載された固定リリースタグ、またはコミットIDへ `#dev` を置き換え、Containers と Debug Menu を同じ配布時点へ固定してください。更新内容が移動するブランチ参照は製品開発の固定依存には使用しません。
 
 ## シーンへ配置する
 
@@ -195,5 +201,36 @@ Input System は任意です。`Unity.InputSystem` が利用可能なら実行�
 ## リリースビルドでの扱い
 
 このモジュールは Release ビルドで自動的に無効にはなりません。製品版に含めない場合は、製品シーンから `DebugMenuController` を外すか、Controller の生成と登録コードを `UNITY_EDITOR || DEVELOPMENT_BUILD` で囲んでください。機密情報を表示する行や破壊的な `Action`、隠れた状態でも効くショートカットを製品版へ残さないでください。
+
+## 制限事項
+
+- 実機確認済みの入力は Windows Editor 上のキーボードとマウスです。ゲームパッド割り当ては自動テスト済みですが、物理コントローラーごとの実機確認は行っていません。
+- 旧 Input のゲームパッド対応は一般的な軸名と Xbox 互換ボタンを試す方式です。独自マッピングのプロジェクトでは `InputProvider` を設定してください。
+- タッチ専用操作、コンソール固有入力、VR 入力、リモートデバッグ機能は提供しません。
+- IL2CPP では `[DebugMenuRegister]` メソッドの除去を防ぐため、`[Preserve]` または `link.xml` が必要です。
+- 保存データは暗号化・改ざん防止を行いません。認証情報や個人情報を保存しないでください。
+
+## 更新
+
+1. 使用中のパッケージ版と Containers の版を確認する。
+2. 保存プロファイルを引き継ぐ場合は `Application.persistentDataPath/DebugMenu/` をバックアップする。
+3. UPM は配布ページの固定リリースタグまたはコミットIDへ更新する。フォルダ配置は `Containers`、`DebugMenu` の順にフォルダ全体を置き換える。
+4. 表示名やページ構成を変更した行は `WithSaveKey` を維持し、Play Mode と対象 Player ビルドで動作を確認する。
+
+## アンインストール
+
+1. シーンと生成コードから `DebugMenuController` および `[DebugMenuRegister]` の参照を外す。
+2. `Tools > Debug Menu > Add To Scene` が生成した `Assets/Settings/DebugMenuPanelSettings.asset` と `Assets/Settings/DebugMenuTheme.tss` が不要なら削除する。
+3. UPM では Debug Menu を削除する。フォルダ配置では `Assets/Modules/DebugMenu` を削除する。
+4. Containers を他の機能が参照していない場合に限り、Containers も削除する。
+5. 保存済みプロファイルが不要なら `Application.persistentDataPath/DebugMenu/` を削除する。
+
+## サポート
+
+不具合報告には、Debug Menu の版、Unity の完全なバージョン、OS、対象プラットフォーム、再現手順、Console のエラー全文、最小構成の登録コードを含めてください。連絡先は `gaku.fujimoto.business@gmail.com` です。
+
+## 利用条件
+
+Unity Asset Store から取得したパッケージは Unity Asset Store 標準 EULA に従います。Git URL / UPM / リポジトリは技術的な取得経路であり、それ自体が利用権を付与するものではありません。詳細は [LICENSE.md](LICENSE.md)、同梱物と外部依存は [Third-Party Notices.txt](Third-Party%20Notices.txt) を確認してください。
 
 詳しい API と運用上の注意は [Documentation](Documentation~/index.md)、動作例は Package Manager の **Samples > Debug Menu Basics** を参照してください。

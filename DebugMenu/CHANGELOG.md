@@ -30,3 +30,10 @@
 - `[DebugMenuRegister]` による分散登録と IL2CPP 向け `[Preserve]` 運用。
 - `Tools > Debug Menu > Add To Scene` による PanelSettings と Controller のセットアップ。
 - 2 つの最上位ページを含む Basics サンプル。
+- UPM のドキュメント、変更履歴、利用条件へのリンクと、Unity 6000.5.7f1 を示す完全な互換バージョン情報。
+- Asset Store 標準 EULA を前提とする `LICENSE.md` と、同梱物・外部依存を明記する `Third-Party Notices.txt`。
+- 対応環境、依存、制限、更新、削除、問い合わせ時に必要な情報をまとめた配布向けドキュメント。
+
+### Changed
+
+- 未リリース版の Git UPM 例を `dev` へ揃え、公開後は固定リリースタグまたはコミットIDへ固定する運用へ変更。

@@ -8,7 +8,9 @@ Debug Menu は次の 3 層で構成されます。
 - `DebugMenuController` / `DebugMenuView`: MonoBehaviour の入口と UI Toolkit 表示。
 - `DebugMenuSettings` / `DebugMenuFavorites` / `DebugMenuHistory` / `DebugMenuSearch`: 値保存や補助機能。
 
-ランタイム asmdef は `DebugMenu.Runtime` です。内部で `Containers.Runtime` の `FastList<T>`、`RingBuffer<T>`、`UndoRedoStack<T>` などを使うため、Containers 1.0.0 が必要です。
+ランタイム asmdef は `DebugMenu.Runtime` です。内部で `Containers.Runtime` の `FastList<T>`、`RingBuffer<T>`、`UndoRedoStack<T>` などを使うため、Containers 1.0.0 が必要です。Input System は任意で、コンパイル時の依存はありません。
+
+公開対象および検証済み環境は Unity 6000.5.7f1 の Windows Editor です。`package.json` も `unity: 6000.5`、`unityRelease: 7f1` を最小条件として宣言します。他の Unity バージョン、OS、Player プラットフォームは未検証です。
 
 ## 導入
 
@@ -16,8 +18,10 @@ Debug Menu は次の 3 層で構成されます。
 
 Git UPM では次の順で追加します。
 
-1. `https://github.com/mynameisGaku/UnityModules.git?path=/Containers#main`
-2. `https://github.com/mynameisGaku/UnityModules.git?path=/DebugMenu#main`
+1. `https://github.com/mynameisGaku/UnityModules.git?path=/Containers#dev`
+2. `https://github.com/mynameisGaku/UnityModules.git?path=/DebugMenu#dev`
+
+`1.0.0` の公開前は `dev` を開発確認に使います。公開後は配布ページに記載された固定リリースタグ、またはコミットIDへ両方の参照を揃えてください。製品プロジェクトの固定依存には更新可能なブランチを使いません。
 
 Unity で **Tools > Debug Menu > Add To Scene** を実行すると、`Assets/Settings` に PanelSettings とランタイムテーマを用意し、シーンへ `DebugMenuController` を配置します。Play Mode の `F1` で開閉します。
 
@@ -180,3 +184,50 @@ Debug Menu は Release ビルドを自動判定して無効化しません。製
 - デバッグ項目を専用 asmdef に分け、製品向けビルドから除外する。
 
 表示するログ、個人情報、認証情報、破壊的な Action、隠れた状態で効くショートカットも同じ境界で管理してください。
+
+## 対応範囲と制限
+
+| 項目 | 状態 |
+|---|---|
+| Unity | 6000.5.7f1 を公開対象・検証済み環境として指定 |
+| Editor OS | Windows Editor で検証済み |
+| Player | 対象プラットフォームごとのビルド・実機確認が必要 |
+| Render Pipeline | UI Toolkit のオーバーレイのみを描画し、レンダーパイプライン固有機能は使用しない |
+| Input System | 任意。利用可能なら実行時検出し、未導入時は旧 Input へフォールバック |
+| 物理ゲームパッド | 論理割り当てを自動テスト済み。機種ごとの実機確認は未実施 |
+| IL2CPP | 登録メソッドへ `[Preserve]` または `link.xml` が必要 |
+| 保存 | デバッグ用途。暗号化・改ざん検出・機密情報保護は行わない |
+
+タッチ専用操作、コンソール固有入力、VR 入力、ネットワーク経由のリモート操作は提供しません。旧 Input のゲームパッド判定は一般的な軸名と Xbox 互換ボタンを試すため、プロジェクト固有の入力設定では `DebugMenuController.InputProvider` を使用してください。
+
+## 更新
+
+1. 更新前に Debug Menu と Containers の版を記録する。
+2. 保存プロファイルを維持する場合は `Application.persistentDataPath/DebugMenu/` をバックアップする。
+3. UPM は配布ページの固定リリースタグまたはコミットIDへ両方の参照を更新する。フォルダ配置では Containers、Debug Menu の順にフォルダ全体を置き換える。
+4. 表示名やページ構成を変えた行は `WithSaveKey` を維持する。
+5. Play Mode、保存プロファイルの往復、対象 Player ビルドを確認する。
+
+## 削除
+
+1. シーンと生成コードから `DebugMenuController` および `[DebugMenuRegister]` の参照を外す。
+2. 自動生成された `Assets/Settings/DebugMenuPanelSettings.asset` と `Assets/Settings/DebugMenuTheme.tss` が不要なら削除する。
+3. UPM から Debug Menu を削除するか、フォルダ配置なら `Assets/Modules/DebugMenu` を削除する。
+4. 他の機能が参照していない場合に限り Containers を削除する。
+5. 保存済みプロファイルが不要なら `Application.persistentDataPath/DebugMenu/` を削除する。
+
+## サポート
+
+不具合報告には次の情報を含めてください。
+
+- Debug Menu と Containers の版。
+- Unity の完全なバージョン、OS、対象 Player プラットフォーム。
+- Input System の導入有無と、使用した入力デバイス。
+- 再現手順、Console のエラー全文、最小構成の登録コード。
+- 表示問題の場合は Game View の解像度、UI Scale、Theme の変更値、スクリーンショット。
+
+連絡先は `gaku.fujimoto.business@gmail.com` です。
+
+## 配布と利用条件
+
+Unity Asset Store から取得した Debug Menu は Unity Asset Store 標準 EULA に従います。Git URL / UPM / リポジトリは技術的な取得経路であり、それ自体が利用、再配布、再許諾その他の権利を付与するものではありません。詳細はパッケージルートの `LICENSE.md`、同梱物と外部依存は `Third-Party Notices.txt` を確認してください。
