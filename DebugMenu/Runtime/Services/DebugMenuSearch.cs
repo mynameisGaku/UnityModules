@@ -175,7 +175,7 @@ namespace DebugMenu
         {
             if (element == null) return;
 
-            var label = element.DisplayLabel ?? string.Empty;
+            element.TryGetDisplayLabel(out var label);
             var path = string.IsNullOrEmpty(parentPath) || string.IsNullOrEmpty(label)
                 ? parentPath
                 : parentPath + " / " + label;

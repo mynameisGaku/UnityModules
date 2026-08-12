@@ -93,7 +93,7 @@ namespace DebugMenu
                 return;
             }
 
-            color.SyncHsvFrom(color.Value);
+            if (color.TryGetColor(out var current)) color.SyncHsvFrom(current);
             style.display = DisplayStyle.Flex;
             var panelPadding = _theme.EffectiveRowHeight * _theme.ColorPickerPaddingRatio;
             var alphaHeight = color.ShowAlpha ? _theme.EffectiveRowHeight : 0f;
@@ -235,8 +235,24 @@ namespace DebugMenu
         {
             if (_color == null || !_color.IsExpanded) return;
 
+            try
+            {
+                DrawPicker(context);
+            }
+            catch (System.Exception exception)
+            {
+                _color.ReportReadError("値取得", exception);
+            }
+        }
+
+        /// <summary>色選択面を描く。利用側Getterの例外境界は呼び出し側に置く。</summary>
+        private void DrawPicker(MeshGenerationContext context)
+        {
             var content = contentRect;
             if (content.width <= 2f || content.height <= 2f) return;
+            if (!_color.TryGetColor(out var current)) return;
+
+            _color.SyncHsvFrom(current);
 
             GetPickerRects(out var hsvRect, out var hueRect, out var alphaRect);
             var painter = context.painter2D;
@@ -251,11 +267,11 @@ namespace DebugMenu
             {
                 var alphaBand = InsetBar(alphaRect);
                 FillRect(painter, alphaBand, new Color(0.22f, 0.22f, 0.22f, 1f));
-                DrawAlphaMesh(context, alphaBand, _color.Value);
+                DrawAlphaMesh(context, alphaBand, current);
                 StrokeRect(painter, alphaBand, _theme.ColorPickerBorder);
             }
 
-            DrawSelection(painter, hsvRect, hueBand, _color.ShowAlpha ? InsetBar(alphaRect) : Rect.zero);
+            DrawSelection(painter, hsvRect, hueBand, _color.ShowAlpha ? InsetBar(alphaRect) : Rect.zero, current);
         }
 
         /// <summary>
@@ -330,7 +346,7 @@ namespace DebugMenu
             mesh.SetNextIndex(0);
         }
 
-        private void DrawSelection(Painter2D painter, Rect hsvRect, Rect hueRect, Rect alphaRect)
+        private void DrawSelection(Painter2D painter, Rect hsvRect, Rect hueRect, Rect alphaRect, Color current)
         {
             var point = new Vector2(
                 Mathf.Lerp(hsvRect.xMin, hsvRect.xMax, _color.Saturation),
@@ -354,7 +370,7 @@ namespace DebugMenu
 
             if (!_color.ShowAlpha) return;
 
-            var alphaX = Mathf.Lerp(alphaRect.xMin, alphaRect.xMax, _color.Value.a);
+            var alphaX = Mathf.Lerp(alphaRect.xMin, alphaRect.xMax, current.a);
             painter.strokeColor = Color.black;
             painter.lineWidth = Mathf.Max(1f, _theme.ScalePixels(3f));
             DrawVerticalLine(painter, alphaX, alphaRect.yMin - markerExtension, alphaRect.yMax + markerExtension);

@@ -30,6 +30,34 @@ namespace DebugMenu.Tests
             public override void ResetToDefault() => ResetCount++;
         }
 
+        /// <summary>履歴の読取経路だけを失敗させられる値行。</summary>
+        private sealed class ThrowingHistoryElement : DebugElement
+        {
+            private int _value;
+
+            public ThrowingHistoryElement(string label, int value) : base(label)
+            {
+                _value = value;
+                IsExpandable = false;
+            }
+
+            public bool ThrowOnRead { get; set; }
+            public override DebugValueKind ValueKind => DebugValueKind.Int;
+
+            public override bool TryGetInt(out int value)
+            {
+                if (ThrowOnRead) throw new System.InvalidOperationException("history getter failed");
+                value = _value;
+                return true;
+            }
+
+            public void ChangeWithoutReading(int value)
+            {
+                _value = value;
+                NotifyChanged();
+            }
+        }
+
         [TearDown]
         public void TearDown()
         {
@@ -324,6 +352,58 @@ namespace DebugMenu.Tests
             Assert.IsTrue(history.Undo());
             Assert.AreEqual(10, secondElement.Value);
             Assert.AreEqual(1, firstElement.Value, "前のメニューまで書き換えた");
+        }
+
+        [Test]
+        public void History_AttachSkipsThrowingGetter()
+        {
+            var menu = new DebugMenuRoot();
+            var broken = menu.AddPage("Gameplay").Root.Add(new ThrowingHistoryElement("broken", 1));
+            broken.ThrowOnRead = true;
+            using var history = new DebugMenuHistory();
+
+            UnityEngine.TestTools.LogAssert.Expect(
+                LogType.Warning,
+                new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値取得"));
+            Assert.DoesNotThrow(() => history.Attach(menu));
+            Assert.AreEqual(0, history.Count);
+        }
+
+        [Test]
+        public void History_RefreshSkipsNewThrowingGetterAndKeepsHealthyRows()
+        {
+            var menu = new DebugMenuRoot();
+            var page = menu.AddPage("Gameplay");
+            var healthy = page.Root.Int("healthy", 2);
+            using var history = new DebugMenuHistory();
+            history.Attach(menu);
+
+            var broken = page.Root.Add(new ThrowingHistoryElement("broken", 1));
+            broken.ThrowOnRead = true;
+            UnityEngine.TestTools.LogAssert.Expect(
+                LogType.Warning,
+                new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値取得"));
+            Assert.DoesNotThrow(history.Refresh);
+
+            healthy.Value = 3;
+            Assert.IsTrue(history.Undo());
+            Assert.AreEqual(2, healthy.Value);
+        }
+
+        [Test]
+        public void History_ChangeNotificationSkipsThrowingGetter()
+        {
+            var menu = new DebugMenuRoot();
+            var broken = menu.AddPage("Gameplay").Root.Add(new ThrowingHistoryElement("broken", 1));
+            using var history = new DebugMenuHistory();
+            history.Attach(menu);
+            broken.ThrowOnRead = true;
+
+            UnityEngine.TestTools.LogAssert.Expect(
+                LogType.Warning,
+                new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値取得"));
+            Assert.DoesNotThrow(() => broken.ChangeWithoutReading(2));
+            Assert.AreEqual(0, history.Count);
         }
 
         // ── 設定の保存と復元 ────────────────────────────────────────────────

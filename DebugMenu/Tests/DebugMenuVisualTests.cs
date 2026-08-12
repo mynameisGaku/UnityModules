@@ -1,6 +1,7 @@
 using System.Reflection;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.TestTools;
 using UnityEngine.UIElements;
 
 namespace DebugMenu.Tests
@@ -272,6 +273,99 @@ namespace DebugMenu.Tests
         }
 
         [Test]
+        public void RowView_ProviderExceptionShowsOnlyThatRowAsErrorAndRecovers()
+        {
+            var shouldThrow = true;
+            var theme = new DebugMenuTheme();
+            var element = new DebugWatch("Network", () => shouldThrow
+                ? throw new System.InvalidOperationException("provider failed")
+                : "Connected");
+            var view = new DebugRowView(theme);
+
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値取得"));
+            Assert.DoesNotThrow(() => view.Bind(new DebugRow(element, 0), false, 0));
+            Assert.That(view.Q<Label>("debug-menu-value").text, Does.StartWith("ERROR:"));
+            AssertColor(theme.Warning, view.Q<Label>("debug-menu-label").style.color.value);
+
+            shouldThrow = false;
+            Assert.DoesNotThrow(() => view.Bind(new DebugRow(element, 0), false, 0));
+            Assert.AreEqual("Connected", view.Q<Label>("debug-menu-value").text);
+            AssertColor(theme.Text, view.Q<Label>("debug-menu-label").style.color.value);
+        }
+
+        [Test]
+        public void RowView_LateGetterFailuresDisableAllValueControls()
+        {
+            var enumReads = 0;
+            var enumArmed = false;
+            var choice = new DebugEnum("Quality", new[] { "Low", "High" }, () =>
+            {
+                if (enumArmed && ++enumReads == 2) throw new System.InvalidOperationException("selection failed");
+                return 0;
+            }, _ => { });
+            enumReads = 0;
+            enumArmed = true;
+            AssertLateReadFailure(choice);
+
+            var ratioReads = 0;
+            var ratioArmed = false;
+            var ratio = new DebugFloat("Volume", () =>
+            {
+                if (ratioArmed && ++ratioReads == 2) throw new System.InvalidOperationException("ratio failed");
+                return 0.5f;
+            }, _ => { }).WithRange(0f, 1f);
+            ratioReads = 0;
+            ratioArmed = true;
+            AssertLateReadFailure(ratio);
+
+            var modifiedReads = 0;
+            var modifiedArmed = false;
+            var modified = new DebugInt("Count", () =>
+            {
+                if (modifiedArmed && ++modifiedReads == 2) throw new System.InvalidOperationException("modified failed");
+                return 1;
+            }, _ => { });
+            modifiedReads = 0;
+            modifiedArmed = true;
+            AssertLateReadFailure(modified);
+
+            var warningReads = 0;
+            var warningArmed = false;
+            var warned = new DebugInt("Budget", () =>
+            {
+                if (warningArmed && ++warningReads == 2) throw new System.InvalidOperationException("warning failed");
+                return 1;
+            }, _ => { });
+            warned.SetWarnRange(0f, 2f);
+            warningReads = 0;
+            warningArmed = true;
+            AssertLateReadFailure(warned);
+        }
+
+        [Test]
+        public void SliderPointer_GetterFailureStopsDragAndDisablesControls()
+        {
+            var shouldThrow = false;
+            var setterCalls = 0;
+            var element = new DebugFloat(
+                "Volume",
+                () => shouldThrow ? throw new System.InvalidOperationException("pointer failed") : 0.5f,
+                _ => setterCalls++).WithRange(0f, 1f);
+            var view = new DebugRowView(new DebugMenuTheme());
+            view.Bind(new DebugRow(element, 0), false, 0);
+            AttachToPanel(view);
+            shouldThrow = true;
+
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値取得"));
+            Assert.DoesNotThrow(() => SendPointerDown(view.Q<VisualElement>("debug-menu-slider"), 0));
+
+            Assert.IsTrue(element.HasReadError);
+            Assert.IsFalse(view.HasActivePointerInteraction);
+            Assert.AreEqual(0, setterCalls);
+            AssertErrorControlsDisabled(view);
+        }
+
+        [Test]
         public void RowView_ShowsModifiedMarkInsteadOfRecoloringValue()
         {
             var theme = new DebugMenuTheme();
@@ -452,6 +546,58 @@ namespace DebugMenu.Tests
             AssertColor(theme.InputFieldCursor, editor.textSelection.cursorColor);
 #pragma warning restore CS0618
             Assert.AreNotEqual(theme.InputFieldSelection, theme.InputFieldText);
+        }
+
+        [Test]
+        public void TextEdit_GetterFailureEndsEditingAndShowsError()
+        {
+            var shouldThrow = false;
+            var value = "Player";
+            var ended = 0;
+            var element = new DebugText(
+                "Name",
+                () => shouldThrow ? throw new System.InvalidOperationException("name failed") : value,
+                next => value = next);
+            var view = new DebugRowView(new DebugMenuTheme(), null, null, null, null, _ => ended++);
+            view.Bind(new DebugRow(element, 0), false, 0);
+            AttachToPanel(view);
+            Assert.IsTrue(view.BeginTextEdit());
+            view.Q<TextField>("debug-menu-editor").value = "Changed";
+            shouldThrow = true;
+
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値取得"));
+            Assert.IsFalse(view.CommitTextEdit());
+
+            Assert.IsFalse(view.IsEditingText);
+            Assert.AreEqual(1, ended);
+            Assert.IsTrue(element.HasReadError);
+            Assert.That(view.Q<Label>("debug-menu-value").text, Does.StartWith("ERROR:"));
+            AssertErrorControlsDisabled(view);
+        }
+
+        [Test]
+        public void TextEdit_RebindGetterFailureNotifiesEditEndedOnce()
+        {
+            var shouldThrow = false;
+            var element = new DebugText(
+                "Name",
+                () => shouldThrow ? throw new System.InvalidOperationException("name failed") : "Player",
+                _ => { });
+            var ended = 0;
+            var view = new DebugRowView(new DebugMenuTheme(), null, null, null, null, _ => ended++);
+            var row = new DebugRow(element, 0);
+            view.Bind(row, false, 0);
+            AttachToPanel(view);
+            Assert.IsTrue(view.BeginTextEdit());
+            shouldThrow = true;
+
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値取得"));
+            Assert.DoesNotThrow(() => view.Bind(row, false, 0));
+
+            Assert.IsFalse(view.IsEditingText);
+            Assert.AreEqual(1, ended);
+            Assert.IsTrue(element.HasReadError);
+            AssertErrorControlsDisabled(view);
         }
 
         [Test]
@@ -686,6 +832,36 @@ namespace DebugMenu.Tests
             Assert.IsFalse(color.IsExpanded);
         }
 
+        [UnityTest]
+        public System.Collections.IEnumerator ColorPicker_RepaintKeepsGetterFailureUntilReadRecovers()
+        {
+            var shouldThrow = false;
+            var color = Color.red;
+            var element = new DebugColor(
+                "Tint",
+                () => shouldThrow ? throw new System.InvalidOperationException("color failed") : color,
+                next => color = next)
+            {
+                IsExpanded = true,
+            };
+            var picker = new DebugColorPickerView(new DebugMenuTheme());
+            AttachToPanel(picker);
+            shouldThrow = true;
+
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値取得"));
+            picker.Bind(element);
+            picker.MarkDirtyRepaint();
+            yield return null;
+
+            Assert.IsTrue(element.HasReadError, "描画失敗直後に値取得エラーが消えている");
+
+            shouldThrow = false;
+            picker.MarkDirtyRepaint();
+            yield return null;
+
+            Assert.IsFalse(element.HasReadError, "取得元の回復後も色選択面のエラーが残っている");
+        }
+
         [Test]
         public void Root_RightClickReturnsThenClosesAtTopLevel()
         {
@@ -795,6 +971,46 @@ namespace DebugMenu.Tests
             var field = target.GetType().GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic);
             Assert.NotNull(field, $"{fieldName} が見つからない");
             field.SetValue(target, value);
+        }
+
+        private static void AssertLateReadFailure(DebugElement element)
+        {
+            var view = new DebugRowView(new DebugMenuTheme());
+
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\]"));
+            Assert.DoesNotThrow(() => view.Bind(new DebugRow(element, 0), false, 0));
+
+            Assert.IsTrue(element.HasReadError);
+            Assert.That(view.Q<Label>("debug-menu-value").text, Does.StartWith("ERROR:"));
+            AssertErrorControlsDisabled(view);
+        }
+
+        private static void AssertErrorControlsDisabled(DebugRowView view)
+        {
+            var value = (VisualElement)ReadPrivateField(view, "_value");
+            var editor = (VisualElement)ReadPrivateField(view, "_editor");
+            var decrease = (VisualElement)ReadPrivateField(view, "_decrease");
+            var increase = (VisualElement)ReadPrivateField(view, "_increase");
+            var checkbox = (VisualElement)ReadPrivateField(view, "_checkbox");
+            var swatch = (VisualElement)ReadPrivateField(view, "_swatch");
+            var slider = (VisualElement)ReadPrivateField(view, "_sliderTrack");
+            var picker = (VisualElement)ReadPrivateField(view, "_colorPicker");
+
+            Assert.AreEqual(DisplayStyle.None, editor.style.display.value);
+            Assert.AreEqual(DisplayStyle.None, decrease.style.display.value);
+            Assert.AreEqual(DisplayStyle.None, increase.style.display.value);
+            Assert.AreEqual(DisplayStyle.None, checkbox.style.display.value);
+            Assert.AreEqual(DisplayStyle.None, swatch.style.display.value);
+            Assert.AreEqual(DisplayStyle.None, slider.style.display.value);
+            Assert.AreEqual(DisplayStyle.None, picker.style.display.value);
+            Assert.AreEqual(PickingMode.Ignore, value.pickingMode);
+            Assert.AreEqual(PickingMode.Ignore, editor.pickingMode);
+            Assert.AreEqual(PickingMode.Ignore, decrease.pickingMode);
+            Assert.AreEqual(PickingMode.Ignore, increase.pickingMode);
+            Assert.AreEqual(PickingMode.Ignore, checkbox.pickingMode);
+            Assert.AreEqual(PickingMode.Ignore, swatch.pickingMode);
+            Assert.AreEqual(PickingMode.Ignore, slider.pickingMode);
+            Assert.AreEqual(PickingMode.Ignore, picker.pickingMode);
         }
 
         private static void SendPointerDown(VisualElement target, int button)

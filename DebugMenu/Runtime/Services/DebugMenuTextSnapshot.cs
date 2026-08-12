@@ -62,12 +62,14 @@ namespace DebugMenu
         {
             if (element == null) return;
 
-            var label = Sanitize(element.DisplayLabel);
+            element.TryGetDisplayLabel(out var displayLabel);
+            var label = Sanitize(displayLabel);
             var path = string.IsNullOrEmpty(parentPath) ? label : parentPath + " / " + label;
             if (visitedElements.Add(element))
             {
                 builder.Append(path);
-                var value = Sanitize(element.GetValueText());
+                element.TryGetDisplayValueText(out var displayValue);
+                var value = Sanitize(displayValue);
                 if (!string.IsNullOrEmpty(value)) builder.Append(" = ").Append(value);
                 builder.AppendLine();
             }

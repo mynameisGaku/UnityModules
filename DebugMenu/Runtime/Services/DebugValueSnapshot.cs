@@ -64,10 +64,60 @@ namespace DebugMenu
                 case DebugValueKind.Color:
                 case DebugValueKind.Vector:
                     // 専用の口が無い型は、打ち込み用の文字列を正とする。
-                    return new DebugValueSnapshot(element.ValueKind, false, 0, 0f, element.GetEditText());
+                    return element.TryGetEditText(out var editText)
+                        ? new DebugValueSnapshot(element.ValueKind, false, 0, 0f, editText)
+                        : default;
 
                 default:
                     return default;
+            }
+        }
+
+        /// <summary>
+        /// 利用側の取得関数を例外境界の内側で呼び、失敗した行だけを値無しとして扱う。
+        /// 履歴や保存の走査で1行の失敗が全体へ波及しないようにするための入口。
+        /// </summary>
+        /// <param name="element">控える対象の行。</param>
+        /// <param name="snapshot">取得できた値。失敗時は空。</param>
+        /// <returns>例外を出さずに取得処理を完了できたか。</returns>
+        public static bool TryCapture(DebugElement element, out DebugValueSnapshot snapshot)
+        {
+            if (element == null)
+            {
+                snapshot = default;
+                return false;
+            }
+
+            try
+            {
+                var valueKind = element.ValueKind;
+                if (valueKind == DebugValueKind.None)
+                {
+                    snapshot = default;
+                    return true;
+                }
+
+                snapshot = Capture(element);
+                if (valueKind != DebugValueKind.None && !snapshot.HasValue)
+                {
+                    if (!element.HasReadError)
+                    {
+                        element.ReportReadError(
+                            "値取得",
+                            new InvalidOperationException($"{valueKind} の値を取得できなかった。"));
+                    }
+
+                    return false;
+                }
+
+                element.ClearReadError("値取得");
+                return true;
+            }
+            catch (Exception exception)
+            {
+                snapshot = default;
+                element.ReportReadError("値取得", exception);
+                return false;
             }
         }
 

@@ -416,42 +416,164 @@ namespace DebugMenu
                 0f,
                 rowHeight * _theme.ValueColumnRatio - leftSlots - rowHeight * _theme.ColumnGapRatio);
 
+            try
+            {
+                element.ClearReadError("行表示");
+                if (!element.TryGetDisplayLabel(out var displayLabel) ||
+                    !element.TryGetDisplayValueText(out var valueText) ||
+                    element.HasReadError)
+                {
+                    ApplyReadErrorState(element, displayLabel);
+                    ApplyResponsiveLayout(resolvedStyle.width);
+                    return;
+                }
+
+                SetValueInteractionEnabled(true);
+                _marker.text = element.ShouldShowMarker
+                    ? element.IsExpandable ? element.IsExpanded ? "▼" : "▶" : "―"
+                    : string.Empty;
+                _label.text = displayLabel;
+
+                if (!string.IsNullOrEmpty(element.Unit) && !string.IsNullOrEmpty(valueText)) valueText += " " + element.Unit;
+
+                // 候補を持つ行は「2/5」を添える。何個中どれかが分からないと選びにくい。
+                if (element.TryGetSelection(out var index, out var count)) valueText += $"  {index + 1}/{count}";
+                if (ApplyReadErrorIfNeeded(element, displayLabel))
+                {
+                    ApplyResponsiveLayout(resolvedStyle.width);
+                    return;
+                }
+
+                _value.text = valueText;
+
+                var adjustable = element.IsAdjustable;
+                var boolElement = element as DebugBool;
+                var isBool = boolElement != null;
+                var isColor = element is DebugColor;
+                var boolValue = false;
+                if (isBool)
+                {
+                    boolElement.TryGetBool(out boolValue);
+                    if (ApplyReadErrorIfNeeded(element, displayLabel))
+                    {
+                        ApplyResponsiveLayout(resolvedStyle.width);
+                        return;
+                    }
+                }
+
+                EnsureValueLayout(isColor
+                    ? ValueLayoutKind.Color
+                    : isBool ? ValueLayoutKind.Bool : element.CanTypeValue ? ValueLayoutKind.Field : ValueLayoutKind.Standard);
+                _decrease.style.display = adjustable && !IsEditingText ? DisplayStyle.Flex : DisplayStyle.None;
+                _increase.style.display = adjustable && !IsEditingText ? DisplayStyle.Flex : DisplayStyle.None;
+                _checkbox.style.display = isBool && !IsEditingText ? DisplayStyle.Flex : DisplayStyle.None;
+                _checkmark.style.display = isBool && boolValue ? DisplayStyle.Flex : DisplayStyle.None;
+                _value.style.display = !IsEditingText && !isBool ? DisplayStyle.Flex : DisplayStyle.None;
+                _editor.style.display = IsEditingText ? DisplayStyle.Flex : DisplayStyle.None;
+
+                BindIdleField(element, isBool);
+                BindSwatch(element);
+                if (ApplyReadErrorIfNeeded(element, displayLabel))
+                {
+                    ApplyResponsiveLayout(resolvedStyle.width);
+                    return;
+                }
+
+                BindSlider(element);
+                if (ApplyReadErrorIfNeeded(element, displayLabel))
+                {
+                    ApplyResponsiveLayout(resolvedStyle.width);
+                    return;
+                }
+
+                var graphLineColor = ResolveGraphLineColor(element);
+                if (ApplyReadErrorIfNeeded(element, displayLabel))
+                {
+                    ApplyResponsiveLayout(resolvedStyle.width);
+                    return;
+                }
+
+                _graph.Bind(element as DebugGraph, graphLineColor);
+                _colorPicker.Bind(element as DebugColor);
+                if (ApplyReadErrorIfNeeded(element, displayLabel))
+                {
+                    ApplyResponsiveLayout(resolvedStyle.width);
+                    return;
+                }
+
+                ApplyVisualState();
+            }
+            catch (Exception exception)
+            {
+                element.ReportReadError("行表示", exception);
+                ApplyReadErrorState(element, element.Label);
+            }
+
+            ApplyResponsiveLayout(resolvedStyle.width);
+        }
+
+        /// <summary>取得に失敗した行だけを操作不能なエラー表示へ切り替える。</summary>
+        /// <param name="element">失敗した行。</param>
+        /// <param name="displayLabel">例外境界の外で確保できた表示名。</param>
+        private void ApplyReadErrorState(DebugElement element, string displayLabel)
+        {
+            var endedEdit = IsEditingText;
+            CancelSliderDrag();
+            if (endedEdit)
+            {
+                _editingElement = null;
+                _editor.Blur();
+            }
+
+            EnsureValueLayout(ValueLayoutKind.Standard);
             _marker.text = element.ShouldShowMarker
                 ? element.IsExpandable ? element.IsExpanded ? "▼" : "▶" : "―"
                 : string.Empty;
+            _label.text = string.IsNullOrEmpty(displayLabel) ? element.Label : displayLabel;
+            _value.text = element.ReadErrorText;
+            _value.style.display = DisplayStyle.Flex;
+            _editor.style.display = DisplayStyle.None;
+            _decrease.style.display = DisplayStyle.None;
+            _increase.style.display = DisplayStyle.None;
+            _checkbox.style.display = DisplayStyle.None;
+            _swatch.style.display = DisplayStyle.None;
+            _sliderTrack.style.display = DisplayStyle.None;
+            _modifiedMark.style.display = DisplayStyle.None;
+            _graph.Bind(null);
+            _colorPicker.Bind(null);
+            SetValueInteractionEnabled(false);
 
-            _label.text = element.DisplayLabel;
+            _label.style.color = _theme.Warning;
+            _marker.style.color = _theme.Warning;
+            _value.style.color = _theme.Warning;
+            style.backgroundColor = _selected
+                ? _theme.SelectionBackground
+                : _hovered ? _theme.HoverBackground : Color.clear;
 
-            var valueText = element.GetValueText();
-            if (!string.IsNullOrEmpty(element.Unit) && !string.IsNullOrEmpty(valueText)) valueText += " " + element.Unit;
+            if (endedEdit) _editEnded?.Invoke(this);
+        }
 
-            // 候補を持つ行は「2/5」を添える。何個中どれかが分からないと選びにくい。
-            if (element.TryGetSelection(out var index, out var count)) valueText += $"  {index + 1}/{count}";
+        /// <summary>取得失敗を検出した時点で、残りの表示処理を止めてエラー状態へ切り替える。</summary>
+        private bool ApplyReadErrorIfNeeded(DebugElement element, string displayLabel)
+        {
+            if (element == null || !element.HasReadError) return false;
 
-            _value.text = valueText;
+            ApplyReadErrorState(element, displayLabel);
+            return true;
+        }
 
-            var adjustable = element.IsAdjustable;
-            var boolElement = element as DebugBool;
-            var isBool = boolElement != null;
-            var isColor = element is DebugColor;
-            EnsureValueLayout(isColor
-                ? ValueLayoutKind.Color
-                : isBool ? ValueLayoutKind.Bool : element.CanTypeValue ? ValueLayoutKind.Field : ValueLayoutKind.Standard);
-            _decrease.style.display = adjustable && !IsEditingText ? DisplayStyle.Flex : DisplayStyle.None;
-            _increase.style.display = adjustable && !IsEditingText ? DisplayStyle.Flex : DisplayStyle.None;
-            _checkbox.style.display = isBool && !IsEditingText ? DisplayStyle.Flex : DisplayStyle.None;
-            _checkmark.style.display = isBool && boolElement.Value ? DisplayStyle.Flex : DisplayStyle.None;
-            _value.style.display = !IsEditingText && !isBool ? DisplayStyle.Flex : DisplayStyle.None;
-            _editor.style.display = IsEditingText ? DisplayStyle.Flex : DisplayStyle.None;
-
-            BindIdleField(element, isBool);
-
-            BindSwatch(element);
-            BindSlider(element);
-            _graph.Bind(element as DebugGraph, ResolveGraphLineColor(element));
-            _colorPicker.Bind(element as DebugColor);
-            ApplyVisualState();
-            ApplyResponsiveLayout(resolvedStyle.width);
+        /// <summary>エラー中の値欄から編集や変更操作が発火しないよう、ポインター入力を切り替える。</summary>
+        private void SetValueInteractionEnabled(bool enabled)
+        {
+            var mode = enabled ? PickingMode.Position : PickingMode.Ignore;
+            _value.pickingMode = mode;
+            _editor.pickingMode = mode;
+            _decrease.pickingMode = mode;
+            _increase.pickingMode = mode;
+            _checkbox.pickingMode = mode;
+            _swatch.pickingMode = mode;
+            _sliderTrack.pickingMode = mode;
+            _colorPicker.pickingMode = mode;
         }
 
         /// <summary>狭い表示領域では、値欄と展開内容を行の内側へ寄せて縮める。</summary>
@@ -631,14 +753,20 @@ namespace DebugMenu
         /// <returns>入力可能な行で、入力欄を開けたなら true。</returns>
         public bool BeginTextEdit()
         {
-            if (Element == null || !Element.CanTypeValue) return false;
+            if (Element == null || Element.HasReadError || !Element.CanTypeValue) return false;
             if (ReferenceEquals(_editingElement, Element)) return true;
 
             FinishTextEditBeforeRebind();
             CancelPointerInteractions();
 
+            if (!Element.TryGetEditText(out var editText))
+            {
+                ApplyReadErrorState(Element, Element.Label);
+                return false;
+            }
+
             _editingElement = Element;
-            _editor.value = Element.GetEditText();
+            _editor.value = editText;
             SetEditorTextColor(_theme.InputFieldText);
             _editor.style.display = DisplayStyle.Flex;
             _value.style.display = DisplayStyle.None;
@@ -672,6 +800,13 @@ namespace DebugMenu
         {
             if (evt.button != 0 || _rowIndex < 0) return;
 
+            if (Element != null && Element.HasReadError)
+            {
+                _selectRow?.Invoke(_rowIndex);
+                evt.StopPropagation();
+                return;
+            }
+
             _clickRow?.Invoke(_rowIndex);
             evt.StopPropagation();
         }
@@ -680,6 +815,13 @@ namespace DebugMenu
         {
             if (evt.button != 0 || _rowIndex < 0) return;
 
+            if (Element != null && Element.HasReadError)
+            {
+                _selectRow?.Invoke(_rowIndex);
+                evt.StopPropagation();
+                return;
+            }
+
             _clickValue?.Invoke(_rowIndex);
             evt.StopPropagation();
         }
@@ -687,6 +829,11 @@ namespace DebugMenu
         private void OnImmediateValuePointerDown(PointerDownEvent evt)
         {
             if (evt.button != 0 || _rowIndex < 0 || Element == null) return;
+            if (Element.HasReadError)
+            {
+                evt.StopPropagation();
+                return;
+            }
 
             _selectRow?.Invoke(_rowIndex);
             if (_decideValue != null) _decideValue(_rowIndex);
@@ -707,6 +854,11 @@ namespace DebugMenu
         private void OnAdjustPointerDown(PointerDownEvent evt, int delta)
         {
             if (evt.button != 0 || _rowIndex < 0 || Element == null || !Element.IsAdjustable) return;
+            if (Element.HasReadError)
+            {
+                evt.StopPropagation();
+                return;
+            }
 
             _adjustRow?.Invoke(_rowIndex, delta);
             evt.StopPropagation();
@@ -714,12 +866,36 @@ namespace DebugMenu
 
         private void OnSliderPointerDown(PointerDownEvent evt)
         {
-            if (evt.button != 0 || Element == null || !Element.TryGetRatio(out _)) return;
+            if (evt.button != 0 || Element == null || Element.HasReadError) return;
+
+            bool hasRatio;
+            try
+            {
+                hasRatio = Element.TryGetRatio(out _);
+            }
+            catch (Exception exception)
+            {
+                Element.ReportReadError("値取得", exception);
+                ApplyReadErrorState(Element, Element.Label);
+                return;
+            }
+
+            if (ApplyReadErrorIfNeeded(Element, Element.Label) || !hasRatio)
+            {
+                evt.StopPropagation();
+                return;
+            }
 
             _selectRow?.Invoke(_rowIndex);
-            _sliderElement = Element;
+            var sliderElement = Element;
+            if (!ApplySliderPosition(evt.localPosition.x, sliderElement))
+            {
+                evt.StopPropagation();
+                return;
+            }
+
+            _sliderElement = sliderElement;
             _sliderPointerId = evt.pointerId;
-            ApplySliderPosition(evt.localPosition.x, _sliderElement);
             _sliderTrack.CapturePointer(evt.pointerId);
             evt.StopPropagation();
         }
@@ -739,7 +915,7 @@ namespace DebugMenu
             ApplySliderPosition(evt.localPosition.x, _sliderElement);
             _sliderPointerId = -1;
             _sliderElement = null;
-            _sliderTrack.ReleasePointer(evt.pointerId);
+            if (_sliderTrack.HasPointerCapture(evt.pointerId)) _sliderTrack.ReleasePointer(evt.pointerId);
             evt.StopPropagation();
         }
 
@@ -768,12 +944,17 @@ namespace DebugMenu
             if (pointerId >= 0 && _sliderTrack.HasPointerCapture(pointerId)) _sliderTrack.ReleasePointer(pointerId);
         }
 
-        private void ApplySliderPosition(float localX, DebugElement element)
+        private bool ApplySliderPosition(float localX, DebugElement element)
         {
             var width = _sliderTrack.resolvedStyle.width;
-            if (width <= 0f || element == null) return;
+            if (width <= 0f || element == null) return false;
 
-            element.TrySetRatio(Mathf.Clamp01(localX / width));
+            var applied = element.TrySetRatio(Mathf.Clamp01(localX / width));
+            if (!element.HasReadError) return applied;
+
+            ApplyReadErrorState(element, element.Label);
+            CancelSliderDrag();
+            return false;
         }
 
         private void OnExpandedContentPointerDown(PointerDownEvent evt)
@@ -820,6 +1001,13 @@ namespace DebugMenu
 
             if (commit && !element.CommitEditText(_editor.value))
             {
+                if (element.HasReadError)
+                {
+                    ApplyReadErrorState(element, element.Label);
+                    ApplyResponsiveLayout(resolvedStyle.width);
+                    return false;
+                }
+
                 SetEditorTextColor(_theme.Warning);
                 schedule.Execute(() =>
                 {
@@ -865,8 +1053,14 @@ namespace DebugMenu
 
             if (!IsEditingText && element is DebugColor colorElement)
             {
+                if (!colorElement.TryGetColor(out var color))
+                {
+                    _swatch.style.display = DisplayStyle.None;
+                    return;
+                }
+
                 _swatch.style.display = DisplayStyle.Flex;
-                _swatch.style.backgroundColor = colorElement.Value;
+                _swatch.style.backgroundColor = color;
                 return;
             }
 
@@ -875,11 +1069,21 @@ namespace DebugMenu
 
         private void BindSlider(DebugElement element)
         {
-            if (!IsEditingText && element != null && element.TryGetRatio(out var ratio))
+            if (!IsEditingText && element != null)
             {
-                _sliderTrack.style.display = DisplayStyle.Flex;
-                _sliderFill.style.width = Length.Percent(Mathf.Clamp01(ratio) * 100f);
-                return;
+                var hasRatio = element.TryGetRatio(out var ratio);
+                if (element.HasReadError)
+                {
+                    _sliderTrack.style.display = DisplayStyle.None;
+                    return;
+                }
+
+                if (hasRatio)
+                {
+                    _sliderTrack.style.display = DisplayStyle.Flex;
+                    _sliderFill.style.width = Length.Percent(Mathf.Clamp01(ratio) * 100f);
+                    return;
+                }
             }
 
             _sliderTrack.style.display = DisplayStyle.None;
@@ -1056,14 +1260,33 @@ namespace DebugMenu
             var element = Element;
             if (element == null) return;
 
+            try
+            {
+                ApplyVisualStateCore(element);
+            }
+            catch (Exception exception)
+            {
+                element.ReportReadError("行表示", exception);
+                ApplyReadErrorState(element, element.Label);
+            }
+        }
+
+        /// <summary>取得処理を含む通常の行色を反映する。例外境界は呼び出し側に置く。</summary>
+        private void ApplyVisualStateCore(DebugElement element)
+        {
             style.backgroundColor = _selected
                 ? _theme.SelectionBackground
                 : _hovered ? _theme.HoverBackground : Color.clear;
 
-            _modifiedMark.style.display = element.IsModified ? DisplayStyle.Flex : DisplayStyle.None;
+            var isModified = element.IsModified;
+            if (ApplyReadErrorIfNeeded(element, element.Label)) return;
+
+            _modifiedMark.style.display = isModified ? DisplayStyle.Flex : DisplayStyle.None;
 
             var labelColor = ResolveLabelColor(element);
             var valueColor = ResolveValueColor(element);
+            if (ApplyReadErrorIfNeeded(element, element.Label)) return;
+
             _label.style.color = labelColor;
             _marker.style.color = labelColor;
             _value.style.color = valueColor;

@@ -15,7 +15,8 @@ namespace DebugMenu
     {
         private readonly Func<float> _getter;
         private readonly Action<float> _setter;
-        private readonly float _defaultValue;
+        private float _defaultValue;
+        private bool _hasDefaultValue;
 
         private float _stored;
 
@@ -27,7 +28,11 @@ namespace DebugMenu
         {
             _getter = getter ?? throw new ArgumentNullException(nameof(getter));
             _setter = setter ?? throw new ArgumentNullException(nameof(setter));
-            _defaultValue = getter();
+            if (TryReadExternalValue(getter, out var initialValue))
+            {
+                _defaultValue = initialValue;
+                _hasDefaultValue = true;
+            }
             IsExpandable = false;
         }
 
@@ -38,6 +43,7 @@ namespace DebugMenu
         {
             _stored = initialValue;
             _defaultValue = initialValue;
+            _hasDefaultValue = true;
             IsExpandable = false;
         }
 
@@ -60,7 +66,16 @@ namespace DebugMenu
         {
             Min = Mathf.Min(min, max);
             Max = Mathf.Max(min, max);
-            Value = Value;   // 範囲内へ丸め直す
+            if (_getter == null) Value = Value;
+            else if (TryGetCurrent(out var current))
+            {
+                var clamped = Mathf.Clamp(current, Min, Max);
+                if (!Mathf.Approximately(current, clamped))
+                {
+                    _setter(clamped);
+                    NotifyChanged();
+                }
+            }
             return this;
         }
 
@@ -83,19 +98,13 @@ namespace DebugMenu
         /// <summary>現在値。設定時は上下限で丸められる。</summary>
         public float Value
         {
-            get => _getter != null ? _getter() : _stored;
-            set
+            get
             {
-                var clamped = Mathf.Clamp(value, Min, Max);
-
-                // 完全一致で弾くと、丸め誤差で毎回通知が飛ぶ。表示桁で見て同じなら変化なしとする。
-                if (Mathf.Approximately(Value, clamped)) return;
-
-                if (_setter != null) _setter(clamped);
-                else _stored = clamped;
-
-                NotifyChanged();
+                var value = _getter != null ? _getter() : _stored;
+                CaptureDefaultIfNeeded(value);
+                return value;
             }
+            set => TrySetValue(value);
         }
 
         /// <summary>上下限が両方とも有限か。</summary>
@@ -108,7 +117,7 @@ namespace DebugMenu
         public override bool IsAdjustable => true;
 
         /// <inheritdoc/>
-        public override bool IsModified => !Mathf.Approximately(Value, _defaultValue);
+        public override bool IsModified => TryGetCurrent(out var value) && !Mathf.Approximately(value, _defaultValue);
 
         /// <inheritdoc/>
         public override bool CanTypeValue => true;
@@ -117,10 +126,18 @@ namespace DebugMenu
         public override string GetValueText() => Value.ToString("F" + Digits, CultureInfo.InvariantCulture);
 
         /// <inheritdoc/>
-        public override void OnAdjust(int delta) => Value += Step * delta;
+        public override void OnAdjust(int delta)
+        {
+            if (!TryGetCurrent(out var value)) return;
+            TrySetValue(value + Step * delta, value);
+        }
 
         /// <inheritdoc/>
-        public override void ResetToDefault() => Value = _defaultValue;
+        public override void ResetToDefault()
+        {
+            if (!TryGetCurrent(out var current)) return;
+            TrySetValue(_defaultValue, current);
+        }
 
         /// <summary>打ち込みには丸めた値ではなく実値を出す。打ち直しで精度が落ちないようにするため。</summary>
         public override string GetEditText() => Value.ToString("R", CultureInfo.InvariantCulture);
@@ -131,8 +148,7 @@ namespace DebugMenu
             if (!float.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed)) return false;
             if (float.IsNaN(parsed)) return false;
 
-            Value = parsed;
-            return true;
+            return TrySetValue(parsed);
         }
 
         /// <inheritdoc/>
@@ -144,8 +160,14 @@ namespace DebugMenu
                 return false;
             }
 
+            if (!TryGetCurrent(out var value))
+            {
+                ratio = 0f;
+                return false;
+            }
+
             var span = Max - Min;
-            ratio = span <= 0f ? 0f : Mathf.Clamp01((Value - Min) / span);
+            ratio = span <= 0f ? 0f : Mathf.Clamp01((value - Min) / span);
             return true;
         }
 
@@ -154,21 +176,55 @@ namespace DebugMenu
         {
             if (!HasRange) return false;
 
-            Value = Mathf.Lerp(Min, Max, Mathf.Clamp01(ratio));
-            return true;
+            return TrySetValue(Mathf.Lerp(Min, Max, Mathf.Clamp01(ratio)));
         }
 
         /// <inheritdoc/>
         public override bool TryGetFloat(out float value)
         {
-            value = Value;
-            return true;
+            return TryGetCurrent(out value);
         }
 
         /// <inheritdoc/>
         public override bool TrySetFloat(float value)
         {
-            Value = value;
+            return TrySetValue(value);
+        }
+
+        private bool TryGetCurrent(out float value)
+        {
+            if (_getter == null) value = _stored;
+            else if (!TryReadExternalValue(_getter, out value)) return false;
+
+            CaptureDefaultIfNeeded(value);
+            return true;
+        }
+
+        private void CaptureDefaultIfNeeded(float value)
+        {
+            if (_hasDefaultValue) return;
+
+            _defaultValue = value;
+            _hasDefaultValue = true;
+        }
+
+        private bool TrySetValue(float value)
+        {
+            if (!TryGetCurrent(out var current)) return false;
+            return TrySetValue(value, current);
+        }
+
+        private bool TrySetValue(float value, float current)
+        {
+            var clamped = Mathf.Clamp(value, Min, Max);
+
+            // 完全一致で弾くと、丸め誤差で毎回通知が飛ぶ。表示桁で見て同じなら変化なしとする。
+            if (Mathf.Approximately(current, clamped)) return true;
+
+            if (_setter != null) _setter(clamped);
+            else _stored = clamped;
+
+            NotifyChanged();
             return true;
         }
     }

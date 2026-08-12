@@ -132,8 +132,7 @@ namespace DebugMenu
             Refresh(false);
             if (!_scope.Contains(element)) return;
 
-            var current = DebugValueSnapshot.Capture(element);
-            if (!current.HasValue) return;
+            if (!DebugValueSnapshot.TryCapture(element, out var current) || !current.HasValue) return;
 
             if (!_lastSeen.TryGetValue(element, out var previous))
             {
@@ -160,8 +159,7 @@ namespace DebugMenu
             _scope.Clear();
             _menu.VisitAll((_, element) =>
             {
-                var snapshot = DebugValueSnapshot.Capture(element);
-                if (!snapshot.HasValue) return;
+                if (!DebugValueSnapshot.TryCapture(element, out var snapshot) || !snapshot.HasValue) return;
 
                 _scope.Add(element);
                 if (!_lastSeen.ContainsKey(element)) _lastSeen[element] = snapshot;

@@ -17,7 +17,8 @@ namespace DebugMenu
         private readonly string[] _options;
         private readonly Func<int> _getter;
         private readonly Action<int> _setter;
-        private readonly int _defaultIndex;
+        private int _defaultIndex;
+        private bool _hasDefaultIndex;
 
         private int _stored;
 
@@ -33,7 +34,11 @@ namespace DebugMenu
 
             _getter = getter ?? throw new ArgumentNullException(nameof(getter));
             _setter = setter ?? throw new ArgumentNullException(nameof(setter));
-            _defaultIndex = Wrap(getter());
+            if (TryReadExternalValue(getter, out var initialIndex))
+            {
+                _defaultIndex = Wrap(initialIndex);
+                _hasDefaultIndex = true;
+            }
             AddOptions();
         }
 
@@ -48,6 +53,7 @@ namespace DebugMenu
 
             _stored = Wrap(initialIndex);
             _defaultIndex = _stored;
+            _hasDefaultIndex = true;
             AddOptions();
         }
 
@@ -83,17 +89,13 @@ namespace DebugMenu
         /// <summary>現在の選択位置。範囲外は端へ丸められる。</summary>
         public int Index
         {
-            get => Wrap(_getter != null ? _getter() : _stored);
-            set
+            get
             {
-                var wrapped = Wrap(value);
-                if (Index == wrapped) return;
-
-                if (_setter != null) _setter(wrapped);
-                else _stored = wrapped;
-
-                NotifyChanged();
+                var index = Wrap(_getter != null ? _getter() : _stored);
+                CaptureDefaultIfNeeded(index);
+                return index;
             }
+            set => TrySetIndex(value);
         }
 
         /// <inheritdoc/>
@@ -103,7 +105,7 @@ namespace DebugMenu
         public override bool IsAdjustable => true;
 
         /// <inheritdoc/>
-        public override bool IsModified => Index != _defaultIndex;
+        public override bool IsModified => TryGetIndex(out var index) && index != _defaultIndex;
 
         /// <inheritdoc/>
         public override string GetValueText() => _options[Index];
@@ -112,36 +114,39 @@ namespace DebugMenu
         /// <param name="delta">左で -1、右で +1。</param>
         public override void OnAdjust(int delta)
         {
-            var next = (Index + delta) % _options.Length;
-            Index = next < 0 ? next + _options.Length : next;
+            if (!TryGetIndex(out var index)) return;
+
+            var next = (index + delta) % _options.Length;
+            TrySetIndex(next < 0 ? next + _options.Length : next, index);
         }
 
         /// <summary>決定で候補一覧を開閉する。</summary>
         public override void OnDecide() => base.OnDecide();
 
         /// <inheritdoc/>
-        public override void ResetToDefault() => Index = _defaultIndex;
+        public override void ResetToDefault()
+        {
+            if (!TryGetIndex(out var current)) return;
+            TrySetIndex(_defaultIndex, current);
+        }
 
         /// <inheritdoc/>
         public override bool TryGetSelection(out int index, out int count)
         {
-            index = Index;
             count = _options.Length;
-            return true;
+            return TryGetIndex(out index);
         }
 
         /// <inheritdoc/>
         public override bool TryGetInt(out int value)
         {
-            value = Index;
-            return true;
+            return TryGetIndex(out value);
         }
 
         /// <inheritdoc/>
         public override bool TrySetInt(int value)
         {
-            Index = value;
-            return true;
+            return TrySetIndex(value);
         }
 
         /// <summary>親の値を映す候補行を構築する。</summary>
@@ -151,6 +156,50 @@ namespace DebugMenu
         }
 
         private int Wrap(int index) => index < 0 ? 0 : index >= _options.Length ? _options.Length - 1 : index;
+
+        internal bool TryGetIndex(out int index)
+        {
+            if (_getter == null) index = Wrap(_stored);
+            else
+            {
+                if (!TryReadExternalValue(_getter, out var current))
+                {
+                    index = 0;
+                    return false;
+                }
+
+                index = Wrap(current);
+            }
+
+            CaptureDefaultIfNeeded(index);
+            return true;
+        }
+
+        private void CaptureDefaultIfNeeded(int index)
+        {
+            if (_hasDefaultIndex) return;
+
+            _defaultIndex = index;
+            _hasDefaultIndex = true;
+        }
+
+        private bool TrySetIndex(int index)
+        {
+            if (!TryGetIndex(out var current)) return false;
+            return TrySetIndex(index, current);
+        }
+
+        private bool TrySetIndex(int index, int current)
+        {
+            var wrapped = Wrap(index);
+            if (current == wrapped) return true;
+
+            if (_setter != null) _setter(wrapped);
+            else _stored = wrapped;
+
+            NotifyChanged();
+            return true;
+        }
     }
 
     /// <summary>候補一覧の 1 行。値は親が持つため、保存対象にはしない。</summary>
@@ -175,13 +224,12 @@ namespace DebugMenu
         public override bool IsSaveable => false;
 
         /// <inheritdoc/>
-        public override string GetValueText() => _owner.Index == _index ? "Selected" : string.Empty;
+        public override string GetValueText() => _owner.TryGetIndex(out var index) && index == _index ? "Selected" : string.Empty;
 
         /// <summary>この候補を親へ設定し、一覧を閉じる。</summary>
         public override void OnDecide()
         {
-            _owner.Index = _index;
-            _owner.IsExpanded = false;
+            if (_owner.TrySetInt(_index)) _owner.IsExpanded = false;
         }
     }
 }

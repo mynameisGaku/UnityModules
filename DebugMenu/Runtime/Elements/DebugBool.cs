@@ -14,7 +14,8 @@ namespace DebugMenu
     {
         private readonly Func<bool> _getter;
         private readonly Action<bool> _setter;
-        private readonly bool _defaultValue;
+        private bool _defaultValue;
+        private bool _hasDefaultValue;
 
         private bool _stored;
 
@@ -26,7 +27,11 @@ namespace DebugMenu
         {
             _getter = getter ?? throw new ArgumentNullException(nameof(getter));
             _setter = setter ?? throw new ArgumentNullException(nameof(setter));
-            _defaultValue = getter();
+            if (TryReadExternalValue(getter, out var initialValue))
+            {
+                _defaultValue = initialValue;
+                _hasDefaultValue = true;
+            }
             IsExpandable = false;
         }
 
@@ -37,22 +42,20 @@ namespace DebugMenu
         {
             _stored = initialValue;
             _defaultValue = initialValue;
+            _hasDefaultValue = true;
             IsExpandable = false;
         }
 
         /// <summary>現在値。</summary>
         public bool Value
         {
-            get => _getter != null ? _getter() : _stored;
-            set
+            get
             {
-                if (Value == value) return;
-
-                if (_setter != null) _setter(value);
-                else _stored = value;
-
-                NotifyChanged();
+                var value = _getter != null ? _getter() : _stored;
+                CaptureDefaultIfNeeded(value);
+                return value;
             }
+            set => TrySetValue(value);
         }
 
         /// <inheritdoc/>
@@ -62,46 +65,91 @@ namespace DebugMenu
         public override bool IsAdjustable => true;
 
         /// <inheritdoc/>
-        public override bool IsModified => Value != _defaultValue;
+        public override bool IsModified => TryGetCurrent(out var value) && value != _defaultValue;
 
         /// <inheritdoc/>
         public override string GetValueText() => Value ? "ON" : "OFF";
 
         /// <inheritdoc/>
-        public override void OnDecide() => Value = !Value;
+        public override void OnDecide()
+        {
+            if (!TryGetCurrent(out var value)) return;
+            TrySetValue(!value, value);
+        }
 
         /// <summary>左右どちらでも切り替える。ON/OFF の 2 値では方向に意味が無いため。</summary>
         /// <param name="delta">左で -1、右で +1。</param>
-        public override void OnAdjust(int delta) => Value = !Value;
+        public override void OnAdjust(int delta) => OnDecide();
 
         /// <inheritdoc/>
-        public override void ResetToDefault() => Value = _defaultValue;
+        public override void ResetToDefault()
+        {
+            if (!TryGetCurrent(out var current)) return;
+            TrySetValue(_defaultValue, current);
+        }
 
         /// <inheritdoc/>
         public override bool TryGetBool(out bool value)
         {
-            value = Value;
-            return true;
+            return TryGetCurrent(out value);
         }
 
         /// <inheritdoc/>
         public override bool TrySetBool(bool value)
         {
-            Value = value;
-            return true;
+            return TrySetValue(value);
         }
 
         /// <inheritdoc/>
         public override bool TryGetInt(out int value)
         {
-            value = Value ? 1 : 0;
+            if (!TryGetCurrent(out var current))
+            {
+                value = 0;
+                return false;
+            }
+
+            value = current ? 1 : 0;
             return true;
         }
 
         /// <inheritdoc/>
         public override bool TrySetInt(int value)
         {
-            Value = value != 0;
+            return TrySetValue(value != 0);
+        }
+
+        private bool TryGetCurrent(out bool value)
+        {
+            if (_getter == null) value = _stored;
+            else if (!TryReadExternalValue(_getter, out value)) return false;
+
+            CaptureDefaultIfNeeded(value);
+            return true;
+        }
+
+        private void CaptureDefaultIfNeeded(bool value)
+        {
+            if (_hasDefaultValue) return;
+
+            _defaultValue = value;
+            _hasDefaultValue = true;
+        }
+
+        private bool TrySetValue(bool value)
+        {
+            if (!TryGetCurrent(out var current)) return false;
+            return TrySetValue(value, current);
+        }
+
+        private bool TrySetValue(bool value, bool current)
+        {
+            if (current == value) return true;
+
+            if (_setter != null) _setter(value);
+            else _stored = value;
+
+            NotifyChanged();
             return true;
         }
     }

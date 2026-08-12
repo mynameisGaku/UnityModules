@@ -13,7 +13,8 @@ namespace DebugMenu
     {
         private readonly Func<string> _getter;
         private readonly Action<string> _setter;
-        private readonly string _defaultValue;
+        private string _defaultValue = string.Empty;
+        private bool _hasDefaultValue;
 
         private string _stored;
 
@@ -25,7 +26,11 @@ namespace DebugMenu
         {
             _getter = getter ?? throw new ArgumentNullException(nameof(getter));
             _setter = setter ?? throw new ArgumentNullException(nameof(setter));
-            _defaultValue = getter() ?? string.Empty;
+            if (TryReadExternalValue(getter, out var initialValue))
+            {
+                _defaultValue = initialValue ?? string.Empty;
+                _hasDefaultValue = true;
+            }
             IsExpandable = false;
         }
 
@@ -36,6 +41,7 @@ namespace DebugMenu
         {
             _stored = initialValue ?? string.Empty;
             _defaultValue = _stored;
+            _hasDefaultValue = true;
             IsExpandable = false;
         }
 
@@ -45,17 +51,13 @@ namespace DebugMenu
         /// <summary>現在値。null を渡すと空文字として扱う。</summary>
         public string Value
         {
-            get => (_getter != null ? _getter() : _stored) ?? string.Empty;
-            set
+            get
             {
-                var next = value ?? string.Empty;
-                if (string.Equals(Value, next, StringComparison.Ordinal)) return;
-
-                if (_setter != null) _setter(next);
-                else _stored = next;
-
-                NotifyChanged();
+                var value = (_getter != null ? _getter() : _stored) ?? string.Empty;
+                CaptureDefaultIfNeeded(value);
+                return value;
             }
+            set => TrySetValue(value);
         }
 
         /// <inheritdoc/>
@@ -65,7 +67,7 @@ namespace DebugMenu
         public override bool CanTypeValue => true;
 
         /// <inheritdoc/>
-        public override bool IsModified => !string.Equals(Value, _defaultValue, StringComparison.Ordinal);
+        public override bool IsModified => TryGetCurrent(out var value) && !string.Equals(value, _defaultValue, StringComparison.Ordinal);
 
         /// <inheritdoc/>
         public override string GetValueText() =>
@@ -77,11 +79,57 @@ namespace DebugMenu
         /// <inheritdoc/>
         public override bool CommitEditText(string text)
         {
-            Value = text;
-            return true;
+            return TrySetValue(text);
         }
 
         /// <inheritdoc/>
-        public override void ResetToDefault() => Value = _defaultValue;
+        public override void ResetToDefault()
+        {
+            if (!TryGetCurrent(out var current)) return;
+            TrySetValue(_defaultValue, current);
+        }
+
+        private bool TryGetCurrent(out string value)
+        {
+            if (_getter == null)
+            {
+                value = _stored ?? string.Empty;
+                return true;
+            }
+
+            if (!TryReadExternalValue(_getter, out value)) return false;
+
+            value ??= string.Empty;
+            CaptureDefaultIfNeeded(value);
+            return true;
+        }
+
+        private void CaptureDefaultIfNeeded(string value)
+        {
+            if (_hasDefaultValue) return;
+
+            _defaultValue = value ?? string.Empty;
+            _hasDefaultValue = true;
+        }
+
+        private bool TrySetValue(string value)
+        {
+            if (!TryGetCurrent(out var current)) return false;
+
+            return TrySetValue(value, current);
+        }
+
+        private bool TrySetValue(string value, string current)
+        {
+
+            var next = value ?? string.Empty;
+            if (string.Equals(current, next, StringComparison.Ordinal)) return true;
+
+            if (_setter != null) _setter(next);
+            else _stored = next;
+
+            NotifyChanged();
+            return true;
+        }
     }
 }

@@ -19,9 +19,14 @@ namespace DebugMenu
     /// </summary>
     public class DebugElement
     {
+        private const float ReadErrorLogIntervalSeconds = 5f;
+
         private readonly FastList<DebugElement> _children = new FastList<DebugElement>();
 
         private Func<string> _labelProvider;
+        private string _readErrorOperation = string.Empty;
+        private string _readErrorMessage = string.Empty;
+        private float _nextReadErrorLogTime;
         private float _warnMin;
         private float _warnMax;
         private bool _hasWarnRange;
@@ -78,12 +83,117 @@ namespace DebugMenu
         /// </summary>
         public string DisplayLabel => _labelProvider != null ? _labelProvider() : Label;
 
+        /// <summary>表示用の取得処理が失敗しているか。失敗した行だけをエラー表示へ切り替えるために使う。</summary>
+        public bool HasReadError => !string.IsNullOrEmpty(_readErrorOperation);
+
+        /// <summary>行へ出す短いエラー表示。例外本文はログへ出し、メニューの幅を圧迫しない。</summary>
+        public string ReadErrorText => HasReadError ? "ERROR: " + _readErrorOperation : string.Empty;
+
+        /// <summary>最後に失敗した取得処理の例外メッセージ。独自Viewで詳細を出す場合に使う。</summary>
+        public string ReadErrorMessage => _readErrorMessage;
+
         /// <summary>
         /// 表示名を毎フレーム作る関数を差す。監視値をそのまま名前に出したいとき
         /// （<c>HP 120/200</c> のような表示）に使う。null を渡すと解除。
         /// </summary>
         /// <param name="provider">表示名を返す関数。</param>
         public void SetLabelProvider(Func<string> provider) => _labelProvider = provider;
+
+        /// <summary>
+        /// 構築時に利用側の取得関数から既定値を読む。失敗時は代替値で行の構築を続け、
+        /// 後続行とControllerの初期化を止めない。
+        /// </summary>
+        /// <typeparam name="T">取得する値の型。</typeparam>
+        /// <param name="getter">利用側の取得関数。</param>
+        /// <param name="fallback">取得できなかった場合の代替値。</param>
+        /// <returns>取得値または代替値。</returns>
+        protected T ReadInitialValueOrDefault<T>(Func<T> getter, T fallback = default)
+        {
+            return TryReadExternalValue(getter, out var value) ? value : fallback;
+        }
+
+        /// <summary>利用側の取得関数を安全に呼ぶ。構築時の範囲設定など、View以外の読取にも使う。</summary>
+        /// <typeparam name="T">取得する値の型。</typeparam>
+        /// <param name="getter">利用側の取得関数。</param>
+        /// <param name="value">取得値。失敗時は既定値。</param>
+        /// <returns>取得できたなら true。</returns>
+        protected bool TryReadExternalValue<T>(Func<T> getter, out T value)
+        {
+            try
+            {
+                value = getter();
+                ClearReadError("値取得");
+                return true;
+            }
+            catch (Exception exception)
+            {
+                value = default;
+                ReportReadError("値取得", exception);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// 動的な表示名を例外境界の内側で読む。失敗時は静的な <see cref="Label"/> を返し、
+        /// 他の行の更新を止めない。
+        /// </summary>
+        /// <param name="label">表示する名前。失敗時は静的な名前。</param>
+        /// <returns>動的な表示名を正常に取得できたか。</returns>
+        public bool TryGetDisplayLabel(out string label)
+        {
+            try
+            {
+                label = DisplayLabel ?? string.Empty;
+                ClearReadError("ラベル取得");
+                return true;
+            }
+            catch (Exception exception)
+            {
+                label = Label ?? string.Empty;
+                ReportReadError("ラベル取得", exception);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// 右カラムの表示値を例外境界の内側で読む。失敗時は明確なエラー文字列を返す。
+        /// </summary>
+        /// <param name="valueText">表示する値。失敗時はエラー表示。</param>
+        /// <returns>値を正常に取得できたか。</returns>
+        public bool TryGetDisplayValueText(out string valueText)
+        {
+            try
+            {
+                valueText = GetValueText() ?? string.Empty;
+                ClearReadError("値取得");
+                return true;
+            }
+            catch (Exception exception)
+            {
+                ReportReadError("値取得", exception);
+                valueText = ReadErrorText;
+                return false;
+            }
+        }
+
+        /// <summary>入力欄の初期文字列を例外境界の内側で読む。失敗時は入力を開始しない。</summary>
+        /// <param name="editText">入力欄へ入れる文字列。失敗時は空。</param>
+        /// <returns>初期文字列を取得できたなら true。</returns>
+        public bool TryGetEditText(out string editText)
+        {
+            try
+            {
+                editText = GetEditText() ?? string.Empty;
+                ClearReadError("値取得");
+                return true;
+            }
+            catch (Exception exception)
+            {
+                editText = string.Empty;
+                ReportReadError("値取得", exception);
+                return false;
+            }
+        }
 
         // ── 状態 ────────────────────────────────────────────────────────────
 
@@ -233,6 +343,27 @@ namespace DebugMenu
         /// <param name="deltaSeconds">前フレームからの経過秒。</param>
         public virtual void Tick(float deltaSeconds) { }
 
+        /// <summary>
+        /// 行のフレーム更新を例外境界の内側で実行する。監視元が一時的に壊れても、
+        /// 後続行の監視とメニュー操作を継続する。
+        /// </summary>
+        /// <param name="deltaSeconds">前フレームからの経過秒。</param>
+        /// <returns>更新が正常に完了したか。</returns>
+        public bool TryTick(float deltaSeconds)
+        {
+            try
+            {
+                Tick(deltaSeconds);
+                ClearReadError("更新");
+                return true;
+            }
+            catch (Exception exception)
+            {
+                ReportReadError("更新", exception);
+                return false;
+            }
+        }
+
         /// <summary>下限を 0、上限を 1 とした現在位置。スライダー表示に使う。</summary>
         /// <param name="ratio">書き込み先。</param>
         public virtual bool TryGetRatio(out float ratio)
@@ -336,6 +467,7 @@ namespace DebugMenu
 
                 if (!TryGetFloat(out var value))
                 {
+                    if (HasReadError) return false;
                     if (!TryGetInt(out var intValue)) return false;
                     value = intValue;
                 }
@@ -399,6 +531,37 @@ namespace DebugMenu
             Changed?.Invoke();
             _changeListener?.Invoke(this);
             _changeSubscribers?.Invoke(this);
+        }
+
+        /// <summary>
+        /// 表示用の取得処理で起きた例外をこの行へ記録する。
+        /// 例外の文言が変化しても、同じ行からのログは一定時間に1回だけ出す。
+        /// </summary>
+        /// <param name="operation">失敗した取得処理。</param>
+        /// <param name="exception">利用側の処理から出た例外。</param>
+        internal void ReportReadError(string operation, Exception exception)
+        {
+            operation = string.IsNullOrEmpty(operation) ? "取得" : operation;
+            var message = exception?.Message ?? "不明な例外";
+            _readErrorOperation = operation;
+            _readErrorMessage = message;
+
+            var now = Time.realtimeSinceStartup;
+            if (now < _nextReadErrorLogTime) return;
+
+            _nextReadErrorLogTime = now + ReadErrorLogIntervalSeconds;
+            var details = exception?.ToString() ?? message;
+            Debug.LogWarning($"[DebugMenu] 行 '{ResolveSaveKey()}' の{operation}に失敗した。行をエラー表示にして続行する。\n{details}");
+        }
+
+        /// <summary>同じ取得処理が回復したときだけ、その処理のエラー表示を解除する。</summary>
+        /// <param name="operation">正常に完了した取得処理。</param>
+        internal void ClearReadError(string operation)
+        {
+            if (!string.Equals(_readErrorOperation, operation, StringComparison.Ordinal)) return;
+
+            _readErrorOperation = string.Empty;
+            _readErrorMessage = string.Empty;
         }
 
         /// <summary>行構造または展開状態の変更を全ページへ知らせる。</summary>

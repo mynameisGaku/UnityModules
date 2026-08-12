@@ -16,7 +16,8 @@ namespace DebugMenu
     {
         private readonly Func<Color> _getter;
         private readonly Action<Color> _setter;
-        private readonly Color _defaultValue;
+        private Color _defaultValue;
+        private bool _hasDefaultValue;
 
         private Color _stored;
         private float _hue;
@@ -32,8 +33,12 @@ namespace DebugMenu
         {
             _getter = getter ?? throw new ArgumentNullException(nameof(getter));
             _setter = setter ?? throw new ArgumentNullException(nameof(setter));
-            _defaultValue = getter();
-            SyncHsvFrom(_defaultValue);
+            if (TryReadExternalValue(getter, out var initialValue))
+            {
+                _defaultValue = initialValue;
+                _hasDefaultValue = true;
+                SyncHsvFrom(initialValue);
+            }
             MarkerVisibility = DebugMarkerVisibility.Always;
         }
 
@@ -44,6 +49,7 @@ namespace DebugMenu
         {
             _stored = initialValue;
             _defaultValue = initialValue;
+            _hasDefaultValue = true;
             SyncHsvFrom(initialValue);
             MarkerVisibility = DebugMarkerVisibility.Always;
         }
@@ -56,10 +62,19 @@ namespace DebugMenu
             {
                 if (_showAlpha == value) return;
 
-                var color = ReadRawValue();
-                _showAlpha = value;
-                if (value) return;
+                if (value)
+                {
+                    _showAlpha = true;
+                    return;
+                }
 
+                if (!TryGetColor(out var color))
+                {
+                    _showAlpha = false;
+                    return;
+                }
+
+                _showAlpha = value;
                 if (Mathf.Approximately(color.a, 1f)) return;
 
                 color.a = 1f;
@@ -74,19 +89,26 @@ namespace DebugMenu
             {
                 var value = ReadRawValue();
                 if (!ShowAlpha) value.a = 1f;
+                CaptureDefaultIfNeeded(value);
                 return value;
             }
-            set
-            {
-                var next = value;
-                if (!ShowAlpha) next.a = 1f;
-                if (Value == next) return;
-
-                WriteValue(next);
-            }
+            set => TrySetValue(value);
         }
 
         private Color ReadRawValue() => _getter != null ? _getter() : _stored;
+
+        /// <summary>外部取得関数の失敗を行内へ閉じて現在色を読む。</summary>
+        /// <param name="value">取得できた現在色。</param>
+        /// <returns>現在色を取得できたか。</returns>
+        internal bool TryGetColor(out Color value)
+        {
+            if (_getter == null) value = _stored;
+            else if (!TryReadExternalValue(_getter, out value)) return false;
+
+            CaptureDefaultIfNeeded(value);
+            if (!ShowAlpha) value.a = 1f;
+            return true;
+        }
 
         private void WriteValue(Color value)
         {
@@ -117,22 +139,31 @@ namespace DebugMenu
         /// <param name="brightness">明度（0〜1）。</param>
         public void SetHsv(float hue, float saturation, float brightness)
         {
-            _hue = Mathf.Repeat(hue, 1f);
-            _saturation = Mathf.Clamp01(saturation);
-            _brightness = Mathf.Clamp01(brightness);
+            if (!TryGetColor(out var current)) return;
 
-            var rgb = Color.HSVToRGB(_hue, _saturation, _brightness);
-            rgb.a = ShowAlpha ? Value.a : 1f;
-            Value = rgb;
+            var nextHue = Mathf.Repeat(hue, 1f);
+            var nextSaturation = Mathf.Clamp01(saturation);
+            var nextBrightness = Mathf.Clamp01(brightness);
+            var rgb = Color.HSVToRGB(nextHue, nextSaturation, nextBrightness);
+            rgb.a = ShowAlpha ? current.a : 1f;
+
+            if (current != rgb) WriteValue(rgb);
+
+            // 利用側 setter が失敗した場合はここへ到達しない。表示上の HSV も未反映のまま保つ。
+            _hue = nextHue;
+            _saturation = nextSaturation;
+            _brightness = nextBrightness;
         }
 
         /// <summary>アルファだけを書き換える。</summary>
         /// <param name="alpha">不透明度（0〜1）。</param>
         public void SetAlpha(float alpha)
         {
-            var color = Value;
+            if (!TryGetColor(out var color)) return;
+
+            var current = color;
             color.a = ShowAlpha ? Mathf.Clamp01(alpha) : 1f;
-            Value = color;
+            if (current != color) WriteValue(color);
         }
 
         /// <inheritdoc/>
@@ -157,7 +188,7 @@ namespace DebugMenu
             {
                 var defaultValue = _defaultValue;
                 if (!ShowAlpha) defaultValue.a = 1f;
-                return Value != defaultValue;
+                return TryGetColor(out var value) && value != defaultValue;
             }
         }
 
@@ -177,14 +208,17 @@ namespace DebugMenu
             var normalized = text[0] == '#' ? text : "#" + text;
             if (!ColorUtility.TryParseHtmlString(normalized, out var parsed)) return false;
 
-            Value = parsed;
-            return true;
+            return TrySetValue(parsed);
         }
 
         /// <inheritdoc/>
         public override void ResetToDefault()
         {
-            Value = _defaultValue;
+            if (!TryGetColor(out var current)) return;
+
+            var defaultValue = _defaultValue;
+            if (!ShowAlpha) defaultValue.a = 1f;
+            TrySetValue(defaultValue, current);
         }
 
         /// <summary>
@@ -227,6 +261,33 @@ namespace DebugMenu
                 CultureInfo.InvariantCulture,
                 "{0:F2}, {1:F2}, {2:F2}, {3:F2}",
                 value.r, value.g, value.b, value.a);
+        }
+
+        private bool TrySetValue(Color value)
+        {
+            if (!TryGetColor(out var current)) return false;
+
+            return TrySetValue(value, current);
+        }
+
+        private bool TrySetValue(Color value, Color current)
+        {
+
+            var next = value;
+            if (!ShowAlpha) next.a = 1f;
+            if (current == next) return true;
+
+            WriteValue(next);
+            return true;
+        }
+
+        private void CaptureDefaultIfNeeded(Color value)
+        {
+            if (_hasDefaultValue) return;
+
+            _defaultValue = value;
+            _hasDefaultValue = true;
+            SyncHsvFrom(value);
         }
     }
 }

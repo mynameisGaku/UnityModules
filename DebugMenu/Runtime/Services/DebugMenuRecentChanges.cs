@@ -118,7 +118,7 @@ namespace DebugMenu
             menu.VisitAll((page, element) =>
             {
                 if (ReferenceEquals(page, _page) || _owners.ContainsKey(element)) return;
-                if (!DebugValueSnapshot.Capture(element).HasValue) return;
+                if (!DebugValueSnapshot.TryCapture(element, out var snapshot) || !snapshot.HasValue) return;
                 _owners.Add(element, page);
             });
         }

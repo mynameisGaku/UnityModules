@@ -17,7 +17,8 @@ namespace DebugMenu
 
         private readonly Func<Vector4> _getter;
         private readonly Action<Vector4> _setter;
-        private readonly Vector4 _defaultValue;
+        private Vector4 _defaultValue;
+        private bool _hasDefaultValue;
         private readonly int _componentCount;
         private readonly DebugFloat[] _components;
 
@@ -35,7 +36,11 @@ namespace DebugMenu
             _componentCount = componentCount;
             _getter = getter ?? throw new ArgumentNullException(nameof(getter));
             _setter = setter ?? throw new ArgumentNullException(nameof(setter));
-            _defaultValue = getter();
+            if (TryReadExternalValue(getter, out var initialValue))
+            {
+                _defaultValue = initialValue;
+                _hasDefaultValue = true;
+            }
 
             _components = BuildComponents();
         }
@@ -73,23 +78,20 @@ namespace DebugMenu
         /// <summary>現在値。使わない成分は 0 として扱う。</summary>
         public Vector4 Value
         {
-            get => _getter != null ? _getter() : _stored;
-            set
+            get
             {
-                if (Value == value) return;
-
-                if (_setter != null) _setter(value);
-                else _stored = value;
-
-                NotifyChanged();
+                var value = _getter != null ? _getter() : _stored;
+                CaptureDefaultIfNeeded(value);
+                return value;
             }
+            set => TrySetValue(value);
         }
 
         /// <inheritdoc/>
         public override DebugValueKind ValueKind => DebugValueKind.Vector;
 
         /// <inheritdoc/>
-        public override bool IsModified => Value != _defaultValue;
+        public override bool IsModified => TryGetCurrent(out var value) && value != _defaultValue;
 
         /// <summary>右カラムには成分を並べて出す。</summary>
         public override string GetValueText()
@@ -107,7 +109,11 @@ namespace DebugMenu
         }
 
         /// <summary>成分ごとにまとめて既定値へ戻す。</summary>
-        public override void ResetToDefault() => Value = _defaultValue;
+        public override void ResetToDefault()
+        {
+            if (!TryGetCurrent(out var current)) return;
+            TrySetValue(_defaultValue, current);
+        }
 
         /// <summary>まとめて打ち込める。成分を 1 つずつ辿るより速い場面があるため。</summary>
         public override bool CanTypeValue => true;
@@ -137,7 +143,9 @@ namespace DebugMenu
             var parts = text.Split(',');
             if (parts.Length != _componentCount) return false;
 
-            var next = Value;
+            if (!TryGetCurrent(out var next)) return false;
+
+            var current = next;
             for (var i = 0; i < _componentCount; i++)
             {
                 if (!float.TryParse(parts[i].Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out var component)) return false;
@@ -146,8 +154,7 @@ namespace DebugMenu
                 next[i] = component;
             }
 
-            Value = next;
-            return true;
+            return TrySetValue(next, current);
         }
 
         private DebugFloat[] BuildComponents()
@@ -162,17 +169,59 @@ namespace DebugMenu
                 var component = new DebugFloat(
                     ComponentNames[axis],
                     () => Value[axis],
-                    v =>
-                    {
-                        var next = Value;
-                        next[axis] = v;
-                        Value = next;
-                    });
+                    v => TrySetComponent(axis, v));
 
                 components[axis] = Add(component);
             }
 
             return components;
+        }
+
+        private bool TryGetCurrent(out Vector4 value)
+        {
+            if (_getter == null) value = _stored;
+            else if (!TryReadExternalValue(_getter, out value)) return false;
+
+            CaptureDefaultIfNeeded(value);
+            return true;
+        }
+
+        private void CaptureDefaultIfNeeded(Vector4 value)
+        {
+            if (_hasDefaultValue) return;
+
+            _defaultValue = value;
+            _hasDefaultValue = true;
+
+            // 親が先に回復した場合も、成分行が後から変更値を既定値として覚えないよう揃える。
+            if (_components == null) return;
+            for (var i = 0; i < _components.Length; i++) _components[i].TryGetFloat(out _);
+        }
+
+        private bool TrySetValue(Vector4 value)
+        {
+            if (!TryGetCurrent(out var current)) return false;
+            return TrySetValue(value, current);
+        }
+
+        private bool TrySetValue(Vector4 value, Vector4 current)
+        {
+            if (current == value) return true;
+
+            if (_setter != null) _setter(value);
+            else _stored = value;
+
+            NotifyChanged();
+            return true;
+        }
+
+        private void TrySetComponent(int axis, float value)
+        {
+            if (!TryGetCurrent(out var next)) return;
+
+            var current = next;
+            next[axis] = value;
+            TrySetValue(next, current);
         }
     }
 }

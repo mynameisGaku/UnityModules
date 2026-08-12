@@ -236,7 +236,7 @@ namespace DebugMenu
                 if (!visited.Add(element)) return;
                 if (!element.IsSaveable) return;
 
-                var snapshot = DebugValueSnapshot.Capture(element);
+                if (!DebugValueSnapshot.TryCapture(element, out var snapshot)) return;
                 if (!snapshot.HasValue) return;
 
                 data.Keys.Add(element.ResolveSaveKey());

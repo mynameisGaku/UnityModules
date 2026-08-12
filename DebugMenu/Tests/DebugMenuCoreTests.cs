@@ -1,7 +1,9 @@
+using System;
 using System.Collections.Generic;
 using Containers;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.TestTools;
 
 namespace DebugMenu.Tests
 {
@@ -11,6 +13,26 @@ namespace DebugMenu.Tests
     /// </summary>
     public sealed class DebugMenuCoreTests
     {
+        private sealed class EmptyIntegerElement : DebugElement
+        {
+            public EmptyIntegerElement() : base("Empty") { }
+
+            public override DebugValueKind ValueKind => DebugValueKind.Int;
+
+            public override bool TryGetInt(out int value)
+            {
+                value = 0;
+                return false;
+            }
+        }
+
+        private sealed class FailingNonValueElement : DebugElement
+        {
+            public FailingNonValueElement() : base("Status") { }
+
+            public override string GetValueText() => throw new InvalidOperationException("provider failed");
+        }
+
         // ── 平坦化 ──────────────────────────────────────────────────────────
 
         [Test]
@@ -504,6 +526,355 @@ namespace DebugMenu.Tests
         }
 
         [Test]
+        public void DisplayLabel_ExceptionUsesFallbackAndRecoversWithoutRepeatedLogs()
+        {
+            var shouldThrow = true;
+            var failureCount = 0;
+            var loggedWarning = string.Empty;
+            var element = new DebugElement("HP");
+            element.SetLabelProvider(() => shouldThrow
+                ? throw new System.InvalidOperationException("label failed " + ++failureCount)
+                : "HP 120/200");
+            Application.LogCallback captureWarning = (condition, stackTrace, type) =>
+            {
+                if (type == LogType.Warning && condition.Contains("[DebugMenu]")) loggedWarning = condition;
+            };
+
+            Application.logMessageReceived += captureWarning;
+            try
+            {
+                LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*ラベル取得"));
+                Assert.IsFalse(element.TryGetDisplayLabel(out var fallback));
+                Assert.AreEqual("HP", fallback);
+                Assert.IsTrue(element.HasReadError);
+
+                // 例外文言が毎回変わっても、同じ行は5秒間に1回だけログへ出す。
+                Assert.IsFalse(element.TryGetDisplayLabel(out _));
+                LogAssert.NoUnexpectedReceived();
+
+                shouldThrow = false;
+                Assert.IsTrue(element.TryGetDisplayLabel(out var recovered));
+                Assert.AreEqual("HP 120/200", recovered);
+                Assert.IsFalse(element.HasReadError);
+            }
+            finally
+            {
+                Application.logMessageReceived -= captureWarning;
+            }
+
+            StringAssert.Contains("InvalidOperationException: label failed 1", loggedWarning);
+            StringAssert.Contains(" at ", loggedWarning, "警告ログから例外の発生位置を追えない");
+        }
+
+        [Test]
+        public void ValueGetter_ExceptionDoesNotStopConstructionOrRangeConfiguration()
+        {
+            var shouldThrow = true;
+            var value = 7;
+
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値取得"));
+            DebugInt element = null;
+            Assert.DoesNotThrow(() => element = new DebugInt(
+                "Count",
+                () => shouldThrow ? throw new System.InvalidOperationException("value failed") : value,
+                next => value = next).WithRange(0, 10));
+            Assert.IsTrue(element.HasReadError);
+
+            shouldThrow = false;
+            Assert.IsTrue(element.TryGetDisplayValueText(out var text));
+            Assert.AreEqual("7", text);
+            Assert.IsFalse(element.HasReadError);
+        }
+
+
+        [Test]
+        public void RecoveredGetter_DisplayCapturesRealDefaultAcrossAllValueKinds()
+        {
+            var shouldThrow = true;
+            var writeCount = 0;
+            var booleanValue = true;
+            var intValue = 7;
+            var floatValue = 0.75f;
+            var enumValue = 1;
+            var textValue = "baseline";
+            var pathValue = "C:\\Baseline";
+            var vectorValue = new Vector4(1f, 2f, 3f, 4f);
+            var colorValue = new Color(0.8f, 0.3f, 0.2f, 0.6f);
+
+            ExpectValueGetterWarnings(10);
+            var boolean = new DebugBool("Boolean", () => ReadOrThrow(booleanValue, shouldThrow), value => { booleanValue = value; writeCount++; });
+            var integer = new DebugInt("Integer", () => ReadOrThrow(intValue, shouldThrow), value => { intValue = value; writeCount++; });
+            var number = new DebugFloat("Float", () => ReadOrThrow(floatValue, shouldThrow), value => { floatValue = value; writeCount++; });
+            var choice = new DebugEnum("Choice", new[] { "A", "B" }, () => ReadOrThrow(enumValue, shouldThrow), value => { enumValue = value; writeCount++; });
+            var text = new DebugText("Text", () => ReadOrThrow(textValue, shouldThrow), value => { textValue = value; writeCount++; });
+            var path = new DebugPath("Path", DebugPathMode.Folder, () => ReadOrThrow(pathValue, shouldThrow), value => { pathValue = value; writeCount++; });
+            var vector = new DebugVector("Vector", 2, () => ReadOrThrow(vectorValue, shouldThrow), value => { vectorValue = value; writeCount++; });
+            var color = new DebugColor("Color", () => ReadOrThrow(colorValue, shouldThrow), value => { colorValue = value; writeCount++; });
+
+            shouldThrow = false;
+            var elements = new DebugElement[] { boolean, integer, number, choice, text, path, vector, color };
+            for (var i = 0; i < elements.Length; i++) Assert.IsTrue(elements[i].TryGetDisplayValueText(out _));
+
+            booleanValue = false;
+            intValue = 11;
+            floatValue = 0.25f;
+            enumValue = 0;
+            textValue = "changed";
+            pathValue = "C:\\Changed";
+            vectorValue = new Vector4(8f, 7f, 6f, 5f);
+            colorValue = Color.green;
+
+            for (var i = 0; i < elements.Length; i++) Assert.IsTrue(elements[i].IsModified, elements[i].Label);
+            for (var i = 0; i < elements.Length; i++) elements[i].ResetToDefault();
+
+            Assert.AreEqual(8, writeCount);
+            Assert.IsTrue(booleanValue);
+            Assert.AreEqual(7, intValue);
+            Assert.That(floatValue, Is.EqualTo(0.75f).Within(0.0001f));
+            Assert.AreEqual(1, enumValue);
+            Assert.AreEqual("baseline", textValue);
+            Assert.AreEqual("C:\\Baseline", pathValue);
+            Assert.AreEqual(new Vector4(1f, 2f, 3f, 4f), vectorValue);
+            Assert.AreEqual(new Color(0.8f, 0.3f, 0.2f, 0.6f), colorValue);
+        }
+
+        [Test]
+        public void RecoveredGetter_ResetBeforeDisplayDoesNotWriteFallbackAcrossAllValueKinds()
+        {
+            var shouldThrow = true;
+            var writeCount = 0;
+            var booleanValue = true;
+            var intValue = 7;
+            var floatValue = 0.75f;
+            var enumValue = 1;
+            var textValue = "baseline";
+            var pathValue = "C:\\Baseline";
+            var vectorValue = new Vector4(1f, 2f, 3f, 4f);
+            var colorValue = new Color(0.8f, 0.3f, 0.2f, 0.6f);
+
+            ExpectValueGetterWarnings(10);
+            var boolean = new DebugBool("Boolean", () => ReadOrThrow(booleanValue, shouldThrow), value => { booleanValue = value; writeCount++; });
+            var integer = new DebugInt("Integer", () => ReadOrThrow(intValue, shouldThrow), value => { intValue = value; writeCount++; });
+            var number = new DebugFloat("Float", () => ReadOrThrow(floatValue, shouldThrow), value => { floatValue = value; writeCount++; });
+            var choice = new DebugEnum("Choice", new[] { "A", "B" }, () => ReadOrThrow(enumValue, shouldThrow), value => { enumValue = value; writeCount++; });
+            var text = new DebugText("Text", () => ReadOrThrow(textValue, shouldThrow), value => { textValue = value; writeCount++; });
+            var path = new DebugPath("Path", DebugPathMode.Folder, () => ReadOrThrow(pathValue, shouldThrow), value => { pathValue = value; writeCount++; });
+            var vector = new DebugVector("Vector", 2, () => ReadOrThrow(vectorValue, shouldThrow), value => { vectorValue = value; writeCount++; });
+            var color = new DebugColor("Color", () => ReadOrThrow(colorValue, shouldThrow), value => { colorValue = value; writeCount++; });
+            var elements = new DebugElement[] { boolean, integer, number, choice, text, path, vector, color };
+
+            shouldThrow = false;
+            for (var i = 0; i < elements.Length; i++) elements[i].ResetToDefault();
+            Assert.AreEqual(0, writeCount, "最初の正常値を既定値として覚えるだけのResetがsetterを呼んだ");
+
+            booleanValue = false;
+            intValue = 11;
+            floatValue = 0.25f;
+            enumValue = 0;
+            textValue = "changed";
+            pathValue = "C:\\Changed";
+            vectorValue = new Vector4(8f, 7f, 6f, 5f);
+            colorValue = Color.green;
+            for (var i = 0; i < elements.Length; i++) elements[i].ResetToDefault();
+
+            Assert.AreEqual(8, writeCount);
+            Assert.IsTrue(booleanValue);
+            Assert.AreEqual(7, intValue);
+            Assert.That(floatValue, Is.EqualTo(0.75f).Within(0.0001f));
+            Assert.AreEqual(1, enumValue);
+            Assert.AreEqual("baseline", textValue);
+            Assert.AreEqual("C:\\Baseline", pathValue);
+            Assert.AreEqual(new Vector4(1f, 2f, 3f, 4f), vectorValue);
+            Assert.AreEqual(new Color(0.8f, 0.3f, 0.2f, 0.6f), colorValue);
+        }
+
+        [Test]
+        public void ValueOperations_GetterExceptionsSkipWritesWithoutEscaping()
+        {
+            var shouldThrow = false;
+            var writeCount = 0;
+
+            var integer = new DebugInt(
+                "Integer",
+                () => shouldThrow ? throw new InvalidOperationException("integer failed") : 4,
+                _ => writeCount++).WithRange(0, 10);
+            var number = new DebugFloat(
+                "Float",
+                () => shouldThrow ? throw new InvalidOperationException("float failed") : 0.4f,
+                _ => writeCount++).WithRange(0f, 1f);
+            var boolean = new DebugBool(
+                "Boolean",
+                () => shouldThrow ? throw new InvalidOperationException("boolean failed") : true,
+                _ => writeCount++);
+            var choice = new DebugEnum(
+                "Choice",
+                new[] { "A", "B" },
+                () => shouldThrow ? throw new InvalidOperationException("choice failed") : 0,
+                _ => writeCount++);
+            var text = new DebugText(
+                "Text",
+                () => shouldThrow ? throw new InvalidOperationException("text failed") : "before",
+                _ => writeCount++);
+            var path = new DebugPath(
+                "Path",
+                DebugPathMode.Folder,
+                () => shouldThrow ? throw new InvalidOperationException("path failed") : string.Empty,
+                _ => writeCount++);
+            var vector = new DebugVector(
+                "Vector",
+                2,
+                () => shouldThrow ? throw new InvalidOperationException("vector failed") : Vector4.one,
+                _ => writeCount++);
+            var color = new DebugColor(
+                "Color",
+                () => shouldThrow ? throw new InvalidOperationException("color failed") : Color.red,
+                _ => writeCount++);
+
+            shouldThrow = true;
+
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値取得"));
+            Assert.DoesNotThrow(() => integer.OnAdjust(1));
+            Assert.IsFalse(integer.CommitEditText("7"));
+            Assert.IsFalse(integer.TrySetRatio(0.8f));
+            Assert.DoesNotThrow(integer.ResetToDefault);
+            Assert.IsFalse(integer.IsModified);
+            Assert.IsFalse(integer.TryGetInt(out _));
+
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値取得"));
+            Assert.DoesNotThrow(() => number.OnAdjust(1));
+            Assert.IsFalse(number.CommitEditText("0.8"));
+            Assert.IsFalse(number.TrySetRatio(0.8f));
+            Assert.DoesNotThrow(number.ResetToDefault);
+            Assert.IsFalse(number.IsModified);
+
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値取得"));
+            Assert.DoesNotThrow(boolean.OnDecide);
+            Assert.DoesNotThrow(() => boolean.OnAdjust(1));
+            Assert.IsFalse(boolean.TrySetBool(false));
+            Assert.DoesNotThrow(boolean.ResetToDefault);
+            Assert.IsFalse(boolean.IsModified);
+
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値取得"));
+            Assert.DoesNotThrow(() => choice.OnAdjust(1));
+            Assert.IsFalse(choice.TryGetSelection(out _, out _));
+            Assert.DoesNotThrow(choice.Children[1].OnDecide);
+            Assert.IsFalse(choice.IsModified);
+
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値取得"));
+            Assert.IsFalse(text.CommitEditText("after"));
+            Assert.DoesNotThrow(text.ResetToDefault);
+            Assert.IsFalse(text.IsModified);
+
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値取得"));
+            Assert.DoesNotThrow(path.OnDecide);
+            Assert.IsFalse(path.IsExpanded);
+            Assert.IsFalse(path.CommitEditText("C:\\Temp"));
+            Assert.DoesNotThrow(path.ResetToDefault);
+            Assert.IsFalse(path.IsModified);
+
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値取得"));
+            Assert.IsFalse(vector.CommitEditText("2, 3"));
+            Assert.DoesNotThrow(vector.ResetToDefault);
+            Assert.IsFalse(vector.IsModified);
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値取得"));
+            Assert.DoesNotThrow(() => vector.GetComponent(0).OnAdjust(1));
+
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値取得"));
+            Assert.DoesNotThrow(() => color.SetHsv(0.5f, 1f, 1f));
+            Assert.DoesNotThrow(() => color.SetAlpha(0.5f));
+            Assert.IsFalse(color.CommitEditText("#00FF00"));
+            Assert.DoesNotThrow(color.ResetToDefault);
+            Assert.IsFalse(color.IsModified);
+
+            Assert.AreEqual(0, writeCount, "取得失敗中に利用側 setter が呼ばれている");
+
+            shouldThrow = false;
+            integer.OnAdjust(1);
+            Assert.AreEqual(1, writeCount, "取得元の回復後も値操作が再開されていない");
+            Assert.IsFalse(integer.HasReadError);
+        }
+
+        [Test]
+        public void ValueOperations_SetterExceptionsRemainVisibleToCaller()
+        {
+            var integer = new DebugInt(
+                "Integer",
+                () => 4,
+                _ => throw new InvalidOperationException("setter failed"));
+
+            Assert.Throws<InvalidOperationException>(() => integer.OnAdjust(1));
+        }
+
+        [Test]
+        public void ValueSnapshot_ExceptionSkipsOnlyFailingElementAndCanRecover()
+        {
+            var shouldThrow = false;
+            var element = new DebugInt(
+                "Count",
+                () => shouldThrow ? throw new System.InvalidOperationException("snapshot failed") : 3,
+                _ => { });
+            shouldThrow = true;
+
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値取得"));
+            Assert.IsFalse(DebugValueSnapshot.TryCapture(element, out var failed));
+            Assert.IsFalse(failed.HasValue);
+
+            shouldThrow = false;
+            Assert.IsTrue(DebugValueSnapshot.TryCapture(element, out var recovered));
+            Assert.IsTrue(recovered.HasValue);
+            Assert.IsFalse(element.HasReadError);
+        }
+
+        [Test]
+        public void ValueSnapshot_ValueKindWithoutValueFailsAndKeepsDiagnostic()
+        {
+            var element = new EmptyIntegerElement();
+
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値取得"));
+            Assert.IsFalse(DebugValueSnapshot.TryCapture(element, out var snapshot));
+            Assert.IsFalse(snapshot.HasValue);
+            Assert.IsTrue(element.HasReadError);
+            StringAssert.Contains("Int", element.ReadErrorMessage);
+        }
+
+        [Test]
+        public void ValueSnapshot_NonValueRowDoesNotClearExistingReadError()
+        {
+            var element = new FailingNonValueElement();
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値取得"));
+            Assert.IsFalse(element.TryGetDisplayValueText(out _));
+            var diagnostic = element.ReadErrorMessage;
+
+            Assert.IsTrue(DebugValueSnapshot.TryCapture(element, out var snapshot));
+
+            Assert.IsFalse(snapshot.HasValue);
+            Assert.IsTrue(element.HasReadError);
+            Assert.AreEqual(diagnostic, element.ReadErrorMessage);
+        }
+
+        [Test]
+        public void SearchAndTextSnapshot_BrokenLabelDoesNotHideHealthyRows()
+        {
+            var menu = new DebugMenuRoot();
+            var page = menu.AddPage("Test");
+            var broken = page.Root.Add(new DebugElement("Broken", "fallback"));
+            broken.SetLabelProvider(() => throw new System.InvalidOperationException("label failed"));
+            page.Root.Add(new DebugBool("Healthy", true));
+            var search = new DebugMenuSearch();
+            var results = new FastList<DebugSearchHit>();
+
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*ラベル取得"));
+            Assert.DoesNotThrow(() => search.Rebuild(menu));
+            search.Query("bro", results);
+            Assert.AreEqual(1, results.Count, "静的ラベルへのフォールバックが索引へ入っていない");
+
+            var text = string.Empty;
+            Assert.DoesNotThrow(() => text = DebugMenuTextSnapshot.Capture(menu));
+            StringAssert.Contains("Test / Broken = fallback", text);
+            StringAssert.Contains("Test / Healthy = ON", text);
+        }
+
+        [Test]
         public void Color_ShowAlphaFalseForcesOpaque()
         {
             var element = new DebugColor("team", new Color(0.1f, 0.2f, 0.3f, 0.25f));
@@ -594,6 +965,32 @@ namespace DebugMenu.Tests
 
             Assert.AreEqual(2f, min);
             Assert.AreEqual(5f, max);
+        }
+
+        [Test]
+        public void PageTick_ProviderExceptionDoesNotStopFollowingRows()
+        {
+            var shouldThrow = true;
+            var healthyCalls = 0;
+            var page = new DebugPage("Test");
+            var failing = page.Root.Add(new DebugGraph("Broken", () => shouldThrow
+                ? throw new System.InvalidOperationException("graph failed")
+                : 2f));
+            var healthy = page.Root.Add(new DebugGraph("Healthy", () => ++healthyCalls));
+
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*更新"));
+            Assert.DoesNotThrow(() => page.Tick(0f));
+            Assert.IsTrue(failing.HasReadError);
+            Assert.AreEqual(1, healthyCalls, "後続行の更新が止まっている");
+            Assert.AreEqual(1, healthy.Samples.Count);
+
+            // 同じ失敗は再度ログへ流さず、後続行だけは引き続き更新する。
+            page.Tick(0f);
+            Assert.AreEqual(2, healthyCalls);
+
+            shouldThrow = false;
+            page.Tick(0f);
+            Assert.IsFalse(failing.HasReadError, "取得元が回復してもエラー表示が残っている");
         }
 
         [Test]
@@ -733,6 +1130,21 @@ namespace DebugMenu.Tests
             DebugMenuCommandDispatcher.Dispatch(menu, DebugMenuCommand.ResetValue);
 
             Assert.AreEqual(5, element.Value, "既定値に戻っていない");
+        }
+
+
+        private static T ReadOrThrow<T>(T value, bool shouldThrow)
+        {
+            if (shouldThrow) throw new InvalidOperationException("initial getter failed");
+            return value;
+        }
+
+        private static void ExpectValueGetterWarnings(int count)
+        {
+            for (var i = 0; i < count; i++)
+            {
+                LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値取得"));
+            }
         }
 
         private enum Sparse

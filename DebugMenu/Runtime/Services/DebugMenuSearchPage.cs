@@ -88,10 +88,8 @@ namespace DebugMenu
                 for (var i = 0; i < _hits.Count; i++)
                 {
                     var hit = _hits[i];
-                    Page.Root.Add(new DebugSearchResult(
-                        hit.Element.DisplayLabel,
-                        hit.Path,
-                        () => NavigateTo(hit)));
+                    hit.Element.TryGetDisplayLabel(out var label);
+                    Page.Root.Add(new DebugSearchResult(label, hit.Path, () => NavigateTo(hit)));
                 }
             }
 

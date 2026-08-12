@@ -15,7 +15,8 @@ namespace DebugMenu
     {
         private readonly Func<int> _getter;
         private readonly Action<int> _setter;
-        private readonly int _defaultValue;
+        private int _defaultValue;
+        private bool _hasDefaultValue;
 
         private int _stored;
 
@@ -27,7 +28,11 @@ namespace DebugMenu
         {
             _getter = getter ?? throw new ArgumentNullException(nameof(getter));
             _setter = setter ?? throw new ArgumentNullException(nameof(setter));
-            _defaultValue = getter();
+            if (TryReadExternalValue(getter, out var initialValue))
+            {
+                _defaultValue = initialValue;
+                _hasDefaultValue = true;
+            }
             IsExpandable = false;
         }
 
@@ -38,6 +43,7 @@ namespace DebugMenu
         {
             _stored = initialValue;
             _defaultValue = initialValue;
+            _hasDefaultValue = true;
             IsExpandable = false;
         }
 
@@ -57,7 +63,16 @@ namespace DebugMenu
         {
             Min = Math.Min(min, max);
             Max = Math.Max(min, max);
-            Value = Value;   // 範囲内へ丸め直す
+            if (_getter == null) Value = Value;
+            else if (TryGetCurrent(out var current))
+            {
+                var clamped = current < Min ? Min : current > Max ? Max : current;
+                if (current != clamped)
+                {
+                    _setter(clamped);
+                    NotifyChanged();
+                }
+            }
             return this;
         }
 
@@ -72,17 +87,13 @@ namespace DebugMenu
         /// <summary>現在値。設定時は上下限で丸められる。</summary>
         public int Value
         {
-            get => _getter != null ? _getter() : _stored;
-            set
+            get
             {
-                var clamped = value < Min ? Min : value > Max ? Max : value;
-                if (Value == clamped) return;
-
-                if (_setter != null) _setter(clamped);
-                else _stored = clamped;
-
-                NotifyChanged();
+                var value = _getter != null ? _getter() : _stored;
+                CaptureDefaultIfNeeded(value);
+                return value;
             }
+            set => TrySetValue(value);
         }
 
         /// <summary>上下限が両方とも設定されているか。</summary>
@@ -95,7 +106,7 @@ namespace DebugMenu
         public override bool IsAdjustable => true;
 
         /// <inheritdoc/>
-        public override bool IsModified => Value != _defaultValue;
+        public override bool IsModified => TryGetCurrent(out var value) && value != _defaultValue;
 
         /// <inheritdoc/>
         public override bool CanTypeValue => true;
@@ -104,10 +115,18 @@ namespace DebugMenu
         public override string GetValueText() => Value.ToString(CultureInfo.InvariantCulture);
 
         /// <inheritdoc/>
-        public override void OnAdjust(int delta) => Value += Step * delta;
+        public override void OnAdjust(int delta)
+        {
+            if (!TryGetCurrent(out var value)) return;
+            TrySetValue(value + Step * delta, value);
+        }
 
         /// <inheritdoc/>
-        public override void ResetToDefault() => Value = _defaultValue;
+        public override void ResetToDefault()
+        {
+            if (!TryGetCurrent(out var current)) return;
+            TrySetValue(_defaultValue, current);
+        }
 
         /// <inheritdoc/>
         public override string GetEditText() => Value.ToString(CultureInfo.InvariantCulture);
@@ -117,8 +136,7 @@ namespace DebugMenu
         {
             if (!int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed)) return false;
 
-            Value = parsed;
-            return true;
+            return TrySetValue(parsed);
         }
 
         /// <inheritdoc/>
@@ -130,8 +148,14 @@ namespace DebugMenu
                 return false;
             }
 
+            if (!TryGetCurrent(out var value))
+            {
+                ratio = 0f;
+                return false;
+            }
+
             var span = (float)Max - Min;
-            ratio = span <= 0f ? 0f : Mathf.Clamp01((Value - Min) / span);
+            ratio = span <= 0f ? 0f : Mathf.Clamp01((value - Min) / span);
             return true;
         }
 
@@ -140,35 +164,72 @@ namespace DebugMenu
         {
             if (!HasRange) return false;
 
-            Value = Mathf.RoundToInt(Mathf.Lerp(Min, Max, Mathf.Clamp01(ratio)));
-            return true;
+            return TrySetValue(Mathf.RoundToInt(Mathf.Lerp(Min, Max, Mathf.Clamp01(ratio))));
         }
 
         /// <inheritdoc/>
         public override bool TryGetInt(out int value)
         {
-            value = Value;
-            return true;
+            return TryGetCurrent(out value);
         }
 
         /// <inheritdoc/>
         public override bool TrySetInt(int value)
         {
-            Value = value;
-            return true;
+            return TrySetValue(value);
         }
 
         /// <inheritdoc/>
         public override bool TryGetFloat(out float value)
         {
-            value = Value;
+            if (!TryGetCurrent(out var current))
+            {
+                value = 0f;
+                return false;
+            }
+
+            value = current;
             return true;
         }
 
         /// <inheritdoc/>
         public override bool TrySetFloat(float value)
         {
-            Value = Mathf.RoundToInt(value);
+            return TrySetValue(Mathf.RoundToInt(value));
+        }
+
+        private bool TryGetCurrent(out int value)
+        {
+            if (_getter == null) value = _stored;
+            else if (!TryReadExternalValue(_getter, out value)) return false;
+
+            CaptureDefaultIfNeeded(value);
+            return true;
+        }
+
+        private void CaptureDefaultIfNeeded(int value)
+        {
+            if (_hasDefaultValue) return;
+
+            _defaultValue = value;
+            _hasDefaultValue = true;
+        }
+
+        private bool TrySetValue(int value)
+        {
+            if (!TryGetCurrent(out var current)) return false;
+            return TrySetValue(value, current);
+        }
+
+        private bool TrySetValue(int value, int current)
+        {
+            var clamped = value < Min ? Min : value > Max ? Max : value;
+            if (current == clamped) return true;
+
+            if (_setter != null) _setter(clamped);
+            else _stored = clamped;
+
+            NotifyChanged();
             return true;
         }
     }

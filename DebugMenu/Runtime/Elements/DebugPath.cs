@@ -12,7 +12,8 @@ namespace DebugMenu
     {
         private readonly Func<string> _getter;
         private readonly Action<string> _setter;
-        private readonly string _defaultValue;
+        private string _defaultValue = string.Empty;
+        private bool _hasDefaultValue;
         private readonly List<string> _extensions = new List<string>();
         private readonly IReadOnlyList<string> _readOnlyExtensions;
 
@@ -28,7 +29,11 @@ namespace DebugMenu
         {
             _getter = getter ?? throw new ArgumentNullException(nameof(getter));
             _setter = setter ?? throw new ArgumentNullException(nameof(setter));
-            _defaultValue = getter() ?? string.Empty;
+            if (TryReadExternalValue(getter, out var initialValue))
+            {
+                _defaultValue = initialValue ?? string.Empty;
+                _hasDefaultValue = true;
+            }
             _readOnlyExtensions = _extensions.AsReadOnly();
             Mode = mode;
             MarkerVisibility = DebugMarkerVisibility.Always;
@@ -42,6 +47,7 @@ namespace DebugMenu
         {
             _stored = initialValue ?? string.Empty;
             _defaultValue = _stored;
+            _hasDefaultValue = true;
             _readOnlyExtensions = _extensions.AsReadOnly();
             Mode = mode;
             MarkerVisibility = DebugMarkerVisibility.Always;
@@ -68,7 +74,12 @@ namespace DebugMenu
         /// <summary>現在のパス。代入時にも設定済みの検証を行う。</summary>
         public string Value
         {
-            get => (_getter != null ? _getter() : _stored) ?? string.Empty;
+            get
+            {
+                var value = (_getter != null ? _getter() : _stored) ?? string.Empty;
+                CaptureDefaultIfNeeded(value);
+                return value;
+            }
             set => TrySetValue(value);
         }
 
@@ -82,7 +93,7 @@ namespace DebugMenu
         public override bool PrefersDecide => true;
 
         /// <inheritdoc/>
-        public override bool IsModified => !string.Equals(Value, _defaultValue, StringComparison.Ordinal);
+        public override bool IsModified => TryGetCurrent(out var value) && !string.Equals(value, _defaultValue, StringComparison.Ordinal);
 
         /// <summary>存在確認の有無を設定して、そのまま返す。</summary>
         /// <param name="required">存在を必須にするなら true。</param>
@@ -174,8 +185,7 @@ namespace DebugMenu
             }
 
             LastValidationError = string.Empty;
-            SetValueUnchecked(next);
-            return true;
+            return SetValueUnchecked(next);
         }
 
         /// <inheritdoc/>
@@ -193,7 +203,8 @@ namespace DebugMenu
                 return;
             }
 
-            _currentDirectory = ResolveStartDirectory();
+            if (!TryResolveStartDirectory(out _currentDirectory)) return;
+
             IsExpanded = true;
             RebuildBrowser();
         }
@@ -205,14 +216,15 @@ namespace DebugMenu
         public override void ResetToDefault()
         {
             LastValidationError = string.Empty;
-            SetValueUnchecked(_defaultValue);
+            if (!TryGetCurrent(out var current)) return;
+            SetValueUnchecked(_defaultValue, current);
         }
 
         private void RebuildBrowser()
         {
             ClearChildren();
 
-            if (string.IsNullOrEmpty(_currentDirectory)) _currentDirectory = ResolveStartDirectory();
+            if (string.IsNullOrEmpty(_currentDirectory) && !TryResolveStartDirectory(out _currentDirectory)) return;
 
             AddParentRow();
             if (Mode == DebugPathMode.Folder)
@@ -314,9 +326,14 @@ namespace DebugMenu
             Add(new DebugPathBrowserRow("[Error] " + operation, message));
         }
 
-        private string ResolveStartDirectory()
+        private bool TryResolveStartDirectory(out string directory)
         {
-            var value = Value;
+            if (!TryGetCurrent(out var value))
+            {
+                directory = string.Empty;
+                return false;
+            }
+
             var candidate = value;
 
             try
@@ -332,14 +349,19 @@ namespace DebugMenu
                     fullPath = parent.FullName;
                 }
 
-                if (Directory.Exists(fullPath)) return fullPath;
+                if (Directory.Exists(fullPath))
+                {
+                    directory = fullPath;
+                    return true;
+                }
             }
             catch
             {
                 // 無効な文字や存在しないドライブは、現在フォルダーへ戻して表示を続ける。
             }
 
-            return Directory.GetCurrentDirectory();
+            directory = Directory.GetCurrentDirectory();
+            return true;
         }
 
         private bool IsAcceptedFile(string path)
@@ -354,13 +376,44 @@ namespace DebugMenu
             return false;
         }
 
-        private void SetValueUnchecked(string value)
+        private bool SetValueUnchecked(string value)
         {
-            if (string.Equals(Value, value, StringComparison.Ordinal)) return;
+            if (!TryGetCurrent(out var current)) return false;
+
+            return SetValueUnchecked(value, current);
+        }
+
+        private bool SetValueUnchecked(string value, string current)
+        {
+            if (string.Equals(current, value, StringComparison.Ordinal)) return true;
 
             if (_setter != null) _setter(value);
             else _stored = value;
             NotifyChanged();
+            return true;
+        }
+
+        private bool TryGetCurrent(out string value)
+        {
+            if (_getter == null)
+            {
+                value = _stored ?? string.Empty;
+                return true;
+            }
+
+            if (!TryReadExternalValue(_getter, out value)) return false;
+
+            value ??= string.Empty;
+            CaptureDefaultIfNeeded(value);
+            return true;
+        }
+
+        private void CaptureDefaultIfNeeded(string value)
+        {
+            if (_hasDefaultValue) return;
+
+            _defaultValue = value ?? string.Empty;
+            _hasDefaultValue = true;
         }
 
         private static string NormalizeExtension(string extension)

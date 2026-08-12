@@ -148,7 +148,7 @@ namespace DebugMenu
         public void Tick(float deltaSeconds)
         {
             var rows = VisibleRows;
-            for (var i = 0; i < rows.Count; i++) rows[i].Element.Tick(deltaSeconds);
+            for (var i = 0; i < rows.Count; i++) rows[i].Element.TryTick(deltaSeconds);
         }
 
         /// <summary>
