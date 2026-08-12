@@ -116,6 +116,197 @@ namespace DebugMenu.Tests
         }
 
         [Test]
+        public void CollectionApi_UsesReadOnlyBclContracts()
+        {
+            Assert.AreEqual(
+                typeof(IReadOnlyList<DebugPage>),
+                typeof(DebugMenuRoot).GetProperty(nameof(DebugMenuRoot.Pages))?.PropertyType);
+            Assert.AreEqual(
+                typeof(IReadOnlyList<DebugElement>),
+                typeof(DebugElement).GetProperty(nameof(DebugElement.Children))?.PropertyType);
+            Assert.AreEqual(
+                typeof(IReadOnlyList<DebugRow>),
+                typeof(DebugPage).GetProperty(nameof(DebugPage.VisibleRows))?.PropertyType);
+        }
+
+        [Test]
+        public void CollectionViews_RejectMutationAndStaySynchronized()
+        {
+            var menu = new DebugMenuRoot();
+            var pages = menu.Pages;
+            Assert.Throws<NotSupportedException>(() => ((IList<DebugPage>)pages).Add(new DebugPage("Blocked")));
+
+            var page = menu.AddPage("Root");
+            Assert.AreEqual(1, pages.Count, "取得済みのページ一覧へ追加が反映されていない");
+
+            var children = page.Root.Children;
+            Assert.Throws<NotSupportedException>(() => ((IList<DebugElement>)children).Add(new DebugElement("Blocked")));
+
+            page.Root.Add(new DebugElement("Child"));
+            Assert.AreEqual(1, children.Count, "取得済みの子行一覧へ追加が反映されていない");
+
+            var rows = page.VisibleRows;
+            page.Root.Add(new DebugElement("Second"));
+            Assert.AreSame(rows, page.VisibleRows, "可視行を読むたびに別の一覧が作られている");
+            Assert.AreEqual(2, rows.Count, "取得済みの可視行一覧へ再構築結果が反映されていない");
+        }
+
+        [Test]
+        public void InlinePageLink_ExposesTargetReadOnlyChildren()
+        {
+            var target = new DebugPage("Target");
+            target.Root.Add(new DebugElement("Child"));
+            var link = new DebugPageLink("Inline", target, DebugAttachMode.Inline);
+
+            Assert.AreSame(target.Root.Children, link.Children);
+            Assert.Throws<NotSupportedException>(() => ((IList<DebugElement>)link.Children).Clear());
+            Assert.AreEqual(1, target.Root.Children.Count);
+        }
+
+        [Test]
+        public void PageRegistration_AddIsIdempotentAndRemoveMiddleKeepsCurrentPath()
+        {
+            var menu = new DebugMenuRoot();
+            var first = menu.AddPage("First");
+            var middle = menu.AddPage("Middle");
+            var last = menu.AddPage("Last");
+            var version = ReadPageVersion(menu);
+            var pages = menu.Pages;
+
+            Assert.AreSame(middle, menu.AddPage(middle));
+            Assert.AreEqual(version, ReadPageVersion(menu));
+            Assert.AreEqual(3, pages.Count);
+
+            var child = new DebugPage("Child");
+            menu.PushPage(child);
+            var changedCount = 0;
+            menu.PageChanged += _ => changedCount++;
+            Assert.IsTrue(menu.RemovePage(middle));
+
+            CollectionAssert.AreEqual(new[] { first, last }, pages);
+            Assert.AreSame(child, menu.CurrentPage);
+            Assert.AreEqual(1, menu.Depth);
+            Assert.AreEqual(unchecked(version + 1u), ReadPageVersion(menu));
+            Assert.AreEqual(0, changedCount);
+        }
+
+        [Test]
+        public void RemovePage_CurrentRootUsesNextThenPreviousFallback()
+        {
+            var menu = new DebugMenuRoot();
+            var first = menu.AddPage("First");
+            var middle = menu.AddPage("Middle");
+            var last = menu.AddPage("Last");
+            var changed = new List<DebugPage>();
+            menu.PageChanged += changed.Add;
+
+            menu.SetRootPage(middle);
+            changed.Clear();
+            Assert.IsTrue(menu.RemovePage(middle));
+            Assert.AreSame(last, menu.CurrentPage);
+            CollectionAssert.AreEqual(new[] { last }, changed);
+
+            changed.Clear();
+            Assert.IsTrue(menu.RemovePage(last));
+            Assert.AreSame(first, menu.CurrentPage);
+            CollectionAssert.AreEqual(new[] { first }, changed);
+        }
+
+        [Test]
+        public void RemovePage_LinkedCurrentPageKeepsReachableNavigationPath()
+        {
+            var menu = new DebugMenuRoot();
+            var root = menu.AddPage("Root");
+            var linked = menu.AddPage("Linked");
+            root.AddChildPage(linked);
+            menu.SetRootPage(root);
+            menu.PushPage(linked);
+            var changedCount = 0;
+            menu.PageChanged += _ => changedCount++;
+
+            Assert.IsTrue(menu.RemovePage(linked));
+
+            Assert.AreSame(linked, menu.CurrentPage);
+            Assert.AreEqual(1, menu.Depth);
+            Assert.AreEqual(0, changedCount);
+        }
+
+        [Test]
+        public void RemovePage_LastClosesVisibleMenuAndNoOpsStayStable()
+        {
+            var menu = new DebugMenuRoot();
+            var only = menu.AddPage("Only");
+            var pages = menu.Pages;
+            var version = ReadPageVersion(menu);
+            var notifications = new List<string>();
+            menu.PageChanged += page => notifications.Add(page == null ? "page:null" : "page:value");
+            menu.VisibilityChanged += visible => notifications.Add("visible:" + visible);
+            menu.SetVisible(true);
+            notifications.Clear();
+
+            Assert.IsFalse(menu.RemovePage(null));
+            Assert.IsFalse(menu.RemovePage(new DebugPage("Unknown")));
+            Assert.AreEqual(version, ReadPageVersion(menu));
+            Assert.IsTrue(menu.RemovePage(only));
+
+            Assert.AreEqual(0, pages.Count);
+            Assert.IsNull(menu.CurrentPage);
+            Assert.AreEqual(0, menu.Depth);
+            Assert.IsFalse(menu.IsVisible);
+            Assert.AreEqual(unchecked(version + 1u), ReadPageVersion(menu));
+            CollectionAssert.AreEqual(new[] { "page:null", "visible:False" }, notifications);
+
+            Assert.IsFalse(menu.RemovePage(only));
+            menu.ClearPages();
+            Assert.AreEqual(unchecked(version + 1u), ReadPageVersion(menu));
+            Assert.AreEqual(2, notifications.Count);
+        }
+
+        [Test]
+        public void ClearPages_ClearsLiveViewAndTransientPathWithPreciseVersioning()
+        {
+            var menu = new DebugMenuRoot();
+            menu.AddPage("First");
+            var second = menu.AddPage("Second");
+            menu.SetRootPage(second);
+            var pages = menu.Pages;
+            var version = ReadPageVersion(menu);
+            var changedCount = 0;
+            menu.PageChanged += _ => changedCount++;
+
+            menu.ClearPages();
+
+            Assert.AreEqual(0, pages.Count);
+            Assert.IsNull(menu.CurrentPage);
+            Assert.AreEqual(0, menu.Depth);
+            Assert.AreEqual(unchecked(version + 1u), ReadPageVersion(menu));
+            Assert.AreEqual(1, changedCount);
+
+            menu.SetRootPage(new DebugPage("Transient"));
+            changedCount = 0;
+            var emptyVersion = ReadPageVersion(menu);
+            menu.ClearPages();
+            Assert.IsNull(menu.CurrentPage);
+            Assert.AreEqual(emptyVersion, ReadPageVersion(menu));
+            Assert.AreEqual(1, changedCount);
+
+            menu.ClearPages();
+            Assert.AreEqual(emptyVersion, ReadPageVersion(menu));
+            Assert.AreEqual(1, changedCount);
+        }
+
+        [Test]
+        public void Decide_ActionCanClearPagesWithoutInvalidatingMissingCurrentPage()
+        {
+            var menu = new DebugMenuRoot();
+            var page = menu.AddPage("Root");
+            page.Root.Action("Clear", menu.ClearPages);
+
+            Assert.DoesNotThrow(menu.Decide);
+            Assert.IsNull(menu.CurrentPage);
+        }
+
+        [Test]
         public void Flatten_HidesChildrenOfCollapsedGroup()
         {
             var page = new DebugPage("Test");
@@ -1645,6 +1836,15 @@ namespace DebugMenu.Tests
         {
             if (shouldThrow) throw new InvalidOperationException("initial getter failed");
             return value;
+        }
+
+        private static uint ReadPageVersion(DebugMenuRoot menu)
+        {
+            var field = typeof(DebugMenuRoot).GetField(
+                "_pageVersion",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            Assert.NotNull(field);
+            return (uint)field.GetValue(menu);
         }
 
         private static void ExpectValueGetterWarnings(int count)

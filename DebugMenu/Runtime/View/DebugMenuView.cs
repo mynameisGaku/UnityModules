@@ -43,6 +43,7 @@ namespace DebugMenu
         private float _lastClickTime = float.NegativeInfinity;
         private DebugRowView _editingRow;
         private bool _textInputEnded;
+        private bool _pageDisplayIsEmpty;
         private Vector2 _hoverPointerLocal;
 
         /// <summary>メニューとテーマを指定して見た目を組み立てる。</summary>
@@ -457,7 +458,14 @@ namespace DebugMenu
         public void Refresh()
         {
             var page = _menu.CurrentPage;
-            if (page == null) return;
+            if (page == null)
+            {
+                ClearPageDisplay();
+                RefreshToast();
+                return;
+            }
+
+            _pageDisplayIsEmpty = false;
 
             if (!ReferenceEquals(_lastPage, page))
             {
@@ -497,6 +505,33 @@ namespace DebugMenu
 
             // 値は毎フレーム変わりうるので、見えている行だけ映し直す。
             RefreshVisibleRows();
+        }
+
+        /// <summary>ページが無い状態へ表示と操作中の行状態を戻す。</summary>
+        private void ClearPageDisplay()
+        {
+            if (_pageDisplayIsEmpty) return;
+
+            _pageDisplayIsEmpty = true;
+            var hadRows = _rows.Count > 0;
+            CancelPointerInteractions();
+            _editingRow = null;
+            _textInputEnded = false;
+            _lastPage = null;
+            _lastCursor = -1;
+            _hoverPointerLocal = Vector2.zero;
+            _rows.Clear();
+            if (hadRows) _list.Rebuild();
+            _breadcrumb.text = string.Empty;
+            _pageHeader.text = string.Empty;
+            _counter.text = string.Empty;
+            _description.text = string.Empty;
+            _descriptionPanel.style.display = DisplayStyle.None;
+            _hoverTooltipText.text = string.Empty;
+            _hoverTooltip.style.display = DisplayStyle.None;
+            _backPage.style.display = DisplayStyle.None;
+            _previousPage.style.display = DisplayStyle.None;
+            _nextPage.style.display = DisplayStyle.None;
         }
 
         private void RefreshToast()
@@ -776,7 +811,7 @@ namespace DebugMenu
             Refresh();
         }
 
-        private bool HasRowsChanged(Containers.FastList<DebugRow> visible)
+        private bool HasRowsChanged(IReadOnlyList<DebugRow> visible)
         {
             if (visible.Count != _rows.Count) return true;
 

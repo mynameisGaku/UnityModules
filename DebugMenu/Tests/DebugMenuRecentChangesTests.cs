@@ -200,6 +200,74 @@ namespace DebugMenu.Tests
         }
 
         [Test]
+        public void RecentChanges_PageRemovalPrunesEntryAndReaddDoesNotRestoreIt()
+        {
+            var menu = new DebugMenuRoot();
+            var page = menu.AddPage("Gameplay");
+            var element = page.Root.Int("Temporary", 0);
+            using var recent = new DebugMenuRecentChanges();
+            recent.Attach(menu);
+            element.Value = 1;
+            Assert.AreEqual(1, recent.Count);
+
+            Assert.IsTrue(menu.RemovePage(page));
+            recent.Refresh();
+            Assert.AreEqual(0, recent.Count);
+            Assert.AreEqual(0, recent.Page.Root.Children.Count);
+
+            menu.AddPage(page);
+            recent.Refresh();
+            Assert.AreEqual(0, recent.Count, "再登録で削除前の最近項目が復活している");
+
+            element.Value = 2;
+            Assert.AreEqual(1, recent.Count);
+        }
+
+        [Test]
+        public void RecentChanges_PageRemovalDiscardsPendingChangeBeforeReadd()
+        {
+            var menu = new DebugMenuRoot();
+            var page = menu.AddPage("Gameplay");
+            var element = page.Root.Add(new MetadataElement("Pending"));
+            using var recent = new DebugMenuRecentChanges();
+            recent.Attach(menu);
+            element.ThrowOnMetadata = true;
+            UnityEngine.TestTools.LogAssert.Expect(
+                UnityEngine.LogType.Warning,
+                new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*最近項目対象確認"));
+            element.Change(1);
+
+            Assert.IsTrue(menu.RemovePage(page));
+            recent.Refresh();
+            menu.AddPage(page);
+            element.ThrowOnMetadata = false;
+            recent.Refresh();
+
+            Assert.AreEqual(0, recent.Count);
+            Assert.AreEqual(0, recent.Page.Root.Children.Count);
+        }
+
+        [Test]
+        public void RecentChanges_PageRemovalKeepsEntryReachableThroughPageLink()
+        {
+            var menu = new DebugMenuRoot();
+            var root = menu.AddPage("Root");
+            var linked = menu.AddPage("Linked");
+            var element = linked.Root.Int("Value", 0);
+            root.AddChildPage(linked);
+            using var recent = new DebugMenuRecentChanges();
+            recent.Attach(menu);
+            element.Value = 1;
+
+            Assert.IsTrue(menu.RemovePage(linked));
+            recent.Refresh();
+
+            Assert.AreEqual(1, recent.Count);
+            Assert.AreSame(element, recent.Entries[0].Element);
+            Assert.AreSame(linked, recent.Entries[0].Page);
+        }
+
+        [Test]
         public void RecentChanges_DisposeDetachesListenerAndBorrowedRows()
         {
             var menu = new DebugMenuRoot();

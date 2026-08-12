@@ -1,5 +1,5 @@
 using System;
-using Containers;
+using System.Collections.Generic;
 
 namespace DebugMenu
 {
@@ -41,7 +41,7 @@ namespace DebugMenu
         /// その場に展開する場合は、遷移先ページの行をそのまま自分の子として見せる。
         /// 実体は 1 つなので、どちらから触っても同じ値を指す。
         /// </summary>
-        public override FastList<DebugElement> Children =>
+        public override IReadOnlyList<DebugElement> Children =>
             Mode == DebugAttachMode.Inline ? Target.Root.Children : base.Children;
 
         /// <summary>保存対象にしない。値を持たず、位置を示すだけの行のため。</summary>

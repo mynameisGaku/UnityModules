@@ -44,7 +44,8 @@ namespace DebugMenu
         private const float ReadErrorLogIntervalSeconds = 5f;
         private const float ChangeObserverErrorLogIntervalSeconds = 5f;
 
-        private readonly FastList<DebugElement> _children = new FastList<DebugElement>();
+        private readonly List<DebugElement> _children = new List<DebugElement>();
+        private readonly IReadOnlyList<DebugElement> _readOnlyChildren;
         private Action[] _changedObservers = Array.Empty<Action>();
 
         private Func<string> _labelProvider;
@@ -80,6 +81,7 @@ namespace DebugMenu
         /// <param name="subTitle">右カラムへ出す文字列。値を持つ行では現在値に置き換わる。</param>
         public DebugElement(string label, string subTitle = null)
         {
+            _readOnlyChildren = _children.AsReadOnly();
             Label = label ?? string.Empty;
             SubTitle = subTitle ?? string.Empty;
         }
@@ -329,7 +331,7 @@ namespace DebugMenu
         // ── 子行 ────────────────────────────────────────────────────────────
 
         /// <summary>子行。実体を別の場所から借りる派生はここを差し替える。</summary>
-        public virtual FastList<DebugElement> Children => _children;
+        public virtual IReadOnlyList<DebugElement> Children => _readOnlyChildren;
 
         /// <summary>子行を 1 つでも持つか。</summary>
         public bool HasChildren => Children.Count > 0;

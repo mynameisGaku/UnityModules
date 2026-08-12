@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using Containers;
 using UnityEngine;
 
 namespace DebugMenu
@@ -45,7 +44,7 @@ namespace DebugMenu
         public override bool IsSaveable => false;
 
         /// <summary>現在のリスト長に合う子行を返す。</summary>
-        public override FastList<DebugElement> Children
+        public override IReadOnlyList<DebugElement> Children
         {
             get
             {

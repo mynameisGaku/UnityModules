@@ -1,5 +1,5 @@
 using System;
-using Containers;
+using System.Collections.Generic;
 
 namespace DebugMenu
 {
@@ -12,7 +12,8 @@ namespace DebugMenu
     /// </summary>
     public sealed class DebugPage
     {
-        private readonly FastList<DebugRow> _visibleRows = new FastList<DebugRow>();
+        private readonly List<DebugRow> _visibleRows = new List<DebugRow>();
+        private readonly IReadOnlyList<DebugRow> _readOnlyVisibleRows;
 
         private int _cursorIndex;
         private bool _rowsDirty = true;
@@ -22,6 +23,7 @@ namespace DebugMenu
         /// <param name="name">ページ名。ページ一覧と保存キーに使う。</param>
         public DebugPage(string name)
         {
+            _readOnlyVisibleRows = _visibleRows.AsReadOnly();
             Name = name ?? string.Empty;
             Root = new DebugElement(Name) { IsExpanded = true, IsExpandable = false };
         }
@@ -48,12 +50,12 @@ namespace DebugMenu
         /// 見えている行の並び。展開されていない子は含まない。
         /// <para>戻り値は内部バッファなので、次に呼ぶまでの間だけ有効。</para>
         /// </summary>
-        public FastList<DebugRow> VisibleRows
+        public IReadOnlyList<DebugRow> VisibleRows
         {
             get
             {
                 EnsureRows();
-                return _visibleRows;
+                return _readOnlyVisibleRows;
             }
         }
 

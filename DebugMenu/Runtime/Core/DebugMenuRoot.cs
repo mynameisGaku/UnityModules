@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using Containers;
 using UnityEngine;
 
 namespace DebugMenu
@@ -15,28 +14,37 @@ namespace DebugMenu
     /// </summary>
     public sealed class DebugMenuRoot
     {
-        private readonly FastList<DebugPage> _pages = new FastList<DebugPage>();
+        private readonly List<DebugPage> _pages = new List<DebugPage>();
+        private readonly IReadOnlyList<DebugPage> _readOnlyPages;
 
         /// <summary>いま見ているページまでの経路。戻るときに 1 枚ずつ取り出す。</summary>
-        private readonly FastList<DebugPage> _pageStack = new FastList<DebugPage>();
+        private readonly List<DebugPage> _pageStack = new List<DebugPage>();
+        private readonly IReadOnlyList<DebugPage> _readOnlyPageStack;
 
         /// <summary>最上位ページを追加するたびに増える、このメニュー固有の版数。</summary>
         private uint _pageVersion;
 
+        /// <summary>空のメニューを作る。</summary>
+        public DebugMenuRoot()
+        {
+            _readOnlyPages = _pages.AsReadOnly();
+            _readOnlyPageStack = _pageStack.AsReadOnly();
+        }
+
         /// <summary>表示・非表示が切り替わったときに発火する。</summary>
         public event Action<bool> VisibilityChanged;
 
-        /// <summary>見ているページが変わったときに発火する。</summary>
+        /// <summary>見ているページが変わったときに発火する。ページが0枚になった場合は null を渡す。</summary>
         public event Action<DebugPage> PageChanged;
 
         /// <summary>登録されているページ。</summary>
-        public FastList<DebugPage> Pages => _pages;
+        public IReadOnlyList<DebugPage> Pages => _readOnlyPages;
 
         /// <summary>いま見ているページ。1 枚も無ければ null。</summary>
         public DebugPage CurrentPage => _pageStack.Count > 0 ? _pageStack[_pageStack.Count - 1] : null;
 
         /// <summary>表示層がパンくずを組み立てるために読む現在のページ経路。</summary>
-        internal FastList<DebugPage> PageStack => _pageStack;
+        internal IReadOnlyList<DebugPage> PageStack => _readOnlyPageStack;
 
         /// <summary>登録済み最上位ページの版数。</summary>
         internal uint PageVersion => _pageVersion;
@@ -56,11 +64,12 @@ namespace DebugMenu
         /// </summary>
         public bool PauseWhileVisible { get; set; } = true;
 
-        /// <summary>ページを登録する。最初に登録したページが起点になる。</summary>
+        /// <summary>ページを登録する。最初に登録したページが起点になり、同じ実体の再登録は何も変えない。</summary>
         /// <param name="page">登録するページ。</param>
         public DebugPage AddPage(DebugPage page)
         {
             if (page == null) throw new ArgumentNullException(nameof(page));
+            if (_pages.Contains(page)) return page;
 
             _pages.Add(page);
             if (_pageStack.Count == 0) _pageStack.Add(page);
@@ -74,6 +83,62 @@ namespace DebugMenu
         /// <summary>名前を指定してページを作り、登録する。</summary>
         /// <param name="name">ページ名。</param>
         public DebugPage AddPage(string name) => AddPage(new DebugPage(name));
+
+        /// <summary>
+        /// 最上位ページの登録を外す。
+        /// 現在の起点を外した場合は、登録位置の次、無ければ直前のページを新しい起点にする。
+        /// </summary>
+        /// <param name="page">登録を外すページ。null または未登録なら何もしない。</param>
+        /// <returns>登録を1件以上外した場合は true。</returns>
+        public bool RemovePage(DebugPage page)
+        {
+            if (page == null) return false;
+
+            var removedIndex = _pages.IndexOf(page);
+            if (removedIndex < 0) return false;
+
+            var removedCurrentRoot = _pageStack.Count > 0 && ReferenceEquals(_pageStack[0], page);
+            _pages.RemoveAt(removedIndex);
+
+            unchecked
+            {
+                _pageVersion++;
+            }
+
+            if (!removedCurrentRoot) return true;
+
+            _pageStack.Clear();
+            if (_pages.Count > 0)
+            {
+                var nextIndex = Math.Min(removedIndex, _pages.Count - 1);
+                _pageStack.Add(_pages[nextIndex]);
+            }
+
+            PageChanged?.Invoke(CurrentPage);
+            if (CurrentPage == null && IsVisible) SetVisible(false);
+            return true;
+        }
+
+        /// <summary>全ての最上位ページを外し、表示経路を空にする。登録と経路が既に空なら何もしない。</summary>
+        public void ClearPages()
+        {
+            var hadPages = _pages.Count > 0;
+            var hadCurrentPage = _pageStack.Count > 0;
+            if (!hadPages && !hadCurrentPage) return;
+
+            _pages.Clear();
+            _pageStack.Clear();
+            if (hadPages)
+            {
+                unchecked
+                {
+                    _pageVersion++;
+                }
+            }
+
+            if (hadCurrentPage) PageChanged?.Invoke(null);
+            if (IsVisible) SetVisible(false);
+        }
 
         /// <summary>登録済みのページを名前で探す。</summary>
         /// <param name="name">ページ名。</param>
@@ -126,7 +191,7 @@ namespace DebugMenu
         {
             if (_pageStack.Count <= 1) return;
 
-            _pageStack.Resize(1);
+            _pageStack.RemoveRange(1, _pageStack.Count - 1);
             PageChanged?.Invoke(CurrentPage);
         }
 
@@ -174,7 +239,8 @@ namespace DebugMenu
         /// </summary>
         public void Decide()
         {
-            var element = CurrentPage?.CurrentElement;
+            var page = CurrentPage;
+            var element = page?.CurrentElement;
             if (element == null) return;
 
             if (element is DebugPageLink link && link.Mode == DebugAttachMode.Page)
@@ -184,7 +250,7 @@ namespace DebugMenu
             }
 
             element.TryDecideSafely();
-            CurrentPage.Invalidate();
+            page.Invalidate();
         }
 
         /// <summary>取り消す。1 つ前のページへ戻り、最上位ならメニューを閉じる。</summary>
@@ -404,7 +470,7 @@ namespace DebugMenu
             Action<DebugPage> visitPage,
             HashSet<DebugPage> visitedPages)
         {
-            var children = default(FastList<DebugElement>);
+            IReadOnlyList<DebugElement> children;
             try
             {
                 children = parent.Children;

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEngine;
@@ -302,6 +303,20 @@ namespace DebugMenu.Tests
             array.ResetToDefault();
 
             CollectionAssert.AreEqual(new[] { 1, 2 }, values);
+        }
+
+        [Test]
+        public void ArrayChildren_ExposeLiveReadOnlyView()
+        {
+            var values = new List<int> { 1, 2 };
+            var array = new DebugIntArray("Values", values);
+            var children = array.Children;
+
+            Assert.Throws<NotSupportedException>(() => ((IList<DebugElement>)children).RemoveAt(0));
+
+            values.Add(3);
+            Assert.AreSame(children, array.Children, "同期のたびに別の子行一覧が作られている");
+            Assert.AreEqual(3, children.Count);
         }
     }
 }

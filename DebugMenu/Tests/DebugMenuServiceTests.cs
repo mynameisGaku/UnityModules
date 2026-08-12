@@ -892,6 +892,51 @@ namespace DebugMenu.Tests
         }
 
         [Test]
+        public void History_PageRemovalPrunesCommandsAndReaddStartsFromCurrentValue()
+        {
+            var menu = new DebugMenuRoot();
+            var page = menu.AddPage("Gameplay");
+            var element = page.Root.Int("count", 0);
+            using var history = new DebugMenuHistory();
+            history.Attach(menu);
+            element.Value = 1;
+            Assert.IsTrue(history.CanUndo);
+
+            Assert.IsTrue(menu.RemovePage(page));
+            history.Refresh();
+            Assert.IsFalse(history.CanUndo);
+
+            element.Value = 2;
+            Assert.IsFalse(history.CanUndo);
+            menu.AddPage(page);
+            history.Refresh();
+            Assert.IsFalse(history.CanUndo, "再登録で削除前の履歴が復活している");
+
+            element.Value = 3;
+            Assert.IsTrue(history.Undo());
+            Assert.AreEqual(2, element.Value);
+        }
+
+        [Test]
+        public void History_PageRemovalKeepsRowsReachableThroughPageLink()
+        {
+            var menu = new DebugMenuRoot();
+            var root = menu.AddPage("Root");
+            var linked = menu.AddPage("Linked");
+            var element = linked.Root.Int("count", 0);
+            root.AddChildPage(linked);
+            using var history = new DebugMenuHistory();
+            history.Attach(menu);
+            element.Value = 1;
+
+            Assert.IsTrue(menu.RemovePage(linked));
+            history.Refresh();
+
+            Assert.IsTrue(history.Undo());
+            Assert.AreEqual(0, element.Value);
+        }
+
+        [Test]
         public void History_ReparentAcrossMenusPrunesOldOwnerAndTracksNewOwner()
         {
             var firstMenu = new DebugMenuRoot();

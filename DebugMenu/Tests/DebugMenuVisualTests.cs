@@ -262,6 +262,91 @@ namespace DebugMenu.Tests
         }
 
         [Test]
+        public void MenuView_EmptyMenuClearsPageDisplayAndInteractionStateIdempotently()
+        {
+            var menu = new DebugMenuRoot();
+            var page = menu.AddPage("Gameplay");
+            page.Root.Add(new DebugText("Name", "Player") { Description = "Current name" });
+            var view = new DebugMenuView(menu);
+            view.Refresh();
+            var editingRow = new DebugRowView(new DebugMenuTheme());
+            editingRow.Bind(page.VisibleRows[0], true, 0);
+            Assert.IsTrue(editingRow.BeginTextEdit());
+            WritePrivateField(view, "_editingRow", editingRow);
+
+            menu.ClearPages();
+            view.Refresh();
+
+            var rows = (System.Collections.IList)ReadPrivateField(view, "_rows");
+            var list = view.Root.Q<ListView>("debug-menu-list");
+            Assert.AreEqual(0, rows.Count);
+            Assert.AreEqual(0, list.itemsSource.Count);
+            Assert.AreEqual(string.Empty, view.Root.Q<Label>("debug-menu-breadcrumb").text);
+            Assert.AreEqual(string.Empty, view.Root.Q<Label>("debug-menu-page-header").text);
+            Assert.AreEqual(string.Empty, view.Root.Q<Label>("debug-menu-counter").text);
+            Assert.AreEqual(string.Empty, view.Root.Q<Label>("debug-menu-description").text);
+            Assert.AreEqual(DisplayStyle.None, view.Root.Q<VisualElement>("debug-menu-description-panel").style.display.value);
+            Assert.AreEqual(DisplayStyle.None, view.Root.Q<VisualElement>("debug-menu-hover-tooltip").style.display.value);
+            Assert.AreEqual(DisplayStyle.None, ReadPrivateField(view, "_backPage") is Button back ? back.style.display.value : DisplayStyle.Flex);
+            Assert.AreEqual(DisplayStyle.None, ReadPrivateField(view, "_previousPage") is Button previous ? previous.style.display.value : DisplayStyle.Flex);
+            Assert.AreEqual(DisplayStyle.None, ReadPrivateField(view, "_nextPage") is Button next ? next.style.display.value : DisplayStyle.Flex);
+            Assert.IsFalse(view.IsEditingText);
+            Assert.IsFalse(view.HasActivePointerInteraction);
+
+            var rowsReference = ReadPrivateField(view, "_rows");
+            Assert.DoesNotThrow(view.Refresh);
+            Assert.AreSame(rowsReference, ReadPrivateField(view, "_rows"));
+            Assert.AreEqual(true, ReadPrivateField(view, "_pageDisplayIsEmpty"));
+            Assert.IsFalse(view.ConsumeTextInput(), "空表示の再更新で入力終了状態が再発している");
+            Assert.AreEqual(0, list.itemsSource.Count);
+        }
+
+        [UnityTest]
+        public System.Collections.IEnumerator MenuView_EmptyMenuEndsRealizedTextEdit()
+        {
+            var menu = new DebugMenuRoot();
+            menu.AddPage("Gameplay").Root.Add(new DebugText("Name", "Player"));
+            var view = new DebugMenuView(menu);
+            AttachToPanel(view.Root);
+            view.Refresh();
+            yield return null;
+
+            Assert.IsTrue(view.TryBeginEditCurrent());
+            var editingRow = (DebugRowView)ReadPrivateField(view, "_editingRow");
+            Assert.IsTrue(editingRow.IsEditingText);
+
+            menu.ClearPages();
+            view.Refresh();
+
+            Assert.IsFalse(editingRow.IsEditingText);
+            Assert.IsFalse(view.IsEditingText);
+            Assert.IsFalse(view.ConsumeTextInput());
+        }
+
+        [UnityTest]
+        public System.Collections.IEnumerator MenuView_EmptyMenuReleasesRealizedPointerInteraction()
+        {
+            var menu = new DebugMenuRoot();
+            menu.AddPage("Gameplay").Root.Float("Volume", 0.5f).WithRange(0f, 1f);
+            var view = new DebugMenuView(menu);
+            AttachToPanel(view.Root);
+            view.Refresh();
+            yield return null;
+
+            var row = view.Root.Q<DebugRowView>();
+            Assert.NotNull(row);
+            var slider = row.Q<VisualElement>("debug-menu-slider");
+            SendPointerDownAt(slider, slider.worldBound.center);
+            Assert.IsTrue(row.HasActivePointerInteraction);
+
+            menu.ClearPages();
+            view.Refresh();
+
+            Assert.IsFalse(row.HasActivePointerInteraction);
+            Assert.IsFalse(view.HasActivePointerInteraction);
+        }
+
+        [Test]
         public void RowView_UsesStandardValueColumnAndControls()
         {
             var theme = new DebugMenuTheme();

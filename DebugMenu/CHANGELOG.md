@@ -38,6 +38,7 @@
 ### Changed
 
 - 未リリース版の Git UPM 例を `dev` へ揃え、公開後は固定リリースタグまたはコミットIDへ固定する運用へ変更。
+- `Pages`・`Children`・`VisibleRows` を .NET 標準の読み取り専用一覧へ移行し、ページ登録を変更する `RemovePage`・`ClearPages` を追加。
 
 ### Fixed
 
