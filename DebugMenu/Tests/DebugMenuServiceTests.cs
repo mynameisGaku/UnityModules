@@ -46,6 +46,8 @@ namespace DebugMenu.Tests
         /// <summary>保存対象判定または値種別の取得を失敗させる独自行。</summary>
         private sealed class ThrowingMetadataElement : DebugElement
         {
+            private int _value = 1;
+
             public ThrowingMetadataElement(string label) : base(label) { }
 
             public bool ThrowOnSaveable { get; set; }
@@ -58,10 +60,47 @@ namespace DebugMenu.Tests
                 : DebugValueKind.Int;
             public override bool TryGetInt(out int value)
             {
-                value = 1;
+                value = _value;
                 return true;
             }
-            public override bool TrySetInt(int value) => true;
+            public override bool TrySetInt(int value)
+            {
+                _value = value;
+                NotifyChanged();
+                return true;
+            }
+
+            public int RawValue => _value;
+
+            public void Change(int value)
+            {
+                _value = value;
+                NotifyChanged();
+            }
+        }
+
+        /// <summary>メタデータ取得中に別の値変更を起こせる行。</summary>
+        private sealed class ReentrantMetadataElement : DebugElement
+        {
+            private System.Action _onMetadata;
+
+            public ReentrantMetadataElement(string label, System.Action onMetadata = null) : base(label)
+            {
+                _onMetadata = onMetadata;
+            }
+
+            public void SetAction(System.Action action) => _onMetadata = action;
+
+            public override bool IsSaveable
+            {
+                get
+                {
+                    var action = _onMetadata;
+                    _onMetadata = null;
+                    action?.Invoke();
+                    return false;
+                }
+            }
         }
 
         private sealed class ThrowingHistoryElement : DebugElement
@@ -75,6 +114,8 @@ namespace DebugMenu.Tests
             }
 
             public bool ThrowOnRead { get; set; }
+            public bool RejectWrites { get; set; }
+            public int RawValue => _value;
             public override DebugValueKind ValueKind => DebugValueKind.Int;
 
             public override bool TryGetInt(out int value)
@@ -84,11 +125,60 @@ namespace DebugMenu.Tests
                 return true;
             }
 
+            public override bool TrySetInt(int value)
+            {
+                if (RejectWrites) return false;
+
+                _value = value;
+                NotifyChanged();
+                return true;
+            }
+
             public void ChangeWithoutReading(int value)
             {
                 _value = value;
                 NotifyChanged();
             }
+        }
+
+        /// <summary>値取得中に一度だけ別処理を呼び出せる履歴用の値行。</summary>
+        private sealed class ReentrantHistoryElement : DebugElement
+        {
+            private int _value;
+            private System.Action _onRead;
+
+            public ReentrantHistoryElement(string label, int value) : base(label)
+            {
+                _value = value;
+                IsExpandable = false;
+            }
+
+            public int RawValue => _value;
+            public override DebugValueKind ValueKind => DebugValueKind.Int;
+
+            public override bool TryGetInt(out int value)
+            {
+                var action = _onRead;
+                _onRead = null;
+                action?.Invoke();
+                value = _value;
+                return true;
+            }
+
+            public override bool TrySetInt(int value)
+            {
+                _value = value;
+                NotifyChanged();
+                return true;
+            }
+
+            public void Change(int value)
+            {
+                _value = value;
+                NotifyChanged();
+            }
+
+            public void InvokeOnNextRead(System.Action action) => _onRead = action;
         }
 
         [TearDown]
@@ -275,6 +365,59 @@ namespace DebugMenu.Tests
         }
 
         [Test]
+        public void History_FailedUndoKeepsSourceStackAndCanRetry()
+        {
+            var menu = new DebugMenuRoot();
+            var element = menu.AddPage("Gameplay").Root.Add(new ThrowingHistoryElement("count", 1));
+            using var history = new DebugMenuHistory();
+            history.Attach(menu);
+            element.ChangeWithoutReading(2);
+            element.RejectWrites = true;
+
+            Assert.IsFalse(history.Undo());
+            Assert.AreEqual(2, element.RawValue);
+            Assert.AreEqual(1, history.Count);
+            Assert.IsTrue(history.CanUndo);
+            Assert.IsFalse(history.CanRedo);
+            Assert.AreEqual("count", history.NextUndoLabel);
+            Assert.IsNull(history.NextRedoLabel);
+
+            element.RejectWrites = false;
+            Assert.IsTrue(history.Undo());
+            Assert.AreEqual(1, element.RawValue);
+            Assert.AreEqual(0, history.Count);
+            Assert.IsTrue(history.CanRedo);
+            Assert.AreEqual("count", history.NextRedoLabel);
+        }
+
+        [Test]
+        public void History_FailedRedoKeepsSourceStackAndCanRetry()
+        {
+            var menu = new DebugMenuRoot();
+            var element = menu.AddPage("Gameplay").Root.Add(new ThrowingHistoryElement("count", 1));
+            using var history = new DebugMenuHistory();
+            history.Attach(menu);
+            element.ChangeWithoutReading(2);
+            Assert.IsTrue(history.Undo());
+            element.RejectWrites = true;
+
+            Assert.IsFalse(history.Redo());
+            Assert.AreEqual(1, element.RawValue);
+            Assert.AreEqual(0, history.Count);
+            Assert.IsFalse(history.CanUndo);
+            Assert.IsTrue(history.CanRedo);
+            Assert.IsNull(history.NextUndoLabel);
+            Assert.AreEqual("count", history.NextRedoLabel);
+
+            element.RejectWrites = false;
+            Assert.IsTrue(history.Redo());
+            Assert.AreEqual(2, element.RawValue);
+            Assert.AreEqual(1, history.Count);
+            Assert.IsFalse(history.CanRedo);
+            Assert.AreEqual("count", history.NextUndoLabel);
+        }
+
+        [Test]
         public void History_UndoIsNotItselfRecorded()
         {
             var menu = new DebugMenuRoot();
@@ -306,6 +449,164 @@ namespace DebugMenu.Tests
             history.Undo();
 
             Assert.AreEqual("初期", element.Value);
+        }
+
+        [Test]
+        public void History_CapacityEvictsOldestChange()
+        {
+            var menu = new DebugMenuRoot();
+            var element = menu.AddPage("Gameplay").Root.Int("count", 0);
+            using var history = new DebugMenuHistory(2);
+            history.Attach(menu);
+
+            element.Value = 1;
+            element.Value = 2;
+            element.Value = 3;
+
+            Assert.AreEqual(2, history.Count);
+            Assert.IsTrue(history.Undo());
+            Assert.AreEqual(2, element.Value);
+            Assert.IsTrue(history.Undo());
+            Assert.AreEqual(1, element.Value);
+            Assert.IsFalse(history.Undo(), "上限を超えた最古の変更が残っている");
+        }
+
+        [Test]
+        public void History_NewChangeAfterUndoClearsRedoBranch()
+        {
+            var menu = new DebugMenuRoot();
+            var element = menu.AddPage("Gameplay").Root.Int("count", 0);
+            using var history = new DebugMenuHistory();
+            history.Attach(menu);
+
+            element.Value = 1;
+            element.Value = 2;
+            Assert.IsTrue(history.Undo());
+            Assert.IsTrue(history.CanRedo);
+
+            element.Value = 7;
+
+            Assert.IsFalse(history.CanRedo, "分岐後も古いやり直しが残っている");
+            Assert.IsFalse(history.Redo());
+            Assert.IsTrue(history.Undo());
+            Assert.AreEqual(1, element.Value);
+        }
+
+        [Test]
+        public void History_LabelAndClearReflectCurrentBranches()
+        {
+            var menu = new DebugMenuRoot();
+            var element = menu.AddPage("Gameplay").Root.Int("Enemy Count", 0);
+            using var history = new DebugMenuHistory();
+            history.Attach(menu);
+
+            element.Value = 4;
+
+            Assert.AreEqual("Enemy Count", history.NextUndoLabel);
+            history.Undo();
+            Assert.IsTrue(history.CanRedo);
+
+            history.Clear();
+
+            Assert.AreEqual(0, history.Count);
+            Assert.IsFalse(history.CanUndo);
+            Assert.IsFalse(history.CanRedo);
+            Assert.IsNull(history.NextUndoLabel);
+        }
+
+        [Test]
+        public void History_ClearReseedsCurrentValueAndDropsDeferredWork()
+        {
+            var menu = new DebugMenuRoot();
+            var element = menu.AddPage("Gameplay").Root.Int("count", 0);
+            using var history = new DebugMenuHistory();
+            history.Attach(menu);
+            element.Value = 1;
+
+            Assert.DoesNotThrow(history.Clear);
+            Assert.AreEqual(0, history.Count);
+            element.Value = 2;
+
+            Assert.AreEqual(1, history.Count);
+            Assert.IsTrue(history.Undo());
+            Assert.AreEqual(1, element.Value, "Clear完了時の値を基準にしていない");
+        }
+
+        [Test]
+        public void History_ClearReseedsRowsChangedByOtherGettersAtFinalValues()
+        {
+            var menu = new DebugMenuRoot();
+            var root = menu.AddPage("Gameplay").Root;
+            var first = root.Add(new ReentrantHistoryElement("first", 0));
+            var second = root.Add(new ReentrantHistoryElement("second", 0));
+            using var history = new DebugMenuHistory();
+            history.Attach(menu);
+            first.Change(9);
+            Assert.IsTrue(history.Undo());
+            Assert.IsTrue(history.CanRedo);
+
+            first.InvokeOnNextRead(() => second.Change(1));
+            second.InvokeOnNextRead(() => first.Change(1));
+
+            Assert.DoesNotThrow(history.Clear);
+            Assert.IsFalse(history.CanUndo, "Clear中のGetterが起こした変更を履歴へ積んでいる");
+            Assert.IsFalse(history.CanRedo, "Clear前のやり直し枝が残っている");
+            first.Change(2);
+            second.Change(2);
+
+            Assert.IsTrue(history.Undo());
+            Assert.AreEqual(1, second.RawValue);
+            Assert.IsTrue(history.Undo());
+            Assert.AreEqual(1, first.RawValue);
+            Assert.IsFalse(history.Undo(), "Clear前の履歴へ戻れている");
+        }
+
+        [Test]
+        public void History_ClearDefersGetterRefreshAndTracksFinalOwnedRows()
+        {
+            var menu = new DebugMenuRoot();
+            var root = menu.AddPage("Gameplay").Root;
+            var first = root.Add(new ReentrantHistoryElement("first", 0));
+            var second = root.Add(new ReentrantHistoryElement("second", 0));
+            using var history = new DebugMenuHistory();
+            history.Attach(menu);
+            DebugInt added = null;
+            System.Action addAndRefresh = () =>
+            {
+                if (added != null) return;
+
+                added = root.Int("late", 5);
+                history.Refresh();
+            };
+            first.InvokeOnNextRead(addAndRefresh);
+            second.InvokeOnNextRead(addAndRefresh);
+
+            Assert.DoesNotThrow(history.Clear);
+            Assert.NotNull(added);
+            added.Value = 6;
+
+            Assert.IsTrue(history.Undo());
+            Assert.AreEqual(5, added.Value);
+            Assert.IsFalse(history.Undo());
+        }
+
+        [Test]
+        public void History_DisposeDoesNotReadThrowingGetterAgain()
+        {
+            var menu = new DebugMenuRoot();
+            var element = menu.AddPage("Gameplay").Root.Add(new ThrowingHistoryElement("count", 0));
+            var history = new DebugMenuHistory();
+            history.Attach(menu);
+            element.ThrowOnRead = true;
+
+            Assert.DoesNotThrow(history.Dispose);
+        }
+
+        [Test]
+        public void History_RejectsNonPositiveCapacity()
+        {
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => new DebugMenuHistory(0));
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => new DebugMenuHistory(-1));
         }
 
         [Test]
@@ -403,6 +704,49 @@ namespace DebugMenu.Tests
         }
 
         [Test]
+        public void History_PendingAttachBaselineRecoversWithoutStructureChange()
+        {
+            var menu = new DebugMenuRoot();
+            var element = menu.AddPage("Gameplay").Root.Add(new ThrowingHistoryElement("broken", 1));
+            element.ThrowOnRead = true;
+            using var history = new DebugMenuHistory();
+
+            UnityEngine.TestTools.LogAssert.Expect(
+                LogType.Warning,
+                new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値取得"));
+            history.Attach(menu);
+            element.ThrowOnRead = false;
+
+            history.Refresh();
+            element.ChangeWithoutReading(2);
+
+            Assert.IsTrue(history.Undo());
+            Assert.AreEqual(1, element.RawValue);
+        }
+
+        [Test]
+        public void History_FirstHealthyNotificationSeedsPendingBaselineBeforeNextChange()
+        {
+            var menu = new DebugMenuRoot();
+            var element = menu.AddPage("Gameplay").Root.Add(new ThrowingHistoryElement("broken", 1));
+            element.ThrowOnRead = true;
+            using var history = new DebugMenuHistory();
+
+            UnityEngine.TestTools.LogAssert.Expect(
+                LogType.Warning,
+                new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値取得"));
+            history.Attach(menu);
+            element.ThrowOnRead = false;
+
+            element.ChangeWithoutReading(2);
+            Assert.IsFalse(history.CanUndo, "回復を検知した通知自体を不正な履歴として積んでいる");
+
+            element.ChangeWithoutReading(3);
+            Assert.IsTrue(history.Undo());
+            Assert.AreEqual(2, element.RawValue);
+        }
+
+        [Test]
         public void History_RefreshSkipsNewThrowingGetterAndKeepsHealthyRows()
         {
             var menu = new DebugMenuRoot();
@@ -437,6 +781,166 @@ namespace DebugMenu.Tests
                 new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値取得"));
             Assert.DoesNotThrow(() => broken.ChangeWithoutReading(2));
             Assert.AreEqual(0, history.Count);
+        }
+
+        [Test]
+        public void History_GetterFailureKeepsHealthyCommandsAndSeedsRecoveredValue()
+        {
+            var menu = new DebugMenuRoot();
+            var element = menu.AddPage("Gameplay").Root.Add(new ThrowingHistoryElement("count", 1));
+            using var history = new DebugMenuHistory();
+            history.Attach(menu);
+            element.ChangeWithoutReading(2);
+            element.ThrowOnRead = true;
+
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*値取得"));
+            element.ChangeWithoutReading(3);
+            Assert.AreEqual(1, history.Count);
+
+            element.ThrowOnRead = false;
+            history.Refresh();
+            element.ChangeWithoutReading(4);
+            Assert.AreEqual(2, history.Count);
+            Assert.IsTrue(history.Undo());
+            Assert.AreEqual(3, element.RawValue);
+            Assert.IsTrue(history.Undo());
+            Assert.AreEqual(1, element.RawValue);
+        }
+
+        [Test]
+        public void History_MetadataFailureKeepsCommandsAndRecoversWithNewBaseline()
+        {
+            var menu = new DebugMenuRoot();
+            var element = menu.AddPage("Gameplay").Root.Add(new ThrowingMetadataElement("count"));
+            using var history = new DebugMenuHistory();
+            history.Attach(menu);
+            element.Change(2);
+            element.ThrowOnSaveable = true;
+
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*履歴対象確認"));
+            element.Change(3);
+            Assert.AreEqual(1, history.Count);
+
+            element.ThrowOnSaveable = false;
+            history.Refresh();
+            element.Change(4);
+            Assert.AreEqual(2, history.Count);
+            Assert.IsTrue(history.Undo());
+            Assert.AreEqual(3, element.RawValue);
+            Assert.IsTrue(history.Undo());
+            Assert.AreEqual(1, element.RawValue);
+        }
+
+        [Test]
+        public void History_PrunesRemovedCommandsFromUndoAndRedo()
+        {
+            var menu = new DebugMenuRoot();
+            var root = menu.AddPage("Gameplay").Root;
+            var healthy = root.Int("healthy", 0);
+            var removed = root.Int("removed", 0);
+            using var history = new DebugMenuHistory();
+            history.Attach(menu);
+            healthy.Value = 1;
+            removed.Value = 1;
+            Assert.IsTrue(history.Undo());
+            Assert.IsTrue(history.CanRedo);
+
+            Assert.IsTrue(root.Remove(removed));
+            history.Refresh();
+
+            Assert.IsFalse(history.CanRedo);
+            Assert.AreEqual("healthy", history.NextUndoLabel);
+            Assert.IsTrue(history.Undo());
+            Assert.AreEqual(0, healthy.Value);
+        }
+
+        [TestCase(DebugAttachMode.Page)]
+        [TestCase(DebugAttachMode.Inline)]
+        public void History_TracksRowsAddedToInitiallyEmptyLinkedPage(DebugAttachMode mode)
+        {
+            var menu = new DebugMenuRoot();
+            var root = menu.AddPage("Root");
+            var target = new DebugPage("Target");
+            root.AddChildPage(target, mode);
+            using var history = new DebugMenuHistory();
+            history.Attach(menu);
+
+            var added = target.Root.Int("late", 1);
+            history.Refresh();
+            added.Value = 2;
+
+            Assert.IsTrue(history.Undo());
+            Assert.AreEqual(1, added.Value);
+        }
+
+        [Test]
+        public void History_TracksPrebuiltPageAddedAfterAttach()
+        {
+            var menu = new DebugMenuRoot();
+            menu.AddPage("Root");
+            var latePage = new DebugPage("Late");
+            var element = latePage.Root.Int("late", 1);
+            using var history = new DebugMenuHistory();
+            history.Attach(menu);
+
+            menu.AddPage(latePage);
+            history.Refresh();
+            element.Value = 2;
+
+            Assert.IsTrue(history.Undo());
+            Assert.AreEqual(1, element.Value);
+        }
+
+        [Test]
+        public void History_ReparentAcrossMenusPrunesOldOwnerAndTracksNewOwner()
+        {
+            var firstMenu = new DebugMenuRoot();
+            var firstRoot = firstMenu.AddPage("First").Root;
+            var secondMenu = new DebugMenuRoot();
+            var secondRoot = secondMenu.AddPage("Second").Root;
+            var element = firstRoot.Int("moved", 0);
+            using var firstHistory = new DebugMenuHistory();
+            using var secondHistory = new DebugMenuHistory();
+            firstHistory.Attach(firstMenu);
+            secondHistory.Attach(secondMenu);
+            element.Value = 1;
+
+            secondRoot.Add(element);
+            firstHistory.Refresh();
+            secondHistory.Refresh();
+            element.Value = 2;
+
+            Assert.AreEqual(0, firstRoot.Children.Count);
+            Assert.IsFalse(firstHistory.CanUndo);
+            Assert.IsTrue(secondHistory.Undo());
+            Assert.AreEqual(1, element.Value);
+        }
+
+        [Test]
+        public void History_ReentrantRefreshCoalescesSameRowAtLastNotificationPosition()
+        {
+            var menu = new DebugMenuRoot();
+            var root = menu.AddPage("Gameplay").Root;
+            var trigger = root.Add(new ReentrantMetadataElement("trigger"));
+            var first = root.Int("first", 0);
+            var second = root.Int("second", 0);
+            using var history = new DebugMenuHistory();
+            history.Attach(menu);
+            trigger.SetAction(() =>
+            {
+                first.Value = 1;
+                second.Value = 1;
+                first.Value = 2;
+            });
+            root.Add(new DebugElement("late"));
+
+            Assert.DoesNotThrow(history.Refresh);
+            Assert.AreEqual(2, history.Count);
+            Assert.IsTrue(history.Undo());
+            Assert.AreEqual(0, first.Value);
+            Assert.IsTrue(history.Undo());
+            Assert.AreEqual(0, second.Value);
+            Assert.IsFalse(history.Undo());
         }
 
         [Test]

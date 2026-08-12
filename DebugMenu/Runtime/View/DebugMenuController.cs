@@ -237,6 +237,7 @@ namespace DebugMenu
         {
             if (Menu == null) return;
             _history?.Refresh();
+            _recentChanges?.Refresh();
             _toasts?.Tick(Time.unscaledDeltaTime);
             if (_themeRefreshPending &&
                 (_view == null || (!_view.IsEditingText && !_view.HasActivePointerInteraction)))

@@ -20,6 +20,9 @@ namespace DebugMenu
         /// <summary>いま見ているページまでの経路。戻るときに 1 枚ずつ取り出す。</summary>
         private readonly FastList<DebugPage> _pageStack = new FastList<DebugPage>();
 
+        /// <summary>最上位ページを追加するたびに増える、このメニュー固有の版数。</summary>
+        private uint _pageVersion;
+
         /// <summary>表示・非表示が切り替わったときに発火する。</summary>
         public event Action<bool> VisibilityChanged;
 
@@ -34,6 +37,9 @@ namespace DebugMenu
 
         /// <summary>表示層がパンくずを組み立てるために読む現在のページ経路。</summary>
         internal FastList<DebugPage> PageStack => _pageStack;
+
+        /// <summary>登録済み最上位ページの版数。</summary>
+        internal uint PageVersion => _pageVersion;
 
         /// <summary>いま見ているページの深さ。0 なら最上位。</summary>
         public int Depth => Mathf.Max(0, _pageStack.Count - 1);
@@ -58,6 +64,10 @@ namespace DebugMenu
 
             _pages.Add(page);
             if (_pageStack.Count == 0) _pageStack.Add(page);
+            unchecked
+            {
+                _pageVersion++;
+            }
             return page;
         }
 
@@ -347,6 +357,97 @@ namespace DebugMenu
             {
                 var page = _pages[i];
                 page.VisitAll(element => visit(page, element));
+            }
+        }
+
+        /// <summary>
+        /// 借用表示を除き、このメニューが所有する行だけを1実体につき1回訪ねる。
+        /// PageLinkの遷移先は組み込み方にかかわらず、遷移先ページの所属として辿る。
+        /// </summary>
+        /// <param name="visit">所有行と、その行が所属するページを受け取る処理。</param>
+        /// <param name="onTraversalError">子行取得に失敗した行と例外を受け取る処理。</param>
+        /// <param name="visitPage">空ページを含む到達済みページを受け取る処理。</param>
+        internal void VisitOwned(
+            Action<DebugPage, DebugElement> visit,
+            Action<DebugElement, Exception> onTraversalError = null,
+            Action<DebugPage> visitPage = null)
+        {
+            if (visit == null) throw new ArgumentNullException(nameof(visit));
+
+            var visitedPages = new HashSet<DebugPage>();
+            for (var i = 0; i < _pages.Count; i++)
+            {
+                VisitOwnedPage(_pages[i], visit, onTraversalError, visitPage, visitedPages);
+            }
+        }
+
+        /// <summary>ページを循環と重複を避けながら、そのページ自身の所属として辿る。</summary>
+        private static void VisitOwnedPage(
+            DebugPage page,
+            Action<DebugPage, DebugElement> visit,
+            Action<DebugElement, Exception> onTraversalError,
+            Action<DebugPage> visitPage,
+            HashSet<DebugPage> visitedPages)
+        {
+            if (page == null || !visitedPages.Add(page)) return;
+
+            visitPage?.Invoke(page);
+            VisitOwnedChildren(page, page.Root, visit, onTraversalError, visitPage, visitedPages);
+        }
+
+        /// <summary>所有関係を保つ子行を辿り、ページリンクの先は対象ページ所属として辿る。</summary>
+        private static void VisitOwnedChildren(
+            DebugPage page,
+            DebugElement parent,
+            Action<DebugPage, DebugElement> visit,
+            Action<DebugElement, Exception> onTraversalError,
+            Action<DebugPage> visitPage,
+            HashSet<DebugPage> visitedPages)
+        {
+            var children = default(FastList<DebugElement>);
+            try
+            {
+                children = parent.Children;
+            }
+            catch (Exception exception)
+            {
+                onTraversalError?.Invoke(parent, exception);
+                return;
+            }
+
+            int count;
+            try
+            {
+                count = children.Count;
+            }
+            catch (Exception exception)
+            {
+                onTraversalError?.Invoke(parent, exception);
+                return;
+            }
+
+            for (var i = 0; i < count; i++)
+            {
+                DebugElement child;
+                try
+                {
+                    child = children[i];
+                    if (child == null || !ReferenceEquals(child.Parent, parent)) continue;
+                }
+                catch (Exception exception)
+                {
+                    onTraversalError?.Invoke(parent, exception);
+                    continue;
+                }
+
+                visit(page, child);
+                if (child is DebugPageLink link)
+                {
+                    VisitOwnedPage(link.Target, visit, onTraversalError, visitPage, visitedPages);
+                    continue;
+                }
+
+                VisitOwnedChildren(page, child, visit, onTraversalError, visitPage, visitedPages);
             }
         }
     }

@@ -5,6 +5,60 @@ namespace DebugMenu.Tests
     /// <summary>最近変更した項目の順序、重複排除、借用表示、解除を検証する。</summary>
     public sealed class DebugMenuRecentChangesTests
     {
+        private sealed class MetadataElement : DebugElement
+        {
+            private int _value;
+
+            public MetadataElement(string label) : base(label) { }
+
+            public bool ThrowOnMetadata { get; set; }
+            public int RawValue => _value;
+            public override bool IsSaveable => ThrowOnMetadata
+                ? throw new System.InvalidOperationException("metadata failed")
+                : true;
+            public override DebugValueKind ValueKind => DebugValueKind.Int;
+            public override bool TryGetInt(out int value)
+            {
+                value = _value;
+                return true;
+            }
+            public override bool TrySetInt(int value)
+            {
+                _value = value;
+                NotifyChanged();
+                return true;
+            }
+
+            public void Change(int value)
+            {
+                _value = value;
+                NotifyChanged();
+            }
+        }
+
+        private sealed class ReentrantMetadataElement : DebugElement
+        {
+            private System.Action _onMetadata;
+
+            public ReentrantMetadataElement(string label, System.Action onMetadata) : base(label)
+            {
+                _onMetadata = onMetadata;
+            }
+
+            public void SetAction(System.Action action) => _onMetadata = action;
+
+            public override bool IsSaveable
+            {
+                get
+                {
+                    var action = _onMetadata;
+                    _onMetadata = null;
+                    action?.Invoke();
+                    return false;
+                }
+            }
+        }
+
         [Test]
         public void RecentChanges_KeepsUniqueNewestFirstOrder()
         {
@@ -86,7 +140,7 @@ namespace DebugMenu.Tests
         }
 
         [Test]
-        public void RecentChanges_RefreshTracksDynamicallyAddedRows()
+        public void RecentChanges_AutomaticallyTracksDynamicallyAddedRows()
         {
             var menu = new DebugMenuRoot();
             var page = menu.AddPage("Gameplay");
@@ -96,13 +150,53 @@ namespace DebugMenu.Tests
 
             var added = page.Root.Int("Added", 0);
             added.Value = 1;
-            Assert.AreEqual(0, recent.Count);
+            Assert.AreEqual(1, recent.Count, "構造変更後の最初の通知で追加行を追跡できていない。");
+            Assert.AreSame(added, recent.Entries[0].Element);
 
             recent.Refresh(menu);
             added.Value = 2;
 
             Assert.AreEqual(1, recent.Count);
             Assert.AreSame(added, recent.Entries[0].Element);
+        }
+
+        [Test]
+        public void RecentChanges_AttachKeepsOwnershipWhenGetterIsTemporarilyUnavailable()
+        {
+            var menu = new DebugMenuRoot();
+            var value = 1;
+            var throwOnRead = false;
+            var element = menu.AddPage("Gameplay").Root.Int(
+                "Recoverable",
+                () => throwOnRead ? throw new System.InvalidOperationException("getter failed") : value,
+                next => value = next);
+            throwOnRead = true;
+
+            using var recent = new DebugMenuRecentChanges();
+            Assert.DoesNotThrow(() => recent.Attach(menu));
+            throwOnRead = false;
+
+            Assert.IsTrue(element.TrySetInt(2));
+            Assert.AreEqual(1, recent.Count);
+            Assert.AreSame(element, recent.Entries[0].Element);
+        }
+
+        [Test]
+        public void RecentChanges_RefreshRemovesDynamicallyRemovedRows()
+        {
+            var menu = new DebugMenuRoot();
+            var root = menu.AddPage("Gameplay").Root;
+            var element = root.Int("Temporary", 0);
+            using var recent = new DebugMenuRecentChanges();
+            recent.Attach(menu);
+            element.Value = 1;
+            Assert.AreEqual(1, recent.Count);
+
+            Assert.IsTrue(root.Remove(element));
+            recent.Refresh(menu);
+
+            Assert.AreEqual(0, recent.Count);
+            Assert.AreEqual(0, recent.Page.Root.Children.Count);
         }
 
         [Test]
@@ -140,6 +234,180 @@ namespace DebugMenu.Tests
 
             Assert.AreEqual(0, first.Count);
             Assert.AreEqual(1, second.Count);
+        }
+
+        [Test]
+        public void RecentChanges_MetadataFailureNotificationAppearsAfterRecovery()
+        {
+            var menu = new DebugMenuRoot();
+            var element = menu.AddPage("Gameplay").Root.Add(new MetadataElement("Recoverable"));
+            using var recent = new DebugMenuRecentChanges();
+            recent.Attach(menu);
+            element.ThrowOnMetadata = true;
+
+            UnityEngine.TestTools.LogAssert.Expect(
+                UnityEngine.LogType.Warning,
+                new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*最近項目対象確認"));
+            element.Change(1);
+            Assert.AreEqual(0, recent.Count);
+
+            element.ThrowOnMetadata = false;
+            recent.Refresh();
+            Assert.AreEqual(1, recent.Count);
+            Assert.AreSame(element, recent.Entries[0].Element);
+        }
+
+        [Test]
+        public void RecentChanges_MetadataRecoveryPreservesOriginalChangeOrder()
+        {
+            var menu = new DebugMenuRoot();
+            var root = menu.AddPage("Gameplay").Root;
+            var first = root.Add(new MetadataElement("First"));
+            var second = root.Add(new MetadataElement("Second"));
+            using var recent = new DebugMenuRecentChanges();
+            recent.Attach(menu);
+            first.ThrowOnMetadata = true;
+            second.ThrowOnMetadata = true;
+
+            UnityEngine.TestTools.LogAssert.Expect(
+                UnityEngine.LogType.Warning,
+                new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*最近項目対象確認"));
+            UnityEngine.TestTools.LogAssert.Expect(
+                UnityEngine.LogType.Warning,
+                new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*最近項目対象確認"));
+            first.Change(1);
+            second.Change(1);
+            first.Change(2);
+
+            first.ThrowOnMetadata = false;
+            recent.Refresh();
+            Assert.AreSame(first, recent.Entries[0].Element);
+
+            second.ThrowOnMetadata = false;
+            recent.Refresh();
+            Assert.AreEqual(2, recent.Count);
+            Assert.AreSame(first, recent.Entries[0].Element);
+            Assert.AreSame(second, recent.Entries[1].Element);
+        }
+
+        [Test]
+        public void RecentChanges_ClearDiscardsPendingUnknownChanges()
+        {
+            var menu = new DebugMenuRoot();
+            var element = menu.AddPage("Gameplay").Root.Add(new MetadataElement("Pending"));
+            using var recent = new DebugMenuRecentChanges();
+            recent.Attach(menu);
+            element.ThrowOnMetadata = true;
+            UnityEngine.TestTools.LogAssert.Expect(
+                UnityEngine.LogType.Warning,
+                new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*最近項目対象確認"));
+            element.Change(1);
+
+            recent.Clear();
+            element.ThrowOnMetadata = false;
+            recent.Refresh();
+
+            Assert.AreEqual(0, recent.Count);
+        }
+
+        [Test]
+        public void RecentChanges_RemovalDiscardsPendingUnknownChangeBeforeReadd()
+        {
+            var menu = new DebugMenuRoot();
+            var root = menu.AddPage("Gameplay").Root;
+            var element = root.Add(new MetadataElement("Pending"));
+            using var recent = new DebugMenuRecentChanges();
+            recent.Attach(menu);
+            element.ThrowOnMetadata = true;
+            UnityEngine.TestTools.LogAssert.Expect(
+                UnityEngine.LogType.Warning,
+                new System.Text.RegularExpressions.Regex(@"\[DebugMenu\].*最近項目対象確認"));
+            element.Change(1);
+
+            Assert.IsTrue(root.Remove(element));
+            recent.Refresh();
+            root.Add(element);
+            element.ThrowOnMetadata = false;
+            recent.Refresh();
+
+            Assert.AreEqual(0, recent.Count);
+        }
+
+        [Test]
+        public void RecentChanges_ParameterlessRefreshRemovesDeletedAndBorrowedOrphans()
+        {
+            var menu = new DebugMenuRoot();
+            var root = menu.AddPage("Gameplay").Root;
+            var element = root.Int("Temporary", 0);
+            using var recent = new DebugMenuRecentChanges();
+            recent.Attach(menu);
+            element.Value = 1;
+
+            Assert.IsTrue(root.Remove(element));
+            recent.Page.Root.AddBorrowed(element);
+            recent.Refresh();
+
+            Assert.AreEqual(0, recent.Count);
+            Assert.AreEqual(0, recent.Page.Root.Children.Count);
+        }
+
+        [TestCase(DebugAttachMode.Page)]
+        [TestCase(DebugAttachMode.Inline)]
+        public void RecentChanges_TracksFirstRowAddedToEmptyLinkedPage(DebugAttachMode mode)
+        {
+            var menu = new DebugMenuRoot();
+            var root = menu.AddPage("Root");
+            var target = new DebugPage("Target");
+            root.AddChildPage(target, mode);
+            using var recent = new DebugMenuRecentChanges();
+            recent.Attach(menu);
+
+            var added = target.Root.Int("late", 0);
+            added.Value = 1;
+
+            Assert.AreEqual(1, recent.Count);
+            Assert.AreSame(target, recent.Entries[0].Page);
+        }
+
+        [Test]
+        public void RecentChanges_UpdatesPageAfterOwnedRowMoves()
+        {
+            var menu = new DebugMenuRoot();
+            var first = menu.AddPage("First");
+            var second = menu.AddPage("Second");
+            var element = first.Root.Int("Moved", 0);
+            using var recent = new DebugMenuRecentChanges();
+            recent.Attach(menu);
+            element.Value = 1;
+
+            second.Root.Add(element);
+            recent.Refresh();
+
+            Assert.AreEqual(0, first.Root.Children.Count);
+            Assert.AreSame(second, recent.Entries[0].Page);
+        }
+
+        [Test]
+        public void RecentChanges_PublicRefreshQueuesReentrantNotificationsInOrder()
+        {
+            var menu = new DebugMenuRoot();
+            var root = menu.AddPage("Gameplay").Root;
+            var first = root.Int("first", 0);
+            var second = root.Int("second", 0);
+            var trigger = root.Add(new ReentrantMetadataElement("trigger", null));
+            using var recent = new DebugMenuRecentChanges();
+            recent.Attach(menu);
+            trigger.SetAction(() =>
+            {
+                first.Value = 1;
+                second.Value = 1;
+                first.Value = 2;
+            });
+
+            Assert.DoesNotThrow(() => recent.Refresh(menu));
+            Assert.AreEqual(2, recent.Count);
+            Assert.AreSame(first, recent.Entries[0].Element);
+            Assert.AreSame(second, recent.Entries[1].Element);
         }
     }
 }

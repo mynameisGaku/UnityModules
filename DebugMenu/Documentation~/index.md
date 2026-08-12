@@ -157,7 +157,7 @@ Application.persistentDataPath/DebugMenu/
 
 `DebugMenuSettings(IDebugMenuStorage, string, DebugMenuSettingsFormat)` を直接作ると、ファイル、`DebugMenuPlayerPrefsStorage`、独自ストレージを選べます。形式はJSON、Text、Binaryから選び、読み込み時は中身から自動判別します。`SaveAs` / `LoadFrom` は任意パスへ原子的に書き出し、または読み込みます。保存形式は改ざん防止や暗号化を目的としていません。
 
-`Settings`ページにはプロファイル名、形式、任意ファイルパス、Save / Load / Delete / Save As / Load From / Copy Menu Text / Reset Allがあります。保存済みプロファイルは一覧から適用できます。保存・読込・コピーなどの結果は画面上の短い通知にも表示します。`Recent`ページは直近16件の変更を重複なしで表示し、借用している元の行を直接操作します。
+`Settings`ページにはプロファイル名、形式、任意ファイルパス、Save / Load / Delete / Save As / Load From / Copy Menu Text / Reset Allがあります。保存済みプロファイルは一覧から適用できます。保存・読込・コピーなどの結果は画面上の短い通知にも表示します。`Recent`ページは直近16件の変更を重複なしで表示し、借用している元の行を直接操作します。`DebugMenuHistory.Refresh()` と `DebugMenuRecentChanges.Refresh()` は実行中に変わった所有行・子ページを反映し、削除済みの履歴と最近項目を安全に除きます。`DebugMenuHistory.Clear()` は履歴枝と保留通知を全て捨て、完了時点の値を新しい基準として保持します。
 
 ## Pause とライフサイクル
 

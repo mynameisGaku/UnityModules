@@ -66,6 +66,9 @@ namespace DebugMenu
         /// <summary>どこかの行構造または展開状態が変わると増える版数。</summary>
         private static uint _structureVersion;
 
+        /// <summary>この行以下の所有子行が変わると増える版数。借用表示と展開状態では増やさない。</summary>
+        private uint _ownedSubtreeVersion;
+
         /// <summary>互換用の単一変更受け取り先。<see cref="SetChangeListener"/> で差し替える。</summary>
         private static Action<DebugElement>[] _changeListeners = Array.Empty<Action<DebugElement>>();
 
@@ -336,10 +339,19 @@ namespace DebugMenu
         public T Add<T>(T child) where T : DebugElement
         {
             if (child == null) throw new ArgumentNullException(nameof(child));
+            if (ReferenceEquals(child.Parent, this) && _children.Contains(child)) return child;
 
+            for (var ancestor = this; ancestor != null; ancestor = ancestor.Parent)
+            {
+                if (ReferenceEquals(ancestor, child))
+                    throw new InvalidOperationException("自分自身または祖先を子行として追加できない。");
+            }
+
+            var oldParent = child.Parent;
+            if (oldParent != null && !ReferenceEquals(oldParent, this)) oldParent.Remove(child);
             _children.Add(child);
             child.Parent = this;
-            NotifyStructureChanged();
+            NotifyOwnedStructureChanged();
             return child;
         }
 
@@ -349,8 +361,15 @@ namespace DebugMenu
         {
             if (child == null || !_children.Remove(child)) return false;
 
-            child.Parent = null;
-            NotifyStructureChanged();
+            if (ReferenceEquals(child.Parent, this))
+            {
+                NotifyOwnedStructureChanged();
+                child.Parent = null;
+            }
+            else
+            {
+                NotifyStructureChanged();
+            }
             return true;
         }
 
@@ -359,9 +378,19 @@ namespace DebugMenu
         {
             if (_children.Count == 0) return;
 
-            for (var i = 0; i < _children.Count; i++) _children[i].Parent = null;
+            var hasOwnedChild = false;
+            for (var i = 0; i < _children.Count; i++)
+            {
+                if (ReferenceEquals(_children[i].Parent, this)) hasOwnedChild = true;
+            }
+
+            if (hasOwnedChild) NotifyOwnedStructureChanged();
+            else NotifyStructureChanged();
+            for (var i = 0; i < _children.Count; i++)
+            {
+                if (ReferenceEquals(_children[i].Parent, this)) _children[i].Parent = null;
+            }
             _children.Clear();
-            NotifyStructureChanged();
         }
 
         /// <summary>
@@ -684,6 +713,9 @@ namespace DebugMenu
         /// <summary>行構造の版数。どこかで子行または展開状態が変わると増える。</summary>
         public static uint StructureVersion => _structureVersion;
 
+        /// <summary>この行以下の所有子行の版数。借用表示と展開状態の変更では増えない。</summary>
+        internal uint OwnedSubtreeVersion => _ownedSubtreeVersion;
+
         /// <summary>
         /// 値が変わった行そのものを受け取る互換用の係を差す。差せるのは 1 つだけで、
         /// 上書きすると前の係は外れる。
@@ -931,6 +963,20 @@ namespace DebugMenu
             {
                 _structureVersion++;
             }
+        }
+
+        /// <summary>所有子行の変更を祖先へ伝え、表示用の構造版も進める。</summary>
+        private void NotifyOwnedStructureChanged()
+        {
+            for (var node = this; node != null; node = node.Parent)
+            {
+                unchecked
+                {
+                    node._ownedSubtreeVersion++;
+                }
+            }
+
+            NotifyStructureChanged();
         }
 
         /// <summary>

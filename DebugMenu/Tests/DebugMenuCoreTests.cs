@@ -13,6 +13,25 @@ namespace DebugMenu.Tests
     /// </summary>
     public sealed class DebugMenuCoreTests
     {
+        [Test]
+        public void ElementAdd_RejectsOwnershipCyclesAndIgnoresSameParentDuplicate()
+        {
+            var root = new DebugElement("root");
+            var child = root.Add(new DebugElement("child"));
+            var versionProperty = typeof(DebugElement).GetProperty(
+                "OwnedSubtreeVersion",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            Assert.NotNull(versionProperty);
+            var version = (uint)versionProperty.GetValue(root);
+
+            Assert.AreSame(child, root.Add(child));
+            Assert.AreEqual(1, root.Children.Count);
+            Assert.AreEqual(version, (uint)versionProperty.GetValue(root), "同じ親への再追加で所有版が進んでいる");
+            Assert.Throws<InvalidOperationException>(() => root.Add(root));
+            Assert.Throws<InvalidOperationException>(() => child.Add(root));
+            Assert.AreSame(root, child.Parent);
+        }
+
         private sealed class EmptyIntegerElement : DebugElement
         {
             public EmptyIntegerElement() : base("Empty") { }
