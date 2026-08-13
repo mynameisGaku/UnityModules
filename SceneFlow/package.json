@@ -1,0 +1,32 @@
+{
+  "name": "com.studiogaku.scene-flow",
+  "version": "1.0.0",
+  "displayName": "Scene Flow",
+  "description": "完全なSceneパスと明示的な結果型を使い、Single・Additive読込、有効Scene切替、Unloadを1件ずつ安全に実行するUnity向けScene遷移モジュール。外部依存、常駐Manager、画面UIを含みません。",
+  "unity": "6000.5",
+  "unityRelease": "7f1",
+  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/blob/scene-flow-v1.0.0/SceneFlow/Documentation~/index.md",
+  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/scene-flow-v1.0.0/SceneFlow/CHANGELOG.md",
+  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/scene-flow-v1.0.0/SceneFlow/LICENSE.md",
+  "license": "Refer to LICENSE.md file",
+  "keywords": [
+    "scene",
+    "flow",
+    "loading",
+    "additive",
+    "build-profile"
+  ],
+  "author": {
+    "name": "StudioGaku",
+    "email": "gaku.fujimoto.business@gmail.com",
+    "url": "https://github.com/mynameisGaku/UnityModules"
+  },
+  "dependencies": {},
+  "samples": [
+    {
+      "displayName": "Scene Flow Basics",
+      "description": "設定済みの3 SceneでSingle・Additive読込、有効Scene切替、Unloadと状態通知を確認するサンプル。",
+      "path": "Samples~/Basics"
+    }
+  ]
+}
