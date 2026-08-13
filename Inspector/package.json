@@ -1,0 +1,32 @@
+{
+  "name": "com.studiogaku.inspector",
+  "version": "1.0.0",
+  "displayName": "Inspector",
+  "description": "属性を付けるだけで Inspector の見た目を変えるエディタ拡張。条件による表示・非表示、グループ化とタブ、入力値の検証、メソッドのボタン化、タグやシーンの選択欄など 43 種類の属性を収録。外部依存なし、unsafe 不使用。",
+  "unity": "6000.5",
+  "unityRelease": "7f1",
+  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/blob/dev/Inspector/Documentation~/index.md",
+  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/dev/Inspector/CHANGELOG.md",
+  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/dev/Inspector/LICENSE.md",
+  "license": "Refer to LICENSE.md file",
+  "keywords": [
+    "inspector",
+    "editor",
+    "attributes",
+    "validation",
+    "workflow"
+  ],
+  "author": {
+    "name": "StudioGaku",
+    "email": "gaku.fujimoto.business@gmail.com",
+    "url": "https://github.com/mynameisGaku/UnityModules"
+  },
+  "dependencies": {},
+  "samples": [
+    {
+      "displayName": "Inspector Basics",
+      "description": "条件表示・グループ・検証・ボタン・選択欄を 1 つのコンポーネントで見比べるサンプル。",
+      "path": "Samples~/Basics"
+    }
+  ]
+}
