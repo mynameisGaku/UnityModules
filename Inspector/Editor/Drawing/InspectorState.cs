@@ -15,7 +15,7 @@ namespace Inspector.Editor
     /// 描画のたびに触ると効いてくる。手前に辞書を置いて、実際の読み書きは変化したときだけにする。
     /// </para>
     /// </summary>
-    public static class InspectorState
+    internal static class InspectorState
     {
         private const string Prefix = "StudioGaku.Inspector.";
 

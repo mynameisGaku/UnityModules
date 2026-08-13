@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Runtime.CompilerServices;
 using UnityEditor;
 using UnityEngine;
 
@@ -13,22 +14,44 @@ namespace Inspector.Editor
     /// どれも当てはまらなければ何もせず <c>false</c> を返し、通常の描画に任せる。
     /// </para>
     /// </summary>
-    public static class InspectorFieldDrawers
+    internal static class InspectorFieldDrawers
     {
+        /// <summary>1 対象から得た Dropdown の表示名と保存値。</summary>
+        private sealed class DropdownOptions
+        {
+            internal readonly List<string> Labels = new List<string>();
+            internal readonly List<object> Values = new List<object>();
+        }
+
         // 参照先を開いて描いている最中のオブジェクト。自分自身を参照する資産で無限に潜らないための番人。
         private static readonly HashSet<EntityId> Expanding = new HashSet<EntityId>();
         private static readonly Dictionary<EntityId, SerializedObject> NestedObjects =
             new Dictionary<EntityId, SerializedObject>();
+        private static readonly ConditionalWeakTable<UnityEngine.Object, HashSet<string>> InitializedExpandableProperties =
+            new ConditionalWeakTable<UnityEngine.Object, HashSet<string>>();
 
         /// <summary>専用の描画があれば描いて <c>true</c> を返す。</summary>
-        public static bool TryDraw(
+        internal static bool TryDraw(
             InspectorMember member,
             object target,
             SerializedProperty property,
             GUIContent label,
             List<string> errors)
         {
+            return TryDrawAll(member, new[] { target }, property, label, errors);
+        }
+
+        /// <summary>複数選択した全所有者を考慮して専用描画する。</summary>
+        internal static bool TryDrawAll(
+            InspectorMember member,
+            IReadOnlyList<object> targets,
+            SerializedProperty property,
+            GUIContent label,
+            List<string> errors)
+        {
             if (property == null) return false;
+
+            var target = FirstTarget(targets);
 
             var attribute = member.GetAttribute<FieldDrawerAttribute>();
             if (attribute == null) return false;
@@ -48,7 +71,7 @@ namespace Inspector.Editor
                 switch (attribute)
                 {
                     case DropdownAttribute dropdown:
-                        return DrawDropdown(dropdown, member, target, property, label, errors);
+                        return DrawDropdown(dropdown, member, targets, property, label, errors);
 
                     case TagAttribute _:
                         return DrawTag(member, property, label, errors);
@@ -90,45 +113,26 @@ namespace Inspector.Editor
         private static bool DrawDropdown(
             DropdownAttribute attribute,
             InspectorMember member,
-            object target,
+            IReadOnlyList<object> targets,
             SerializedProperty property,
             GUIContent label,
             List<string> errors)
         {
-            if (!MemberResolver.TryGetValue(target, attribute.ValuesMember, out var source, out var error))
+            if (!TryCollectAllDropdownOptions(
+                    targets,
+                    attribute.ValuesMember,
+                    out var options,
+                    out var candidatesMatch,
+                    out var error))
             {
                 Report(errors, member.Name, error);
                 return false;
             }
 
-            var labels = new List<string>();
-            var values = new List<object>();
+            if (!string.IsNullOrEmpty(error)) Report(errors, member.Name, error);
 
-            switch (source)
-            {
-                case IDropdownList named:
-                    foreach (var entry in named)
-                    {
-                        labels.Add(entry.Key);
-                        values.Add(entry.Value);
-                    }
-
-                    break;
-
-                case IEnumerable sequence when !(source is string):
-                    foreach (var value in sequence)
-                    {
-                        labels.Add(value?.ToString() ?? "null");
-                        values.Add(value);
-                    }
-
-                    break;
-
-                default:
-                    Report(errors, member.Name,
-                        $"'{attribute.ValuesMember}' が候補の並びを返していない。IEnumerable<T> か DropdownList<T> を返すようにする。");
-                    return false;
-            }
+            var labels = options.Labels;
+            var values = options.Values;
 
             object current = null;
             try
@@ -161,19 +165,130 @@ namespace Inspector.Editor
             var contents = new GUIContent[labels.Count];
             for (var i = 0; i < labels.Count; i++) contents[i] = new GUIContent(labels[i]);
 
-            EditorGUI.BeginChangeCheck();
-            var picked = EditorGUILayout.Popup(label, index, contents);
-
-            if (EditorGUI.EndChangeCheck() && picked != index)
+            using (new EditorGUI.DisabledScope(!candidatesMatch))
             {
-                try
+                EditorGUI.BeginChangeCheck();
+                var picked = EditorGUILayout.Popup(label, ResolveDisplayedPopupIndex(property.hasMultipleDifferentValues, index), contents);
+
+                if (EditorGUI.EndChangeCheck() && picked >= 0 && picked < values.Count)
                 {
-                    property.boxedValue = values[picked];
+                    try
+                    {
+                        property.boxedValue = values[picked];
+                    }
+                    catch (Exception exception)
+                    {
+                        Report(errors, member.Name, $"選んだ値を書き込めない: {exception.Message}");
+                    }
                 }
-                catch (Exception exception)
+            }
+
+            if (!candidatesMatch)
+            {
+                EditorGUILayout.HelpBox(
+                    "複数選択した対象で Dropdown の候補が異なるため、この欄は表示だけにしている。選択を分けると編集できる。",
+                    MessageType.Info);
+            }
+
+            return true;
+        }
+
+        /// <summary>複数対象から得る Dropdown 候補の表示名・値・順番が全て同じか。</summary>
+        internal static bool DropdownOptionsMatch(
+            IReadOnlyList<object> targets,
+            string valuesMember,
+            out string error)
+        {
+            return TryCollectAllDropdownOptions(targets, valuesMember, out _, out var match, out error) && match;
+        }
+
+        private static bool TryCollectAllDropdownOptions(
+            IReadOnlyList<object> targets,
+            string valuesMember,
+            out DropdownOptions first,
+            out bool match,
+            out string error)
+        {
+            first = null;
+            match = true;
+            error = null;
+
+            if (targets == null || targets.Count == 0)
+            {
+                error = "Dropdown の候補を取得する対象が無い。";
+                return false;
+            }
+
+            for (var i = 0; i < targets.Count; i++)
+            {
+                if (!TryCollectDropdownOptions(targets[i], valuesMember, out var current, out var currentError))
                 {
-                    Report(errors, member.Name, $"選んだ値を書き込めない: {exception.Message}");
+                    match = false;
+                    if (error == null) error = $"選択対象 {i + 1}: {currentError}";
+                    continue;
                 }
+
+                if (first == null)
+                {
+                    first = current;
+                    continue;
+                }
+
+                if (!SameDropdownOptions(first, current)) match = false;
+            }
+
+            return first != null;
+        }
+
+        private static bool TryCollectDropdownOptions(
+            object target,
+            string valuesMember,
+            out DropdownOptions options,
+            out string error)
+        {
+            options = null;
+            error = null;
+
+            if (!MemberResolver.TryGetValue(target, valuesMember, out var source, out error)) return false;
+
+            var collected = new DropdownOptions();
+            switch (source)
+            {
+                case IDropdownList named:
+                    foreach (var entry in named)
+                    {
+                        collected.Labels.Add(entry.Key);
+                        collected.Values.Add(entry.Value);
+                    }
+
+                    break;
+
+                case IEnumerable sequence when !(source is string):
+                    foreach (var value in sequence)
+                    {
+                        collected.Labels.Add(value?.ToString() ?? "null");
+                        collected.Values.Add(value);
+                    }
+
+                    break;
+
+                default:
+                    error = $"'{valuesMember}' が候補の並びを返していない。IEnumerable<T> か DropdownList<T> を返すようにする。";
+                    return false;
+            }
+
+            options = collected;
+            return true;
+        }
+
+        private static bool SameDropdownOptions(DropdownOptions left, DropdownOptions right)
+        {
+            if (left.Labels.Count != right.Labels.Count || left.Values.Count != right.Values.Count) return false;
+
+            for (var i = 0; i < left.Labels.Count; i++)
+            {
+                if (!string.Equals(left.Labels[i], right.Labels[i], StringComparison.Ordinal)) return false;
+                if (!ConditionEvaluator.AreEqual(left.Values[i], right.Values[i])) return false;
             }
 
             return true;
@@ -196,25 +311,46 @@ namespace Inspector.Editor
 
         private static bool DrawLayer(InspectorMember member, SerializedProperty property, GUIContent label, List<string> errors)
         {
+            var names = new List<string>();
+            var indices = new List<int>();
+
+            for (var layerIndex = 0; layerIndex < 32; layerIndex++)
+            {
+                var layerName = LayerMask.LayerToName(layerIndex);
+                if (string.IsNullOrEmpty(layerName)) continue;
+
+                names.Add(layerName);
+                indices.Add(layerIndex);
+            }
+
             switch (property.propertyType)
             {
                 case SerializedPropertyType.Integer:
                 {
+                    var current = property.intValue;
+                    var labels = new List<string>(names);
+                    var values = new List<int>(indices);
+                    var selected = ResolveIntSelection(values, current);
+                    if (selected < 0) selected = InsertMissingOption(labels, values, current);
+
                     EditorGUI.BeginChangeCheck();
-                    var picked = EditorGUILayout.LayerField(label, property.intValue);
-                    if (EditorGUI.EndChangeCheck()) property.intValue = picked;
+                    var picked = EditorGUILayout.Popup(label, ResolveDisplayedPopupIndex(property.hasMultipleDifferentValues, selected), ToContents(labels));
+                    if (EditorGUI.EndChangeCheck() && picked >= 0 && picked < values.Count) property.intValue = values[picked];
 
                     return true;
                 }
 
                 case SerializedPropertyType.String:
                 {
-                    var current = LayerMask.NameToLayer(property.stringValue);
-                    if (current < 0) current = 0;
+                    var current = property.stringValue;
+                    var labels = new List<string>(names);
+                    var values = new List<string>(names);
+                    var selected = ResolveStringSelection(values, current);
+                    if (selected < 0) selected = InsertMissingOption(labels, values, current);
 
                     EditorGUI.BeginChangeCheck();
-                    var picked = EditorGUILayout.LayerField(label, current);
-                    if (EditorGUI.EndChangeCheck()) property.stringValue = LayerMask.LayerToName(picked);
+                    var picked = EditorGUILayout.Popup(label, ResolveDisplayedPopupIndex(property.hasMultipleDifferentValues, selected), ToContents(labels));
+                    if (EditorGUI.EndChangeCheck() && picked >= 0 && picked < values.Count) property.stringValue = values[picked];
 
                     return true;
                 }
@@ -229,45 +365,53 @@ namespace Inspector.Editor
         {
             var scenes = EditorBuildSettings.scenes;
 
-            var names = new List<string> { "(未設定)" };
+            var labels = new List<string> { "(未設定)" };
+            var names = new List<string> { string.Empty };
             var indices = new List<int> { -1 };
 
             for (var i = 0; i < scenes.Length; i++)
             {
                 if (!scenes[i].enabled) continue;
 
-                names.Add(Path.GetFileNameWithoutExtension(scenes[i].path));
-                indices.Add(i);
+                var sceneName = Path.GetFileNameWithoutExtension(scenes[i].path);
+                labels.Add(sceneName);
+                names.Add(sceneName);
+                indices.Add(ResolveEnabledSceneBuildIndex(scenes, i));
             }
 
-            if (names.Count == 1)
+            if (labels.Count == 1)
             {
                 EditorGUILayout.HelpBox("Build Settings にシーンが 1 つも登録されていない。", MessageType.Warning);
             }
-
-            var contents = new GUIContent[names.Count];
-            for (var i = 0; i < names.Count; i++) contents[i] = new GUIContent(names[i]);
 
             switch (property.propertyType)
             {
                 case SerializedPropertyType.String:
                 {
-                    var selected = Math.Max(0, names.IndexOf(property.stringValue));
+                    var current = property.stringValue;
+                    var displayedLabels = new List<string>(labels);
+                    var values = new List<string>(names);
+                    var selected = ResolveStringSelection(values, current);
+                    if (selected < 0) selected = InsertMissingOption(displayedLabels, values, current);
 
                     EditorGUI.BeginChangeCheck();
-                    var picked = EditorGUILayout.Popup(label, selected, contents);
-                    if (EditorGUI.EndChangeCheck()) property.stringValue = picked == 0 ? string.Empty : names[picked];
+                    var picked = EditorGUILayout.Popup(label, ResolveDisplayedPopupIndex(property.hasMultipleDifferentValues, selected), ToContents(displayedLabels));
+                    if (EditorGUI.EndChangeCheck() && picked >= 0 && picked < values.Count) property.stringValue = values[picked];
 
                     return true;
                 }
 
                 case SerializedPropertyType.Integer:
                 {
-                    var selected = Math.Max(0, indices.IndexOf(property.intValue));
+                    var current = property.intValue;
+                    var displayedLabels = new List<string>(labels);
+                    var values = new List<int>(indices);
+                    var selected = ResolveIntSelection(values, current);
+                    if (selected < 0) selected = InsertMissingOption(displayedLabels, values, current);
 
                     EditorGUI.BeginChangeCheck();
-                    var picked = EditorGUILayout.Popup(label, selected, contents);
-                    if (EditorGUI.EndChangeCheck()) property.intValue = indices[picked];
+                    var picked = EditorGUILayout.Popup(label, ResolveDisplayedPopupIndex(property.hasMultipleDifferentValues, selected), ToContents(displayedLabels));
+                    if (EditorGUI.EndChangeCheck() && picked >= 0 && picked < values.Count) property.intValue = values[picked];
 
                     return true;
                 }
@@ -278,47 +422,60 @@ namespace Inspector.Editor
             }
         }
 
+        /// <summary>
+        /// Build Settings 上の位置から、無効なシーンを除外した実際の buildIndex を求める。
+        /// </summary>
+        private static int ResolveEnabledSceneBuildIndex(EditorBuildSettingsScene[] scenes, int settingsIndex)
+        {
+            var buildIndex = 0;
+            for (var i = 0; i < settingsIndex; i++)
+            {
+                if (scenes[i].enabled) buildIndex++;
+            }
+
+            return buildIndex;
+        }
+
         private static bool DrawSortingLayer(InspectorMember member, SerializedProperty property, GUIContent label, List<string> errors)
         {
             var layers = SortingLayer.layers;
+            var names = new List<string>(layers.Length);
+            var ids = new List<int>(layers.Length);
 
-            var contents = new GUIContent[layers.Length];
-            for (var i = 0; i < layers.Length; i++) contents[i] = new GUIContent(layers[i].name);
+            for (var i = 0; i < layers.Length; i++)
+            {
+                names.Add(layers[i].name);
+                ids.Add(layers[i].id);
+            }
 
             switch (property.propertyType)
             {
                 case SerializedPropertyType.String:
                 {
-                    var selected = 0;
-                    for (var i = 0; i < layers.Length; i++)
-                    {
-                        if (!string.Equals(layers[i].name, property.stringValue, StringComparison.Ordinal)) continue;
-
-                        selected = i;
-                        break;
-                    }
+                    var current = property.stringValue;
+                    var labels = new List<string>(names);
+                    var values = new List<string>(names);
+                    var selected = ResolveStringSelection(values, current);
+                    if (selected < 0) selected = InsertMissingOption(labels, values, current);
 
                     EditorGUI.BeginChangeCheck();
-                    var picked = EditorGUILayout.Popup(label, selected, contents);
-                    if (EditorGUI.EndChangeCheck() && layers.Length > 0) property.stringValue = layers[picked].name;
+                    var picked = EditorGUILayout.Popup(label, ResolveDisplayedPopupIndex(property.hasMultipleDifferentValues, selected), ToContents(labels));
+                    if (EditorGUI.EndChangeCheck() && picked >= 0 && picked < values.Count) property.stringValue = values[picked];
 
                     return true;
                 }
 
                 case SerializedPropertyType.Integer:
                 {
-                    var selected = 0;
-                    for (var i = 0; i < layers.Length; i++)
-                    {
-                        if (layers[i].id != property.intValue) continue;
-
-                        selected = i;
-                        break;
-                    }
+                    var current = property.intValue;
+                    var labels = new List<string>(names);
+                    var values = new List<int>(ids);
+                    var selected = ResolveIntSelection(values, current);
+                    if (selected < 0) selected = InsertMissingOption(labels, values, current);
 
                     EditorGUI.BeginChangeCheck();
-                    var picked = EditorGUILayout.Popup(label, selected, contents);
-                    if (EditorGUI.EndChangeCheck() && layers.Length > 0) property.intValue = layers[picked].id;
+                    var picked = EditorGUILayout.Popup(label, ResolveDisplayedPopupIndex(property.hasMultipleDifferentValues, selected), ToContents(labels));
+                    if (EditorGUI.EndChangeCheck() && picked >= 0 && picked < values.Count) property.intValue = values[picked];
 
                     return true;
                 }
@@ -327,6 +484,57 @@ namespace Inspector.Editor
                     Report(errors, member.Name, "[SortingLayer] は string（名前）か int（ID）のフィールドに付ける。");
                     return false;
             }
+        }
+
+        /// <summary>複数の保存値が異なるときは、先頭対象の値ではなく未選択表示を返す。</summary>
+        private static int ResolveDisplayedPopupIndex(bool hasMultipleDifferentValues, int selected)
+        {
+            return hasMultipleDifferentValues ? -1 : selected;
+        }
+
+        /// <summary>文字列の保存値が候補にある位置を、大文字と小文字を区別して返す。</summary>
+        private static int ResolveStringSelection(IReadOnlyList<string> values, string current)
+        {
+            for (var i = 0; i < values.Count; i++)
+            {
+                if (string.Equals(values[i], current, StringComparison.Ordinal)) return i;
+            }
+
+            return -1;
+        }
+
+        /// <summary>整数の保存値が候補にある位置を返す。</summary>
+        private static int ResolveIntSelection(IReadOnlyList<int> values, int current)
+        {
+            for (var i = 0; i < values.Count; i++)
+            {
+                if (values[i] == current) return i;
+            }
+
+            return -1;
+        }
+
+        /// <summary>候補外の保存値を先頭へ足し、誤って通常候補に見えない表示位置を返す。</summary>
+        private static int InsertMissingOption<T>(List<string> labels, List<T> values, T current)
+        {
+            labels.Insert(0, $"(候補に無い) {FormatMissingValue(current)}");
+            values.Insert(0, current);
+            return 0;
+        }
+
+        /// <summary>候補外の保存値を、人が識別できる文字列へ変換する。</summary>
+        private static string FormatMissingValue<T>(T value)
+        {
+            return ReferenceEquals(value, null) ? "null" : value.ToString();
+        }
+
+        /// <summary>候補名を Popup へ渡す表示要素へ変換する。</summary>
+        private static GUIContent[] ToContents(IReadOnlyList<string> labels)
+        {
+            var contents = new GUIContent[labels.Count];
+            for (var i = 0; i < labels.Count; i++) contents[i] = new GUIContent(labels[i]);
+
+            return contents;
         }
 
         private static bool DrawProgressBar(
@@ -412,6 +620,16 @@ namespace Inspector.Editor
 
             EditorGUILayout.PropertyField(property, label);
 
+            if (!CanExpandReference(property.hasMultipleDifferentValues))
+            {
+                EditorGUILayout.HelpBox(
+                    "複数選択した対象で参照先が異なるため、中身は展開しない。選択を分けると編集できる。",
+                    MessageType.Info);
+                return true;
+            }
+
+            ApplyExpandableInitialState(attribute, property);
+
             var referenced = property.objectReferenceValue;
             if (referenced == null) return true;
 
@@ -441,6 +659,38 @@ namespace Inspector.Editor
 
             EditorGUI.indentLevel--;
             return true;
+        }
+
+        /// <summary>参照先が 1 件に定まるときだけ、その中身を展開する。</summary>
+        internal static bool CanExpandReference(bool hasMultipleDifferentValues)
+        {
+            return !hasMultipleDifferentValues;
+        }
+
+        /// <summary>対象とプロパティごとに一度だけ、属性で指定された初期開閉状態を反映する。</summary>
+        internal static void ApplyExpandableInitialState(ExpandableAttribute attribute, SerializedProperty property)
+        {
+            var path = property.propertyPath;
+            var targets = property.serializedObject.targetObjects;
+            var shouldInitialize = true;
+
+            for (var i = 0; i < targets.Length; i++)
+            {
+                var target = targets[i];
+                if (target == null) continue;
+
+                var initialized = InitializedExpandableProperties.GetOrCreateValue(target);
+                if (initialized.Contains(path)) shouldInitialize = false;
+            }
+
+            if (shouldInitialize) property.isExpanded = attribute.Expanded;
+
+            for (var i = 0; i < targets.Length; i++)
+            {
+                var target = targets[i];
+                if (target == null) continue;
+                InitializedExpandableProperties.GetOrCreateValue(target).Add(path);
+            }
         }
 
         private static void DrawNested(UnityEngine.Object referenced)
@@ -606,6 +856,19 @@ namespace Inspector.Editor
             var assets = Application.dataPath.Replace('\\', '/');
             var lastSlash = assets.LastIndexOf('/');
             return lastSlash < 0 ? assets : assets.Substring(0, lastSlash);
+        }
+
+        /// <summary>所有者配列から最初に解決できた対象を返す。</summary>
+        private static object FirstTarget(IReadOnlyList<object> targets)
+        {
+            if (targets == null) return null;
+
+            for (var i = 0; i < targets.Count; i++)
+            {
+                if (targets[i] != null) return targets[i];
+            }
+
+            return null;
         }
 
         private static void Report(List<string> errors, string ownerName, string message)

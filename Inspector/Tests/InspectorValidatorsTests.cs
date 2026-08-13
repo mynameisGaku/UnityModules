@@ -2,6 +2,8 @@ using Inspector.Editor;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
+using System.Collections.Generic;
+using System.Reflection;
 
 namespace Inspector.Tests
 {
@@ -15,6 +17,33 @@ namespace Inspector.Tests
         public GameObject Reference;
         public string Text;
         public int[] Items;
+
+        [ValidateInput(nameof(ValidateCount))]
+        public int ValidatedCount;
+
+        public int ValidationCalls;
+
+        private bool ValidateCount(int value)
+        {
+            ValidationCalls++;
+            return value >= 0;
+        }
+
+        public string TextValue => Text;
+
+        public int OverloadValidationCalls;
+
+        private bool ValidateOverload(string value)
+        {
+            OverloadValidationCalls++;
+            return !string.IsNullOrWhiteSpace(value);
+        }
+
+        private bool ValidateOverload(int value)
+        {
+            Assert.Fail("string property に int overload を使ってはならない");
+            return false;
+        }
     }
 
     public sealed class InspectorValidatorsTests
@@ -133,6 +162,122 @@ namespace Inspector.Tests
             const string outside = "D:/shared/data/table.csv";
 
             Assert.AreEqual(outside, InspectorFieldDrawers.Relativize(outside, true));
+        }
+
+        [Test]
+        public void DrawAll_RunsValidateInputForEveryMixedTarget()
+        {
+            var second = ScriptableObject.CreateInstance<ValidationSubject>();
+
+            try
+            {
+                _subject.ValidatedCount = 1;
+                second.ValidatedCount = 2;
+
+                using (var serialized = new SerializedObject(new Object[] { _subject, second }))
+                {
+                    serialized.Update();
+                    var property = serialized.FindProperty(nameof(ValidationSubject.ValidatedCount));
+                    Assert.IsTrue(property.hasMultipleDifferentValues);
+
+                    var member = InspectorMemberScanner.Scan(
+                        typeof(ValidationSubject),
+                        new[] { nameof(ValidationSubject.ValidatedCount) })[0];
+
+                    InspectorValidators.DrawAll(
+                        member,
+                        new object[] { _subject, second },
+                        new Object[] { _subject, second },
+                        property,
+                        new System.Collections.Generic.List<string>());
+                }
+
+                Assert.AreEqual(1, _subject.ValidationCalls);
+                Assert.AreEqual(1, second.ValidationCalls, "mixed 値でも先頭だけで検査を終えない");
+            }
+            finally
+            {
+                Object.DestroyImmediate(second);
+            }
+        }
+
+        [Test]
+        public void DrawAll_MixedConditionKeepsValidationButDoesNotClampValues()
+        {
+            var second = ScriptableObject.CreateInstance<ValidationSubject>();
+
+            try
+            {
+                _subject.Count = -4;
+                second.Count = 3;
+
+                using (var serialized = new SerializedObject(new Object[] { _subject, second }))
+                {
+                    serialized.Update();
+                    var property = serialized.FindProperty(nameof(ValidationSubject.Count));
+                    var member = new InspectorMember(
+                        InspectorMemberKind.SerializedField,
+                        nameof(ValidationSubject.Count),
+                        typeof(ValidationSubject).GetField(nameof(ValidationSubject.Count)),
+                        new InspectorAttribute[]
+                        {
+                            new MinValueAttribute(0f),
+                        },
+                        0);
+
+                    InspectorValidators.DrawAll(
+                        member,
+                        new object[] { _subject, second },
+                        new Object[] { _subject, second },
+                        property,
+                        new System.Collections.Generic.List<string>(),
+                        allowMutation: false);
+
+                    Assert.IsFalse(serialized.ApplyModifiedProperties(), "表示だけの検証で保存値を書き換えない");
+                }
+
+                Assert.AreEqual(-4, _subject.Count, "条件混在時は MinValue でも clamp しない");
+                Assert.AreEqual(3, second.Count);
+
+                var before = InspectorGUILayout.CapturePropertyValues(
+                    new Object[] { _subject, second },
+                    nameof(ValidationSubject.Count));
+                Assert.IsEmpty(InspectorGUILayout.FindChangedTargets(before),
+                    "条件混在の描画で値が変わらなければ OnValueChanged の対象を作らない");
+            }
+            finally
+            {
+                Object.DestroyImmediate(second);
+            }
+        }
+
+        [Test]
+        public void DrawAll_ReadOnlyPropertyUsesRequiredAndMatchingValidatorOverload()
+        {
+            _subject.Text = "有効";
+            var propertyInfo = typeof(ValidationSubject).GetProperty(nameof(ValidationSubject.TextValue));
+            Assert.IsNotNull(propertyInfo);
+            var member = new InspectorMember(
+                InspectorMemberKind.NativeProperty,
+                nameof(ValidationSubject.TextValue),
+                propertyInfo,
+                new InspectorAttribute[]
+                {
+                    new RequiredAttribute(),
+                    new ValidateInputAttribute("ValidateOverload"),
+                },
+                0);
+            var errors = new List<string>();
+
+            InspectorValidators.DrawAll(
+                member,
+                new object[] { _subject },
+                new Object[] { _subject },
+                null,
+                errors);
+
+            Assert.AreEqual(1, _subject.OverloadValidationCalls);
+            Assert.IsEmpty(errors);
         }
     }
 }

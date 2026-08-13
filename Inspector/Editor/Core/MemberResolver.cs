@@ -17,7 +17,7 @@ namespace Inspector.Editor
     /// 継承の連なりを自前で辿っている。
     /// </para>
     /// </summary>
-    public static class MemberResolver
+    internal static class MemberResolver
     {
         private const BindingFlags DeclaredMembers =
             BindingFlags.Instance | BindingFlags.Static |

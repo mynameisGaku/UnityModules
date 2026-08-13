@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.Linq;
 using Inspector.Editor;
 using NUnit.Framework;
@@ -44,6 +46,53 @@ namespace Inspector.Tests
         private sealed class PlainScriptable : ScriptableObject
         {
             [ShowIf("Value")] public int Shown;
+        }
+
+        [Serializable]
+        private sealed class NestedSettings
+        {
+            public bool Enabled;
+
+            [HideInInspector]
+            public int HiddenValue;
+
+            [ShowIf(nameof(Enabled))]
+            [OnValueChanged(nameof(Changed))]
+            public int Conditional;
+
+            [ShowNonSerialized] private int _runtimeValue;
+
+            [HideInInspector] [ShowNonSerialized] private int _explicitHiddenRuntimeValue;
+
+            [Button] private void Changed() { }
+        }
+
+        private sealed class NestedRoot
+        {
+            public NestedSettings Settings;
+        }
+
+        private sealed class ManagedReferenceRoot
+        {
+            [SerializeReference]
+            public NestedSettings Settings;
+        }
+
+        [Serializable]
+        private sealed class RecursiveSettings
+        {
+            public bool Enabled;
+
+            [ShowIf(nameof(Enabled))] public int Conditional;
+
+#pragma warning disable UAC1005 // 循環を打ち切る検査用に、意図して自己参照を作る。
+            public RecursiveSettings Next;
+#pragma warning restore UAC1005
+        }
+
+        private sealed class RecursiveRoot
+        {
+            public RecursiveSettings Settings;
         }
 
         private static InspectorMember Find(System.Collections.Generic.List<InspectorMember> members, string name)
@@ -144,6 +193,63 @@ namespace Inspector.Tests
             Assert.IsTrue(InspectorMemberScanner.UsesInspectorAttributes(typeof(PlainScriptable)));
             Assert.IsFalse(InspectorMemberScanner.UsesInspectorAttributes(typeof(Plain)),
                 "属性を使っていない型は既定のインスペクタに任せる");
+        }
+
+        [Test]
+        public void Scan_RecursivelyBuildsSerializableMembersWithFullPropertyPaths()
+        {
+            var root = Find(InspectorMemberScanner.Scan(typeof(NestedRoot), new[] { nameof(NestedRoot.Settings) }), nameof(NestedRoot.Settings));
+
+            Assert.IsTrue(root.HasChildren);
+            Assert.AreEqual(nameof(NestedRoot.Settings), root.PropertyPath);
+
+            var conditional = root.Children.Single(member => member.Name == nameof(NestedSettings.Conditional));
+            Assert.AreEqual("Settings.Conditional", conditional.PropertyPath);
+            Assert.AreEqual("Settings", conditional.OwnerPath);
+            Assert.IsTrue(conditional.HasAttribute<ShowIfAttribute>());
+            Assert.IsTrue(conditional.HasAttribute<OnValueChangedAttribute>());
+
+            Assert.IsFalse(root.Children.Any(member => member.Name == nameof(NestedSettings.HiddenValue)),
+                "[HideInInspector] の保存フィールドは入れ子の独自描画にも出さない");
+            Assert.IsTrue(root.Children.Any(member => member.Name == "_explicitHiddenRuntimeValue"),
+                "[ShowNonSerialized] で明示した非保存値は HideInInspector と独立した経路で維持する");
+
+            CollectionAssert.IsSubsetOf(
+                new[] { "Enabled", "Conditional", "_runtimeValue", "_explicitHiddenRuntimeValue", "Changed" },
+                root.Children.Select(member => member.Name).ToArray());
+        }
+
+        [Test]
+        public void UsesInspectorAttributes_FindsAttributesInsideSerializableFields()
+        {
+            Assert.IsTrue(InspectorMemberScanner.UsesInspectorAttributes(typeof(NestedRoot)),
+                "根に属性が無くても入れ子の属性を使う型は既定 Inspector に戻さない");
+        }
+
+        [Test]
+        public void Scan_LeavesSerializeReferenceFieldsToUnitysDefaultDrawer()
+        {
+            var root = Find(
+                InspectorMemberScanner.Scan(typeof(ManagedReferenceRoot), new[] { nameof(ManagedReferenceRoot.Settings) }),
+                nameof(ManagedReferenceRoot.Settings));
+
+            Assert.IsFalse(root.HasChildren, "実行時の派生型を持てる SerializeReference は既定 PropertyField に任せる");
+            Assert.IsFalse(InspectorMemberScanner.UsesInspectorAttributes(typeof(ManagedReferenceRoot)),
+                "宣言型の内部属性だけで managed reference の独自描画を有効にしない");
+        }
+
+        [Test]
+        public void Scan_StopsRecursiveSerializableTypesAndReportsTheBoundary()
+        {
+            var errors = new List<string>();
+            var members = InspectorMemberScanner.Scan(typeof(RecursiveRoot), new[] { nameof(RecursiveRoot.Settings) }, errors);
+            var settings = Find(members, nameof(RecursiveRoot.Settings));
+            var next = settings.Children.Single(member => member.Name == nameof(RecursiveSettings.Next));
+
+            Assert.IsFalse(next.HasChildren, "循環先を再び展開しない");
+            Assert.AreEqual(1, errors.Count);
+            StringAssert.Contains("循環", errors[0]);
+            StringAssert.Contains("Settings.Next", errors[0]);
         }
 
         [Test]
