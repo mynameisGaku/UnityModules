@@ -1,0 +1,16 @@
+{
+    "name": "TimeControl.Samples",
+    "rootNamespace": "TimeControl.Samples",
+    "references": [
+        "TimeControl.Runtime"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
