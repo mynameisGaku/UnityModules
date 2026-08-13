@@ -28,9 +28,15 @@ Unity の既定の Inspector は「フィールドを宣言順に、全部、同
 
 ## インストール
 
-`Assets/` 以下にフォルダごと配置する。アセンブリ定義が同梱されているので、
-利用側の asmdef から `Inspector.Runtime` を参照する（属性の定義だけなので、
-参照してもビルドサイズはほとんど増えない）。エディタ側は自動で効く。
+Package Manager の **Install package from git URL** に、次の固定版 URL を入力する。
+
+```text
+https://github.com/mynameisGaku/UnityModules.git?path=/Inspector#inspector-v1.0.0
+```
+
+手動で導入する場合は `Inspector` フォルダーを `Assets/` 以下へ配置する。
+どちらの方法でも、利用側に asmdef がある場合は `Inspector.Runtime` を参照する。
+属性の定義だけなのでビルドサイズへの影響は小さく、エディタ側は自動で有効になる。
 
 ```csharp
 using Inspector;
@@ -193,7 +199,8 @@ private static readonly int[] Sizes = { 128, 256, 512, 1024 };
 
 ## 独自の `CustomEditor` と併用する
 
-このパッケージは `[CustomEditor(typeof(Object), true)]` という**最も曖昧な指定**で入っている。
+このパッケージは `[CustomEditor(typeof(Object), true, isFallback = true)]` という
+**最も曖昧な予備 Editor** として入っている。
 そのため、専用のエディタを持つ型では常にそちらが優先され、属性は効かなくなる。
 その型でも効かせたいなら `InspectorEditor` を継承する。
 
@@ -228,13 +235,26 @@ public sealed class SpawnerEditor : Inspector.Editor.InspectorEditor
 
 ---
 
+## 入れ子と複数選択
+
+- 単一の `[Serializable]` class / struct フィールドは再帰して描く。入れ子側の条件、
+  `[OnValueChanged]`、`[InlineButton]`、`[Button]` も入れ子の所有者を基準に解決し、
+  struct で変更した値は最上位の保存値まで書き戻す。
+- 複数選択の条件は全対象で評価する。全対象で非表示になる場合だけ隠し、結果が混在した場合や
+  所有者を解決できない対象がある場合は、設定を見失わないよう表示したまま編集を止めて理由を示す。
+- `[Required]`、`[AssetOnly]`、`[SceneObjectOnly]`、`[ValidateInput]` は全対象を個別に検査し、
+  問題がある件数を表示する。
+- `[ShowNativeProperty]` / `[ShowNonSerialized]` は全対象の値を比較し、異なる場合は `—` で混在を示す。
+  読み取り専用メンバーでも `[Required]` `[ValidateInput]` `[Suffix]` `[InlineButton]` を使える。
+
+---
+
 ## 現時点でできないこと
 
-- **入れ子の `[Serializable]` クラスの中のフィールドには効かない。** 対象はコンポーネント直下の
-  メンバー（継承したものを含む）まで。中途半端に対応させると配列やリストの描画を自前で作り直すことになり、
-  そちらのほうが壊れやすいため、いまは範囲を切っている。
-- **複数のオブジェクトを同時に選んでいるときは、条件を最初の 1 つで判定する。** 値がばらけている場合、
-  検証の表示は出さない。
+- 配列・`List<T>` の要素に付いた属性と、実行時に派生型が決まる `[SerializeReference]` の中は
+  独自に再帰せず、Unity の既定の `PropertyField` へ任せる。
+- 参照が循環している入れ子と 8 階層を超える入れ子は、理由を表示して Unity の既定描画へ戻す。
+- 複数選択で値が混在している `[MinValue]` / `[MaxValue]` は、全対象を同じ値へ揃えないよう丸めない。
 - **`[Button]` を付けられるのは引数なしのメソッドだけ。** 引数を入力させる欄は、値の置き場所が無いため作らない。
 
 ---

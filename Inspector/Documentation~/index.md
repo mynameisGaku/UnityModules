@@ -8,6 +8,7 @@ Unity 6000.5 以降向けの Inspector 拡張。属性を付けるだけで表�
 - [属性リファレンス](#属性リファレンス)
 - [独自の CustomEditor と併用する](#独自の-customeditor-と併用する)
 - [よくある落とし穴](#よくある落とし穴)
+- [入れ子と複数選択](#入れ子と複数選択)
 - [できないこと](#できないこと)
 
 ---
@@ -50,7 +51,14 @@ Inspector には両方が同じ濃さで並びます。触った人は `_gravity
 
 ## 導入
 
-`Assets/` 以下にフォルダごと配置し、利用側の asmdef から `Inspector.Runtime` を参照します。
+Package Manager の **Install package from git URL** に、次の固定版 URL を入力します。
+
+```text
+https://github.com/mynameisGaku/UnityModules.git?path=/Inspector#inspector-v1.0.0
+```
+
+手動で導入する場合は `Inspector` フォルダーを `Assets/` 以下へ配置します。
+どちらの方法でも、利用側に asmdef がある場合は `Inspector.Runtime` を参照します。
 
 ```csharp
 using Inspector;
@@ -83,11 +91,12 @@ using Inspector;
 
 ### 属性を使っていない型には触らない
 
-`InspectorEditor` は `[CustomEditor(typeof(Object), true)]` で全ての型を受け持ちますが、
+`InspectorEditor` は `[CustomEditor(typeof(Object), true, isFallback = true)]` で
+行き先のない型だけを受け持ちますが、
 `CreateInspectorGUI()` の中で対象の型を調べ、このパッケージの属性が 1 つも無ければ
 Unity の既定のインスペクタをそのまま返します。導入しただけで既存クラスの見た目は変わりません。
 
-なお `[CustomEditor(typeof(Object), true)]` は**最も曖昧な指定**なので、
+なお `isFallback = true` を指定した全 `Object` 向け Editor は**最も曖昧な予備指定**なので、
 `Transform` のように専用のエディタを持つ型では常にそちらが優先されます。
 
 ### 型ごとに 1 回だけ走査する
@@ -313,13 +322,30 @@ public override void OnInspectorGUI()
 
 ---
 
+## 入れ子と複数選択
+
+単一の `[Serializable]` class / struct フィールドは再帰して描きます。入れ子側の条件、
+`[OnValueChanged]`、`[InlineButton]`、`[Button]` は、そのメンバーを持つ入れ子の所有者を基準に解決します。
+struct の中で変更した値も、最上位の保存値まで書き戻します。
+
+複数選択では条件を全対象で評価します。全対象で非表示になる場合だけ隠します。
+結果が混在した場合や所有者を解決できない対象がある場合は、設定を見失わないよう表示を残し、
+編集を止めたうえで理由を案内します。
+
+`[Required]`、`[AssetOnly]`、`[SceneObjectOnly]`、`[ValidateInput]` も全対象を個別に検査し、
+問題がある件数を表示します。`[MinValue]` / `[MaxValue]` は、保存値が混在している場合に
+全対象を同じ値へ揃えないよう丸めません。
+
+`[ShowNativeProperty]` / `[ShowNonSerialized]` は全対象の値を比較し、異なる場合は `—` で混在を示します。
+読み取り専用メンバーでも `[Required]` `[ValidateInput]` `[Suffix]` `[InlineButton]` を利用できます。
+
+---
+
 ## できないこと
 
-- **入れ子の `[Serializable]` クラスの中のフィールドには効きません。**
-  対象はコンポーネント直下のメンバー（継承したものを含む）までです。
-  中途半端に対応させると配列やリストの描画を自前で作り直すことになり、そちらのほうが壊れやすいため、
-  いまは範囲を切っています。中のフィールドは Unity の既定どおりに描かれます。
-- **複数のオブジェクトを同時に選んでいるときは、条件を最初の 1 つで判定します。**
-  値がばらけている場合、検証の表示と数値の丸めは行いません。
+- 配列・`List<T>` の要素に付いた属性と、実行時に派生型が決まる `[SerializeReference]` の中は
+  独自に再帰せず、Unity の既定の `PropertyField` へ任せます。
+- 参照が循環している入れ子と 8 階層を超える入れ子は、理由を表示して Unity の既定描画へ戻します。
+- 複数選択で値が混在している `[MinValue]` / `[MaxValue]` は丸めません。
 - **`[Button]` に引数は取れません。** 引数を入力させる欄を作ると、その値の保存場所が必要になります。
 - **`[MinMaxSlider]` と `[SubclassSelector]` は入っていません。** Containers パッケージ側にあります。

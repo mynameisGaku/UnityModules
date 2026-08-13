@@ -2,7 +2,7 @@
 
 このパッケージの変更履歴。書式は [Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) に、バージョン番号は [Semantic Versioning](https://semver.org/lang/ja/) に従う。
 
-## [1.0.0] — 未リリース
+## [1.0.0] - 2026-08-13
 
 ### Added
 
@@ -24,9 +24,19 @@
   引数付きメソッドへの `[Button]` など）は、対象を隠さずに理由を Inspector 上へ表示する。
 - 独自の `CustomEditor` から使うための `InspectorEditor` 基底クラスと `InspectorGUILayout.Draw`。
 - 走査・並べ替え・グループ構築の結果を型ごとに作り置きする `InspectorLayoutCache`。
+- 単一の `[Serializable]` class / struct フィールドを再帰して描き、入れ子の条件・変更通知・ボタンを
+  入れ子の所有者から解決する。struct の変更は最上位の保存値まで書き戻す。
+- 複数選択では条件と検証を全対象で評価する。条件の結果が混在するときは表示を残して編集を止め、
+  検証に通らない対象は件数付きで知らせる。
+- `[ShowNativeProperty]` / `[ShowNonSerialized]` の複数選択では全対象の値を比較し、異なる場合は混在表示にする。
+  `[Required]` `[ValidateInput]` `[Suffix]` `[InlineButton]` も読み取り専用メンバーで機能する。
+- `[Expandable(Expanded = true)]` の初期開閉を対象とプロパティごとに一度だけ反映する。
+- 設定済みコンポーネントをすぐ確認できる `Inspector Basics` サンプルシーン。
 
 ### Notes
 
-- 対象はコンポーネント直下のメンバー（継承したものを含む）まで。入れ子の `[Serializable]` クラスの中には効かない。
+- 配列・`List<T>` の要素属性、実行時派生型の `[SerializeReference]`、循環または 8 階層を超える入れ子は
+  Unity の既定描画へ戻す。
+- 複数選択で値が混在する `[MinValue]` / `[MaxValue]` は、全対象を同じ値へ揃えないよう丸めない。
 - `[Header]` `[Space]` `[Tooltip]` `[Range]` `[TextArea]` など Unity 標準の属性は再実装せず、そのまま素通しする。
 - `[MinMaxSlider]` と `[SubclassSelector]` は Containers パッケージ側にあるため収録していない。
