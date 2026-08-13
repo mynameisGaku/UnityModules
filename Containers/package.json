@@ -1,0 +1,27 @@
+{
+  "name": "com.studiogaku.containers",
+  "version": "1.0.0",
+  "displayName": "Containers",
+  "description": "Unity 向けのコンテナ/データ構造ライブラリ。GC を出さないコレクション、Inspector に出せるシリアライズ対応型、空間分割、時間・履歴管理、破棄済みオブジェクトに耐える Unity 固有のコンテナまでを 1 パッケージにまとめたもの。外部依存なし、unsafe 不使用。",
+  "unity": "6000.0",
+  "keywords": [
+    "collections",
+    "data-structures",
+    "performance",
+    "serialization",
+    "spatial",
+    "pooling"
+  ],
+  "author": {
+    "name": "StudioGaku",
+    "email": "gaku.fujimoto.business@gmail.com"
+  },
+  "dependencies": {},
+  "samples": [
+    {
+      "displayName": "Containers Samples",
+      "description": "各カテゴリの最小サンプル。",
+      "path": "Samples~/Basics"
+    }
+  ]
+}
