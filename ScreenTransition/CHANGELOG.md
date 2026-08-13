@@ -2,6 +2,12 @@
 
 このパッケージの変更履歴。書式は [Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) に、バージョン番号は [Semantic Versioning](https://semver.org/lang/ja/) に従います。
 
+## [1.0.1] - 2026-08-14
+
+### Fixed
+
+- 最小UPM構成でもUI Toolkit型を解決できるよう、組込UI Toolkitモジュール `com.unity.modules.uielements` 1.0.0を明示的な依存関係として追加。
+
 ## [1.0.0] - 2026-08-14
 
 ### Added
