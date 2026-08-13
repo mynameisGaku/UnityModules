@@ -5,8 +5,9 @@
 ## 使い方
 
 1. Package Manager から **Inspector Basics** を Import する。
-2. 空の GameObject に **Inspector Basics Sample** を付ける。
-3. Inspector を見ながら、次を試す。
+2. `InspectorBasics.unity` を開く。
+3. Hierarchy の **Inspector Basics Sample** を選ぶ。
+4. Inspector を見ながら、次を試す。
 
 | 操作 | 見るところ |
 |---|---|
