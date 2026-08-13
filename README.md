@@ -12,6 +12,7 @@ Unity 向けの再利用可能なモジュール置き場。各モジュール�
 | モジュール | 内容 | 依存 |
 |---|---|---|
 | [Containers](Containers/) | コンテナ / データ構造 66 種。GC フリーのコレクション、Inspector に出せるシリアライズ対応型、空間分割、Unity のライフサイクルに耐えるコンテナ。 | なし |
+| [Inspector](Inspector/) | Inspector 拡張の属性 43 種。条件による表示・非表示、グループ化とタブ、入力値の検証、メソッドのボタン化。**Unity 6000.5 以降**。 | なし |
 
 ---
 
@@ -23,10 +24,14 @@ Unity 向けの再利用可能なモジュール置き場。各モジュール�
 ```
 Assets/
 └── Modules/
-    └── Containers/
-        ├── Runtime/     Containers.Runtime
-        ├── Editor/      Containers.Editor
-        └── Tests/       Containers.Tests
+    ├── Containers/
+    │   ├── Runtime/     Containers.Runtime
+    │   ├── Editor/      Containers.Editor
+    │   └── Tests/       Containers.Tests
+    └── Inspector/
+        ├── Runtime/     Inspector.Runtime   属性の定義だけ
+        ├── Editor/      Inspector.Editor    解釈と描画
+        └── Tests/       Inspector.Tests
 ```
 
 UPM パッケージとして扱う場合は、モジュールのフォルダを `Packages/` 以下に置くか、
