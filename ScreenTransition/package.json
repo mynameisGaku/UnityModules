@@ -1,0 +1,32 @@
+{
+  "name": "com.studiogaku.screen-transition",
+  "version": "1.0.0",
+  "displayName": "Screen Transition",
+  "description": "UI Toolkitの全画面オーバーレイを使い、色、時間、補間方法を指定したCover・Revealを非スケール時間で実行するUnity向け画面遷移モジュール。Scene読込、入力制御、音声、常駐singletonは含みません。",
+  "unity": "6000.5",
+  "unityRelease": "7f1",
+  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/blob/screen-transition-v1.0.0/ScreenTransition/Documentation~/index.md",
+  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/screen-transition-v1.0.0/ScreenTransition/CHANGELOG.md",
+  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/screen-transition-v1.0.0/ScreenTransition/LICENSE.md",
+  "license": "Refer to LICENSE.md file",
+  "keywords": [
+    "screen",
+    "transition",
+    "fade",
+    "ui-toolkit",
+    "overlay"
+  ],
+  "author": {
+    "name": "StudioGaku",
+    "email": "gaku.fujimoto.business@gmail.com",
+    "url": "https://github.com/mynameisGaku/UnityModules"
+  },
+  "dependencies": {},
+  "samples": [
+    {
+      "displayName": "Screen Transition Basics",
+      "description": "明るい背景の上でCover・Reveal・自動デモを操作し、全画面オーバーレイの色と不透明度を確認するサンプル。",
+      "path": "Samples~/Basics"
+    }
+  ]
+}
