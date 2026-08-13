@@ -1,0 +1,10 @@
+Third-Party Notices
+===================
+
+このパッケージ本体には、第三者が制作したコード、フォント、音声、画像、映像その他のコンポーネントを同梱していません。
+
+同梱しているシェーダ `Runtime/Resources/StudioGakuDrawLines.shader` は本パッケージのために書き下ろしたもので、Unity が提供する `UnityCG.cginc` を include しています。`UnityCG.cginc` は Unity の実行環境から利用しており、このパッケージ内へ再配布していません。
+
+別パッケージとして必要な依存はありません。
+
+Unity Editor、UnityEngine API は Unity の実行環境から利用し、このパッケージ内へ再配布していません。
