@@ -5,18 +5,12 @@ namespace TimeControl
     /// <summary>要求倍率の検査と、複数要求から適用倍率を決める純粋計算を提供する。</summary>
     internal static class TimeScaleResolver
     {
-        // Controller公開前にも同じ境界値で純粋計算を検証できるようにする。
-        private const float MaximumMultiplier = 100f;
-
-        // Controller公開前にも同じ適用上限で基準値と積を検証できるようにする。
-        private const float MaximumEffectiveTimeScale = 100f;
-
         /// <summary>所有開始時の基準値が管理可能な範囲か調べる。</summary>
         /// <param name="baselineTimeScale">所有開始時に読み取った時間倍率。</param>
         /// <returns>管理可能ならNone、そうでなければ範囲外理由。</returns>
         internal static TimeControlError ValidateBaseline(float baselineTimeScale)
         {
-            return IsFinite(baselineTimeScale) && baselineTimeScale >= 0f && baselineTimeScale <= MaximumEffectiveTimeScale
+            return IsFinite(baselineTimeScale) && baselineTimeScale >= 0f && baselineTimeScale <= TimeControlController.MaximumEffectiveTimeScale
                 ? TimeControlError.None
                 : TimeControlError.EffectiveTimeScaleOutOfRange;
         }
@@ -29,7 +23,7 @@ namespace TimeControl
         internal static TimeControlError ValidateMultiplier(float baselineTimeScale, float multiplier, out float effectiveTimeScale)
         {
             effectiveTimeScale = 0f;
-            if (!IsFinite(multiplier) || multiplier < 0f || multiplier > MaximumMultiplier)
+            if (!IsFinite(multiplier) || multiplier < 0f || multiplier > TimeControlController.MaximumMultiplier)
             {
                 return TimeControlError.InvalidMultiplier;
             }
@@ -41,7 +35,7 @@ namespace TimeControl
 
             var unmaskedEffectiveTimeScale = (double)baselineTimeScale * multiplier;
             if (double.IsNaN(unmaskedEffectiveTimeScale) || double.IsInfinity(unmaskedEffectiveTimeScale) ||
-                unmaskedEffectiveTimeScale < 0d || unmaskedEffectiveTimeScale > MaximumEffectiveTimeScale)
+                unmaskedEffectiveTimeScale < 0d || unmaskedEffectiveTimeScale > TimeControlController.MaximumEffectiveTimeScale)
             {
                 return TimeControlError.EffectiveTimeScaleOutOfRange;
             }
