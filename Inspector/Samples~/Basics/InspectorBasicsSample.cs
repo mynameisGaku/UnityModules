@@ -8,7 +8,7 @@ namespace Inspector.Samples
     /// <summary>
     /// 収録している属性を 1 つのコンポーネントで見比べるためのサンプル。
     /// <para>
-    /// 空の GameObject に付けて、Inspector を見ながらチェックや列挙を切り替えてみるとよい。
+    /// 同梱シーンの設定済みオブジェクトを選び、Inspector でチェックや列挙を切り替えて確認する。
     /// </para>
     /// </summary>
     [AddComponentMenu("StudioGaku/Inspector Basics Sample")]
