@@ -16,6 +16,7 @@ Unity 向けの再利用可能なモジュール置き場。各モジュール�
 | [Drawing](Drawing/) | 実行中の線・矢印・箱・球・経路・文字をコード1行で描くデバッグ可視化。Development Build専用呼び出しと持続時間に対応。**Unity 6000.5 以降**。 | なし |
 | [Save System](SaveSystem/) | 型付きJSON保存、複数スロット、破損検出、可能な環境での原子的置換、1世代バックアップ復旧。依存なし。**Unity 6000.5 以降**。 | なし |
 | [Scene Flow](SceneFlow/) | 完全なSceneパスでSingle・Additive読込、有効Scene切替、Unloadを直列化し、開始前条件と完了後状態を結果で返す。**Unity 6000.5 以降**。 | なし |
+| [Screen Transition](ScreenTransition/) | UI Toolkitの全画面オーバーレイでCover・Revealを非スケール時間に実行し、色・時間・補間方法・完了結果を明示する。**Unity 6000.5 以降**。 | なし |
 
 ---
 
@@ -42,11 +43,15 @@ Assets/
     │   ├── Runtime/     SaveSystem.Runtime
     │   ├── Tests/       SaveSystem.Tests
     │   └── Samples~/    SaveSystem.Samples
-    └── SceneFlow/
-        ├── Runtime/     SceneFlow.Runtime
-        ├── Editor/      SceneFlow.Editor
-        ├── Tests/       SceneFlow.Tests / SceneFlow.Editor.Tests / SceneFlow.PlayMode.Tests
-        └── Samples~/    SceneFlow.Samples
+    ├── SceneFlow/
+    │   ├── Runtime/     SceneFlow.Runtime
+    │   ├── Editor/      SceneFlow.Editor
+    │   ├── Tests/       SceneFlow.Tests / SceneFlow.Editor.Tests / SceneFlow.PlayMode.Tests
+    │   └── Samples~/    SceneFlow.Samples
+    └── ScreenTransition/
+        ├── Runtime/     ScreenTransition.Runtime
+        ├── Tests/       ScreenTransition.Tests / ScreenTransition.PlayMode.Tests
+        └── Samples~/    ScreenTransition.Samples / ScreenTransition.Samples.PlayMode.Tests
 ```
 
 UPM パッケージとして扱う場合は、モジュールのフォルダを `Packages/` 以下に置くか、
