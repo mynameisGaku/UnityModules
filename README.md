@@ -17,6 +17,7 @@ Unity 向けの再利用可能なモジュール置き場。各モジュール�
 | [Save System](SaveSystem/) | 型付きJSON保存、複数スロット、破損検出、可能な環境での原子的置換、1世代バックアップ復旧。依存なし。**Unity 6000.5 以降**。 | なし |
 | [Scene Flow](SceneFlow/) | 完全なSceneパスでSingle・Additive読込、有効Scene切替、Unloadを直列化し、開始前条件と完了後状態を結果で返す。**Unity 6000.5 以降**。 | なし |
 | [Screen Transition](ScreenTransition/) | UI Toolkitの全画面オーバーレイでCover・Revealを非スケール時間に実行し、色・時間・補間方法・完了結果を明示する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
+| [Time Control](TimeControl/) | Scene所有のControllerが複数leaseの相対倍率を最小値で集約し、pause・slow motion・単独fast-forwardをTime.timeScaleへ安全に反映する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 
 ---
 
@@ -48,10 +49,14 @@ Assets/
     │   ├── Editor/      SceneFlow.Editor
     │   ├── Tests/       SceneFlow.Tests / SceneFlow.Editor.Tests / SceneFlow.PlayMode.Tests
     │   └── Samples~/    SceneFlow.Samples
-    └── ScreenTransition/
-        ├── Runtime/     ScreenTransition.Runtime
-        ├── Tests/       ScreenTransition.Tests / ScreenTransition.PlayMode.Tests
-        └── Samples~/    ScreenTransition.Samples / ScreenTransition.Samples.PlayMode.Tests
+    ├── ScreenTransition/
+    │   ├── Runtime/     ScreenTransition.Runtime
+    │   ├── Tests/       ScreenTransition.Tests / ScreenTransition.PlayMode.Tests
+    │   └── Samples~/    ScreenTransition.Samples / ScreenTransition.Samples.PlayMode.Tests
+    └── TimeControl/
+        ├── Runtime/     TimeControl.Runtime
+        ├── Tests/       TimeControl.Tests / TimeControl.PlayMode.Tests
+        └── Samples~/    TimeControl.Samples / TimeControl.Samples.PlayMode.Tests
 ```
 
 UPM パッケージとして扱う場合は、モジュールのフォルダを `Packages/` 以下に置くか、
