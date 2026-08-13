@@ -1,0 +1,16 @@
+{
+  "name": "Drawing.Samples",
+  "rootNamespace": "Drawing.Samples",
+  "references": [
+    "Drawing.Runtime"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}
