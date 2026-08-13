@@ -20,6 +20,9 @@ namespace Inspector
     [AttributeUsage(AttributeTargets.Field, AllowMultiple = false)]
     public sealed class ProgressBarAttribute : FieldDrawerAttribute
     {
+        /// <summary>表示名と上限値を指定して進捗バーを作る。</summary>
+        /// <param name="label">バーの左に出すラベル。省略するとフィールド名から作る。</param>
+        /// <param name="max">バーが満たされた状態とみなす上限値。</param>
         public ProgressBarAttribute(string label = null, float max = 1f)
         {
             Label = label;
@@ -35,6 +38,7 @@ namespace Inspector
         /// <summary>上限値を返すメンバーの名前。可変の最大値（最大体力など）に使う。</summary>
         public string MaxMember { get; set; }
 
+        /// <summary>バーを塗る色。</summary>
         public InspectorColor Color { get; set; } = InspectorColor.Cyan;
 
         /// <summary>バーの中に「現在値 / 上限」を書くか。</summary>

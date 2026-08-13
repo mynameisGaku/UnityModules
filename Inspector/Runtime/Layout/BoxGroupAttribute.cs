@@ -12,6 +12,7 @@ namespace Inspector
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property | AttributeTargets.Method, AllowMultiple = false)]
     public sealed class BoxGroupAttribute : GroupAttribute
     {
+        /// <summary>指定したパスのメンバーを見出し付きの枠で囲む。</summary>
         /// <param name="path"><c>/</c> 区切りで入れ子にできるグループパス。</param>
         public BoxGroupAttribute(string path) : base(path) { }
 

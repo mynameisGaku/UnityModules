@@ -23,8 +23,11 @@ namespace Inspector
     [AttributeUsage(AttributeTargets.Field, AllowMultiple = true)]
     public sealed class OnValueChangedAttribute : InspectorAttribute
     {
+        /// <summary>対象フィールドの値が変わった後に指定したメソッドを呼ぶ。</summary>
+        /// <param name="method">変更後に呼ぶ引数なしメソッドの名前。</param>
         public OnValueChangedAttribute(string method) => Method = method;
 
+        /// <summary>変更後に呼ぶ引数なしメソッドの名前。</summary>
         public string Method { get; }
     }
 }

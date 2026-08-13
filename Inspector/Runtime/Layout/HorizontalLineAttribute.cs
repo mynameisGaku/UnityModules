@@ -12,14 +12,19 @@ namespace Inspector
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property | AttributeTargets.Method, AllowMultiple = true)]
     public sealed class HorizontalLineAttribute : DecoratorAttribute
     {
+        /// <summary>対象メンバーの上に指定した太さと色の区切り線を引く。</summary>
+        /// <param name="height">線の太さ。</param>
+        /// <param name="color">線に使う色。</param>
         public HorizontalLineAttribute(float height = 1f, InspectorColor color = InspectorColor.Gray)
         {
             Height = height;
             Color = color;
         }
 
+        /// <summary>線の太さ。</summary>
         public float Height { get; }
 
+        /// <summary>線に使う色。</summary>
         public InspectorColor Color { get; }
 
         /// <summary>線の上に空ける余白。</summary>

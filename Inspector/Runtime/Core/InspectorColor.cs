@@ -15,17 +15,40 @@ namespace Inspector
         /// <summary>エディタの既定色をそのまま使う。</summary>
         Default,
 
+        /// <summary>灰色。</summary>
         Gray,
+
+        /// <summary>白。</summary>
         White,
+
+        /// <summary>黒。</summary>
         Black,
+
+        /// <summary>赤。</summary>
         Red,
+
+        /// <summary>緑。</summary>
         Green,
+
+        /// <summary>青。</summary>
         Blue,
+
+        /// <summary>黄。</summary>
         Yellow,
+
+        /// <summary>オレンジ。</summary>
         Orange,
+
+        /// <summary>シアン。</summary>
         Cyan,
+
+        /// <summary>マゼンタ。</summary>
         Magenta,
+
+        /// <summary>ピンク。</summary>
         Pink,
+
+        /// <summary>紫。</summary>
         Violet,
     }
 
@@ -39,6 +62,9 @@ namespace Inspector
         /// 使うため、ここでは <paramref name="fallback"/> をそのまま返す。
         /// </para>
         /// </summary>
+        /// <param name="color">変換する名前付き色。</param>
+        /// <param name="fallback"><see cref="InspectorColor.Default"/> のときに返す色。</param>
+        /// <returns>名前付き色に対応する色。既定色なら <paramref name="fallback"/>。</returns>
         public static Color ToColor(this InspectorColor color, Color fallback)
         {
             switch (color)

@@ -25,6 +25,7 @@ namespace Inspector
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property, AllowMultiple = true)]
     public sealed class ValidateInputAttribute : ValidatorAttribute
     {
+        /// <summary>指定したメソッドで対象メンバーの値を検査する。</summary>
         /// <param name="method">検査メソッドの名前。</param>
         /// <param name="message">通らなかったときの文言。メソッドが <c>out string</c> を返す場合はそちらが優先される。</param>
         public ValidateInputAttribute(string method, string message = null)
@@ -33,8 +34,10 @@ namespace Inspector
             Message = message;
         }
 
+        /// <summary>値を検査するメソッドの名前。</summary>
         public string Method { get; }
 
+        /// <summary>検査に通らなかったときに表示する文言。</summary>
         public string Message { get; }
 
         /// <summary>通らなかったときの重み。既定は警告ではなくエラー。</summary>

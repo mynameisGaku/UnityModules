@@ -16,6 +16,7 @@ namespace Inspector
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property | AttributeTargets.Method, AllowMultiple = false)]
     public sealed class TabGroupAttribute : GroupAttribute
     {
+        /// <summary>指定したタブ列の 1 枚へ対象メンバーを入れる。</summary>
         /// <param name="group">タブ列そのものの名前。<c>/</c> 区切りで入れ子にできる。</param>
         /// <param name="tab">このメンバーが乗るタブの名前。</param>
         public TabGroupAttribute(string group, string tab) : base(Combine(group, tab))

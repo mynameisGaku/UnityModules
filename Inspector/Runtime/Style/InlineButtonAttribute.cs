@@ -23,6 +23,7 @@ namespace Inspector
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property, AllowMultiple = true)]
     public sealed class InlineButtonAttribute : StyleAttribute
     {
+        /// <summary>対象メンバーの右隣にメソッドを呼ぶボタンを表示する。</summary>
         /// <param name="method">押したときに呼ぶ引数なしメソッドの名前。</param>
         /// <param name="label">ボタンの文言。省略するとメソッド名から作る。</param>
         public InlineButtonAttribute(string method, string label = null)
@@ -31,8 +32,10 @@ namespace Inspector
             Label = label;
         }
 
+        /// <summary>押したときに呼ぶ引数なしメソッドの名前。</summary>
         public string Method { get; }
 
+        /// <summary>ボタンに表示する文言。</summary>
         public string Label { get; }
 
         /// <summary>ボタンの幅。</summary>

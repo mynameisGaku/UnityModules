@@ -17,14 +17,19 @@ namespace Inspector
     [AttributeUsage(AttributeTargets.Field, AllowMultiple = false)]
     public sealed class ShowAssetPreviewAttribute : DecoratorAttribute
     {
+        /// <summary>指定した大きさでアセットのプレビューを表示する。</summary>
+        /// <param name="width">プレビューの幅。</param>
+        /// <param name="height">プレビューの高さ。</param>
         public ShowAssetPreviewAttribute(int width = 64, int height = 64)
         {
             Width = width;
             Height = height;
         }
 
+        /// <summary>プレビューの幅。</summary>
         public int Width { get; }
 
+        /// <summary>プレビューの高さ。</summary>
         public int Height { get; }
 
         /// <inheritdoc/>

@@ -22,10 +22,15 @@ namespace Inspector
     [AttributeUsage(AttributeTargets.Field, AllowMultiple = false)]
     public sealed class MinValueAttribute : ValidatorAttribute
     {
+        /// <summary>対象値の浮動小数点数としての下限を指定する。</summary>
+        /// <param name="value">対象値へ適用する下限。</param>
         public MinValueAttribute(float value) => Value = value;
 
+        /// <summary>対象値の整数としての下限を指定する。</summary>
+        /// <param name="value">対象値へ適用する下限。</param>
         public MinValueAttribute(int value) => Value = value;
 
+        /// <summary>対象値へ適用する下限。</summary>
         public float Value { get; }
     }
 
@@ -33,10 +38,15 @@ namespace Inspector
     [AttributeUsage(AttributeTargets.Field, AllowMultiple = false)]
     public sealed class MaxValueAttribute : ValidatorAttribute
     {
+        /// <summary>対象値の浮動小数点数としての上限を指定する。</summary>
+        /// <param name="value">対象値へ適用する上限。</param>
         public MaxValueAttribute(float value) => Value = value;
 
+        /// <summary>対象値の整数としての上限を指定する。</summary>
+        /// <param name="value">対象値へ適用する上限。</param>
         public MaxValueAttribute(int value) => Value = value;
 
+        /// <summary>対象値へ適用する上限。</summary>
         public float Value { get; }
     }
 }
