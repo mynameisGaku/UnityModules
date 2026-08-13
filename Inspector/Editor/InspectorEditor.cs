@@ -7,7 +7,7 @@ namespace Inspector.Editor
     /// <summary>
     /// このモジュールの属性を解釈する Inspector。
     /// <para>
-    /// <c>[CustomEditor(typeof(Object), true)]</c> は<b>最も曖昧な指定</b>なので、
+    /// <c>isFallback = true</c> を指定した全 Object 向けの予備 Editor なので、
     /// 専用のエディタを持つ型（Transform、Rigidbody、利用側の <c>CustomEditor</c> など）では
     /// そちらが優先され、ここは呼ばれない。行き先の無い型だけを受け持つ。
     /// </para>
@@ -26,7 +26,7 @@ namespace Inspector.Editor
     /// }
     /// </code>
     /// </summary>
-    [CustomEditor(typeof(UnityEngine.Object), true)]
+    [CustomEditor(typeof(UnityEngine.Object), true, isFallback = true)]
     [CanEditMultipleObjects]
     public class InspectorEditor : UnityEditor.Editor
     {
@@ -38,6 +38,7 @@ namespace Inspector.Editor
         /// 属性を使っている型では <c>null</c> を返し、<see cref="OnInspectorGUI"/> の経路に落とす。
         /// </para>
         /// </summary>
+        /// <returns>既定表示を構築した要素。属性を使う型または派生 Editor では <c>null</c>。</returns>
         public override VisualElement CreateInspectorGUI()
         {
             // 派生クラスは自前で描くつもりで書かれている。既定のインスペクタを返すと
