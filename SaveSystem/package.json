@@ -1,0 +1,32 @@
+{
+  "name": "com.studiogaku.save-system",
+  "version": "1.0.0",
+  "displayName": "Save System",
+  "description": "型付き JSON、複数スロット、結果型、SHA-256 破損検出、耐久書き込み、1 世代バックアップからの自動復旧をまとめた Unity 向け同期保存モジュール。外部依存なし、unsafe 不使用。",
+  "unity": "6000.5",
+  "unityRelease": "7f1",
+  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/blob/save-system-v1.0.0/SaveSystem/Documentation~/index.md",
+  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/save-system-v1.0.0/SaveSystem/CHANGELOG.md",
+  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/save-system-v1.0.0/SaveSystem/LICENSE.md",
+  "license": "Refer to LICENSE.md file",
+  "keywords": [
+    "save",
+    "persistence",
+    "json",
+    "backup",
+    "recovery"
+  ],
+  "author": {
+    "name": "StudioGaku",
+    "email": "gaku.fujimoto.business@gmail.com",
+    "url": "https://github.com/mynameisGaku/UnityModules"
+  },
+  "dependencies": {},
+  "samples": [
+    {
+      "displayName": "Save System Basics",
+      "description": "設定済み Scene を Play し、再生回数とコイン数が再起動を跨いで残ることをボタンまたは Context Menu で確認するサンプル。",
+      "path": "Samples~/Basics"
+    }
+  ]
+}
