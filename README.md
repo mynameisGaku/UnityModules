@@ -16,6 +16,7 @@ Unity 向けの再利用可能なモジュール置き場。各モジュール�
 | [Inspector](Inspector/) | Inspector 拡張の属性 43 種。条件による表示・非表示、グループ化とタブ、入力値の検証、メソッドのボタン化。**Unity 6000.5 以降**。 | なし |
 | [Drawing](Drawing/) | 実行中の線・矢印・箱・球・経路・文字をコード1行で描くデバッグ可視化。Development Build専用呼び出しと持続時間に対応。**Unity 6000.5 以降**。 | なし |
 | [Save System](SaveSystem/) | 型付きJSON保存、複数スロット、破損検出、可能な環境での原子的置換、1世代バックアップ復旧。依存なし。**Unity 6000.5 以降**。 | なし |
+| [Scene Flow](SceneFlow/) | 完全なSceneパスでSingle・Additive読込、有効Scene切替、Unloadを直列化し、開始前条件と完了後状態を結果で返す。**Unity 6000.5 以降**。 | なし |
 
 ---
 
@@ -42,10 +43,15 @@ Assets/
     ├── Drawing/
     │   ├── Runtime/     Drawing.Runtime
     │   └── Tests/       Drawing.Tests
-    └── SaveSystem/
-        ├── Runtime/     SaveSystem.Runtime
-        ├── Tests/       SaveSystem.Tests
-        └── Samples~/    SaveSystem.Samples
+    ├── SaveSystem/
+    │   ├── Runtime/     SaveSystem.Runtime
+    │   ├── Tests/       SaveSystem.Tests
+    │   └── Samples~/    SaveSystem.Samples
+    └── SceneFlow/
+        ├── Runtime/     SceneFlow.Runtime
+        ├── Editor/      SceneFlow.Editor
+        ├── Tests/       SceneFlow.Tests / SceneFlow.Editor.Tests / SceneFlow.PlayMode.Tests
+        └── Samples~/    SceneFlow.Samples
 ```
 
 UPM パッケージとして扱う場合は、モジュールのフォルダを `Packages/` 以下に置くか、
