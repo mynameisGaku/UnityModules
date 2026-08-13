@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using UnityEngine;
 
 namespace Inspector.Editor
 {
@@ -12,8 +13,11 @@ namespace Inspector.Editor
     /// 「Unity が表示するはずだった順」を外から渡してもらう形にしている。
     /// </para>
     /// </summary>
-    public static class InspectorMemberScanner
+    internal static class InspectorMemberScanner
     {
+        /// <summary>循環参照や極端な型で Inspector の組み立てが終わらなくなるのを防ぐ深さ。</summary>
+        internal const int MaxNestedDepth = 8;
+
         private const BindingFlags DeclaredMembers =
             BindingFlags.Instance | BindingFlags.Static |
             BindingFlags.Public | BindingFlags.NonPublic |
@@ -34,16 +38,7 @@ namespace Inspector.Editor
             if (type == null) return false;
             if (UsesAttributesCache.TryGetValue(type, out var cached)) return cached;
 
-            var found = false;
-
-            foreach (var declaring in Hierarchy(type))
-            {
-                if (HasAttributeOnAnyMember(declaring))
-                {
-                    found = true;
-                    break;
-                }
-            }
+            var found = UsesInspectorAttributes(type, 0, new HashSet<Type>());
 
             UsesAttributesCache[type] = found;
             return found;
@@ -58,10 +53,22 @@ namespace Inspector.Editor
         /// </param>
         public static List<InspectorMember> Scan(Type type, IReadOnlyList<string> serializedFieldNames)
         {
+            return Scan(type, serializedFieldNames, null);
+        }
+
+        /// <summary>
+        /// 表示対象を集め、入れ子の打ち切り理由を <paramref name="errors"/> に積む。
+        /// </summary>
+        internal static List<InspectorMember> Scan(
+            Type type,
+            IReadOnlyList<string> serializedFieldNames,
+            List<string> errors)
+        {
             var members = new List<InspectorMember>();
             if (type == null) return members;
 
             var hierarchy = Hierarchy(type);
+            var ancestry = new HashSet<Type> { type };
             var index = 0;
 
             if (serializedFieldNames != null)
@@ -70,68 +77,21 @@ namespace Inspector.Editor
                 {
                     var name = serializedFieldNames[i];
                     var field = FindField(hierarchy, name);
+                    var children = CreateNestedMembers(field, name, 1, ancestry, errors);
 
                     members.Add(new InspectorMember(
                         InspectorMemberKind.SerializedField,
                         name,
                         field,
                         GetInspectorAttributes(field),
-                        index++));
+                        index++,
+                        name,
+                        null,
+                        children));
                 }
             }
 
-            // 保存されないものは Unity の並びに現れないので、宣言順（基底クラスが先）で後ろに足す。
-            for (var h = 0; h < hierarchy.Count; h++)
-            {
-                var declaring = hierarchy[h];
-
-                var fields = declaring.GetFields(DeclaredMembers);
-                for (var i = 0; i < fields.Length; i++)
-                {
-                    var field = fields[i];
-                    if (field.GetCustomAttribute<ShowNonSerializedAttribute>() == null) continue;
-                    if (Contains(members, field.Name)) continue;
-
-                    members.Add(new InspectorMember(
-                        InspectorMemberKind.NonSerializedField,
-                        field.Name,
-                        field,
-                        GetInspectorAttributes(field),
-                        index++));
-                }
-
-                var properties = declaring.GetProperties(DeclaredMembers);
-                for (var i = 0; i < properties.Length; i++)
-                {
-                    var property = properties[i];
-                    if (property.GetCustomAttribute<ShowNativePropertyAttribute>() == null) continue;
-                    if (!property.CanRead) continue;
-                    if (property.GetIndexParameters().Length != 0) continue;
-                    if (Contains(members, property.Name)) continue;
-
-                    members.Add(new InspectorMember(
-                        InspectorMemberKind.NativeProperty,
-                        property.Name,
-                        property,
-                        GetInspectorAttributes(property),
-                        index++));
-                }
-
-                var methods = declaring.GetMethods(DeclaredMembers);
-                for (var i = 0; i < methods.Length; i++)
-                {
-                    var method = methods[i];
-                    if (method.GetCustomAttribute<ButtonAttribute>() == null) continue;
-                    if (Contains(members, method.Name)) continue;
-
-                    members.Add(new InspectorMember(
-                        InspectorMemberKind.Method,
-                        method.Name,
-                        method,
-                        GetInspectorAttributes(method),
-                        index++));
-                }
-            }
+            AppendNonSerializedMembers(members, hierarchy, null, ref index);
 
             return members;
         }
@@ -150,6 +110,232 @@ namespace Inspector.Editor
 
             chain.Reverse();
             return chain;
+        }
+
+        /// <summary>入れ子型の保存メンバーと、明示された非保存メンバーを同じ所有者の下へ集める。</summary>
+        private static IReadOnlyList<InspectorMember> CreateNestedMembers(
+            FieldInfo field,
+            string ownerPath,
+            int depth,
+            HashSet<Type> ancestry,
+            List<string> errors)
+        {
+            if (!IsNestedSerializableField(field)) return Array.Empty<InspectorMember>();
+
+            var nestedType = field.FieldType;
+            if (!UsesInspectorAttributes(nestedType)) return Array.Empty<InspectorMember>();
+
+            if (depth > MaxNestedDepth)
+            {
+                Report(errors, ownerPath, $"入れ子が最大深さ {MaxNestedDepth} を超えたため、これより内側は既定表示に戻した。");
+                return Array.Empty<InspectorMember>();
+            }
+
+            if (!ancestry.Add(nestedType))
+            {
+                Report(errors, ownerPath, $"型 {nestedType.Name} が循環しているため、これより内側は既定表示に戻した。");
+                return Array.Empty<InspectorMember>();
+            }
+
+            try
+            {
+                var hierarchy = Hierarchy(nestedType);
+                var members = new List<InspectorMember>();
+                var index = 0;
+
+                for (var h = 0; h < hierarchy.Count; h++)
+                {
+                    var fields = hierarchy[h].GetFields(DeclaredMembers);
+
+                    for (var i = 0; i < fields.Length; i++)
+                    {
+                        var childField = fields[i];
+                        if (!IsSerializedField(childField)) continue;
+
+                        var propertyPath = ownerPath + "." + childField.Name;
+                        var children = CreateNestedMembers(childField, propertyPath, depth + 1, ancestry, errors);
+
+                        members.Add(new InspectorMember(
+                            InspectorMemberKind.SerializedField,
+                            childField.Name,
+                            childField,
+                            GetInspectorAttributes(childField),
+                            index++,
+                            propertyPath,
+                            ownerPath,
+                            children));
+                    }
+                }
+
+                AppendNonSerializedMembers(members, hierarchy, ownerPath, ref index);
+                return members;
+            }
+            finally
+            {
+                ancestry.Remove(nestedType);
+            }
+        }
+
+        /// <summary>保存されない明示メンバーを、宣言順で保存フィールドの後ろへ足す。</summary>
+        private static void AppendNonSerializedMembers(
+            List<InspectorMember> members,
+            IReadOnlyList<Type> hierarchy,
+            string ownerPath,
+            ref int index)
+        {
+            // 保存されないものは Unity の並びに現れないので、宣言順（基底クラスが先）で後ろに足す。
+            for (var h = 0; h < hierarchy.Count; h++)
+            {
+                var declaring = hierarchy[h];
+
+                var fields = declaring.GetFields(DeclaredMembers);
+                for (var i = 0; i < fields.Length; i++)
+                {
+                    var field = fields[i];
+                    if (field.GetCustomAttribute<ShowNonSerializedAttribute>() == null) continue;
+                    if (Contains(members, field.Name)) continue;
+
+                    members.Add(new InspectorMember(
+                        InspectorMemberKind.NonSerializedField,
+                        field.Name,
+                        field,
+                        GetInspectorAttributes(field),
+                        index++,
+                        null,
+                        ownerPath,
+                        null));
+                }
+
+                var properties = declaring.GetProperties(DeclaredMembers);
+                for (var i = 0; i < properties.Length; i++)
+                {
+                    var property = properties[i];
+                    if (property.GetCustomAttribute<ShowNativePropertyAttribute>() == null) continue;
+                    if (!property.CanRead) continue;
+                    if (property.GetIndexParameters().Length != 0) continue;
+                    if (Contains(members, property.Name)) continue;
+
+                    members.Add(new InspectorMember(
+                        InspectorMemberKind.NativeProperty,
+                        property.Name,
+                        property,
+                        GetInspectorAttributes(property),
+                        index++,
+                        null,
+                        ownerPath,
+                        null));
+                }
+
+                var methods = declaring.GetMethods(DeclaredMembers);
+                for (var i = 0; i < methods.Length; i++)
+                {
+                    var method = methods[i];
+                    if (method.GetCustomAttribute<ButtonAttribute>() == null) continue;
+                    if (Contains(members, method.Name)) continue;
+
+                    members.Add(new InspectorMember(
+                        InspectorMemberKind.Method,
+                        method.Name,
+                        method,
+                        GetInspectorAttributes(method),
+                        index++,
+                        null,
+                        ownerPath,
+                        null));
+                }
+            }
+        }
+
+        /// <summary>型自身か、保存される入れ子型の内側に Inspector 属性があるか調べる。</summary>
+        private static bool UsesInspectorAttributes(Type type, int depth, HashSet<Type> ancestry)
+        {
+            if (type == null || depth > MaxNestedDepth || !ancestry.Add(type)) return false;
+
+            try
+            {
+                var hierarchy = Hierarchy(type);
+
+                for (var h = 0; h < hierarchy.Count; h++)
+                {
+                    var declaring = hierarchy[h];
+                    if (HasAttributeOnAnyMember(declaring)) return true;
+
+                    var fields = declaring.GetFields(DeclaredMembers);
+                    for (var i = 0; i < fields.Length; i++)
+                    {
+                        if (!IsNestedSerializableField(fields[i])) continue;
+                        if (UsesInspectorAttributes(fields[i].FieldType, depth + 1, ancestry)) return true;
+                    }
+                }
+
+                return false;
+            }
+            finally
+            {
+                ancestry.Remove(type);
+            }
+        }
+
+        /// <summary>Unity が保存するフィールドか。入れ子を独自表示するときの欠落防止に使う。</summary>
+        private static bool IsSerializedField(FieldInfo field)
+        {
+            if (field == null || field.IsStatic || field.IsLiteral || field.IsInitOnly) return false;
+            if (field.IsNotSerialized) return false;
+            if (field.IsDefined(typeof(HideInInspector), true)) return false;
+
+            var hasStorageAttribute = field.IsPublic
+                || field.IsDefined(typeof(SerializeField), true)
+                || field.IsDefined(typeof(SerializeReference), true);
+
+            return hasStorageAttribute && IsSupportedSerializedType(
+                field.FieldType,
+                field.IsDefined(typeof(SerializeReference), true),
+                allowCollection: true);
+        }
+
+        /// <summary>Unity の保存対象になる型か。System の複雑な値や辞書を誤って欄へ足さない。</summary>
+        private static bool IsSupportedSerializedType(Type type, bool serializeReference, bool allowCollection)
+        {
+            if (type == null || type.IsPointer || type.IsByRef || typeof(Delegate).IsAssignableFrom(type)) return false;
+            if (serializeReference) return !type.IsValueType && !typeof(UnityEngine.Object).IsAssignableFrom(type);
+            if (type.IsPrimitive || type.IsEnum || type == typeof(string)) return true;
+            if (typeof(UnityEngine.Object).IsAssignableFrom(type)) return true;
+
+            if (type.IsArray)
+            {
+                return allowCollection
+                    && type.GetArrayRank() == 1
+                    && IsSupportedSerializedType(type.GetElementType(), false, allowCollection: false);
+            }
+
+            if (type.IsGenericType)
+            {
+                return allowCollection
+                    && type.GetGenericTypeDefinition() == typeof(List<>)
+                    && IsSupportedSerializedType(type.GetGenericArguments()[0], false, allowCollection: false);
+            }
+
+            if (!type.IsDefined(typeof(SerializableAttribute), false)) return false;
+
+            // DateTime など System 側の複雑な値は [Serializable] でも Unity の保存形式ではない。
+            var space = type.Namespace;
+            return space == null || !space.Equals("System", StringComparison.Ordinal)
+                && !space.StartsWith("System.", StringComparison.Ordinal);
+        }
+
+        /// <summary>配列や Unity 組み込み型ではない、直接たどれる Serializable フィールドか。</summary>
+        private static bool IsNestedSerializableField(FieldInfo field)
+        {
+            if (!IsSerializedField(field)) return false;
+            if (field.IsDefined(typeof(SerializeReference), true)) return false;
+
+            var type = field.FieldType;
+            if (type == null || type.IsArray || type.IsEnum || type.IsPrimitive || type == typeof(string)) return false;
+            if (type.IsGenericType) return false;
+            if (typeof(UnityEngine.Object).IsAssignableFrom(type)) return false;
+            if (IsEngineType(type)) return false;
+
+            return type.IsDefined(typeof(SerializableAttribute), false);
         }
 
         private static bool IsEngineType(Type type)
@@ -217,6 +403,15 @@ namespace Inspector.Editor
             for (var i = 0; i < raw.Length; i++) result[i] = (InspectorAttribute)raw[i];
 
             return result;
+        }
+
+        /// <summary>同じ入れ子の問題を描画のたびに重ねない形で記録する。</summary>
+        private static void Report(List<string> errors, string propertyPath, string message)
+        {
+            if (errors == null || string.IsNullOrEmpty(message)) return;
+
+            var text = string.IsNullOrEmpty(propertyPath) ? message : propertyPath + ": " + message;
+            if (!errors.Contains(text)) errors.Add(text);
         }
     }
 }

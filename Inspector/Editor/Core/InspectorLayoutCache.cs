@@ -16,7 +16,7 @@ namespace Inspector.Editor
     /// 属性を足したのに反映されない、という状態にはならない。
     /// </para>
     /// </summary>
-    public static class InspectorLayoutCache
+    internal static class InspectorLayoutCache
     {
         private static readonly Dictionary<Type, InspectorLayout> Cache = new Dictionary<Type, InspectorLayout>();
 
@@ -26,8 +26,17 @@ namespace Inspector.Editor
             if (type == null) return null;
             if (Cache.TryGetValue(type, out var cached)) return cached;
 
+            var scanErrors = new List<string>();
             var layout = InspectorLayoutBuilder.Build(
-                InspectorMemberScanner.Scan(type, CollectSerializedFieldNames(serializedObject)));
+                InspectorMemberScanner.Scan(type, CollectSerializedFieldNames(serializedObject), scanErrors));
+
+            if (scanErrors.Count > 0)
+            {
+                var errors = new List<string>(layout.Errors.Count + scanErrors.Count);
+                errors.AddRange(layout.Errors);
+                errors.AddRange(scanErrors);
+                layout = new InspectorLayout(layout.Root, layout.Members, errors);
+            }
 
             Cache[type] = layout;
             return layout;

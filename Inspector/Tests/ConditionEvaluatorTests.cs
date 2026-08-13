@@ -27,6 +27,16 @@ namespace Inspector.Tests
             public int Count = 3;
             public float Ratio = 0.5f;
             public Mode Selected = Mode.Simple;
+            public int ConditionReads;
+
+            public bool CountedEnabled
+            {
+                get
+                {
+                    ConditionReads++;
+                    return Enabled;
+                }
+            }
 
             [ShowIf(nameof(Enabled))] public int ShownWhenEnabled;
             [HideIf(nameof(Enabled))] public int HiddenWhenEnabled;
@@ -42,9 +52,13 @@ namespace Inspector.Tests
             [ShowInPlayMode] public int OnlyWhilePlaying;
             [HideInPlayMode] public int OnlyWhileEditing;
             [ShowIf(nameof(Enabled))] [HideIf(nameof(Locked))] public int ShownWhenEnabledAndUnlocked;
-            [ShowIf("_typo")] public int BrokenCondition;
+            [ShowIf("_showTypo")] public int BrokenShowCondition;
+            [HideIf("_hideTypo")] public int BrokenHideCondition;
+            [EnableIf("_enableTypo")] public int BrokenEnableCondition;
+            [DisableIf("_disableTypo")] public int BrokenDisableCondition;
             [ShowIf(nameof(Enabled), nameof(Locked))] public int MistakenMultiCondition;
             [ShowIf(nameof(Count))] public int NonBooleanCondition;
+            [ShowIf(nameof(CountedEnabled))] public int CountedCondition;
         }
 
         private static readonly List<string> Errors = new List<string>();
@@ -189,15 +203,19 @@ namespace Inspector.Tests
             Assert.IsFalse(Resolve(subject, nameof(Subject.OnlyWhileEditing), isPlaying: true).Visible);
         }
 
-        [Test]
-        public void MisspelledMember_KeepsTheFieldVisibleAndExplainsWhy()
+        [TestCase(nameof(Subject.BrokenShowCondition), "_showTypo")]
+        [TestCase(nameof(Subject.BrokenHideCondition), "_hideTypo")]
+        [TestCase(nameof(Subject.BrokenEnableCondition), "_enableTypo")]
+        [TestCase(nameof(Subject.BrokenDisableCondition), "_disableTypo")]
+        public void MisspelledMember_KeepsTheFieldVisibleAndEditable(string memberName, string missingMember)
         {
-            // 黙って消すと「消えていること」自体に気付けない。出したうえで理由を添える。
-            var state = Resolve(new Subject(), nameof(Subject.BrokenCondition));
+            // 設定ミスで対象が消えたり編集不能になったりすると修正できないため、属性の効果を適用しない。
+            var state = Resolve(new Subject(), memberName);
 
             Assert.IsTrue(state.Visible);
+            Assert.IsTrue(state.Enabled);
             Assert.AreEqual(1, Errors.Count);
-            StringAssert.Contains("_typo", Errors[0]);
+            StringAssert.Contains(missingMember, Errors[0]);
         }
 
         [Test]
@@ -235,6 +253,55 @@ namespace Inspector.Tests
             Assert.IsFalse(ConditionEvaluator.AreEqual("1", 1));
             Assert.IsFalse(ConditionEvaluator.AreEqual(null, 0));
             Assert.IsTrue(ConditionEvaluator.AreEqual(null, null));
+        }
+
+        [Test]
+        public void ResolveAll_KeepsMixedVisibilityVisibleButDisablesEditing()
+        {
+            Errors.Clear();
+            var first = new Subject { Enabled = false };
+            var second = new Subject { Enabled = true };
+
+            var state = ConditionEvaluator.ResolveAll(
+                new object[] { first, second },
+                Member(nameof(Subject.ShownWhenEnabled)),
+                false,
+                Errors);
+
+            Assert.IsTrue(state.Visible, "1 件でも条件に合うなら先頭対象の値だけで隠さない");
+            Assert.IsFalse(state.Enabled, "条件外の対象まで一括変更しない");
+            Assert.IsTrue(state.Mixed);
+            Assert.IsEmpty(Errors, "条件の混在は設定ミスではない");
+        }
+
+        [Test]
+        public void ResolveAll_HidesOnlyWhenEverySelectedTargetIsHidden()
+        {
+            var state = ConditionEvaluator.ResolveAll(
+                new object[] { new Subject { Enabled = false }, new Subject { Enabled = false } },
+                Member(nameof(Subject.ShownWhenEnabled)),
+                false,
+                Errors);
+
+            Assert.IsFalse(state.Visible);
+            Assert.IsFalse(state.Mixed);
+        }
+
+        [Test]
+        public void ResolveAll_EvaluatesEverySelectedTarget()
+        {
+            Errors.Clear();
+            var first = new Subject { Enabled = false };
+            var second = new Subject { Enabled = true };
+
+            ConditionEvaluator.ResolveAll(
+                new object[] { first, second },
+                Member(nameof(Subject.CountedCondition)),
+                false,
+                Errors);
+
+            Assert.AreEqual(1, first.ConditionReads);
+            Assert.AreEqual(1, second.ConditionReads, "先頭の不成立だけで後続対象の検証を打ち切らない");
         }
     }
 }

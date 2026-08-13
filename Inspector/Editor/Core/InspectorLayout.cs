@@ -3,7 +3,7 @@ using System.Collections.Generic;
 namespace Inspector.Editor
 {
     /// <summary>グループの中に並ぶもの 1 件。メンバーか、入れ子のグループのどちらか。</summary>
-    public readonly struct InspectorLayoutItem
+    internal readonly struct InspectorLayoutItem
     {
         private InspectorLayoutItem(InspectorMember member, InspectorGroup group)
         {
@@ -23,7 +23,7 @@ namespace Inspector.Editor
     }
 
     /// <summary>まとまり 1 つ。<see cref="Items"/> には所属メンバーと子グループが表示順で並ぶ。</summary>
-    public sealed class InspectorGroup
+    internal sealed class InspectorGroup
     {
         public InspectorGroup(string path, string name, GroupKind kind, GroupAttribute source)
         {
@@ -62,7 +62,7 @@ namespace Inspector.Editor
     }
 
     /// <summary>型 1 つぶんの表示構造。<see cref="InspectorLayoutBuilder"/> が作る。</summary>
-    public sealed class InspectorLayout
+    internal sealed class InspectorLayout
     {
         public InspectorLayout(InspectorGroup root, IReadOnlyList<InspectorMember> members, IReadOnlyList<string> errors)
         {

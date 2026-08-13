@@ -8,7 +8,7 @@ namespace Inspector.Editor
     /// GUI に触らないので、表示のされ方はここだけを見て確かめられる。
     /// </para>
     /// </summary>
-    public static class InspectorLayoutBuilder
+    internal static class InspectorLayoutBuilder
     {
         private sealed class KindDeclaration
         {

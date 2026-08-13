@@ -10,7 +10,7 @@ namespace Inspector.Editor
     /// 表記ゆれで別グループに割れると原因が分かりにくいので、入口で 1 つの形に揃える。
     /// </para>
     /// </summary>
-    public static class GroupPathUtility
+    internal static class GroupPathUtility
     {
         public const char Separator = '/';
 

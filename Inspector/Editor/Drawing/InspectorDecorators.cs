@@ -5,12 +5,23 @@ using UnityEngine;
 namespace Inspector.Editor
 {
     /// <summary>フィールドの前後に足す表示（見出し・注意書き・区切り線・プレビュー）を描く。</summary>
-    public static class InspectorDecorators
+    internal static class InspectorDecorators
     {
         /// <summary>指定した位置の装飾を宣言順に描く。</summary>
         public static void Draw(
             InspectorMember member,
             object target,
+            DecoratorPosition position,
+            SerializedProperty property,
+            List<string> errors)
+        {
+            DrawAll(member, new[] { target }, position, property, errors);
+        }
+
+        /// <summary>複数選択した全所有者を条件表示へ反映して装飾を描く。</summary>
+        internal static void DrawAll(
+            InspectorMember member,
+            IReadOnlyList<object> targets,
             DecoratorPosition position,
             SerializedProperty property,
             List<string> errors)
@@ -29,7 +40,7 @@ namespace Inspector.Editor
                         break;
 
                     case InfoBoxAttribute info:
-                        DrawInfoBox(info, target, member.Name, errors);
+                        DrawInfoBox(info, targets, member.Name, errors);
                         break;
 
                     case HorizontalLineAttribute line:
@@ -65,12 +76,22 @@ namespace Inspector.Editor
             }
         }
 
-        private static void DrawInfoBox(InfoBoxAttribute info, object target, string ownerName, List<string> errors)
+        private static void DrawInfoBox(
+            InfoBoxAttribute info,
+            IReadOnlyList<object> targets,
+            string ownerName,
+            List<string> errors)
         {
-            if (!string.IsNullOrEmpty(info.VisibleIf)
-                && !ConditionEvaluator.EvaluateFlag(target, info.VisibleIf, ownerName, errors))
+            if (!string.IsNullOrEmpty(info.VisibleIf))
             {
-                return;
+                var visible = false;
+
+                for (var i = 0; targets != null && i < targets.Count; i++)
+                {
+                    visible |= ConditionEvaluator.EvaluateFlag(targets[i], info.VisibleIf, ownerName, errors);
+                }
+
+                if (!visible) return;
             }
 
             EditorGUILayout.HelpBox(info.Text, InspectorStyles.ToMessageType(info.Kind));

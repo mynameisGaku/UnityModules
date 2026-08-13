@@ -1,10 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.Reflection;
 
 namespace Inspector.Editor
 {
     /// <summary>Inspector に出るメンバーの出自。</summary>
-    public enum InspectorMemberKind
+    internal enum InspectorMemberKind
     {
         /// <summary>保存されるフィールド。<c>SerializedProperty</c> を通して描く。</summary>
         SerializedField,
@@ -26,7 +27,7 @@ namespace Inspector.Editor
     /// <b>選択中のオブジェクトに依存しない情報だけ</b>で、値や条件の判定結果は持たない。
     /// </para>
     /// </summary>
-    public sealed class InspectorMember
+    internal sealed class InspectorMember
     {
         private static readonly InspectorAttribute[] NoAttributes = new InspectorAttribute[0];
 
@@ -36,12 +37,30 @@ namespace Inspector.Editor
             MemberInfo member,
             InspectorAttribute[] attributes,
             int declarationIndex)
+            : this(kind, name, member, attributes, declarationIndex, null, null, null)
+        {
+        }
+
+        /// <summary>保存パスと入れ子構造を含む、走査処理用のメンバーを作る。</summary>
+        internal InspectorMember(
+            InspectorMemberKind kind,
+            string name,
+            MemberInfo member,
+            InspectorAttribute[] attributes,
+            int declarationIndex,
+            string propertyPath,
+            string ownerPath,
+            IReadOnlyList<InspectorMember> children)
         {
             Kind = kind;
             Name = name;
             Member = member;
             Attributes = attributes ?? NoAttributes;
             DeclarationIndex = declarationIndex;
+            PropertyPath = propertyPath ?? (kind == InspectorMemberKind.SerializedField ? name : null);
+            OwnerPath = ownerPath;
+            Children = children ?? Array.Empty<InspectorMember>();
+            ChildLayout = Children.Count > 0 ? InspectorLayoutBuilder.Build(Children) : null;
 
             Order = GetAttribute<OrderAttribute>()?.Order ?? 0;
             GroupPath = ResolveGroupPath(Attributes);
@@ -51,6 +70,30 @@ namespace Inspector.Editor
 
         /// <summary>フィールド名・プロパティ名・メソッド名。<see cref="InspectorMemberKind.SerializedField"/> では property path でもある。</summary>
         public string Name { get; }
+
+        /// <summary>
+        /// <see cref="SerializedProperty"/> を根から探す完全なパス。
+        /// 保存されないメンバーでは <c>null</c>。
+        /// </summary>
+        internal string PropertyPath { get; }
+
+        /// <summary>
+        /// 条件や変更通知を解決する所有者までの保存パス。
+        /// 最上位のメンバーでは <c>null</c>。
+        /// </summary>
+        internal string OwnerPath { get; }
+
+        /// <summary>
+        /// この保存フィールドの中で独自に描くメンバー。
+        /// 入れ子型が Inspector 属性を使わない場合は空。
+        /// </summary>
+        internal IReadOnlyList<InspectorMember> Children { get; }
+
+        /// <summary>入れ子の Inspector 属性を独自に描く必要があるか。</summary>
+        internal bool HasChildren => Children.Count > 0;
+
+        /// <summary>入れ子メンバーの並びとグループを組み立てた結果。</summary>
+        internal InspectorLayout ChildLayout { get; }
 
         /// <summary>元になったリフレクション情報。見つからなかった場合のみ <c>null</c>。</summary>
         public MemberInfo Member { get; }

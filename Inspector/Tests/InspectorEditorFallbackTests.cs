@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using Inspector.Editor;
 using NUnit.Framework;
 using UnityEditor;
@@ -54,6 +55,22 @@ namespace Inspector.Tests
                 if (editor != null) UnityEngine.Object.DestroyImmediate(editor);
                 UnityEngine.Object.DestroyImmediate(target);
             }
+        }
+
+        [Test]
+        public void EditorAssembly_ExportsOnlySupportedExtensionTypes()
+        {
+            var exported = typeof(InspectorEditor).Assembly
+                .GetExportedTypes()
+                .Select(type => type.FullName)
+                .OrderBy(name => name)
+                .ToArray();
+
+            CollectionAssert.AreEqual(new[]
+            {
+                "Inspector.Editor.InspectorEditor",
+                "Inspector.Editor.InspectorGUILayout",
+            }, exported);
         }
 
         private sealed class FallbackTarget : ScriptableObject

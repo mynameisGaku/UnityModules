@@ -19,11 +19,57 @@ namespace Inspector.Editor
         {
             public SerializedObject SerializedObject;
             public UnityEngine.Object[] Targets;
-            public object Target;
             public Type Type;
             public bool IsPlaying;
+            public string StatePath;
             public readonly List<string> Errors = new List<string>();
             public readonly List<Action> Deferred = new List<Action>();
+            public readonly List<PendingValueChange> PendingValueChanges = new List<PendingValueChange>();
+            public readonly Dictionary<string, object[]> OwnersByPath = new Dictionary<string, object[]>();
+        }
+
+        /// <summary>対象ごとに保存した 1 プロパティの値。</summary>
+        internal readonly struct PropertyValueSnapshot
+        {
+            /// <summary>比較対象とプロパティの現在値を保存する。</summary>
+            public PropertyValueSnapshot(UnityEngine.Object target, string propertyPath, bool exists, uint contentHash)
+            {
+                Target = target;
+                PropertyPath = propertyPath;
+                Exists = exists;
+                ContentHash = contentHash;
+            }
+
+            /// <summary>値を持つオブジェクト。</summary>
+            public UnityEngine.Object Target { get; }
+
+            /// <summary>比較する保存プロパティのパス。</summary>
+            public string PropertyPath { get; }
+
+            /// <summary>保存時にプロパティが存在したか。</summary>
+            public bool Exists { get; }
+
+            /// <summary>子要素を含む保存値の識別値。</summary>
+            public uint ContentHash { get; }
+        }
+
+        /// <summary>値の書き戻し後に変更通知を判定するための情報。</summary>
+        private sealed class PendingValueChange
+        {
+            /// <summary>変更前の対象別の値。</summary>
+            public PropertyValueSnapshot[] Before;
+
+            /// <summary>変更されたときに呼ぶメソッド。</summary>
+            public OnValueChangedAttribute[] Callbacks;
+
+            /// <summary>Undo 履歴に表示するフィールド名。</summary>
+            public string OwnerName;
+
+            /// <summary>変更通知メソッドを持つ入れ子所有者までのパス。</summary>
+            public string OwnerPath;
+
+            /// <summary>変更通知メソッドを宣言している所有者の型。</summary>
+            public Type OwnerType;
         }
 
         /// <summary>
@@ -49,7 +95,6 @@ namespace Inspector.Editor
             {
                 SerializedObject = serializedObject,
                 Targets = targets != null && targets.Length > 0 ? targets : new[] { main },
-                Target = main,
                 Type = main.GetType(),
                 IsPlaying = EditorApplication.isPlaying,
             };
@@ -62,6 +107,10 @@ namespace Inspector.Editor
             DrawItems(context, layout.Root);
 
             serializedObject.ApplyModifiedProperties();
+
+            // 値を全部書き戻してから差分を確定する。補助ボタンや開閉操作で GUI.changed が立っても、
+            // 保存値が同じなら変更通知には含めない。
+            QueueValueChangedCallbacks(context);
 
             // 値を書き戻したあとに呼ぶ。ここより前だと、コールバックが読むフィールドが
             // まだ編集前の値のままになる。
@@ -134,10 +183,11 @@ namespace Inspector.Editor
         {
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
-                var open = InspectorState.GetFoldout(context.Type, group.Path, true);
+                var statePath = CombinePath(context.StatePath, group.Path);
+                var open = InspectorState.GetFoldout(context.Type, statePath, true);
                 var next = EditorGUILayout.Foldout(open, group.Name, true);
 
-                if (next != open) InspectorState.SetFoldout(context.Type, group.Path, next);
+                if (next != open) InspectorState.SetFoldout(context.Type, statePath, next);
                 if (!next) return;
 
                 EditorGUI.indentLevel++;
@@ -192,10 +242,11 @@ namespace Inspector.Editor
             var names = new string[pages.Count];
             for (var i = 0; i < pages.Count; i++) names[i] = pages[i].Name;
 
-            var selected = Mathf.Clamp(InspectorState.GetTab(context.Type, group.Path), 0, pages.Count - 1);
+            var statePath = CombinePath(context.StatePath, group.Path);
+            var selected = Mathf.Clamp(InspectorState.GetTab(context.Type, statePath), 0, pages.Count - 1);
             var picked = GUILayout.Toolbar(selected, names);
 
-            if (picked != selected) InspectorState.SetTab(context.Type, group.Path, picked);
+            if (picked != selected) InspectorState.SetTab(context.Type, statePath, picked);
 
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
@@ -205,23 +256,25 @@ namespace Inspector.Editor
 
         private static void DrawMember(DrawContext context, InspectorMember member)
         {
-            var state = ConditionEvaluator.Resolve(context.Target, member, context.IsPlaying, context.Errors);
+            var owners = ResolveOwners(context, member);
+            var primaryOwner = FirstOwner(owners);
+            var state = ConditionEvaluator.ResolveAll(owners, member, context.IsPlaying, context.Errors);
             if (!state.Visible) return;
 
             SerializedProperty property = null;
 
             if (member.Kind == InspectorMemberKind.SerializedField)
             {
-                property = context.SerializedObject.FindProperty(member.Name);
+                property = context.SerializedObject.FindProperty(member.PropertyPath);
 
                 if (property == null)
                 {
-                    context.Errors.Add($"{member.Name}: 保存されたデータが見つからない。");
+                    Report(context.Errors, member.Name, $"保存されたデータ '{member.PropertyPath}' が見つからない。");
                     return;
                 }
             }
 
-            InspectorDecorators.Draw(member, context.Target, DecoratorPosition.Before, property, context.Errors);
+            InspectorDecorators.DrawAll(member, owners, DecoratorPosition.Before, property, context.Errors);
 
             var indent = member.GetAttribute<IndentAttribute>();
             var color = member.GetAttribute<GUIColorAttribute>();
@@ -241,7 +294,7 @@ namespace Inspector.Editor
                     switch (member.Kind)
                     {
                         case InspectorMemberKind.SerializedField:
-                            DrawSerializedField(context, member, property);
+                            DrawSerializedField(context, member, property, owners);
                             break;
 
                         case InspectorMemberKind.Method:
@@ -249,7 +302,7 @@ namespace Inspector.Editor
                             break;
 
                         default:
-                            DrawReadOnlyValue(context, member);
+                            DrawReadOnlyValue(context, member, owners, primaryOwner);
                             break;
                     }
                 }
@@ -261,25 +314,48 @@ namespace Inspector.Editor
                 GUI.color = savedColor;
             }
 
-            if (property != null) InspectorValidators.Draw(member, context.Target, property, context.Errors);
+            if (state.Mixed)
+            {
+                EditorGUILayout.HelpBox(
+                    "選択対象の表示・編集条件が揃っていないか、入れ子の所有者を取得できないため、この欄は表示だけにしている。選択を分けると確認しやすい。",
+                    MessageType.Info);
+            }
 
-            InspectorDecorators.Draw(member, context.Target, DecoratorPosition.After, property, context.Errors);
+            InspectorValidators.DrawAll(
+                member,
+                owners,
+                context.Targets,
+                property,
+                context.Errors,
+                allowMutation: !state.Mixed);
+
+            InspectorDecorators.DrawAll(member, owners, DecoratorPosition.After, property, context.Errors);
         }
 
-        private static void DrawSerializedField(DrawContext context, InspectorMember member, SerializedProperty property)
+        private static void DrawSerializedField(
+            DrawContext context,
+            InspectorMember member,
+            SerializedProperty property,
+            IReadOnlyList<object> owners)
         {
             var label = BuildLabel(member, property);
             var suffix = member.GetAttribute<SuffixAttribute>();
             var buttons = member.GetAttributes<InlineButtonAttribute>();
             var inline = (suffix != null || buttons.Length > 0) && IsSingleLine(member, property);
+            var callbacks = member.GetAttributes<OnValueChangedAttribute>();
+            var before = callbacks.Length > 0
+                ? CapturePropertyValues(context.Targets, property.propertyPath)
+                : null;
 
-            EditorGUI.BeginChangeCheck();
-
-            if (inline)
+            if (member.HasChildren)
+            {
+                DrawNestedValue(context, member, property, label, suffix, buttons);
+            }
+            else if (inline)
             {
                 using (new EditorGUILayout.HorizontalScope())
                 {
-                    DrawValue(context, member, property, label);
+                    DrawValue(member, owners, property, label, context.Errors);
 
                     if (suffix != null)
                     {
@@ -291,7 +367,7 @@ namespace Inspector.Editor
             }
             else
             {
-                DrawValue(context, member, property, label);
+                DrawValue(member, owners, property, label, context.Errors);
 
                 if (buttons.Length > 0)
                 {
@@ -303,13 +379,16 @@ namespace Inspector.Editor
                 }
             }
 
-            if (!EditorGUI.EndChangeCheck()) return;
-
-            var callbacks = member.GetAttributes<OnValueChangedAttribute>();
-            for (var i = 0; i < callbacks.Length; i++)
+            if (callbacks.Length > 0)
             {
-                var methodName = callbacks[i].Method;
-                context.Deferred.Add(() => InvokeOnTargets(context, methodName, member.Name, record: false));
+                context.PendingValueChanges.Add(new PendingValueChange
+                {
+                    Before = before,
+                    Callbacks = callbacks,
+                    OwnerName = member.Name,
+                    OwnerPath = member.OwnerPath,
+                    OwnerType = member.Member?.DeclaringType,
+                });
             }
         }
 
@@ -325,15 +404,79 @@ namespace Inspector.Editor
                 if (!GUILayout.Button(text, InspectorStyles.InlineButton, GUILayout.Width(button.Width))) continue;
 
                 var methodName = button.Method;
-                context.Deferred.Add(() => InvokeOnTargets(context, methodName, member.Name, record: true));
+                var ownerType = member.Member?.DeclaringType ?? context.Type;
+                context.Deferred.Add(() => InvokeOnOwners(
+                    context.Targets,
+                    ownerType,
+                    member.OwnerPath,
+                    methodName,
+                    member.Name,
+                    record: true));
             }
         }
 
-        private static void DrawValue(DrawContext context, InspectorMember member, SerializedProperty property, GUIContent label)
+        private static void DrawValue(
+            InspectorMember member,
+            IReadOnlyList<object> owners,
+            SerializedProperty property,
+            GUIContent label,
+            List<string> errors)
         {
-            if (InspectorFieldDrawers.TryDraw(member, context.Target, property, label, context.Errors)) return;
+            if (InspectorFieldDrawers.TryDrawAll(member, owners, property, label, errors)) return;
 
             EditorGUILayout.PropertyField(property, label, true);
+        }
+
+        /// <summary>属性を持つ Serializable の親欄と、その内側の独自レイアウトを描く。</summary>
+        private static void DrawNestedValue(
+            DrawContext context,
+            InspectorMember member,
+            SerializedProperty property,
+            GUIContent label,
+            SuffixAttribute suffix,
+            InlineButtonAttribute[] buttons)
+        {
+            if (suffix != null || buttons.Length > 0)
+            {
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    EditorGUILayout.PropertyField(property, label, false);
+
+                    if (suffix != null)
+                    {
+                        GUILayout.Label(suffix.Text, InspectorStyles.Suffix, GUILayout.Width(suffix.Width));
+                    }
+
+                    DrawInlineButtons(context, member, buttons);
+                }
+            }
+            else
+            {
+                EditorGUILayout.PropertyField(property, label, false);
+            }
+
+            if (!property.isExpanded) return;
+
+            var layout = member.ChildLayout;
+            if (layout == null) return;
+
+            var savedStatePath = context.StatePath;
+            context.StatePath = CombinePath(savedStatePath, member.PropertyPath);
+            EditorGUI.indentLevel++;
+            try
+            {
+                DrawItems(context, layout.Root);
+            }
+            finally
+            {
+                EditorGUI.indentLevel--;
+                context.StatePath = savedStatePath;
+            }
+
+            for (var i = 0; i < layout.Errors.Count; i++)
+            {
+                Report(context.Errors, member.Name, layout.Errors[i]);
+            }
         }
 
         private static void DrawButton(DrawContext context, InspectorMember member)
@@ -362,28 +505,149 @@ namespace Inspector.Editor
             }
 
             var name = method.Name;
-            context.Deferred.Add(() => InvokeOnTargets(context, name, member.Name, record: true));
+            var ownerType = method.DeclaringType ?? context.Type;
+            context.Deferred.Add(() => InvokeOnOwners(
+                context.Targets,
+                ownerType,
+                member.OwnerPath,
+                name,
+                member.Name,
+                record: true));
         }
 
         /// <summary>
-        /// 選択中の全オブジェクトに対してメソッドを呼ぶ。
+        /// 保存値が実際に変わった対象へ変更通知を予約する。
+        /// 補助ボタンや開閉操作だけでは値の識別値が変わらないため、通知しない。
+        /// </summary>
+        private static void QueueValueChangedCallbacks(DrawContext context)
+        {
+            for (var i = 0; i < context.PendingValueChanges.Count; i++)
+            {
+                var pending = context.PendingValueChanges[i];
+                var changedTargets = FindChangedTargets(pending.Before);
+                if (changedTargets.Length == 0) continue;
+
+                for (var callbackIndex = 0; callbackIndex < pending.Callbacks.Length; callbackIndex++)
+                {
+                    var methodName = pending.Callbacks[callbackIndex].Method;
+                    var ownerName = pending.OwnerName;
+                    var ownerType = pending.OwnerType ?? context.Type;
+                    var ownerPath = pending.OwnerPath;
+                    context.Deferred.Add(() => InvokeOnOwners(
+                        changedTargets,
+                        ownerType,
+                        ownerPath,
+                        methodName,
+                        ownerName,
+                        record: true));
+                }
+            }
+        }
+
+        /// <summary>選択対象ごとに指定プロパティの現在値を保存する。</summary>
+        internal static PropertyValueSnapshot[] CapturePropertyValues(UnityEngine.Object[] targets, string propertyPath)
+        {
+            if (targets == null || targets.Length == 0) return Array.Empty<PropertyValueSnapshot>();
+
+            var snapshots = new PropertyValueSnapshot[targets.Length];
+
+            for (var i = 0; i < targets.Length; i++)
+            {
+                var target = targets[i];
+                if (target == null)
+                {
+                    snapshots[i] = new PropertyValueSnapshot(null, propertyPath, false, 0u);
+                    continue;
+                }
+
+                using (var serialized = new SerializedObject(target))
+                {
+                    serialized.Update();
+                    var property = serialized.FindProperty(propertyPath);
+                    snapshots[i] = property == null
+                        ? new PropertyValueSnapshot(target, propertyPath, false, 0u)
+                        : new PropertyValueSnapshot(target, propertyPath, true, property.contentHash);
+                }
+            }
+
+            return snapshots;
+        }
+
+        /// <summary>保存時点から指定プロパティの値が変わった対象だけを返す。</summary>
+        internal static UnityEngine.Object[] FindChangedTargets(PropertyValueSnapshot[] before)
+        {
+            if (before == null || before.Length == 0) return Array.Empty<UnityEngine.Object>();
+
+            var changed = new List<UnityEngine.Object>(before.Length);
+
+            for (var i = 0; i < before.Length; i++)
+            {
+                var snapshot = before[i];
+                if (snapshot.Target == null) continue;
+
+                using (var serialized = new SerializedObject(snapshot.Target))
+                {
+                    serialized.Update();
+                    var property = serialized.FindProperty(snapshot.PropertyPath);
+                    var exists = property != null;
+                    var contentHash = exists ? property.contentHash : 0u;
+
+                    if (exists != snapshot.Exists || contentHash != snapshot.ContentHash)
+                    {
+                        changed.Add(snapshot.Target);
+                    }
+                }
+            }
+
+            return changed.ToArray();
+        }
+
+        /// <summary>
+        /// 選択中の対象にメソッドを呼ぶ。instance メソッドは対象ごと、static メソッドは選択数に関係なく 1 回だけ呼ぶ。
         /// <para>
         /// <paramref name="record"/> が真なら呼ぶ前に <c>Undo</c> に控えを取る。
         /// ボタンは中で何を書き換えるか分からないので、押した結果を取り消せるようにしておく。
         /// </para>
         /// </summary>
-        private static void InvokeOnTargets(DrawContext context, string methodName, string ownerName, bool record)
+        internal static void InvokeOnTargets(UnityEngine.Object[] targets, Type targetType, string methodName, string ownerName, bool record)
         {
-            if (record) Undo.RecordObjects(context.Targets, ownerName);
+            InvokeOnOwners(targets, targetType, null, methodName, ownerName, record);
+        }
 
-            for (var i = 0; i < context.Targets.Length; i++)
+        /// <summary>
+        /// 選択対象の根を Undo に記録し、指定された入れ子所有者へメソッドを流す。
+        /// static メソッドは選択数に関係なく 1 回だけ呼ぶ。
+        /// </summary>
+        internal static void InvokeOnOwners(
+            UnityEngine.Object[] targets,
+            Type ownerType,
+            string ownerPath,
+            string methodName,
+            string ownerName,
+            bool record)
+        {
+            if (targets == null || targets.Length == 0) return;
+
+            var validTargets = new List<UnityEngine.Object>(targets.Length);
+            for (var i = 0; i < targets.Length; i++)
             {
-                var target = context.Targets[i];
-                if (target == null) continue;
+                if (targets[i] != null && !validTargets.Contains(targets[i])) validTargets.Add(targets[i]);
+            }
 
-                if (!MemberResolver.TryInvoke(target, methodName, out var error))
+            if (validTargets.Count == 0) return;
+
+            var resolvedType = ownerType ?? validTargets[0].GetType();
+            var invocationCount = InspectorOwnerResolver.IsStaticMethod(resolvedType, methodName) ? 1 : validTargets.Count;
+
+            if (record) Undo.RecordObjects(validTargets.ToArray(), ownerName);
+
+            for (var i = 0; i < invocationCount; i++)
+            {
+                var target = validTargets[i];
+
+                if (!InspectorOwnerResolver.TryInvoke(target, ownerPath, resolvedType, methodName, out var error))
                 {
-                    Debug.LogError($"[Inspector] {context.Type.Name}.{ownerName}: {error}", target);
+                    Debug.LogError($"[Inspector] {resolvedType.Name}.{ownerName}: {error}", target);
                     continue;
                 }
 
@@ -391,28 +655,75 @@ namespace Inspector.Editor
             }
         }
 
-        private static void DrawReadOnlyValue(DrawContext context, InspectorMember member)
+        private static void DrawReadOnlyValue(
+            DrawContext context,
+            InspectorMember member,
+            IReadOnlyList<object> owners,
+            object owner)
         {
-            if (!MemberResolver.TryGetValue(context.Target, member.Name, out var value, out var error))
+            if (!MemberResolver.TryGetValue(owner, member.Name, out var value, out var error))
             {
                 EditorGUILayout.HelpBox(error, MessageType.Warning);
                 return;
             }
 
             var label = BuildLabel(member, null);
+            var suffix = member.GetAttribute<SuffixAttribute>();
+            var buttons = member.GetAttributes<InlineButtonAttribute>();
+            var mixed = ReadOnlyValuesDiffer(member, owners, value);
+
+            if (suffix != null || buttons.Length > 0)
+            {
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    using (new EditorGUI.DisabledScope(true))
+                    {
+                        DrawStaticValue(label, value, mixed);
+                    }
+
+                    if (suffix != null)
+                    {
+                        GUILayout.Label(suffix.Text, InspectorStyles.Suffix, GUILayout.Width(suffix.Width));
+                    }
+
+                    DrawInlineButtons(context, member, buttons);
+                }
+
+                return;
+            }
 
             using (new EditorGUI.DisabledScope(true))
             {
-                DrawStaticValue(label, value);
+                DrawStaticValue(label, value, mixed);
             }
+        }
+
+        /// <summary>複数選択中の読み取り専用値が同じかを、全所有者から判定する。</summary>
+        internal static bool ReadOnlyValuesDiffer(InspectorMember member, IReadOnlyList<object> owners, object firstValue)
+        {
+            if (owners == null || owners.Count <= 1) return false;
+
+            for (var i = 1; i < owners.Count; i++)
+            {
+                if (!MemberResolver.TryGetValue(owners[i], member.Name, out var value, out _)) return true;
+                if (!Equals(firstValue, value)) return true;
+            }
+
+            return false;
         }
 
         /// <summary>
         /// 保存対象ではない値を、型に合った欄で表示だけする。
         /// 見慣れた形で出したほうが桁や成分を読み違えないので、素の文字列にはしない。
         /// </summary>
-        private static void DrawStaticValue(GUIContent label, object value)
+        private static void DrawStaticValue(GUIContent label, object value, bool mixed = false)
         {
+            if (mixed)
+            {
+                EditorGUILayout.LabelField(label, new GUIContent("—"));
+                return;
+            }
+
             switch (value)
             {
                 case null:
@@ -495,6 +806,57 @@ namespace Inspector.Editor
                     EditorGUILayout.LabelField(label, new GUIContent(value.ToString()));
                     break;
             }
+        }
+
+        /// <summary>各選択対象から、属性を解決する所有者を同じ順で取り出す。</summary>
+        private static object[] ResolveOwners(DrawContext context, InspectorMember member)
+        {
+            var key = member.OwnerPath ?? string.Empty;
+            if (context.OwnersByPath.TryGetValue(key, out var cached)) return cached;
+
+            var targets = context.Targets;
+            var owners = new object[targets.Length];
+
+            for (var i = 0; i < targets.Length; i++)
+            {
+                if (InspectorOwnerResolver.TryGet(targets[i], member.OwnerPath, out owners[i], out var error)) continue;
+
+                Report(context.Errors, member.Name, error);
+            }
+
+            context.OwnersByPath[key] = owners;
+            return owners;
+        }
+
+        /// <summary>描画補助へ渡す、最初に解決できた所有者を返す。</summary>
+        private static object FirstOwner(IReadOnlyList<object> owners)
+        {
+            if (owners == null) return null;
+
+            for (var i = 0; i < owners.Count; i++)
+            {
+                if (owners[i] != null) return owners[i];
+            }
+
+            return null;
+        }
+
+        /// <summary>同じ設定ミスを 1 回だけ記録する。</summary>
+        private static void Report(List<string> errors, string ownerName, string message)
+        {
+            if (errors == null || string.IsNullOrEmpty(message)) return;
+
+            var text = string.IsNullOrEmpty(ownerName) ? message : ownerName + ": " + message;
+            if (!errors.Contains(text)) errors.Add(text);
+        }
+
+        /// <summary>入れ子ごとに重ならない Inspector 状態キーを作る。</summary>
+        private static string CombinePath(string parent, string child)
+        {
+            if (string.IsNullOrEmpty(parent)) return child ?? string.Empty;
+            if (string.IsNullOrEmpty(child)) return parent;
+
+            return parent + "/" + child;
         }
 
         private static GUIContent BuildLabel(InspectorMember member, SerializedProperty property)

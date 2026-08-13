@@ -10,7 +10,7 @@ namespace Inspector.Editor
     /// エディタ拡張で一番よくある無駄なので、まとめて 1 回だけ作る。
     /// </para>
     /// </summary>
-    public static class InspectorStyles
+    internal static class InspectorStyles
     {
         private static GUIStyle _title;
         private static GUIStyle _subtitle;
