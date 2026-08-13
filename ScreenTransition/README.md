@@ -11,7 +11,7 @@ Screen Transitionは、UI Toolkitの単色オーバーレイを透明から不�
 Package Managerの **Add package from git URL** に固定タグ付きURLを指定します。
 
 ```text
-https://github.com/mynameisGaku/UnityModules.git?path=/ScreenTransition#screen-transition-v1.0.0
+https://github.com/mynameisGaku/UnityModules.git?path=/ScreenTransition#screen-transition-v1.0.1
 ```
 
 利用側にasmdefがある場合は `ScreenTransition.Runtime` を参照します。フォルダーを直接管理する場合だけ、`ScreenTransition/`を`Assets/Modules/ScreenTransition/`へ配置してください。

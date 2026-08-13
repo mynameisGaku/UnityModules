@@ -9,7 +9,7 @@ Screen Transitionは、利用側が所有するUI Toolkitのpanelへ単色オー
 Package Managerの **Add package from git URL** に次を指定します。
 
 ```text
-https://github.com/mynameisGaku/UnityModules.git?path=/ScreenTransition#screen-transition-v1.0.0
+https://github.com/mynameisGaku/UnityModules.git?path=/ScreenTransition#screen-transition-v1.0.1
 ```
 
 利用側のasmdefから `ScreenTransition.Runtime` を参照します。外部パッケージへの依存はありません。
