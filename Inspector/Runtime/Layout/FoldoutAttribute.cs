@@ -16,6 +16,7 @@ namespace Inspector
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property | AttributeTargets.Method, AllowMultiple = false)]
     public sealed class FoldoutAttribute : GroupAttribute
     {
+        /// <summary>指定したパスのメンバーを折りたたみ可能なまとまりに入れる。</summary>
         /// <param name="path"><c>/</c> 区切りで入れ子にできるグループパス。</param>
         public FoldoutAttribute(string path) : base(path) { }
 

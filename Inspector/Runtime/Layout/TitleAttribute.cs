@@ -18,12 +18,16 @@ namespace Inspector
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property | AttributeTargets.Method, AllowMultiple = true)]
     public sealed class TitleAttribute : DecoratorAttribute
     {
+        /// <summary>対象メンバーの上に見出しと任意の副題を表示する。</summary>
+        /// <param name="title">表示する見出し。</param>
+        /// <param name="subtitle">見出しの下に添える説明。</param>
         public TitleAttribute(string title, string subtitle = null)
         {
             Title = title;
             Subtitle = subtitle;
         }
 
+        /// <summary>表示する見出し。</summary>
         public string Title { get; }
 
         /// <summary>見出しの下に小さく添える説明。</summary>

@@ -21,9 +21,11 @@ namespace Inspector
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property, AllowMultiple = false)]
     public sealed class RequiredAttribute : ValidatorAttribute
     {
+        /// <summary>対象メンバーが未設定のときに指定した文言を表示する。</summary>
         /// <param name="message">出す文言。省略するとフィールド名から作る。</param>
         public RequiredAttribute(string message = null) => Message = message;
 
+        /// <summary>対象メンバーが未設定のときに表示する文言。</summary>
         public string Message { get; }
     }
 }

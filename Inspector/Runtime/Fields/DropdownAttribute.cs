@@ -24,9 +24,11 @@ namespace Inspector
     [AttributeUsage(AttributeTargets.Field, AllowMultiple = false)]
     public sealed class DropdownAttribute : FieldDrawerAttribute
     {
+        /// <summary>指定したメンバーが返す値を選択肢として使う。</summary>
         /// <param name="valuesMember">候補を返すメンバーの名前。</param>
         public DropdownAttribute(string valuesMember) => ValuesMember = valuesMember;
 
+        /// <summary>候補を返すフィールド、プロパティ、または引数なしメソッドの名前。</summary>
         public string ValuesMember { get; }
     }
 }

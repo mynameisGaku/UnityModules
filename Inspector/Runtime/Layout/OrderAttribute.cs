@@ -17,8 +17,11 @@ namespace Inspector
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property | AttributeTargets.Method, AllowMultiple = false)]
     public sealed class OrderAttribute : InspectorAttribute
     {
+        /// <summary>対象メンバーの描画順を指定する。</summary>
+        /// <param name="order">描画順。小さい値ほど先に描く。</param>
         public OrderAttribute(int order) => Order = order;
 
+        /// <summary>対象メンバーの描画順。</summary>
         public int Order { get; }
     }
 }

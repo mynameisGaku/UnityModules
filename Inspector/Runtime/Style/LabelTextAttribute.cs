@@ -18,8 +18,11 @@ namespace Inspector
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property | AttributeTargets.Method, AllowMultiple = false)]
     public sealed class LabelTextAttribute : StyleAttribute
     {
+        /// <summary>対象メンバーのラベルを指定した文言に差し替える。</summary>
+        /// <param name="text">ラベルに表示する文言。</param>
         public LabelTextAttribute(string text) => Text = text;
 
+        /// <summary>ラベルに表示する文言。</summary>
         public string Text { get; }
 
         /// <summary>マウスを乗せたときに出す説明。</summary>
@@ -39,8 +42,11 @@ namespace Inspector
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property, AllowMultiple = false)]
     public sealed class LabelWidthAttribute : StyleAttribute
     {
+        /// <summary>対象メンバーを描く間だけラベル欄の幅を指定する。</summary>
+        /// <param name="width">ラベル欄の幅。</param>
         public LabelWidthAttribute(float width) => Width = width;
 
+        /// <summary>対象メンバーに使うラベル欄の幅。</summary>
         public float Width { get; }
     }
 }

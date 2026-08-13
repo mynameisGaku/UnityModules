@@ -24,9 +24,11 @@ namespace Inspector
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
     public sealed class ButtonAttribute : InspectorAttribute
     {
+        /// <summary>対象メソッドを指定した文言のボタンとして表示する。</summary>
         /// <param name="label">ボタンの文言。省略するとメソッド名から作る。</param>
         public ButtonAttribute(string label = null) => Label = label;
 
+        /// <summary>ボタンに表示する文言。</summary>
         public string Label { get; }
 
         /// <summary>いつ押せるようにするか。</summary>

@@ -21,17 +21,25 @@ namespace Inspector
     /// };
     /// </code>
     /// </summary>
+    /// <typeparam name="T">各選択肢が保持する値の型。</typeparam>
     public sealed class DropdownList<T> : IDropdownList
     {
         private readonly List<KeyValuePair<string, object>> _entries = new List<KeyValuePair<string, object>>();
 
         /// <summary>選択肢を 1 つ足す。コレクション初期化子から <c>{ "名前", 値 }</c> の形で呼べる。</summary>
+        /// <param name="label">Inspector に表示する選択肢の名前。</param>
+        /// <param name="value">選択時にフィールドへ設定する値。</param>
         public void Add(string label, T value) => _entries.Add(new KeyValuePair<string, object>(label, value));
 
+        /// <summary>登録されている選択肢の数。</summary>
         public int Count => _entries.Count;
 
+        /// <summary>表示名と値の組を登録順に列挙する。</summary>
+        /// <returns>登録済みの表示名と値を列挙する反復子。</returns>
         public IEnumerator<KeyValuePair<string, object>> GetEnumerator() => _entries.GetEnumerator();
 
+        /// <summary>表示名と値の組を登録順に列挙する。</summary>
+        /// <returns>登録済みの表示名と値を列挙する反復子。</returns>
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     }
 

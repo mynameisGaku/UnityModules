@@ -38,6 +38,8 @@ namespace Inspector
         private static readonly object[] EmptyValues = new object[0];
 
         /// <summary>単一メンバーを見る形。<paramref name="values"/> を省くと bool として扱う。</summary>
+        /// <param name="member">条件として参照するメンバーの名前。</param>
+        /// <param name="values">成立とみなす値。空ならメンバーを bool として判定する。</param>
         protected ConditionAttribute(string member, params object[] values)
         {
             Members = member == null ? EmptyMembers : new[] { member };
@@ -46,6 +48,8 @@ namespace Inspector
         }
 
         /// <summary>複数メンバーを論理演算でまとめる形。各メンバーは bool として扱う。</summary>
+        /// <param name="conditionOperator">各メンバーの判定結果をまとめる論理演算。</param>
+        /// <param name="members">条件として参照するメンバー名の並び。</param>
         protected ConditionAttribute(ConditionOperator conditionOperator, params string[] members)
         {
             Members = members ?? EmptyMembers;
@@ -109,6 +113,8 @@ namespace Inspector
     /// </summary>
     public abstract class GroupAttribute : InspectorAttribute
     {
+        /// <summary>指定したパスを所属先とするグループ属性を作る。</summary>
+        /// <param name="path"><c>/</c> 区切りで入れ子にできるグループパス。</param>
         protected GroupAttribute(string path) => Path = path;
 
         /// <summary><c>/</c> 区切りのグループパス。</summary>
@@ -147,7 +153,10 @@ namespace Inspector
     /// <summary>装飾をフィールドの前に描くか後に描くか。</summary>
     public enum DecoratorPosition
     {
+        /// <summary>対象メンバーより前に描く。</summary>
         Before,
+
+        /// <summary>対象メンバーより後に描く。</summary>
         After,
     }
 

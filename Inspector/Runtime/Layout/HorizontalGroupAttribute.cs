@@ -18,6 +18,7 @@ namespace Inspector
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property | AttributeTargets.Method, AllowMultiple = false)]
     public sealed class HorizontalGroupAttribute : GroupAttribute
     {
+        /// <summary>指定したパスのメンバーを横一列に並べる。</summary>
         /// <param name="path"><c>/</c> 区切りで入れ子にできるグループパス。</param>
         public HorizontalGroupAttribute(string path) : base(path) { }
 
