@@ -14,6 +14,7 @@ Unity 向けの再利用可能なモジュール置き場。各モジュール�
 | [Containers](Containers/) | コンテナ / データ構造 66 種。GC フリーのコレクション、Inspector に出せるシリアライズ対応型、空間分割、Unity のライフサイクルに耐えるコンテナ。 | なし |
 | [DebugMenu](DebugMenu/) | 全画面ランタイムデバッグメニュー。値変更、アクション、監視グラフ、HSV 色編集をキーボードとマウスから操作できる。 | Containers 1.0.0 |
 | [Inspector](Inspector/) | Inspector 拡張の属性 43 種。条件による表示・非表示、グループ化とタブ、入力値の検証、メソッドのボタン化。**Unity 6000.5 以降**。 | なし |
+| [Drawing](Drawing/) | 実行中の線・矢印・箱・球・経路・文字をコード1行で描くデバッグ可視化。Development Build専用呼び出しと持続時間に対応。**Unity 6000.5 以降**。 | なし |
 
 ---
 
@@ -33,10 +34,13 @@ Assets/
     │   ├── Runtime/     DebugMenu.Runtime
     │   ├── Editor/      DebugMenu.Editor
     │   └── Tests/       DebugMenu.Tests
-    └── Inspector/
-        ├── Runtime/     Inspector.Runtime   属性の定義だけ
-        ├── Editor/      Inspector.Editor    解釈と描画
-        └── Tests/       Inspector.Tests
+    ├── Inspector/
+    │   ├── Runtime/     Inspector.Runtime   属性の定義だけ
+    │   ├── Editor/      Inspector.Editor    解釈と描画
+    │   └── Tests/       Inspector.Tests
+    └── Drawing/
+        ├── Runtime/     Drawing.Runtime
+        └── Tests/       Drawing.Tests
 ```
 
 UPM パッケージとして扱う場合は、モジュールのフォルダを `Packages/` 以下に置くか、
