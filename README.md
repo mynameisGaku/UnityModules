@@ -19,6 +19,7 @@ Unity 向けの再利用可能なモジュール置き場。各モジュール�
 | [Screen Transition](ScreenTransition/) | UI Toolkitの全画面オーバーレイでCover・Revealを非スケール時間に実行し、色・時間・補間方法・完了結果を明示する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [Time Control](TimeControl/) | Scene所有のControllerが複数leaseの相対倍率を最小値で集約し、pause・slow motion・単独fast-forwardをTime.timeScaleへ安全に反映する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [Diagnostics Context](DiagnosticsContext/) | 明示追加したcontext・breadcrumbと実行中のUnity Warning・Error・Assert・Exceptionを有界に保持し、手動操作時だけJSON reportへ書き出す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
+| [Build Guard](BuildGuard/) | Player build対象Sceneのactive・inactive階層とPrefab instanceを検査し、Missing MonoBehaviourを階層path・件数付きでbuild前に拒否するEditor専用module。**Unity 6000.5 以降**。 | なし |
 
 ---
 
@@ -58,10 +59,14 @@ Assets/
     │   ├── Runtime/     TimeControl.Runtime
     │   ├── Tests/       TimeControl.Tests / TimeControl.PlayMode.Tests
     │   └── Samples~/    TimeControl.Samples / TimeControl.Samples.PlayMode.Tests
-    └── DiagnosticsContext/
+    ├── DiagnosticsContext/
         ├── Runtime/     DiagnosticsContext.Runtime
         ├── Tests/       DiagnosticsContext.Tests / DiagnosticsContext.PlayMode.Tests
         └── Samples~/    DiagnosticsContext.Samples / DiagnosticsContext.Samples.PlayMode.Tests
+    └── BuildGuard/
+        ├── Editor/      BuildGuard.Editor
+        ├── Tests/       BuildGuard.Tests
+        └── Samples~/    Build Guard Basics
 ```
 
 UPM パッケージとして扱う場合は、モジュールのフォルダを `Packages/` 以下に置くか、
