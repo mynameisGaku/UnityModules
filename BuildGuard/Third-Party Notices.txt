@@ -1,0 +1,6 @@
+Third-Party Notices
+===================
+
+このパッケージ本体には、第三者が制作したcode、font、音声、画像、映像その他のcomponentを同梱していません。
+
+第三者packageへの依存はありません。Unity Editor、UnityEngine、およびUnity build callback APIは実行環境から利用し、このパッケージ内へ再配布していません。
