@@ -1,0 +1,34 @@
+{
+  "name": "com.studiogaku.diagnostics-context",
+  "version": "1.0.0",
+  "displayName": "Diagnostics Context",
+  "description": "利用側が明示追加したcontext、breadcrumb、実行中のUnity Warning・Error・Assert・Exceptionを有界に保持し、手動操作時だけJSON reportへ書き出す診断情報モジュール。自動識別情報収集、crash後の生存保証、uploadは含みません。",
+  "unity": "6000.5",
+  "unityRelease": "7f1",
+  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/blob/diagnostics-context-v1.0.0/DiagnosticsContext/Documentation~/index.md",
+  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/diagnostics-context-v1.0.0/DiagnosticsContext/CHANGELOG.md",
+  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/diagnostics-context-v1.0.0/DiagnosticsContext/LICENSE.md",
+  "license": "Refer to LICENSE.md file",
+  "keywords": [
+    "diagnostics",
+    "context",
+    "breadcrumb",
+    "report",
+    "logging"
+  ],
+  "author": {
+    "name": "StudioGaku",
+    "email": "gaku.fujimoto.business@gmail.com",
+    "url": "https://github.com/mynameisGaku/UnityModules"
+  },
+  "dependencies": {
+    "com.unity.modules.uielements": "1.0.0"
+  },
+  "samples": [
+    {
+      "displayName": "Diagnostics Context Basics",
+      "description": "明示的なcontextとbreadcrumb、実行中のwarningを追加し、手動JSON reportを確認するUI Toolkitサンプル。",
+      "path": "Samples~/Basics"
+    }
+  ]
+}
