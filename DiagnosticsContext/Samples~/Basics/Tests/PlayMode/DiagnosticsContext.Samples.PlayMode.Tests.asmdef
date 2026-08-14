@@ -1,0 +1,22 @@
+{
+    "name": "DiagnosticsContext.Samples.PlayMode.Tests",
+    "rootNamespace": "DiagnosticsContext.Samples.Tests.PlayMode",
+    "references": [
+        "DiagnosticsContext.Runtime",
+        "DiagnosticsContext.Samples",
+        "UnityEngine.TestRunner"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
