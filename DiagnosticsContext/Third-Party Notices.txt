@@ -1,0 +1,9 @@
+Third-Party Notices
+===================
+
+このパッケージ本体には、第三者が制作したcode、font、音声、画像、映像その他のcomponentを同梱していません。
+
+第三者packageへの依存はありません。package manifestは同梱Basics sampleのため、Unity組込みの`com.unity.modules.uielements` 1.0.0を宣言します。このmoduleが利用するUnity組込みUI moduleはUnity実行環境から提供されます。
+
+Unity Editor、UnityEngine、およびUnityのUI Toolkit APIは実行環境から利用し、このパッケージ内へ再配布していません。
+
