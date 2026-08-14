@@ -1,0 +1,32 @@
+{
+  "name": "com.studiogaku.build-guard",
+  "version": "1.0.0",
+  "displayName": "Build Guard",
+  "description": "Player build対象Sceneのactive・inactive階層とPrefab instanceを検査し、Missing MonoBehaviourを検出した場合に階層pathと件数を示してbuildを失敗させるEditor専用module。自動修復、一般asset scan、project固有policyは含みません。",
+  "unity": "6000.5",
+  "unityRelease": "7f1",
+  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/blob/build-guard-v1.0.0/BuildGuard/Documentation~/index.md",
+  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/build-guard-v1.0.0/BuildGuard/CHANGELOG.md",
+  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/build-guard-v1.0.0/BuildGuard/LICENSE.md",
+  "license": "Refer to LICENSE.md file",
+  "keywords": [
+    "build",
+    "validation",
+    "scene",
+    "missing-script",
+    "editor"
+  ],
+  "author": {
+    "name": "StudioGaku",
+    "email": "gaku.fujimoto.business@gmail.com",
+    "url": "https://github.com/mynameisGaku/UnityModules"
+  },
+  "dependencies": {},
+  "samples": [
+    {
+      "displayName": "Build Guard Basics",
+      "description": "Missing Scriptのないbuild可能Sceneと、意図的な失敗を安全に試すtext template。",
+      "path": "Samples~/Basics"
+    }
+  ]
+}
