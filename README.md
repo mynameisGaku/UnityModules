@@ -18,6 +18,7 @@ Unity 向けの再利用可能なモジュール置き場。各モジュール�
 | [Scene Flow](SceneFlow/) | 完全なSceneパスでSingle・Additive読込、有効Scene切替、Unloadを直列化し、開始前条件と完了後状態を結果で返す。**Unity 6000.5 以降**。 | なし |
 | [Screen Transition](ScreenTransition/) | UI Toolkitの全画面オーバーレイでCover・Revealを非スケール時間に実行し、色・時間・補間方法・完了結果を明示する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [Time Control](TimeControl/) | Scene所有のControllerが複数leaseの相対倍率を最小値で集約し、pause・slow motion・単独fast-forwardをTime.timeScaleへ安全に反映する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
+| [Diagnostics Context](DiagnosticsContext/) | 明示追加したcontext・breadcrumbと実行中のUnity Warning・Error・Assert・Exceptionを有界に保持し、手動操作時だけJSON reportへ書き出す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 
 ---
 
@@ -53,10 +54,14 @@ Assets/
     │   ├── Runtime/     ScreenTransition.Runtime
     │   ├── Tests/       ScreenTransition.Tests / ScreenTransition.PlayMode.Tests
     │   └── Samples~/    ScreenTransition.Samples / ScreenTransition.Samples.PlayMode.Tests
-    └── TimeControl/
-        ├── Runtime/     TimeControl.Runtime
-        ├── Tests/       TimeControl.Tests / TimeControl.PlayMode.Tests
-        └── Samples~/    TimeControl.Samples / TimeControl.Samples.PlayMode.Tests
+    ├── TimeControl/
+    │   ├── Runtime/     TimeControl.Runtime
+    │   ├── Tests/       TimeControl.Tests / TimeControl.PlayMode.Tests
+    │   └── Samples~/    TimeControl.Samples / TimeControl.Samples.PlayMode.Tests
+    └── DiagnosticsContext/
+        ├── Runtime/     DiagnosticsContext.Runtime
+        ├── Tests/       DiagnosticsContext.Tests / DiagnosticsContext.PlayMode.Tests
+        └── Samples~/    DiagnosticsContext.Samples / DiagnosticsContext.Samples.PlayMode.Tests
 ```
 
 UPM パッケージとして扱う場合は、モジュールのフォルダを `Packages/` 以下に置くか、
