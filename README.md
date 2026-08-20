@@ -37,6 +37,7 @@ Unity 向けの再利用可能なモジュール置き場。各モジュール�
 | [Input Repeat](InputRepeat/) | 明示simulation tickと押下状態から初回trigger・保持repeat・tick jump時のcatch-up・解放edgeを決定論的に算出する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [Input Chord Matcher](InputChordMatcher/) | required commandの押下edgeが明示simulation tickの許容span内に揃ったかを決定論的に判定する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [Input Press Classifier](InputPressClassifier/) | 明示simulation tickと押下状態から短押しtap・長押し開始・長押し完了を決定論的に分類する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
+| [Input Axis Conflict Resolver](InputAxisConflictResolver/) | negative・positiveの相反入力を明示simulation tickと4つのpolicyから決定論的に解決する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 
 ---
 
@@ -148,10 +149,14 @@ Assets/
         ├── Runtime/     InputChordMatcher.Runtime
         ├── Tests/       InputChordMatcher.Tests
         └── Samples~/    InputChording.Samples / InputChording.Samples.PlayMode.Tests
-    └── InputPressClassifier/
+    ├── InputPressClassifier/
         ├── Runtime/     InputPressClassifier.Runtime
         ├── Tests/       InputPressClassifier.Tests
         └── Samples~/    InputPressing.Samples / InputPressing.Samples.PlayMode.Tests
+    └── InputAxisConflictResolver/
+        ├── Runtime/     InputAxisConflictResolver.Runtime
+        ├── Tests/       InputAxisConflictResolver.Tests
+        └── Samples~/    InputAxisConflict.Samples / InputAxisConflict.Samples.PlayMode.Tests
 ```
 
 UPM パッケージとして扱う場合は、モジュールのフォルダを `Packages/` 以下に置くか、
