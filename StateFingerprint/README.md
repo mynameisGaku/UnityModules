@@ -96,4 +96,3 @@ Package Managerから`State Fingerprint Basics`をimportしてください。Bui
 ## License
 
 配布形態に応じて`LICENSE.md`を確認してください。第三者コードは含みません。
-

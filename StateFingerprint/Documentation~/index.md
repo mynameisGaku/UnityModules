@@ -46,4 +46,3 @@ null string/bytes、不正Unicode、容量超過は、そのrecordを1 byteも�
 ## 非目標
 
 object serializer、schema migration、file I/O、network protocol、cryptographic signature、collection sort、global serviceはv1へ含めません。
-

@@ -12,4 +12,3 @@
 - Engine非依存Runtimeとgolden vector EditMode tests
 - Build、Damage、Move、Replay、Resetを確認できるresponsive UI Toolkitサンプル
 - 実PanelSettings上の960x600 / 640x360 geometry検証
-
