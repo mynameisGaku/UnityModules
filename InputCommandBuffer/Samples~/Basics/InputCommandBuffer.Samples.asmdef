@@ -1,0 +1,16 @@
+{
+  "name": "InputBuffering.Samples",
+  "rootNamespace": "InputBuffering.Samples",
+  "references": [
+    "InputCommandBuffer.Runtime"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}
