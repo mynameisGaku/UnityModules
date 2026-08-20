@@ -1,0 +1,37 @@
+{
+  "name": "com.studiogaku.input-sequence-matcher",
+  "version": "1.0.0",
+  "displayName": "Input Sequence Matcher",
+  "description": "Matches positive command sequences with an explicit simulation tick and deterministic gap, timeout, and restart rules.",
+  "unity": "6000.5",
+  "unityRelease": "7f1",
+  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/tree/input-sequence-matcher-v1.0.0/InputSequenceMatcher/Documentation~",
+  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/input-sequence-matcher-v1.0.0/InputSequenceMatcher/CHANGELOG.md",
+  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/input-sequence-matcher-v1.0.0/InputSequenceMatcher/LICENSE.md",
+  "dependencies": {
+    "com.unity.modules.uielements": "1.0.0"
+  },
+  "samples": [
+    {
+      "displayName": "Input Sequence Matcher Basics",
+      "description": "Light-Light-Heavy matching, gap timeout and restart, and responsive UI Toolkit geometry.",
+      "path": "Samples~/Basics"
+    }
+  ],
+  "keywords": [
+    "input-sequence-matcher",
+    "input",
+    "sequence",
+    "matcher",
+    "combo",
+    "tick",
+    "deterministic",
+    "simulation",
+    "replay",
+    "command",
+    "timeout"
+  ],
+  "author": {
+    "name": "Studio Gaku"
+  }
+}
