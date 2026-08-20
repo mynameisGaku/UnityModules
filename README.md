@@ -29,6 +29,7 @@ Unity 向けの再利用可能なモジュール置き場。各モジュール�
 | [Replay Tape](ReplayTape/) | 非減少tick・command id・opaque payloadをversion固定canonical tapeへ記録し、完全検証後に同じ順序で読み戻す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [Canonical Payload](CanonicalPayload/) | 明示したschema順のprimitive値をlittle-endian・IEEE 754・厳格UTF-8の有界canonical bytesへ変換し、同順序で読み戻す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [Fixed Point](FixedPoint/) | signed Q16.16の小数値を整数raw値で保持し、0方向丸めと明示overflowを持つ四則演算をplatform間で再現する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
+| [Generational Handle](GenerationalHandle/) | 最小の空きslotを決定論的に割り当て、generationで解放済みの古いhandleを新しいentryから区別する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 
 ---
 
@@ -108,10 +109,14 @@ Assets/
         ├── Runtime/     CanonicalPayload.Runtime
         ├── Tests/       CanonicalPayload.Tests
         └── Samples~/    CanonicalPayload.Samples / CanonicalPayload.Samples.PlayMode.Tests
-    └── FixedPoint/
+    ├── FixedPoint/
         ├── Runtime/     FixedPoint.Runtime
         ├── Tests/       FixedPoint.Tests
         └── Samples~/    FixedPoint.Samples / FixedPoint.Samples.PlayMode.Tests
+    └── GenerationalHandle/
+        ├── Runtime/     GenerationalHandle.Runtime
+        ├── Tests/       GenerationalHandle.Tests
+        └── Samples~/    GenerationalHandle.Samples / GenerationalHandle.Samples.PlayMode.Tests
 ```
 
 UPM パッケージとして扱う場合は、モジュールのフォルダを `Packages/` 以下に置くか、
