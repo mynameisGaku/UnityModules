@@ -1,0 +1,37 @@
+{
+  "name": "com.studiogaku.input-threshold-classifier",
+  "version": "1.0.0",
+  "displayName": "Input Threshold Classifier",
+  "description": "Classifies finite scalar samples into deterministic pressed state and edges with separate inclusive release and press thresholds.",
+  "unity": "6000.5",
+  "unityRelease": "7f1",
+  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/tree/input-threshold-classifier-v1.0.0/InputThresholdClassifier/Documentation~",
+  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/input-threshold-classifier-v1.0.0/InputThresholdClassifier/CHANGELOG.md",
+  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/input-threshold-classifier-v1.0.0/InputThresholdClassifier/LICENSE.md",
+  "dependencies": {
+    "com.unity.modules.uielements": "1.0.0"
+  },
+  "samples": [
+    {
+      "displayName": "Input Threshold Classifier Basics",
+      "description": "Inclusive release and press boundaries, hysteresis retention, non-finite rejection, and responsive UI Toolkit geometry.",
+      "path": "Samples~/Basics"
+    }
+  ],
+  "keywords": [
+    "input-threshold-classifier",
+    "input",
+    "threshold",
+    "hysteresis",
+    "analog",
+    "pressed",
+    "edge",
+    "deterministic",
+    "simulation",
+    "replay",
+    "command"
+  ],
+  "author": {
+    "name": "Studio Gaku"
+  }
+}
