@@ -1,0 +1,16 @@
+{
+  "name": "AudioControl.Samples",
+  "rootNamespace": "AudioControl.Samples",
+  "references": [
+    "AudioControl.Runtime"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}
