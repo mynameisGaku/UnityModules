@@ -1,0 +1,16 @@
+{
+  "name": "SimulationClock.Samples",
+  "rootNamespace": "SimulationClock.Samples",
+  "references": [
+    "SimulationClock.Runtime"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}
