@@ -20,6 +20,7 @@ Unity 向けの再利用可能なモジュール置き場。各モジュール�
 | [Time Control](TimeControl/) | Scene所有のControllerが複数leaseの相対倍率を最小値で集約し、pause・slow motion・単独fast-forwardをTime.timeScaleへ安全に反映する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [Diagnostics Context](DiagnosticsContext/) | 明示追加したcontext・breadcrumbと実行中のUnity Warning・Error・Assert・Exceptionを有界に保持し、手動操作時だけJSON reportへ書き出す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [Build Guard](BuildGuard/) | Player build対象Sceneのactive・inactive階層とPrefab instanceを検査し、Missing MonoBehaviourを階層path・件数付きでbuild前に拒否するEditor専用module。**Unity 6000.5 以降**。 | なし |
+| [Input Gate](InputGate/) | PlayerInputの実行中Action Mapを入れ子leaseで停止し、最後の解放時にActionごとの有効状態を復元する。**Unity 6000.5 / Input System 1.20.0 以降**。 | com.unity.inputsystem 1.20.0 / com.unity.modules.uielements 1.0.0 |
 
 ---
 
@@ -60,13 +61,17 @@ Assets/
     │   ├── Tests/       TimeControl.Tests / TimeControl.PlayMode.Tests
     │   └── Samples~/    TimeControl.Samples / TimeControl.Samples.PlayMode.Tests
     ├── DiagnosticsContext/
-        ├── Runtime/     DiagnosticsContext.Runtime
-        ├── Tests/       DiagnosticsContext.Tests / DiagnosticsContext.PlayMode.Tests
-        └── Samples~/    DiagnosticsContext.Samples / DiagnosticsContext.Samples.PlayMode.Tests
-    └── BuildGuard/
-        ├── Editor/      BuildGuard.Editor
-        ├── Tests/       BuildGuard.Tests
-        └── Samples~/    Build Guard Basics
+    │   ├── Runtime/     DiagnosticsContext.Runtime
+    │   ├── Tests/       DiagnosticsContext.Tests / DiagnosticsContext.PlayMode.Tests
+    │   └── Samples~/    DiagnosticsContext.Samples / DiagnosticsContext.Samples.PlayMode.Tests
+    ├── BuildGuard/
+    │   ├── Editor/      BuildGuard.Editor
+    │   ├── Tests/       BuildGuard.Tests
+    │   └── Samples~/    Build Guard Basics
+    └── InputGate/
+        ├── Runtime/     InputGate.Runtime
+        ├── Tests/       InputGate.Tests / InputGate.PlayMode.Tests
+        └── Samples~/    InputGate.Samples / InputGate.Samples.PlayMode.Tests
 ```
 
 UPM パッケージとして扱う場合は、モジュールのフォルダを `Packages/` 以下に置くか、
