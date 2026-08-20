@@ -1,0 +1,5 @@
+Deterministic Random uses algorithm ideas and constants from the xoshiro256**
+and SplitMix64 reference implementations by David Blackman and Sebastiano
+Vigna, published at https://prng.di.unimi.it/ and dedicated to the public
+domain under CC0. The C# implementation in this package is independently
+written and distributed under the package MIT License.
