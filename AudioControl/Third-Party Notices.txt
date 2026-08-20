@@ -1,0 +1,10 @@
+Third-Party Notices
+===================
+
+このパッケージ本体には、第三者が制作したコード、フォント、音声、画像、映像その他のコンポーネントを同梱していません。
+
+package manifestはUnity組込みAudio module `com.unity.modules.audio` 1.0.0と、同梱Basics sampleのためUnity組込みUI Toolkit module `com.unity.modules.uielements` 1.0.0を依存関係として宣言します。
+
+Basics sampleのtoneは実行時に`AudioClip.Create`で生成し、音声fileを配布物へ含めません。
+
+Unity Editor、UnityEngine、Unity Audio、およびUnity UI Toolkit APIは実行環境から利用し、このパッケージ内へ再配布していません。
