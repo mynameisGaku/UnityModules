@@ -34,6 +34,7 @@ Unity 向けの再利用可能なモジュール置き場。各モジュール�
 | [Input Stabilizer](InputStabilizer/) | 同じsigned integer commandが指定sample数だけ連続した時に確定し、一時的なnoise候補をsimulationへ流さない。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [Input Command Buffer](InputCommandBuffer/) | 早押しcommandを明示simulation tickの短い有効期間だけ保持し、同じidの最古entryからFIFOで消費する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [Input Sequence Matcher](InputSequenceMatcher/) | 正のcommand id列を明示simulation tickで照合し、順序一致・間隔timeout・先頭restartを決定論的に判定する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
+| [Input Repeat](InputRepeat/) | 明示simulation tickと押下状態から初回trigger・保持repeat・tick jump時のcatch-up・解放edgeを決定論的に算出する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 
 ---
 
@@ -133,10 +134,14 @@ Assets/
         ├── Runtime/     InputCommandBuffer.Runtime
         ├── Tests/       InputCommandBuffer.Tests
         └── Samples~/    InputBuffering.Samples / InputBuffering.Samples.PlayMode.Tests
-    └── InputSequenceMatcher/
+    ├── InputSequenceMatcher/
         ├── Runtime/     InputSequenceMatcher.Runtime
         ├── Tests/       InputSequenceMatcher.Tests
         └── Samples~/    InputSequencing.Samples / InputSequencing.Samples.PlayMode.Tests
+    └── InputRepeat/
+        ├── Runtime/     InputRepeat.Runtime
+        ├── Tests/       InputRepeat.Tests
+        └── Samples~/    InputRepeating.Samples / InputRepeating.Samples.PlayMode.Tests
 ```
 
 UPM パッケージとして扱う場合は、モジュールのフォルダを `Packages/` 以下に置くか、
