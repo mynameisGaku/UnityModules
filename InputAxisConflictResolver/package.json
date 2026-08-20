@@ -1,0 +1,21 @@
+{
+  "name": "com.studiogaku.input-axis-conflict-resolver",
+  "version": "1.0.0",
+  "displayName": "Input Axis Conflict Resolver",
+  "description": "Resolves opposing digital axis inputs from explicit simulation ticks and a declared conflict policy.",
+  "unity": "6000.5",
+  "unityRelease": "7f1",
+  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/tree/input-axis-conflict-resolver-v1.0.0/InputAxisConflictResolver/Documentation~",
+  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/input-axis-conflict-resolver-v1.0.0/InputAxisConflictResolver/CHANGELOG.md",
+  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/input-axis-conflict-resolver-v1.0.0/InputAxisConflictResolver/LICENSE.md",
+  "dependencies": { "com.unity.modules.uielements": "1.0.0" },
+  "samples": [
+    {
+      "displayName": "Input Axis Conflict Resolver Basics",
+      "description": "Last-pressed-wins, release fallback, same-tick tie, and responsive UI Toolkit geometry.",
+      "path": "Samples~/Basics"
+    }
+  ],
+  "keywords": ["input", "axis", "conflict", "socd", "opposing", "tick", "deterministic", "simulation", "replay"],
+  "author": { "name": "Studio Gaku" }
+}
