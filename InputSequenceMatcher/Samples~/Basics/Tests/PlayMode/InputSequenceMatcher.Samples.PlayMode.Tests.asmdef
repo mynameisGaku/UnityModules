@@ -1,0 +1,22 @@
+{
+  "name": "InputSequencing.Samples.PlayMode.Tests",
+  "rootNamespace": "InputSequencing.Samples.PlayMode.Tests",
+  "references": [
+    "InputSequenceMatcher.Runtime",
+    "InputSequencing.Samples",
+    "UnityEngine.TestRunner"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": true,
+  "precompiledReferences": [
+    "nunit.framework.dll"
+  ],
+  "autoReferenced": false,
+  "defineConstraints": [
+    "UNITY_INCLUDE_TESTS"
+  ],
+  "versionDefines": [],
+  "noEngineReferences": false
+}
