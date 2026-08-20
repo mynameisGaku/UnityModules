@@ -1,0 +1,33 @@
+{
+  "name": "com.studiogaku.state-fingerprint",
+  "version": "1.0.0",
+  "displayName": "State Fingerprint",
+  "description": "Builds bounded, versioned SHA-256 fingerprints from explicit ordered typed fields without reflection or Unity runtime state.",
+  "unity": "6000.5",
+  "unityRelease": "7f1",
+  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/blob/state-fingerprint-v1.0.0/StateFingerprint/Documentation~/index.md",
+  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/state-fingerprint-v1.0.0/StateFingerprint/CHANGELOG.md",
+  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/state-fingerprint-v1.0.0/StateFingerprint/LICENSE.md",
+  "dependencies": {
+    "com.unity.modules.uielements": "1.0.0"
+  },
+  "samples": [
+    {
+      "displayName": "State Fingerprint Basics",
+      "description": "Ready-to-open scene for exact rebuild, state mutation, snapshot replay, reset, and responsive UI.",
+      "path": "Samples~/Basics"
+    }
+  ],
+  "keywords": [
+    "deterministic",
+    "fingerprint",
+    "hash",
+    "replay",
+    "state",
+    "verification"
+  ],
+  "author": {
+    "name": "Studio Gaku"
+  }
+}
+
