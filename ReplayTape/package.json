@@ -1,0 +1,32 @@
+{
+  "name": "com.studiogaku.replay-tape",
+  "version": "1.0.0",
+  "displayName": "Replay Tape",
+  "description": "Builds and validates bounded, versioned command tapes from explicit nondecreasing ticks, command IDs, and opaque payloads without Unity runtime state.",
+  "unity": "6000.5",
+  "unityRelease": "7f1",
+  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/blob/replay-tape-v1.0.0/ReplayTape/Documentation~/index.md",
+  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/replay-tape-v1.0.0/ReplayTape/CHANGELOG.md",
+  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/replay-tape-v1.0.0/ReplayTape/LICENSE.md",
+  "dependencies": {
+    "com.unity.modules.uielements": "1.0.0"
+  },
+  "samples": [
+    {
+      "displayName": "Replay Tape Basics",
+      "description": "Ready-to-open scene for recording, building, replaying, resetting, and responsive UI verification.",
+      "path": "Samples~/Basics"
+    }
+  ],
+  "keywords": [
+    "command",
+    "deterministic",
+    "input",
+    "recording",
+    "replay",
+    "tape"
+  ],
+  "author": {
+    "name": "Studio Gaku"
+  }
+}
