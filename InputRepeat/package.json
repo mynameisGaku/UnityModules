@@ -1,0 +1,37 @@
+{
+  "name": "com.studiogaku.input-repeat",
+  "version": "1.0.0",
+  "displayName": "Input Repeat",
+  "description": "Calculates immediate press and held-repeat trigger counts from explicit simulation ticks without reading engine time.",
+  "unity": "6000.5",
+  "unityRelease": "7f1",
+  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/tree/input-repeat-v1.0.0/InputRepeat/Documentation~",
+  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/input-repeat-v1.0.0/InputRepeat/CHANGELOG.md",
+  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/input-repeat-v1.0.0/InputRepeat/LICENSE.md",
+  "dependencies": {
+    "com.unity.modules.uielements": "1.0.0"
+  },
+  "samples": [
+    {
+      "displayName": "Input Repeat Basics",
+      "description": "Immediate press, delayed repeat, tick-jump catch-up, release, and responsive UI Toolkit geometry.",
+      "path": "Samples~/Basics"
+    }
+  ],
+  "keywords": [
+    "input-repeat",
+    "input",
+    "repeat",
+    "hold",
+    "press",
+    "tick",
+    "deterministic",
+    "simulation",
+    "replay",
+    "command",
+    "catch-up"
+  ],
+  "author": {
+    "name": "Studio Gaku"
+  }
+}
