@@ -23,6 +23,7 @@ Unity 向けの再利用可能なモジュール置き場。各モジュール�
 | [Input Gate](InputGate/) | PlayerInputの実行中Action Mapを入れ子leaseで停止し、最後の解放時にActionごとの有効状態を復元する。**Unity 6000.5 / Input System 1.20.0 以降**。 | com.unity.inputsystem 1.20.0 / com.unity.modules.uielements 1.0.0 |
 | [Audio Control](AudioControl/) | owner付きAudioSource poolで再生、voice上限、priority steal、handle停止、非スケールfadeを管理する。**Unity 6000.5 以降**。 | com.unity.modules.audio 1.0.0 / com.unity.modules.uielements 1.0.0 |
 | [Startup Flow](StartupFlow/) | 明示した非同期stepをOrderとIdで決定論的に直列実行し、進捗・失敗位置・完了件数・協調cancelを結果として返す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
+| [Simulation Clock](SimulationClock/) | 明示した整数経過時間を再現可能な固定step範囲・端数・補間率・drop量へ変換し、状態を保存・復元する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 
 ---
 
@@ -78,10 +79,14 @@ Assets/
         ├── Runtime/     AudioControl.Runtime
         ├── Tests/       AudioControl.Tests / AudioControl.PlayMode.Tests
         └── Samples~/    AudioControl.Samples / AudioControl.Samples.PlayMode.Tests
-    └── StartupFlow/
+    ├── StartupFlow/
         ├── Runtime/     StartupFlow.Runtime
         ├── Tests/       StartupFlow.Tests / StartupFlow.PlayMode.Tests
         └── Samples~/    StartupFlow.Samples / StartupFlow.Samples.PlayMode.Tests
+    └── SimulationClock/
+        ├── Runtime/     SimulationClock.Runtime
+        ├── Tests/       SimulationClock.Tests
+        └── Samples~/    SimulationClock.Samples / SimulationClock.Samples.PlayMode.Tests
 ```
 
 UPM パッケージとして扱う場合は、モジュールのフォルダを `Packages/` 以下に置くか、
