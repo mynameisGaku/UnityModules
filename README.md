@@ -31,6 +31,7 @@ Unity 向けの再利用可能なモジュール置き場。各モジュール�
 | [Fixed Point](FixedPoint/) | signed Q16.16の小数値を整数raw値で保持し、0方向丸めと明示overflowを持つ四則演算をplatform間で再現する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [Generational Handle](GenerationalHandle/) | 最小の空きslotを決定論的に割り当て、generationで解放済みの古いhandleを新しいentryから区別する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [Input Quantizer](InputQuantizer/) | 有限1軸入力をdead zone付きの小さなsigned integer commandへ対称かつ決定論的に変換する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
+| [Input Stabilizer](InputStabilizer/) | 同じsigned integer commandが指定sample数だけ連続した時に確定し、一時的なnoise候補をsimulationへ流さない。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 
 ---
 
@@ -118,10 +119,14 @@ Assets/
         ├── Runtime/     GenerationalHandle.Runtime
         ├── Tests/       GenerationalHandle.Tests
         └── Samples~/    GenerationalHandle.Samples / GenerationalHandle.Samples.PlayMode.Tests
-    └── InputQuantizer/
+    ├── InputQuantizer/
         ├── Runtime/     InputQuantizer.Runtime
         ├── Tests/       InputQuantizer.Tests
         └── Samples~/    InputQuantization.Samples / InputQuantization.Samples.PlayMode.Tests
+    └── InputStabilizer/
+        ├── Runtime/     InputStabilizer.Runtime
+        ├── Tests/       InputStabilizer.Tests
+        └── Samples~/    InputStabilization.Samples / InputStabilization.Samples.PlayMode.Tests
 ```
 
 UPM パッケージとして扱う場合は、モジュールのフォルダを `Packages/` 以下に置くか、
