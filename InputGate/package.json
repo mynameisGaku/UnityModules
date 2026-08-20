@@ -1,0 +1,35 @@
+{
+  "name": "com.studiogaku.input-gate",
+  "version": "1.0.0",
+  "displayName": "Input Gate",
+  "description": "PlayerInputが実行時に所有する指定Action Mapを入れ子leaseで停止し、最後の解放時にActionごとの有効状態を復元する入力制御モジュール。Legacy Input、EventSystem遮断、入力buffer消去、自動Scene連携、global singletonは含みません。",
+  "unity": "6000.5",
+  "unityRelease": "7f1",
+  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/blob/input-gate-v1.0.0/InputGate/Documentation~/index.md",
+  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/input-gate-v1.0.0/InputGate/CHANGELOG.md",
+  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/input-gate-v1.0.0/InputGate/LICENSE.md",
+  "license": "Refer to LICENSE.md file",
+  "keywords": [
+    "input",
+    "input-system",
+    "action-map",
+    "gate",
+    "lease"
+  ],
+  "author": {
+    "name": "StudioGaku",
+    "email": "gaku.fujimoto.business@gmail.com",
+    "url": "https://github.com/mynameisGaku/UnityModules"
+  },
+  "dependencies": {
+    "com.unity.inputsystem": "1.20.0",
+    "com.unity.modules.uielements": "1.0.0"
+  },
+  "samples": [
+    {
+      "displayName": "Input Gate Basics",
+      "description": "Gameplay mapだけを入れ子leaseで停止し、UI mapと操作画面が継続することを確認するサンプル。",
+      "path": "Samples~/Basics"
+    }
+  ]
+}
