@@ -1,0 +1,38 @@
+{
+  "name": "com.studiogaku.input-direction-quantizer",
+  "version": "1.0.0",
+  "displayName": "Input Direction Quantizer",
+  "description": "Converts finite 2D analog values into deterministic four-way or eight-way directions with a radial dead zone.",
+  "unity": "6000.5",
+  "unityRelease": "7f1",
+  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/tree/input-direction-quantizer-v1.0.0/InputDirectionQuantizer/Documentation~",
+  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/input-direction-quantizer-v1.0.0/InputDirectionQuantizer/CHANGELOG.md",
+  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/input-direction-quantizer-v1.0.0/InputDirectionQuantizer/LICENSE.md",
+  "dependencies": {
+    "com.unity.modules.uielements": "1.0.0"
+  },
+  "samples": [
+    {
+      "displayName": "Input Direction Quantizer Basics",
+      "description": "Radial dead-zone, four-way tie, eight-way sectors, non-finite rejection, and responsive UI Toolkit geometry.",
+      "path": "Samples~/Basics"
+    }
+  ],
+  "keywords": [
+    "input-direction-quantizer",
+    "input",
+    "direction",
+    "vector",
+    "four-way",
+    "eight-way",
+    "quantization",
+    "dead-zone",
+    "deterministic",
+    "simulation",
+    "replay",
+    "command"
+  ],
+  "author": {
+    "name": "Studio Gaku"
+  }
+}
