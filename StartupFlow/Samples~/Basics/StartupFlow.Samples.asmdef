@@ -1,0 +1,16 @@
+{
+  "name": "StartupFlow.Samples",
+  "rootNamespace": "StartupFlow.Samples",
+  "references": [
+    "StartupFlow.Runtime"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}
