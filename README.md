@@ -32,6 +32,7 @@ Unity 向けの再利用可能なモジュール置き場。各モジュール�
 | [Generational Handle](GenerationalHandle/) | 最小の空きslotを決定論的に割り当て、generationで解放済みの古いhandleを新しいentryから区別する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [Input Quantizer](InputQuantizer/) | 有限1軸入力をdead zone付きの小さなsigned integer commandへ対称かつ決定論的に変換する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [Input Stabilizer](InputStabilizer/) | 同じsigned integer commandが指定sample数だけ連続した時に確定し、一時的なnoise候補をsimulationへ流さない。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
+| [Input Command Buffer](InputCommandBuffer/) | 早押しcommandを明示simulation tickの短い有効期間だけ保持し、同じidの最古entryからFIFOで消費する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 
 ---
 
@@ -123,10 +124,14 @@ Assets/
         ├── Runtime/     InputQuantizer.Runtime
         ├── Tests/       InputQuantizer.Tests
         └── Samples~/    InputQuantization.Samples / InputQuantization.Samples.PlayMode.Tests
-    └── InputStabilizer/
+    ├── InputStabilizer/
         ├── Runtime/     InputStabilizer.Runtime
         ├── Tests/       InputStabilizer.Tests
         └── Samples~/    InputStabilization.Samples / InputStabilization.Samples.PlayMode.Tests
+    └── InputCommandBuffer/
+        ├── Runtime/     InputCommandBuffer.Runtime
+        ├── Tests/       InputCommandBuffer.Tests
+        └── Samples~/    InputBuffering.Samples / InputBuffering.Samples.PlayMode.Tests
 ```
 
 UPM パッケージとして扱う場合は、モジュールのフォルダを `Packages/` 以下に置くか、
