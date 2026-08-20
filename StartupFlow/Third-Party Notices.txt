@@ -1,0 +1,11 @@
+Startup Flow
+============
+
+This package contains no third-party source code, binary library, font, image,
+audio, or other redistributed asset.
+
+The package uses Unity APIs supplied by the host Unity installation, including
+UnityEngine.Awaitable, Application.exitCancellationToken, and UI Toolkit for
+the optional sample. Those Unity modules are not redistributed by this
+package and remain governed by the Unity Terms of Service and applicable Unity
+license terms.

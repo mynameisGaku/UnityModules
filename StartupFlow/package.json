@@ -1,0 +1,34 @@
+{
+  "name": "com.studiogaku.startup-flow",
+  "version": "1.0.0",
+  "displayName": "Startup Flow",
+  "description": "明示した非同期startup stepをOrderとIdで決定論的に直列実行し、step進捗、全体進捗、失敗位置、完了件数、協調cancelを結果として返す初期化フロー。依存解決、並列実行、retry、自動singletonは含みません。",
+  "unity": "6000.5",
+  "unityRelease": "7f1",
+  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/blob/startup-flow-v1.0.0/StartupFlow/Documentation~/index.md",
+  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/startup-flow-v1.0.0/StartupFlow/CHANGELOG.md",
+  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/startup-flow-v1.0.0/StartupFlow/LICENSE.md",
+  "license": "Refer to LICENSE.md file",
+  "keywords": [
+    "startup",
+    "initialization",
+    "awaitable",
+    "progress",
+    "bootstrap"
+  ],
+  "author": {
+    "name": "StudioGaku",
+    "email": "gaku.fujimoto.business@gmail.com",
+    "url": "https://github.com/mynameisGaku/UnityModules"
+  },
+  "dependencies": {
+    "com.unity.modules.uielements": "1.0.0"
+  },
+  "samples": [
+    {
+      "displayName": "Startup Flow Basics",
+      "description": "成功・途中失敗・協調cancelと進捗を実Buttonで確認するready-to-openサンプル。",
+      "path": "Samples~/Basics"
+    }
+  ]
+}
