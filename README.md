@@ -25,6 +25,7 @@ Unity 向けの再利用可能なモジュール置き場。各モジュール�
 | [Startup Flow](StartupFlow/) | 明示した非同期stepをOrderとIdで決定論的に直列実行し、進捗・失敗位置・完了件数・協調cancelを結果として返す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [Simulation Clock](SimulationClock/) | 明示した整数経過時間を再現可能な固定step範囲・端数・補間率・drop量へ変換し、状態を保存・復元する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [Deterministic Random](DeterministicRandom/) | version付き256-bit状態を保存・復元し、同じseed・状態・操作順から同じ64-bit列・範囲整数・浮動小数を再現する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
+| [State Fingerprint](StateFingerprint/) | 明示した型付きfield列をversion固定canonical bytesへ変換し、Replay前後のstate一致をportable SHA-256 fingerprintで検証する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 
 ---
 
@@ -88,10 +89,14 @@ Assets/
         ├── Runtime/     SimulationClock.Runtime
         ├── Tests/       SimulationClock.Tests
         └── Samples~/    SimulationClock.Samples / SimulationClock.Samples.PlayMode.Tests
-    └── DeterministicRandom/
+    ├── DeterministicRandom/
         ├── Runtime/     DeterministicRandom.Runtime
         ├── Tests/       DeterministicRandom.Tests
         └── Samples~/    DeterministicRandom.Samples / DeterministicRandom.Samples.PlayMode.Tests
+    └── StateFingerprint/
+        ├── Runtime/     StateFingerprint.Runtime
+        ├── Tests/       StateFingerprint.Tests
+        └── Samples~/    StateFingerprint.Samples / StateFingerprint.Samples.PlayMode.Tests
 ```
 
 UPM パッケージとして扱う場合は、モジュールのフォルダを `Packages/` 以下に置くか、
