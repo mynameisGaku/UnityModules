@@ -1,0 +1,23 @@
+{
+  "name": "InputGate.Samples.PlayMode.Tests",
+  "rootNamespace": "InputGate.Samples.Tests.PlayMode",
+  "references": [
+    "InputGate.Runtime",
+    "InputGate.Samples",
+    "Unity.InputSystem",
+    "UnityEngine.TestRunner"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": true,
+  "precompiledReferences": [
+    "nunit.framework.dll"
+  ],
+  "autoReferenced": false,
+  "defineConstraints": [
+    "UNITY_INCLUDE_TESTS"
+  ],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

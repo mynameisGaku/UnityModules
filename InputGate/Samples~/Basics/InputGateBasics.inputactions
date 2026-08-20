@@ -1,0 +1,84 @@
+{
+  "name": "InputGateBasics",
+  "maps": [
+    {
+      "name": "Gameplay",
+      "id": "36ef7074-03d4-4e47-913c-af2c9791be91",
+      "actions": [
+        {
+          "name": "Pulse",
+          "type": "Button",
+          "id": "49648acb-f2ab-4d84-909e-18eb234a1fb4",
+          "expectedControlType": "Button",
+          "processors": "",
+          "interactions": "",
+          "initialStateCheck": false
+        }
+      ],
+      "bindings": [
+        {
+          "name": "",
+          "id": "e7d9f1c5-3869-4af1-b497-e09104171c78",
+          "path": "<Keyboard>/space",
+          "interactions": "",
+          "processors": "",
+          "groups": "",
+          "action": "Pulse",
+          "isComposite": false,
+          "isPartOfComposite": false
+        },
+        {
+          "name": "",
+          "id": "360bcb27-bb91-4b8c-83a2-27860da16483",
+          "path": "<Gamepad>/buttonSouth",
+          "interactions": "",
+          "processors": "",
+          "groups": "",
+          "action": "Pulse",
+          "isComposite": false,
+          "isPartOfComposite": false
+        }
+      ]
+    },
+    {
+      "name": "UI",
+      "id": "c1bd3d65-af5a-4f47-950c-10a433e29fbb",
+      "actions": [
+        {
+          "name": "Pulse",
+          "type": "Button",
+          "id": "993362ba-a434-4c43-80a3-4df889d22a62",
+          "expectedControlType": "Button",
+          "processors": "",
+          "interactions": "",
+          "initialStateCheck": false
+        }
+      ],
+      "bindings": [
+        {
+          "name": "",
+          "id": "fe388a3f-96f1-4f84-a6d9-8c2eed43d723",
+          "path": "<Keyboard>/enter",
+          "interactions": "",
+          "processors": "",
+          "groups": "",
+          "action": "Pulse",
+          "isComposite": false,
+          "isPartOfComposite": false
+        },
+        {
+          "name": "",
+          "id": "25a8dc49-4de6-40cc-bd82-82d21c992bbc",
+          "path": "<Gamepad>/buttonNorth",
+          "interactions": "",
+          "processors": "",
+          "groups": "",
+          "action": "Pulse",
+          "isComposite": false,
+          "isPartOfComposite": false
+        }
+      ]
+    }
+  ],
+  "controlSchemes": []
+}
