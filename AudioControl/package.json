@@ -1,0 +1,35 @@
+{
+  "name": "com.studiogaku.audio-control",
+  "version": "1.0.0",
+  "displayName": "Audio Control",
+  "description": "owner付きAudioSource poolへ再生要求を割り当て、voice上限、priorityと開始順による決定論的steal、handle停止、非スケールfadeを提供する音声制御モジュール。AudioClip読込、AudioMixer、3D spatial設定、global singletonは含みません。",
+  "unity": "6000.5",
+  "unityRelease": "7f1",
+  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/blob/audio-control-v1.0.0/AudioControl/Documentation~/index.md",
+  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/audio-control-v1.0.0/AudioControl/CHANGELOG.md",
+  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/audio-control-v1.0.0/AudioControl/LICENSE.md",
+  "license": "Refer to LICENSE.md file",
+  "keywords": [
+    "audio",
+    "voice",
+    "fade",
+    "priority",
+    "pool"
+  ],
+  "author": {
+    "name": "StudioGaku",
+    "email": "gaku.fujimoto.business@gmail.com",
+    "url": "https://github.com/mynameisGaku/UnityModules"
+  },
+  "dependencies": {
+    "com.unity.modules.audio": "1.0.0",
+    "com.unity.modules.uielements": "1.0.0"
+  },
+  "samples": [
+    {
+      "displayName": "Audio Control Basics",
+      "description": "生成toneでowner付きvoice、上限、steal、非スケールfadeを確認するready-to-openサンプル。",
+      "path": "Samples~/Basics"
+    }
+  ]
+}
