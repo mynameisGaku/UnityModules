@@ -36,6 +36,7 @@ Unity 向けの再利用可能なモジュール置き場。各モジュール�
 | [Input Sequence Matcher](InputSequenceMatcher/) | 正のcommand id列を明示simulation tickで照合し、順序一致・間隔timeout・先頭restartを決定論的に判定する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [Input Repeat](InputRepeat/) | 明示simulation tickと押下状態から初回trigger・保持repeat・tick jump時のcatch-up・解放edgeを決定論的に算出する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [Input Chord Matcher](InputChordMatcher/) | required commandの押下edgeが明示simulation tickの許容span内に揃ったかを決定論的に判定する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
+| [Input Press Classifier](InputPressClassifier/) | 明示simulation tickと押下状態から短押しtap・長押し開始・長押し完了を決定論的に分類する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 
 ---
 
@@ -143,10 +144,14 @@ Assets/
         ├── Runtime/     InputRepeat.Runtime
         ├── Tests/       InputRepeat.Tests
         └── Samples~/    InputRepeating.Samples / InputRepeating.Samples.PlayMode.Tests
-    └── InputChordMatcher/
+    ├── InputChordMatcher/
         ├── Runtime/     InputChordMatcher.Runtime
         ├── Tests/       InputChordMatcher.Tests
         └── Samples~/    InputChording.Samples / InputChording.Samples.PlayMode.Tests
+    └── InputPressClassifier/
+        ├── Runtime/     InputPressClassifier.Runtime
+        ├── Tests/       InputPressClassifier.Tests
+        └── Samples~/    InputPressing.Samples / InputPressing.Samples.PlayMode.Tests
 ```
 
 UPM パッケージとして扱う場合は、モジュールのフォルダを `Packages/` 以下に置くか、
