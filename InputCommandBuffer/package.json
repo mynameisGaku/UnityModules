@@ -1,0 +1,35 @@
+{
+  "name": "com.studiogaku.input-command-buffer",
+  "version": "1.0.0",
+  "displayName": "Input Command Buffer",
+  "description": "Buffers discrete input commands for an explicit simulation-tick window and consumes matching commands in deterministic FIFO order.",
+  "unity": "6000.5",
+  "unityRelease": "7f1",
+  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/tree/input-command-buffer-v1.0.0/InputCommandBuffer/Documentation~",
+  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/input-command-buffer-v1.0.0/InputCommandBuffer/CHANGELOG.md",
+  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/input-command-buffer-v1.0.0/InputCommandBuffer/LICENSE.md",
+  "dependencies": {
+    "com.unity.modules.uielements": "1.0.0"
+  },
+  "samples": [
+    {
+      "displayName": "Input Command Buffer Basics",
+      "description": "Explicit-tick recording, in-window FIFO consumption, expiry, and responsive UI Toolkit geometry.",
+      "path": "Samples~/Basics"
+    }
+  ],
+  "keywords": [
+    "input-command-buffer",
+    "input",
+    "buffer",
+    "fifo",
+    "tick",
+    "deterministic",
+    "simulation",
+    "replay",
+    "command"
+  ],
+  "author": {
+    "name": "Studio Gaku"
+  }
+}
