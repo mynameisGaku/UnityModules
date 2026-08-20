@@ -1,0 +1,16 @@
+{
+  "name": "InputDirectionQuantization.Samples",
+  "rootNamespace": "InputDirectionQuantization.Samples",
+  "references": [
+    "InputDirectionQuantizer.Runtime"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}
