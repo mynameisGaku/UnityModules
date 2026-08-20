@@ -1,0 +1,32 @@
+{
+  "name": "com.studiogaku.canonical-payload",
+  "version": "1.0.0",
+  "displayName": "Canonical Payload",
+  "description": "Builds and reads bounded canonical primitive payload bytes with explicit caller-owned schema order.",
+  "unity": "6000.5",
+  "unityRelease": "7f1",
+  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/tree/canonical-payload-v1.0.0/CanonicalPayload/Documentation~",
+  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/canonical-payload-v1.0.0/CanonicalPayload/CHANGELOG.md",
+  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/canonical-payload-v1.0.0/CanonicalPayload/LICENSE.md",
+  "dependencies": {
+    "com.unity.modules.uielements": "1.0.0"
+  },
+  "samples": [
+    {
+      "displayName": "Canonical Payload Basics",
+      "description": "Encode, decode, corruption rejection, stable rebuild, and responsive UI Toolkit geometry.",
+      "path": "Samples~/Basics"
+    }
+  ],
+  "keywords": [
+    "canonical",
+    "binary",
+    "payload",
+    "serialization",
+    "replay",
+    "deterministic"
+  ],
+  "author": {
+    "name": "Studio Gaku"
+  }
+}
