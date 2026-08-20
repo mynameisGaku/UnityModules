@@ -16,4 +16,3 @@ namespace StateFingerprint
         Disposed = 3
     }
 }
-

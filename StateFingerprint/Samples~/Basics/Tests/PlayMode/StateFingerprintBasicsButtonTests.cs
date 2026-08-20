@@ -228,4 +228,3 @@ namespace StateFingerprint.Samples.PlayMode.Tests
         private static string Describe(VisualElement element, Rect bounds, Rect safe) => $"{element.name} text='{(element as TextElement)?.text}' bounds={bounds} safe={safe}";
     }
 }
-
