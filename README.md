@@ -27,6 +27,7 @@ Unity 向けの再利用可能なモジュール置き場。各モジュール�
 | [Deterministic Random](DeterministicRandom/) | version付き256-bit状態を保存・復元し、同じseed・状態・操作順から同じ64-bit列・範囲整数・浮動小数を再現する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [State Fingerprint](StateFingerprint/) | 明示した型付きfield列をversion固定canonical bytesへ変換し、Replay前後のstate一致をportable SHA-256 fingerprintで検証する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [Replay Tape](ReplayTape/) | 非減少tick・command id・opaque payloadをversion固定canonical tapeへ記録し、完全検証後に同じ順序で読み戻す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
+| [Canonical Payload](CanonicalPayload/) | 明示したschema順のprimitive値をlittle-endian・IEEE 754・厳格UTF-8の有界canonical bytesへ変換し、同順序で読み戻す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 
 ---
 
@@ -98,10 +99,14 @@ Assets/
         ├── Runtime/     StateFingerprint.Runtime
         ├── Tests/       StateFingerprint.Tests
         └── Samples~/    StateFingerprint.Samples / StateFingerprint.Samples.PlayMode.Tests
-    └── ReplayTape/
+    ├── ReplayTape/
         ├── Runtime/     ReplayTape.Runtime
         ├── Tests/       ReplayTape.Tests
         └── Samples~/    ReplayTape.Samples / ReplayTape.Samples.PlayMode.Tests
+    └── CanonicalPayload/
+        ├── Runtime/     CanonicalPayload.Runtime
+        ├── Tests/       CanonicalPayload.Tests
+        └── Samples~/    CanonicalPayload.Samples / CanonicalPayload.Samples.PlayMode.Tests
 ```
 
 UPM パッケージとして扱う場合は、モジュールのフォルダを `Packages/` 以下に置くか、
