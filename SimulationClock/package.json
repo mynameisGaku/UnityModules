@@ -1,0 +1,33 @@
+{
+  "name": "com.studiogaku.simulation-clock",
+  "version": "1.0.0",
+  "displayName": "Simulation Clock",
+  "description": "Converts explicit integer elapsed time into deterministic fixed-step ranges, interpolation state, and bounded catch-up results without reading a global clock.",
+  "unity": "6000.5",
+  "unityRelease": "7f1",
+  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/blob/simulation-clock-v1.0.0/SimulationClock/Documentation~/index.md",
+  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/simulation-clock-v1.0.0/SimulationClock/CHANGELOG.md",
+  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/simulation-clock-v1.0.0/SimulationClock/LICENSE.md",
+  "dependencies": {
+    "com.unity.modules.uielements": "1.0.0"
+  },
+  "samples": [
+    {
+      "displayName": "Simulation Clock Basics",
+      "description": "Ready-to-open scene for exact elapsed inputs, bounded catch-up, state reset, replay verification, and responsive UI.",
+      "path": "Samples~/Basics"
+    }
+  ],
+  "keywords": [
+    "simulation",
+    "fixed-step",
+    "deterministic",
+    "clock",
+    "replay"
+  ],
+  "author": {
+    "name": "StudioGaku"
+  },
+  "license": "MIT",
+  "type": "tool"
+}
