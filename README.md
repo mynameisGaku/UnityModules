@@ -22,6 +22,7 @@ Unity 向けの再利用可能なモジュール置き場。各モジュール�
 | [Build Guard](BuildGuard/) | Player build対象Sceneのactive・inactive階層とPrefab instanceを検査し、Missing MonoBehaviourを階層path・件数付きでbuild前に拒否するEditor専用module。**Unity 6000.5 以降**。 | なし |
 | [Input Gate](InputGate/) | PlayerInputの実行中Action Mapを入れ子leaseで停止し、最後の解放時にActionごとの有効状態を復元する。**Unity 6000.5 / Input System 1.20.0 以降**。 | com.unity.inputsystem 1.20.0 / com.unity.modules.uielements 1.0.0 |
 | [Audio Control](AudioControl/) | owner付きAudioSource poolで再生、voice上限、priority steal、handle停止、非スケールfadeを管理する。**Unity 6000.5 以降**。 | com.unity.modules.audio 1.0.0 / com.unity.modules.uielements 1.0.0 |
+| [Startup Flow](StartupFlow/) | 明示した非同期stepをOrderとIdで決定論的に直列実行し、進捗・失敗位置・完了件数・協調cancelを結果として返す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 
 ---
 
@@ -73,10 +74,14 @@ Assets/
         ├── Runtime/     InputGate.Runtime
         ├── Tests/       InputGate.Tests / InputGate.PlayMode.Tests
         └── Samples~/    InputGate.Samples / InputGate.Samples.PlayMode.Tests
-    └── AudioControl/
+    ├── AudioControl/
         ├── Runtime/     AudioControl.Runtime
         ├── Tests/       AudioControl.Tests / AudioControl.PlayMode.Tests
         └── Samples~/    AudioControl.Samples / AudioControl.Samples.PlayMode.Tests
+    └── StartupFlow/
+        ├── Runtime/     StartupFlow.Runtime
+        ├── Tests/       StartupFlow.Tests / StartupFlow.PlayMode.Tests
+        └── Samples~/    StartupFlow.Samples / StartupFlow.Samples.PlayMode.Tests
 ```
 
 UPM パッケージとして扱う場合は、モジュールのフォルダを `Packages/` 以下に置くか、
