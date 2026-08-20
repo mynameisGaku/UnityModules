@@ -39,6 +39,7 @@ Unity 向けの再利用可能なモジュール置き場。各モジュール�
 | [Input Press Classifier](InputPressClassifier/) | 明示simulation tickと押下状態から短押しtap・長押し開始・長押し完了を決定論的に分類する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [Input Axis Conflict Resolver](InputAxisConflictResolver/) | negative・positiveの相反入力を明示simulation tickと4つのpolicyから決定論的に解決する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [Input Multi Tap Classifier](InputMultiTapClassifier/) | 明示simulation tickのtap edgeをgap windowへ集約し、single・double・triple等の有界burstを決定論的に確定する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
+| [Input Direction Quantizer](InputDirectionQuantizer/) | 有限2D analog入力をradial dead zone付きの4-way・8-way方向へ決定論的に変換する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 
 ---
 
@@ -158,10 +159,14 @@ Assets/
         ├── Runtime/     InputAxisConflictResolver.Runtime
         ├── Tests/       InputAxisConflictResolver.Tests
         └── Samples~/    InputAxisConflict.Samples / InputAxisConflict.Samples.PlayMode.Tests
-    └── InputMultiTapClassifier/
+    ├── InputMultiTapClassifier/
         ├── Runtime/     InputMultiTapClassifier.Runtime
         ├── Tests/       InputMultiTapClassifier.Tests
         └── Samples~/    InputMultiTapping.Samples / InputMultiTapping.Samples.PlayMode.Tests
+    └── InputDirectionQuantizer/
+        ├── Runtime/     InputDirectionQuantizer.Runtime
+        ├── Tests/       InputDirectionQuantizer.Tests
+        └── Samples~/    InputDirectionQuantization.Samples / InputDirectionQuantization.Samples.PlayMode.Tests
 ```
 
 UPM パッケージとして扱う場合は、モジュールのフォルダを `Packages/` 以下に置くか、
