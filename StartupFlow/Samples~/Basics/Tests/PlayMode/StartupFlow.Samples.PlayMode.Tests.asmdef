@@ -1,0 +1,22 @@
+{
+  "name": "StartupFlow.Samples.PlayMode.Tests",
+  "rootNamespace": "StartupFlow.Samples.PlayMode.Tests",
+  "references": [
+    "StartupFlow.Runtime",
+    "StartupFlow.Samples",
+    "UnityEngine.TestRunner"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": true,
+  "precompiledReferences": [
+    "nunit.framework.dll"
+  ],
+  "autoReferenced": false,
+  "defineConstraints": [
+    "UNITY_INCLUDE_TESTS"
+  ],
+  "versionDefines": [],
+  "noEngineReferences": false
+}
