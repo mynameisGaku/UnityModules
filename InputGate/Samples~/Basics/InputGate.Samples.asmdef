@@ -1,0 +1,17 @@
+{
+  "name": "InputGate.Samples",
+  "rootNamespace": "InputGate.Samples",
+  "references": [
+    "InputGate.Runtime",
+    "Unity.InputSystem"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}
