@@ -1,0 +1,21 @@
+{
+  "name": "com.studiogaku.input-multi-tap-classifier",
+  "version": "1.0.0",
+  "displayName": "Input Multi Tap Classifier",
+  "description": "Classifies bounded single, double, triple, and higher tap bursts from explicit simulation ticks.",
+  "unity": "6000.5",
+  "unityRelease": "7f1",
+  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/tree/input-multi-tap-classifier-v1.0.0/InputMultiTapClassifier/Documentation~",
+  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/input-multi-tap-classifier-v1.0.0/InputMultiTapClassifier/CHANGELOG.md",
+  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/input-multi-tap-classifier-v1.0.0/InputMultiTapClassifier/LICENSE.md",
+  "dependencies": { "com.unity.modules.uielements": "1.0.0" },
+  "samples": [
+    {
+      "displayName": "Input Multi Tap Classifier Basics",
+      "description": "Pending tap windows, gap completion, maximum-count completion, and responsive UI Toolkit geometry.",
+      "path": "Samples~/Basics"
+    }
+  ],
+  "keywords": ["input", "tap", "double-tap", "multi-tap", "gesture", "tick", "deterministic", "simulation", "replay"],
+  "author": { "name": "Studio Gaku" }
+}
