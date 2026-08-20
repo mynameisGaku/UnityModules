@@ -1,0 +1,16 @@
+{
+  "name": "InputAxisConflict.Samples",
+  "rootNamespace": "InputAxisConflict.Samples",
+  "references": [
+    "InputAxisConflictResolver.Runtime"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}
