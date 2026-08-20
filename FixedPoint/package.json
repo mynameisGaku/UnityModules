@@ -1,0 +1,32 @@
+{
+  "name": "com.studiogaku.fixed-point",
+  "version": "1.0.0",
+  "displayName": "Fixed Point",
+  "description": "Provides checked, deterministic signed Q16.16 scalar arithmetic without engine dependencies.",
+  "unity": "6000.5",
+  "unityRelease": "7f1",
+  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/tree/fixed-point-v1.0.0/FixedPoint/Documentation~",
+  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/fixed-point-v1.0.0/FixedPoint/CHANGELOG.md",
+  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/fixed-point-v1.0.0/FixedPoint/LICENSE.md",
+  "dependencies": {
+    "com.unity.modules.uielements": "1.0.0"
+  },
+  "samples": [
+    {
+      "displayName": "Fixed Point Basics",
+      "description": "Exact Q16.16 operations, overflow rejection, and responsive UI Toolkit geometry.",
+      "path": "Samples~/Basics"
+    }
+  ],
+  "keywords": [
+    "fixed-point",
+    "q16.16",
+    "deterministic",
+    "simulation",
+    "replay",
+    "numeric"
+  ],
+  "author": {
+    "name": "Studio Gaku"
+  }
+}
