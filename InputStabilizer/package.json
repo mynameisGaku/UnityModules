@@ -1,0 +1,34 @@
+{
+  "name": "com.studiogaku.input-stabilizer",
+  "version": "1.0.0",
+  "displayName": "Input Stabilizer",
+  "description": "Commits a signed integer input command only after the same candidate appears for a configured number of consecutive samples.",
+  "unity": "6000.5",
+  "unityRelease": "7f1",
+  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/tree/input-stabilizer-v1.0.0/InputStabilizer/Documentation~",
+  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/input-stabilizer-v1.0.0/InputStabilizer/CHANGELOG.md",
+  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/input-stabilizer-v1.0.0/InputStabilizer/LICENSE.md",
+  "dependencies": {
+    "com.unity.modules.uielements": "1.0.0"
+  },
+  "samples": [
+    {
+      "displayName": "Input Stabilizer Basics",
+      "description": "Candidate progress, third-sample commit, noise cancellation, and responsive UI Toolkit geometry.",
+      "path": "Samples~/Basics"
+    }
+  ],
+  "keywords": [
+    "input-stabilizer",
+    "input",
+    "stabilization",
+    "debounce",
+    "deterministic",
+    "simulation",
+    "replay",
+    "command"
+  ],
+  "author": {
+    "name": "Studio Gaku"
+  }
+}
