@@ -1,48 +1,72 @@
-# Build Guard
+# ビルド前の不備チェック（Build Guard）
 
-Player buildへ含めるSceneにMissing MonoBehaviourが残っている場合、buildを開始前またはScene処理中に失敗させるEditor専用moduleです。検出したScene path、兄弟index付きのGameObject階層path、GameObjectごとの件数、合計件数を一度に示します。
+## 30秒で分かる
 
-## インストール
+Player buildに含めるSceneを自動で調べ、次の「Inspectorでは見落としやすい壊れた参照」が残っていれば、長いbuildを始める前に止めます。
 
-Unity 6000.5.7f1以降を使用してください。
+- 削除したC# scriptがComponentとして残った **Missing Script**
+- 削除したTexture、Material、PrefabなどをComponent fieldが参照したままの **Missing Object Reference**
 
-Package Managerの **Add package from git URL...** へ次を指定します。
+設定画面を開く必要はありません。Packageを導入して通常どおりPlayer buildするだけです。失敗messageにはScene、GameObject階層、Component型、field pathをまとめて表示します。
+
+## こんなときに便利
+
+- PrefabやSceneを整理したあと、どこに壊れた参照が残ったか分からない。
+- inactive GameObjectまで手作業でInspectorを開いて確認するのが面倒。
+- CI buildを早く止め、修復場所が分かるmessageを残したい。
+
+## 3分で使う
+
+### 1. インストール
+
+Unity 6000.5.7f1以降で、Package Managerの **Add package from git URL...** へ次を指定します。
 
 ```text
-https://github.com/mynameisGaku/UnityModules.git?path=/BuildGuard#build-guard-v1.0.0
+https://github.com/mynameisGaku/UnityModules.git?path=/BuildGuard#build-guard-v1.1.0
 ```
 
-または、この `BuildGuard` folderをprojectの `Assets/Modules/` 以下へ配置します。追加packageへの依存はありません。
+または`BuildGuard` folderをprojectの`Assets/Modules/`へ配置します。追加packageへの依存はありません。
 
-## 基本動作
+### 2. いつもどおりbuildする
 
-導入後の設定やsingletonは不要です。Player buildへ渡されたSceneをbuild開始前に検査し、さらにUnityが実際に処理する一時Sceneを検査します。
+Build ProfilesのScene一覧を設定し、Player buildを実行します。問題がなければBuild Guardは何も出力せず、そのままbuildを続けます。
 
-- rootから全childを走査し、inactive GameObjectも検査します。
-- Prefab instance内も実Scene階層として検査します。
-- Missing Scriptがなければ何も出力せずbuildを継続します。
-- Missing Scriptがあれば自動修復やScene保存をせず、`BuildFailedException`でbuildを中止します。
-- PlayModeでのScene読込とAssetBundle buildは対象外です。
+### 3. messageから修復場所を開く
 
-失敗messageの例です。
+壊れた参照がある場合はbuildが止まり、次のようなmessageがConsoleへ出ます。
 
 ```text
-Build GuardがPlayer build対象Scene内のMissing Scriptを検出しました。
+Build Guard found build-blocking issues in a Player build Scene.
 Scene: Assets/Scenes/Game.unity
-- Root[0]/Inactive Child[1]: 2
-合計: 2
-Missing MonoBehaviourを修復または削除してからbuildを再実行してください。
+Missing Scripts: 1
+- Root[0]/Inactive Child[1]: 1
+Missing Object References: 1
+- Camera Root[1] :: UnityEngine.Camera[1].m_TargetTexture
+Repair or remove the listed missing references before building again.
 ```
 
-## v1の境界
+`Root[0]`などの数字は同じ親の中での並び順です。`UnityEngine.Camera[1].m_TargetTexture`は、対象GameObjectの2番目のComponentにある`m_TargetTexture` fieldが壊れていることを表します。
 
-v1はMissing MonoBehaviourの検出だけを責務にします。PrefabやSceneの自動修復、project全assetの一括scan、PlayerSettingsやDevelopment Buildのpolicy、test実行、version管理、secret検出、独自Build画面は含みません。Runtime assemblyとPlayerへ含まれるcodeもありません。
+## 何を検査するか
+
+- Player buildへ実際に渡されたScene
+- active・inactiveを問わない全GameObject
+- Scene内のPrefab instance
+- UnityがSceneへ保存するObject Reference field
+- build開始前の元Sceneと、Unityがbuild中に処理する一時Scene
+
+検出時もSceneを自動修復、保存、削除しません。
+
+## 対象外
+
+このmoduleはbuild対象Sceneの壊れた参照に責務を絞ります。project全体の未使用asset検索、Runtimeで代入するnull fieldの判定、AddressablesやResources内assetの一括検査、PlayerSettings policy、test実行、自動修復は行いません。Runtime assemblyとPlayerへ含まれるcodeもありません。
 
 ## サンプル
 
 Package ManagerのSamplesから **Build Guard Basics** をImportしてください。
 
-- `BuildGuardBasics.unity` はMissing Scriptのないbuild可能Sceneです。
-- `BrokenSceneExample.unity.txt` は意図的にMissing Scriptを含む安全なtext templateです。試す場合だけscratch copyを作り、拡張子を `.unity` へ変更してbuild対象に加えてください。
+- `BuildGuardBasics.unity`: そのままbuildできるScene
+- `BrokenSceneExample.unity.txt`: Missing Scriptの失敗を安全に試すtext template
+- `Samples~/Basics/README.md`: Missing Object Referenceを安全に作る3分手順
 
-元のprojectや共有branchへ壊れたSceneを残さないでください。
+共有branchへ壊れたSceneを残さないよう、失敗確認はscratch copyか使い捨てprojectで行ってください。
