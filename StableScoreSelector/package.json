@@ -1,0 +1,23 @@
+{
+  "name": "com.studiogaku.stable-score-selector",
+  "version": "1.0.0",
+  "displayName": "Stable Score Selector",
+  "description": "Keeps a current scored candidate through ties and small score changes, then switches only when a deterministic challenger reaches an explicit minimum advantage.",
+  "unity": "6000.5",
+  "unityRelease": "7f1",
+  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/tree/stable-score-selector-v1.0.0/StableScoreSelector/Documentation~",
+  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/stable-score-selector-v1.0.0/StableScoreSelector/CHANGELOG.md",
+  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/stable-score-selector-v1.0.0/StableScoreSelector/LICENSE.md",
+  "dependencies": {
+    "com.unity.modules.uielements": "1.0.0"
+  },
+  "samples": [
+    {
+      "displayName": "Stable Score Selector Basics",
+      "description": "Demonstrates initial selection, current retention, threshold switching, tie retention, and missing-current recovery with responsive UI Toolkit geometry.",
+      "path": "Samples~/Basics"
+    }
+  ],
+  "keywords": ["score", "selection", "hysteresis", "stability", "ai", "decision", "deterministic", "gameplay"],
+  "author": { "name": "Studio Gaku" }
+}
