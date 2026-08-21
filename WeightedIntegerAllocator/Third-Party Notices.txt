@@ -1,0 +1,3 @@
+Weighted Integer Allocator 1.0.0 does not include third-party source code or bundled third-party libraries.
+
+Unity built-in modules used by the optional sample remain subject to Unity's terms.
