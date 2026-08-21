@@ -120,5 +120,68 @@ namespace BuildGuard.Tests
             Assert.That(Selection.activeGameObject, Is.Not.Null);
             Assert.That(BuildGuardHierarchyPath.Create(Selection.activeGameObject.transform), Is.EqualTo(hierarchyPath));
         }
+
+        [Test]
+        public void TryRemoveMissingScripts_OpensExactObjectAndLeavesSceneDirtyWithUndo()
+        {
+            var hostScene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            Assert.That(EditorSceneManager.SaveScene(hostScene, $"{_temporaryFolder}/Host.unity"), Is.True);
+            var fixture = new MissingScriptSceneScannerTests();
+            fixture.SetUp();
+            try
+            {
+                var scene = fixture.OpenSceneFixture();
+                var finding = MissingScriptSceneScanner.Scan(scene)[0];
+                var issue = new BuildGuardScanIssue(
+                    BuildGuardIssueKind.MissingScript,
+                    scene.path,
+                    finding.HierarchyPath,
+                    $"Missing Scripts: {finding.MissingScriptCount}");
+                UnityEngine.SceneManagement.SceneManager.SetActiveScene(hostScene);
+                Assert.That(EditorSceneManager.CloseScene(scene, true), Is.True);
+
+                var removed = BuildGuardScanWindow.TryRemoveMissingScripts(
+                    issue,
+                    false,
+                    false,
+                    out var removedCount);
+
+                Assert.That(removed, Is.True);
+                Assert.That(removedCount, Is.EqualTo(1));
+                Assert.That(Selection.activeGameObject, Is.Not.Null);
+                Assert.That(GameObjectUtility.GetMonoBehavioursWithMissingScriptCount(Selection.activeGameObject), Is.Zero);
+                Assert.That(Selection.activeGameObject.scene.isDirty, Is.True);
+
+                Undo.PerformUndo();
+                var restored = BuildGuardHierarchyPath.Find(
+                    UnityEngine.SceneManagement.SceneManager.GetActiveScene(),
+                    issue.HierarchyPath);
+                Assert.That(restored, Is.Not.Null);
+                Assert.That(GameObjectUtility.GetMonoBehavioursWithMissingScriptCount(restored), Is.EqualTo(1));
+            }
+            finally
+            {
+                fixture.TearDown();
+            }
+        }
+
+        [Test]
+        public void TryRemoveMissingScripts_MissingObjectReferenceIssueDoesNothing()
+        {
+            var issue = new BuildGuardScanIssue(
+                BuildGuardIssueKind.MissingObjectReference,
+                "Assets/Missing.unity",
+                "Root[0]",
+                "Camera[0].m_TargetTexture");
+
+            var removed = BuildGuardScanWindow.TryRemoveMissingScripts(
+                issue,
+                false,
+                false,
+                out var removedCount);
+
+            Assert.That(removed, Is.False);
+            Assert.That(removedCount, Is.Zero);
+        }
     }
 }

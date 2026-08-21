@@ -99,6 +99,12 @@ namespace BuildGuard.Editor
                         EditorGUIUtility.systemCopyBuffer = FormatClipboardText(issue);
                     }
 
+                    if (issue.Kind == BuildGuardIssueKind.MissingScript
+                        && GUILayout.Button("Open and Remove", GUILayout.Width(132f)))
+                    {
+                        RemoveMissingScripts(index, issue);
+                    }
+
                     GUILayout.FlexibleSpace();
                 }
             }
@@ -182,6 +188,66 @@ namespace BuildGuard.Editor
             Selection.activeObject = sceneAsset;
             EditorGUIUtility.PingObject(sceneAsset);
             return true;
+        }
+
+        /// <summary>
+        /// Opens one Missing Script issue and removes only the missing MonoBehaviour slots from its GameObject.
+        /// </summary>
+        internal static bool TryRemoveMissingScripts(
+            BuildGuardScanIssue issue,
+            bool confirmSave,
+            bool confirmRemoval,
+            out int removedCount)
+        {
+            removedCount = 0;
+            if (issue.Kind != BuildGuardIssueKind.MissingScript)
+            {
+                return false;
+            }
+
+            if (confirmRemoval && !EditorUtility.DisplayDialog(
+                "Remove Missing Scripts",
+                $"Open {issue.ScenePath} and remove all missing script slots from {issue.HierarchyPath}?\n\nThe Scene will remain unsaved so the change can be reviewed or undone.",
+                "Open and Remove",
+                "Cancel"))
+            {
+                return false;
+            }
+
+            if (!TryOpenIssue(issue, confirmSave))
+            {
+                return false;
+            }
+
+            var target = Selection.activeGameObject;
+            if (target == null || GameObjectUtility.GetMonoBehavioursWithMissingScriptCount(target) == 0)
+            {
+                return false;
+            }
+
+            Undo.RegisterFullObjectHierarchyUndo(target, "Remove Missing Scripts");
+            removedCount = GameObjectUtility.RemoveMonoBehavioursWithMissingScript(target);
+            if (removedCount == 0)
+            {
+                return false;
+            }
+
+            EditorSceneManager.MarkSceneDirty(target.scene);
+            EditorGUIUtility.PingObject(target);
+            return true;
+        }
+
+        private void RemoveMissingScripts(int index, BuildGuardScanIssue issue)
+        {
+            if (!TryRemoveMissingScripts(issue, true, true, out var removedCount))
+            {
+                return;
+            }
+
+            _issues.RemoveAt(index);
+            _statusText = $"Removed {removedCount} missing script slot(s). Review the unsaved Scene, then save or Undo.";
+            Repaint();
+            GUIUtility.ExitGUI();
         }
 
         private static string FormatStatus(BuildGuardManualScanResult result)
