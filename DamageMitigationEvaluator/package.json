@@ -1,0 +1,23 @@
+{
+  "name": "com.studiogaku.damage-mitigation-evaluator",
+  "version": "1.0.0",
+  "displayName": "Damage Mitigation Evaluator",
+  "description": "Applies up to 32 explicit flat or ratio mitigation layers in input order without mutation, returning a reconstructable per-layer damage breakdown.",
+  "unity": "6000.5",
+  "unityRelease": "7f1",
+  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/tree/damage-mitigation-evaluator-v1.0.0/DamageMitigationEvaluator/Documentation~",
+  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/damage-mitigation-evaluator-v1.0.0/DamageMitigationEvaluator/CHANGELOG.md",
+  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/damage-mitigation-evaluator-v1.0.0/DamageMitigationEvaluator/LICENSE.md",
+  "dependencies": {
+    "com.unity.modules.uielements": "1.0.0"
+  },
+  "samples": [
+    {
+      "displayName": "Damage Mitigation Evaluator Basics",
+      "description": "Compares flat, ratio, ordered, clamped, and invalid mitigation plans with responsive UI Toolkit geometry.",
+      "path": "Samples~/Basics"
+    }
+  ],
+  "keywords": ["damage", "mitigation", "armor", "resistance", "reduction", "combat", "deterministic", "gameplay"],
+  "author": { "name": "Studio Gaku" }
+}
