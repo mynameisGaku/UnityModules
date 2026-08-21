@@ -49,6 +49,20 @@ namespace ReferenceFinder.Samples.Tests
             Assert.That(plan.Occurrences, Has.Count.EqualTo(1));
             Assert.That(plan.Occurrences[0].AssetPath, Is.EqualTo(ownerPath));
             Assert.That(plan.Occurrences[0].PropertyPath, Is.EqualTo("_reference"));
+
+            var renamePlan = AssetBatchRenamer.Preview(
+                new[] { target, replacement },
+                "ReferenceFinderExample",
+                "Demo",
+                string.Empty,
+                string.Empty);
+            Assert.That(renamePlan.Entries, Has.Count.EqualTo(2));
+            Assert.That(renamePlan.Entries[0].OriginalPath, Is.EqualTo(replacementPath));
+            Assert.That(renamePlan.Entries[0].NewPath, Does.EndWith("/DemoReplacement.asset"));
+            Assert.That(renamePlan.Entries[1].OriginalPath, Is.EqualTo(targetPath));
+            Assert.That(renamePlan.Entries[1].NewPath, Does.EndWith("/DemoTarget.asset"));
+            Assert.That(AssetDatabase.GUIDToAssetPath(TargetGuid), Is.EqualTo(targetPath));
+            Assert.That(AssetDatabase.GUIDToAssetPath(ReplacementGuid), Is.EqualTo(replacementPath));
         }
     }
 }

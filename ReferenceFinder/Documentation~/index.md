@@ -1,6 +1,6 @@
-# アセット参照管理
+# アセット整理・参照管理
 
-ReferenceFinderはEditor専用のAsset参照管理moduleです。直接・間接参照の逆引きに加え、具体的なserialized propertyを確定できる直接参照だけをPreviewし、Undo可能な置換へ進めます。
+ReferenceFinderはEditor専用のAsset整理・参照管理moduleです。直接・間接参照の逆引き、具体的なserialized propertyだけを対象にしたUndo可能な置換、選択AssetのGUIDを維持する一括Renameを提供します。
 
 ## 処理の流れ
 
@@ -36,6 +36,24 @@ Undo記録 → 一括置換 → Asset保存
 
 置換元と置換先は同じ具体型だけを受け付けます。Preview後にowner、property、参照先のいずれかが変わった場合は、変更前にPlan全体を停止します。読み取り失敗pathが1件でもあるPlanも適用しません。Sceneとscript参照は自動変更しません。
 
+## 一括Renameの流れ
+
+```text
+Project windowでmain Assetを複数選択
+    ↓
+Find / Replace / Prefix / Suffixから変更後pathを計算
+    ↓
+script・folder・Package・sub-asset・case-only・衝突を拒否
+    ↓
+利用者が全pathをPreview
+    ↓
+全GUID・元path・変更先の空きを再検査
+    ↓
+AssetDatabase.RenameAssetで順番に変更
+```
+
+Renameは同じfolder内のfile nameだけを変更します。Unity Undoには登録されないため、version controlを復旧手段にします。途中で予期しない失敗が発生した場合は、完了済みの変更を逆順に戻します。
+
 ## 公開API
 
 - `AssetReferenceFinder.FindDirectReferences(Object)`
@@ -49,6 +67,11 @@ Undo記録 → 一括置換 → Asset保存
 - `AssetReferenceReplacementPlan`
 - `AssetReferenceOccurrence`
 - `AssetReferenceReplacementResult`
+- `AssetBatchRenamer.Preview(IReadOnlyList<Object>, string, string, string, string)`
+- `AssetBatchRenamer.Apply(AssetRenamePlan)`
+- `AssetRenamePlan`
+- `AssetRenameEntry`
+- `AssetRenameResult`
 
 Windowの進捗Cancel、選択、Ping、Open、path copyはEditor UIだけの補助です。
 
@@ -66,3 +89,7 @@ Windowの進捗Cancel、選択、Ping、Open、path copyはEditor UIだけの補
 - Preview後に変更されたpropertyを検出し、部分更新しないことを確認する。
 - 適用後に参照先が置き換わり、Undoで元へ戻ることを確認する。
 - Scene参照をUnsupportedへ分離することを確認する。
+- Rename Previewがfind、replace、prefix、suffixを決められた順で合成し、元Assetを変更しないことを確認する。
+- 重複・既存destination、script、folder、sub-asset、case-only Renameを変更前に拒否する。
+- Apply前に古くなったPlanを検出し、他のAssetも変更しないことを確認する。
+- Rename後もGUIDとserialized referenceが維持されることを確認する。

@@ -18,7 +18,7 @@ Unity で繰り返し発生する設定、実装、確認作業を減らすた�
 | BGM・SE の同時再生数や fade をまとめたい | [音声再生管理（AudioControl）](AudioControl/) | AudioSource pool、優先度、停止 handle、fade を管理する。 |
 | セーブ枠、破損、バックアップを毎回実装したくない | [セーブデータ管理（SaveSystem）](SaveSystem/) | 型付き JSON、複数 slot、破損検出、backup 復旧を使う。 |
 | Missing Scriptや削除済みAssetへの参照をbuild後に見つけたくない | [ビルド前の不備確認・修復（Build Guard）](BuildGuard/) | 壊れた参照を一覧化し、修復場所へ移動する。Missing Scriptは確認後にUndo可能な形で除去できる。 |
-| Assetを削除・置換する前に利用箇所を確認し、参照もまとめて切り替えたい | [アセット参照管理（Reference Finder）](ReferenceFinder/) | 直接・間接参照を検索し、安全に特定できたserialized propertyだけをPreview後にUndo可能な形で置換する。 |
+| Assetの利用箇所を確認・置換し、複数の名前もまとめて整理したい | [アセット整理・参照管理（Reference Finder）](ReferenceFinder/) | 直接・間接参照の検索、安全な参照置換、GUIDを維持する一括RenameをPreview後に実行する。 |
 | 不具合調査用の状態とログを手動保存したい | [不具合レポート保存（DiagnosticsContext）](DiagnosticsContext/) | context、breadcrumb、Unity log を有界 JSON に書き出す。 |
 | スティック補正とTap・Hold・Repeatをまとめて扱いたい | [入力補助（Input Assist）](InputAssist/) | dead zone、感度curve、滑らかさ、4/8方向、button gestureを1つの導入で処理する。 |
 | Gameplay 入力だけ一時的に止めたい | [入力の一時停止（InputGate）](InputGate/) | PlayerInput の Action Map を入れ子で停止・復元する。 |
@@ -49,7 +49,7 @@ Unity で繰り返し発生する設定、実装、確認作業を減らすた�
 | [ゲーム時間制御（TimeControl）](TimeControl/) | Scene所有のControllerが複数leaseの相対倍率を最小値で集約し、pause・slow motion・単独fast-forwardをTime.timeScaleへ安全に反映する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [不具合レポート保存（DiagnosticsContext）](DiagnosticsContext/) | 明示追加したcontext・breadcrumbと実行中のUnity Warning・Error・Assert・Exceptionを有界に保持し、手動操作時だけJSON reportへ書き出す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [ビルド前の不備確認・修復（Build Guard）](BuildGuard/) | build対象SceneのMissing Scriptと削除済みObject Referenceを一覧から開き、Missing Scriptだけを確認・Undo付きで除去できる。Player build開始時にも同じ検査で自動停止するEditor専用module。**Unity 6000.5 以降**。 | なし |
-| [アセット参照管理（Reference Finder）](ReferenceFinder/) | 選択Assetの直接・間接参照元を検索し、具体的なserialized propertyを確認できた直接参照だけをPreview後にUndo可能な形で置換するEditor専用module。Sceneや未対応形式は変更せず一覧へ分離する。**Unity 6000.5 以降**。 | なし |
+| [アセット整理・参照管理（Reference Finder）](ReferenceFinder/) | 選択Assetの直接・間接参照元を検索し、安全に特定できた参照だけをUndo付きで置換する。さらに複数Assetへ文字置換・prefix・suffixをまとめて適用し、GUIDを維持してRenameするEditor専用module。**Unity 6000.5 以降**。 | なし |
 | [入力補助（Input Assist）](InputAssist/) | 2D入力へradial dead zone、感度curve、増減速度制限、4/8方向判定をまとめて適用し、button入力からTap・Hold・Repeat・multi-tapを判定する。入力値と経過時間は利用側から渡すため、Input System・AI・Replayのどれでも使える。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [入力の一時停止（InputGate）](InputGate/) | PlayerInputの実行中Action Mapを入れ子leaseで停止し、最後の解放時にActionごとの有効状態を復元する。**Unity 6000.5 / Input System 1.20.0 以降**。 | com.unity.inputsystem 1.20.0 / com.unity.modules.uielements 1.0.0 |
 | [音声再生管理（AudioControl）](AudioControl/) | owner付きAudioSource poolで再生、voice上限、priority steal、handle停止、非スケールfadeを管理する。**Unity 6000.5 以降**。 | com.unity.modules.audio 1.0.0 / com.unity.modules.uielements 1.0.0 |
