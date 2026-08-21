@@ -56,6 +56,7 @@ Unity 向けの再利用可能なモジュール置き場。各モジュール�
 | [Threshold Tier Table](ThresholdTierTable/) | 最大32件の有限thresholdを昇順に保持し、有限queryから現在tier・次tier・0〜1の段階内進捗を再構築可能に返す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [Linear Trend Estimator](LinearTrendEstimator/) | 2〜32個の等間隔な有限sampleへ最小二乗直線を当て、mean・slope・intercept・next predictionを再構築可能に返す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [Charge Cooldown](ChargeCooldown/) | 最大32 chargeの消費と逐次回復を明示simulation tickから計算し、前後state・回復数・消費成否を再構築可能に返す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
+| [Sample Statistics](SampleStatistics/) | 1〜32個の有限sampleからminimum・maximum・mean・range・母分散・母標準偏差を再構築可能に返す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 
 ---
 
@@ -243,10 +244,14 @@ Assets/
         ├── Runtime/     LinearTrendEstimator.Runtime
         ├── Tests/       LinearTrendEstimator.Tests
         └── Samples~/    LinearTrendEstimator.Samples / LinearTrendEstimator.Samples.PlayMode.Tests
-    └── ChargeCooldown/
+    ├── ChargeCooldown/
         ├── Runtime/     ChargeCooldown.Runtime
         ├── Tests/       ChargeCooldown.Tests
         └── Samples~/    ChargeCooldown.Samples / ChargeCooldown.Samples.PlayMode.Tests
+    └── SampleStatistics/
+        ├── Runtime/     SampleStatistics.Runtime
+        ├── Tests/       SampleStatistics.Tests
+        └── Samples~/    SampleStatistics.Samples / SampleStatistics.Samples.PlayMode.Tests
 ```
 
 UPM パッケージとして扱う場合は、モジュールのフォルダを `Packages/` 以下に置くか、
