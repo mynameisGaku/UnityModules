@@ -1,0 +1,14 @@
+{
+  "name": "InputVectorExponentialSmoother.Runtime",
+  "rootNamespace": "InputFiltering",
+  "references": [],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": true
+}
