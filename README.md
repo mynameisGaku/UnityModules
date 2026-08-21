@@ -20,6 +20,7 @@ Unity で繰り返し発生する設定、実装、確認作業を減らすた�
 | Missing Scriptや削除済みAssetへの参照をbuild後に見つけたくない | [ビルド前の不備チェック（Build Guard）](BuildGuard/) | `Tools > Build Guard`で壊れた参照を一覧化し、修復するGameObjectへ直接移動する。 |
 | Assetを削除・置換する前に利用箇所を知りたい | [アセット参照検索（Reference Finder）](ReferenceFinder/) | 直接・間接参照を切り替え、選択Assetを利用するScene、Prefab、Material、設定Assetなどを一覧表示する。 |
 | 不具合調査用の状態とログを手動保存したい | [不具合レポート保存（DiagnosticsContext）](DiagnosticsContext/) | context、breadcrumb、Unity log を有界 JSON に書き出す。 |
+| スティック補正とTap・Hold・Repeatをまとめて扱いたい | [入力補助（Input Assist）](InputAssist/) | dead zone、感度curve、滑らかさ、4/8方向、button gestureを1つの導入で処理する。 |
 | Gameplay 入力だけ一時的に止めたい | [入力の一時停止（InputGate）](InputGate/) | PlayerInput の Action Map を入れ子で停止・復元する。 |
 | Inspector の表示整理や入力検証を減らしたい | [インスペクター入力補助（Inspector）](Inspector/) | 条件表示、group、tab、検証、button 属性を使う。 |
 | 実行中の位置・範囲・経路を見たい | [デバッグ描画（Drawing）](Drawing/) | 線、矢印、箱、球、経路、文字をコードから描く。 |
@@ -49,6 +50,7 @@ Unity で繰り返し発生する設定、実装、確認作業を減らすた�
 | [不具合レポート保存（DiagnosticsContext）](DiagnosticsContext/) | 明示追加したcontext・breadcrumbと実行中のUnity Warning・Error・Assert・Exceptionを有界に保持し、手動操作時だけJSON reportへ書き出す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [ビルド前の不備チェック（Build Guard）](BuildGuard/) | build対象SceneのMissing Scriptと削除済みObject Referenceを手動一覧から開いて修復でき、Player build開始時にも同じ検査で自動停止するEditor専用module。**Unity 6000.5 以降**。 | なし |
 | [アセット参照検索（Reference Finder）](ReferenceFinder/) | 選択したAssetの直接・間接参照元をAssets配下から検索し、Search Root指定、選択、Ping、Open、path copyまで行うEditor専用module。**Unity 6000.5 以降**。 | なし |
+| [入力補助（Input Assist）](InputAssist/) | 2D入力へradial dead zone、感度curve、増減速度制限、4/8方向判定をまとめて適用し、button入力からTap・Hold・Repeat・multi-tapを判定する。入力値と経過時間は利用側から渡すため、Input System・AI・Replayのどれでも使える。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [入力の一時停止（InputGate）](InputGate/) | PlayerInputの実行中Action Mapを入れ子leaseで停止し、最後の解放時にActionごとの有効状態を復元する。**Unity 6000.5 / Input System 1.20.0 以降**。 | com.unity.inputsystem 1.20.0 / com.unity.modules.uielements 1.0.0 |
 | [音声再生管理（AudioControl）](AudioControl/) | owner付きAudioSource poolで再生、voice上限、priority steal、handle停止、非スケールfadeを管理する。**Unity 6000.5 以降**。 | com.unity.modules.audio 1.0.0 / com.unity.modules.uielements 1.0.0 |
 | [起動手順管理（StartupFlow）](StartupFlow/) | 明示した非同期stepをOrderとIdで決定論的に直列実行し、進捗・失敗位置・完了件数・協調cancelを結果として返す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
@@ -59,24 +61,6 @@ Unity で繰り返し発生する設定、実装、確認作業を減らすた�
 | [再現用データ変換（CanonicalPayload）](CanonicalPayload/) | 明示したschema順のprimitive値をlittle-endian・IEEE 754・厳格UTF-8の有界canonical bytesへ変換し、同順序で読み戻す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [固定小数点計算（FixedPoint）](FixedPoint/) | signed Q16.16の小数値を整数raw値で保持し、0方向丸めと明示overflowを持つ四則演算をplatform間で再現する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [解放済み参照の識別（GenerationalHandle）](GenerationalHandle/) | 最小の空きslotを決定論的に割り当て、generationで解放済みの古いhandleを新しいentryから区別する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
-| [1軸入力の段階化（InputQuantizer）](InputQuantizer/) | 有限1軸入力をdead zone付きの小さなsigned integer commandへ対称かつ決定論的に変換する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
-| [入力ぶれ抑制（InputStabilizer）](InputStabilizer/) | 同じsigned integer commandが指定sample数だけ連続した時に確定し、一時的なnoise候補をsimulationへ流さない。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
-| [先行入力（InputCommandBuffer）](InputCommandBuffer/) | 早押しcommandを明示simulation tickの短い有効期間だけ保持し、同じidの最古entryからFIFOで消費する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
-| [コマンド順序判定（InputSequenceMatcher）](InputSequenceMatcher/) | 正のcommand id列を明示simulation tickで照合し、順序一致・間隔timeout・先頭restartを決定論的に判定する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
-| [長押し連続入力（InputRepeat）](InputRepeat/) | 明示simulation tickと押下状態から初回trigger・保持repeat・tick jump時のcatch-up・解放edgeを決定論的に算出する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
-| [同時押し判定（InputChordMatcher）](InputChordMatcher/) | required commandの押下edgeが明示simulation tickの許容span内に揃ったかを決定論的に判定する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
-| [短押し・長押し判定（InputPressClassifier）](InputPressClassifier/) | 明示simulation tickと押下状態から短押しtap・長押し開始・長押し完了を決定論的に分類する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
-| [反対方向の同時入力解決（InputAxisConflictResolver）](InputAxisConflictResolver/) | negative・positiveの相反入力を明示simulation tickと4つのpolicyから決定論的に解決する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
-| [連打回数判定（InputMultiTapClassifier）](InputMultiTapClassifier/) | 明示simulation tickのtap edgeをgap windowへ集約し、single・double・triple等の有界burstを決定論的に確定する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
-| [4方向・8方向変換（InputDirectionQuantizer）](InputDirectionQuantizer/) | 有限2D analog入力をradial dead zone付きの4-way・8-way方向へ決定論的に変換する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
-| [押下しきい値判定（InputThresholdClassifier）](InputThresholdClassifier/) | 有限scalar sampleをrelease・pressの2つのinclusive thresholdで安定したpressed状態とedgeへ分類する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
-| [コマンド優先順位（InputCommandArbiter）](InputCommandArbiter/) | 同一simulation stepで成立したcommand候補から最大priorityと安定した先頭tie-breakで1件を決定論的に選ぶ。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
-| [スティック遊び補正（InputRadialDeadZone）](InputRadialDeadZone/) | 有限2D analog入力をinner・outerのradial境界間で方向を保った連続成分へ決定論的に補正する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
-| [入力変化速度制限（InputVectorSlewLimiter）](InputVectorSlewLimiter/) | 有限2D targetへのvector差を明示stepごとの最大magnitude以内に制限し、現在状態を再構築可能に保つ。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
-| [スティック感度カーブ（InputVectorResponseCurve）](InputVectorResponseCurve/) | 単位円内の有限2D analog入力へ4種類のmagnitude curveを方向を保って決定論的に適用する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
-| [入力なめらか補正（InputVectorExponentialSmoother）](InputVectorExponentialSmoother/) | 有限2D targetとの差へ明示stepごとに一定割合を適用し、平滑状態・実適用差分・残差を再構築可能に保つ。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
-| [複数入力の合成（InputVectorWeightedMixer）](InputVectorWeightedMixer/) | 最大32件の有限2D sourceを明示weightの正規化加重平均へ変換し、合成結果・件数・失敗位置を再構築可能に返す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
-| [入力方向の回転制限（InputVectorDirectionLimiter）](InputVectorDirectionLimiter/) | unit circle内の有限2D targetへ明示stepごとの方向回転だけを制限し、target magnitudeと回転結果を再構築可能に返す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [ゲージ値管理（ResourceMeter）](ResourceMeter/) | immutable capacity内の有限resourceを回復・部分消費・全量必須消費し、前後値・実適用量・未適用量・境界遷移を再構築可能に返す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [能力値補正（StatModifierStack）](StatModifierStack/) | 最大32件の有限modifierをID昇順でFlat・加算percent・乗算factorの3 stageへ合成し、最終値・stage合計・件数を再構築可能に返す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [重み付き抽選（WeightedChoiceTable）](WeightedChoiceTable/) | 最大32件の正weightをID昇順の累積区間へ変換し、明示sampleから選択ID・index・区間・totalを再構築可能に返す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
@@ -96,6 +80,10 @@ Unity で繰り返し発生する設定、実装、確認作業を減らすた�
 | [定期発火計画（PeriodicTickPlanner）](PeriodicTickPlanner/) | 次回tick・間隔・残り回数から、指定simulation tickまでの定期発火範囲と次cursorを有界かつ決定論的に計画する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [ダメージ軽減計算（DamageMitigationEvaluator）](DamageMitigationEvaluator/) | 元damageへ固定軽減・率軽減を入力順に適用し、各層の要求量・実適用量・残damageを再構築可能に返す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [敵対度計算（ThreatScoreResolver）](ThreatScoreResolver/) | 1〜32対象の非負threat scoreへ最大64件の有限増減を入力順に適用し、0下限・全明細・安定首位を返す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
+
+### 旧入力モジュールとの関係
+
+通常のスティック補正とbutton gestureは、新規導入では [入力補助（Input Assist）](InputAssist/) を使う。公開済みの細分化moduleは既存利用者との互換性のため残している。sequence・chord・buffer・priority選択など高度なcommand処理が必要な場合だけ、対応する旧moduleを個別に選ぶ。
 
 ---
 
@@ -151,6 +139,10 @@ Assets/
     │   ├── Editor/      ReferenceFinder.Editor
     │   ├── Tests/       ReferenceFinder.Tests
     │   └── Samples~/    Reference Finder Basics
+    ├── InputAssist/
+    │   ├── Runtime/     InputAssist.Runtime
+    │   ├── Tests/       InputAssist.Tests
+    │   └── Samples~/    InputAssist.Samples / InputAssist.Samples.PlayMode.Tests
     ├── InputGate/
         ├── Runtime/     InputGate.Runtime
         ├── Tests/       InputGate.Tests / InputGate.PlayMode.Tests
@@ -191,78 +183,6 @@ Assets/
         ├── Runtime/     GenerationalHandle.Runtime
         ├── Tests/       GenerationalHandle.Tests
         └── Samples~/    GenerationalHandle.Samples / GenerationalHandle.Samples.PlayMode.Tests
-    ├── InputQuantizer/
-        ├── Runtime/     InputQuantizer.Runtime
-        ├── Tests/       InputQuantizer.Tests
-        └── Samples~/    InputQuantization.Samples / InputQuantization.Samples.PlayMode.Tests
-    ├── InputStabilizer/
-        ├── Runtime/     InputStabilizer.Runtime
-        ├── Tests/       InputStabilizer.Tests
-        └── Samples~/    InputStabilization.Samples / InputStabilization.Samples.PlayMode.Tests
-    ├── InputCommandBuffer/
-        ├── Runtime/     InputCommandBuffer.Runtime
-        ├── Tests/       InputCommandBuffer.Tests
-        └── Samples~/    InputBuffering.Samples / InputBuffering.Samples.PlayMode.Tests
-    ├── InputSequenceMatcher/
-        ├── Runtime/     InputSequenceMatcher.Runtime
-        ├── Tests/       InputSequenceMatcher.Tests
-        └── Samples~/    InputSequencing.Samples / InputSequencing.Samples.PlayMode.Tests
-    ├── InputRepeat/
-        ├── Runtime/     InputRepeat.Runtime
-        ├── Tests/       InputRepeat.Tests
-        └── Samples~/    InputRepeating.Samples / InputRepeating.Samples.PlayMode.Tests
-    ├── InputChordMatcher/
-        ├── Runtime/     InputChordMatcher.Runtime
-        ├── Tests/       InputChordMatcher.Tests
-        └── Samples~/    InputChording.Samples / InputChording.Samples.PlayMode.Tests
-    ├── InputPressClassifier/
-        ├── Runtime/     InputPressClassifier.Runtime
-        ├── Tests/       InputPressClassifier.Tests
-        └── Samples~/    InputPressing.Samples / InputPressing.Samples.PlayMode.Tests
-    ├── InputAxisConflictResolver/
-        ├── Runtime/     InputAxisConflictResolver.Runtime
-        ├── Tests/       InputAxisConflictResolver.Tests
-        └── Samples~/    InputAxisConflict.Samples / InputAxisConflict.Samples.PlayMode.Tests
-    ├── InputMultiTapClassifier/
-        ├── Runtime/     InputMultiTapClassifier.Runtime
-        ├── Tests/       InputMultiTapClassifier.Tests
-        └── Samples~/    InputMultiTapping.Samples / InputMultiTapping.Samples.PlayMode.Tests
-    ├── InputDirectionQuantizer/
-        ├── Runtime/     InputDirectionQuantizer.Runtime
-        ├── Tests/       InputDirectionQuantizer.Tests
-        └── Samples~/    InputDirectionQuantization.Samples / InputDirectionQuantization.Samples.PlayMode.Tests
-    ├── InputThresholdClassifier/
-        ├── Runtime/     InputThresholdClassifier.Runtime
-        ├── Tests/       InputThresholdClassifier.Tests
-        └── Samples~/    InputThresholding.Samples / InputThresholding.Samples.PlayMode.Tests
-    ├── InputCommandArbiter/
-        ├── Runtime/     InputCommandArbiter.Runtime
-        ├── Tests/       InputCommandArbiter.Tests
-        └── Samples~/    InputArbitration.Samples / InputArbitration.Samples.PlayMode.Tests
-    ├── InputRadialDeadZone/
-        ├── Runtime/     InputRadialDeadZone.Runtime
-        ├── Tests/       InputRadialDeadZone.Tests
-        └── Samples~/    InputDeadZones.Samples / InputDeadZones.Samples.PlayMode.Tests
-    ├── InputVectorSlewLimiter/
-        ├── Runtime/     InputVectorSlewLimiter.Runtime
-        ├── Tests/       InputVectorSlewLimiter.Tests
-        └── Samples~/    InputSmoothing.Samples / InputSmoothing.Samples.PlayMode.Tests
-    ├── InputVectorResponseCurve/
-        ├── Runtime/     InputVectorResponseCurve.Runtime
-        ├── Tests/       InputVectorResponseCurve.Tests
-        └── Samples~/    InputResponse.Samples / InputResponse.Samples.PlayMode.Tests
-    ├── InputVectorExponentialSmoother/
-        ├── Runtime/     InputVectorExponentialSmoother.Runtime
-        ├── Tests/       InputVectorExponentialSmoother.Tests
-        └── Samples~/    InputFiltering.Samples / InputFiltering.Samples.PlayMode.Tests
-    ├── InputVectorWeightedMixer/
-        ├── Runtime/     InputVectorWeightedMixer.Runtime
-        ├── Tests/       InputVectorWeightedMixer.Tests
-        └── Samples~/    InputMixing.Samples / InputMixing.Samples.PlayMode.Tests
-    ├── InputVectorDirectionLimiter/
-        ├── Runtime/     InputVectorDirectionLimiter.Runtime
-        ├── Tests/       InputVectorDirectionLimiter.Tests
-        └── Samples~/    InputVectorDirectionLimiter.Samples / InputVectorDirectionLimiter.Samples.PlayMode.Tests
     ├── ResourceMeter/
         ├── Runtime/     ResourceMeter.Runtime
         ├── Tests/       ResourceMeter.Tests
