@@ -50,6 +50,7 @@ Unity 向けの再利用可能なモジュール置き場。各モジュール�
 | [Input Vector Direction Limiter](InputVectorDirectionLimiter/) | unit circle内の有限2D targetへ明示stepごとの方向回転だけを制限し、target magnitudeと回転結果を再構築可能に返す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [Resource Meter](ResourceMeter/) | immutable capacity内の有限resourceを回復・部分消費・全量必須消費し、前後値・実適用量・未適用量・境界遷移を再構築可能に返す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [Stat Modifier Stack](StatModifierStack/) | 最大32件の有限modifierをID昇順でFlat・加算percent・乗算factorの3 stageへ合成し、最終値・stage合計・件数を再構築可能に返す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
+| [Weighted Choice Table](WeightedChoiceTable/) | 最大32件の正weightをID昇順の累積区間へ変換し、明示sampleから選択ID・index・区間・totalを再構築可能に返す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 
 ---
 
@@ -213,10 +214,14 @@ Assets/
         ├── Runtime/     ResourceMeter.Runtime
         ├── Tests/       ResourceMeter.Tests
         └── Samples~/    ResourceMeter.Samples / ResourceMeter.Samples.PlayMode.Tests
-    └── StatModifierStack/
+    ├── StatModifierStack/
         ├── Runtime/     StatModifierStack.Runtime
         ├── Tests/       StatModifierStack.Tests
         └── Samples~/    StatModifierStack.Samples / StatModifierStack.Samples.PlayMode.Tests
+    └── WeightedChoiceTable/
+        ├── Runtime/     WeightedChoiceTable.Runtime
+        ├── Tests/       WeightedChoiceTable.Tests
+        └── Samples~/    WeightedChoiceTable.Samples / WeightedChoiceTable.Samples.PlayMode.Tests
 ```
 
 UPM パッケージとして扱う場合は、モジュールのフォルダを `Packages/` 以下に置くか、
