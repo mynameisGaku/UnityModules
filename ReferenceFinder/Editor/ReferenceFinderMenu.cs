@@ -4,7 +4,7 @@ namespace ReferenceFinder
 {
     internal static class ReferenceFinderMenu
     {
-        private const string MenuPath = "Assets/Find Direct References";
+        private const string MenuPath = "Assets/Find Asset References";
 
         [MenuItem(MenuPath, false, 2000)]
         private static void FindSelected()
