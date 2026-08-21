@@ -9,13 +9,13 @@ using UnityEngine.SceneManagement;
 namespace BuildGuard.Tests
 {
     /// <summary>
-    /// build callbackの対象範囲と失敗契約を検証します。
+    /// Verifies build callback scope and failure contracts.
     /// </summary>
     [Parallelizable(ParallelScope.None)]
     internal sealed class BuildGuardSceneProcessorTests
     {
         /// <summary>
-        /// PlayMode相当のnull reportではMissing Script Sceneを拒否しないことを検証します。
+        /// Verifies that non-build callbacks with a null report skip validation.
         /// </summary>
         [Test]
         public void OnProcessScene_NullReport_DoesNotValidate()
@@ -34,7 +34,7 @@ namespace BuildGuard.Tests
         }
 
         /// <summary>
-        /// Missing Script Sceneの明示検査が詳細message付きで失敗することを検証します。
+        /// Verifies that explicit validation rejects missing scripts with actionable details.
         /// </summary>
         [Test]
         public void ValidateScene_BrokenScene_ThrowsBuildFailedException()
@@ -45,7 +45,7 @@ namespace BuildGuard.Tests
             {
                 var scene = fixture.OpenSceneFixture();
                 var exception = Assert.Throws<BuildFailedException>(() => BuildGuardSceneProcessor.ValidateScene(scene));
-                Assert.That(exception.Message, Does.Contain("Broken\\/Root[0]").And.Contain("Inactive Child[0]").And.Contain("合計: 3"));
+                Assert.That(exception.Message, Does.Contain("Broken\\/Root[0]").And.Contain("Inactive Child[0]").And.Contain("Missing Scripts: 3"));
             }
             finally
             {
@@ -54,7 +54,7 @@ namespace BuildGuard.Tests
         }
 
         /// <summary>
-        /// Missing ScriptのないSceneを明示検査しても失敗しないことを検証します。
+        /// Verifies that explicit validation accepts a valid Scene.
         /// </summary>
         [Test]
         public void ValidateScene_ValidScene_DoesNotThrow()
@@ -64,7 +64,29 @@ namespace BuildGuard.Tests
         }
 
         /// <summary>
-        /// 閉じたbuild対象Sceneを検査し、元のactive Sceneを維持したまま失敗することを検証します。
+        /// Verifies that explicit validation rejects missing serialized object references.
+        /// </summary>
+        [Test]
+        public void ValidateScene_MissingObjectReference_ThrowsBuildFailedException()
+        {
+            var fixture = new MissingObjectReferenceSceneScannerTests();
+            fixture.SetUp();
+            try
+            {
+                var scene = fixture.CreateSceneWithMissingCameraTargetTexture();
+                var exception = Assert.Throws<BuildFailedException>(() => BuildGuardSceneProcessor.ValidateScene(scene));
+                Assert.That(exception.Message, Does.Contain("Missing Object References: 1")
+                    .And.Contain("Camera Root[0]")
+                    .And.Contain("UnityEngine.Camera[1].m_TargetTexture"));
+            }
+            finally
+            {
+                fixture.TearDown();
+            }
+        }
+
+        /// <summary>
+        /// Verifies that preflight validation restores a closed Scene and preserves the active Scene.
         /// </summary>
         [Test]
         public void Preflight_ClosedBrokenScene_PreservesActiveScene()
@@ -92,7 +114,7 @@ namespace BuildGuard.Tests
         }
 
         /// <summary>
-        /// 同じScene pathが重複しても一度だけ検査し、閉じた状態へ戻すことを検証します。
+        /// Verifies that duplicate Scene paths are scanned once and restored to a closed state.
         /// </summary>
         [Test]
         public void Preflight_DuplicateValidScenePath_LeavesSceneClosed()
@@ -116,7 +138,7 @@ namespace BuildGuard.Tests
         }
 
         /// <summary>
-        /// Scene変換より早い固定callback順序を公開することを検証します。
+        /// Verifies the stable early callback order used before Scene conversion.
         /// </summary>
         [Test]
         public void CallbackOrder_IsEarlyAndStable()

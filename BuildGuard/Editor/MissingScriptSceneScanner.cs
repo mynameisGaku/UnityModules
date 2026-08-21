@@ -10,27 +10,27 @@ using UnityEngine.SceneManagement;
 namespace BuildGuard.Editor
 {
     /// <summary>
-    /// 読み込み済みSceneの全GameObjectを走査してMissing MonoBehaviourを収集します。
+    /// Scans every loaded Scene GameObject for missing MonoBehaviour slots.
     /// </summary>
     internal static class MissingScriptSceneScanner
     {
         /// <summary>
-        /// 指定Sceneのactive・inactiveを含む全階層を走査します。
+        /// Scans active and inactive GameObjects in deterministic hierarchy order.
         /// </summary>
-        /// <param name="scene">走査対象の読み込み済みScene。</param>
-        /// <returns>階層path順に並んだ検出結果。</returns>
-        /// <exception cref="ArgumentException">Sceneが無効な場合。</exception>
-        /// <exception cref="InvalidOperationException">Sceneが読み込まれていない場合。</exception>
+        /// <param name="scene">The loaded Scene to scan.</param>
+        /// <returns>Findings sorted by hierarchy path.</returns>
+        /// <exception cref="ArgumentException">The Scene is invalid.</exception>
+        /// <exception cref="InvalidOperationException">The Scene is not loaded.</exception>
         internal static IReadOnlyList<MissingScriptFinding> Scan(Scene scene)
         {
             if (!scene.IsValid())
             {
-                throw new ArgumentException("走査対象Sceneが無効です。", nameof(scene));
+                throw new ArgumentException("The Scene to scan is invalid.", nameof(scene));
             }
 
             if (!scene.isLoaded)
             {
-                throw new InvalidOperationException("走査対象Sceneが読み込まれていません。");
+                throw new InvalidOperationException("The Scene to scan is not loaded.");
             }
 
             var findings = new List<MissingScriptFinding>();
@@ -47,7 +47,7 @@ namespace BuildGuard.Editor
         }
 
         /// <summary>
-        /// root GameObjectをScene内の兄弟index順で比較します。
+        /// Compares root GameObjects by sibling index and then by ordinal name.
         /// </summary>
         private static int CompareRootOrder(GameObject left, GameObject right)
         {
@@ -56,7 +56,7 @@ namespace BuildGuard.Editor
         }
 
         /// <summary>
-        /// Transform以下をinactive状態に関係なく再帰走査します。
+        /// Recursively scans a Transform regardless of active state.
         /// </summary>
         private static void ScanTransform(Transform current, string hierarchyPath, ICollection<MissingScriptFinding> findings)
         {
@@ -74,7 +74,7 @@ namespace BuildGuard.Editor
         }
 
         /// <summary>
-        /// GameObject名と兄弟indexから一意なpath要素を作成します。
+        /// Creates one deterministic hierarchy segment.
         /// </summary>
         private static string FormatSegment(Transform transform)
         {
@@ -82,7 +82,7 @@ namespace BuildGuard.Editor
         }
 
         /// <summary>
-        /// path区切りと制御文字を一行で判別できる表現へ変換します。
+        /// Escapes path separators and control characters for one-line output.
         /// </summary>
         internal static string EscapePathText(string value)
         {
@@ -90,7 +90,7 @@ namespace BuildGuard.Editor
         }
 
         /// <summary>
-        /// 制御文字を一行表現へ変換し、通常のslashは維持します。
+        /// Escapes control characters while preserving ordinary slashes.
         /// </summary>
         internal static string EscapeSingleLineText(string value)
         {
@@ -98,7 +98,7 @@ namespace BuildGuard.Editor
         }
 
         /// <summary>
-        /// path区切りをescapeするか選び、制御文字を一行表現へ変換します。
+        /// Escapes control characters with optional slash escaping.
         /// </summary>
         private static string EscapeText(string value, bool escapeSlash)
         {

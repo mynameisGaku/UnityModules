@@ -11,19 +11,19 @@ using UnityEngine.SceneManagement;
 namespace BuildGuard.Editor
 {
     /// <summary>
-    /// incremental buildのcontent再利用に関係なく、予定された全Player Sceneをbuild開始前に検査します。
+    /// Validates every scheduled Player Scene before incremental content can be reused.
     /// </summary>
     internal sealed class BuildGuardPreflightProcessor : BuildPlayerProcessor
     {
         /// <summary>
-        /// 他のbuild準備処理より先に検査するためのcallback順序を取得します。
+        /// Gets an early callback order for preflight validation.
         /// </summary>
         public override int callbackOrder => BuildGuardSceneProcessor.CallbackOrder;
 
         /// <summary>
-        /// 実際に予定されたScene pathを取得し、Missing Scriptがあればbuildを中止します。
+        /// Validates the Scene paths scheduled by the actual Player build request.
         /// </summary>
-        /// <param name="buildPlayerContext">Unityが予定したPlayer build context。</param>
+        /// <param name="buildPlayerContext">The Player build context prepared by Unity.</param>
         public override void PrepareForBuild(BuildPlayerContext buildPlayerContext)
         {
             if (buildPlayerContext == null)
@@ -35,9 +35,9 @@ namespace BuildGuard.Editor
         }
 
         /// <summary>
-        /// 指定Scene pathを順番に開いて検査し、元のScene開閉状態を維持します。
+        /// Opens each specified Scene in order while preserving the original loaded and active Scene state.
         /// </summary>
-        /// <param name="scenePaths">Player buildへ渡されたScene asset path。</param>
+        /// <param name="scenePaths">Scene asset paths passed to the Player build.</param>
         internal static void ValidateScenePaths(IReadOnlyList<string> scenePaths)
         {
             if (scenePaths == null)
