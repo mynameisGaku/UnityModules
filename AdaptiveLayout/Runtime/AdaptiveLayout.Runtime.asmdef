@@ -1,0 +1,14 @@
+{
+    "name": "AdaptiveLayout.Runtime",
+    "rootNamespace": "AdaptiveLayout",
+    "references": [],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
