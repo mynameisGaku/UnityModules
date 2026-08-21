@@ -1,8 +1,21 @@
-# Build Guard 1.1.0
+# Build Guard 1.2.0
 
-Build Guardは、Player build対象Sceneに壊れたComponent参照が残ったまま成果物が作られることを防ぐEditor専用moduleです。Missing ScriptとMissing Object Referenceを、同じbuild前検査へまとめています。Runtime assembly、設定asset、global singleton、公開APIを持ちません。
+Build Guardは、Player build対象Sceneの壊れたComponent参照を手動scanとbuild時の自動検査へまとめたEditor専用moduleです。Runtime assembly、設定asset、global singleton、公開APIを持ちません。
 
-## 検査時点
+## 利用者の操作
+
+### 手動scan
+
+**Tools > Build Guard > Scan Build Scenes** は、active Build Profileで有効なSceneを上から順に検査します。結果windowには次を表示します。
+
+- 問題の種類
+- Scene asset path
+- 兄弟index付きGameObject階層path
+- Missing Script件数、またはComponent型・順番・serialized property path
+
+`Open Scene`は未保存Sceneの保存確認後に対象Sceneを開き、階層pathがまだ一致すればGameObjectを選択します。対象が既に修復・移動されている場合はScene assetを選択します。`Copy`は1件を一行でclipboardへコピーします。
+
+### 自動build検査
 
 同じruleを2つのPlayer build callbackから適用します。
 
@@ -21,7 +34,7 @@ Sceneのroot順と各Transformのchild順でactive・inactiveに関係なく全G
 
 各Componentを`SerializedObject`として走査し、`ObjectReference`型で値を解決できない一方、保存された`EntityId`が有効なfieldを検出します。これにより、Scene保存後に削除されたTexture、Material、Prefabなどへの参照を検出できます。最初からnullの任意fieldは検出しません。
 
-Prefab instanceも展開済みScene階層として同じ規則で扱います。結果は階層path、Component順、property pathの順へ並べ、1つの失敗messageへまとめます。
+Prefab instanceも展開済みScene階層として同じ規則で扱います。結果はScene順、階層path、Component順、property pathの順へ並べます。
 
 ## Sceneの扱い
 
@@ -32,7 +45,7 @@ Prefab instanceも展開済みScene階層として同じ規則で扱います。
 - 空pathやScene assetとして解決できないpathはUnity本体のbuild診断へ委ねます。
 - 検査はScene、Prefab instance、GameObject、Componentを変更しません。
 
-GameObject名には兄弟indexを付けます。`/`、`\\`、改行、復帰、tabは一行で判別できるようescapeします。
+GameObject名には兄弟indexを付けます。`/`、`\\`、改行、復帰、tabは一行で判別できるようescapeします。このpath生成と解決は手動windowと自動build検査で共通です。
 
 ## 対象外
 
@@ -44,18 +57,18 @@ GameObject名には兄弟indexを付けます。`/`、`\\`、改行、復帰、t
 - Addressables、Resources、AssetBundle contentの一括検査
 - PlayerSettings、Development Build、Profiler、署名、version、secretのpolicy判定
 - test、Package Validation Suite、version管理commandの自動実行
-- custom Build windowや設定asset
+- custom rule登録や設定asset
 
 ## Build Guard Basics
 
 Package ManagerからSampleをImportすると、次を確認できます。
 
-- `BuildGuardBasics.unity`: active rootとinactive childを持つbuild可能Scene
+- `BuildGuardBasics.unity`: active rootとinactive childを持つscan・build可能Scene
 - `BrokenSceneExample.unity.txt`: Missing Scriptを1件含むtext template
-- Sample README: RenderTextureを一度Cameraへ設定してから削除し、Missing Object Referenceを再現する手順
+- Sample README: 2種類の問題を手動scanとPlayer buildで確認する手順
 
 失敗動作はscratch locationか使い捨てprojectで確認し、確認後は壊れたSceneを削除してください。
 
 ## 検証方針
 
-Editor testはinactive階層、Prefab instance、削除済みRenderTexture、path escape、決定論的message、閉じたSceneの一時読込とactive Scene復元を検証します。配布gateではclean projectへtarballを導入し、有効Sceneのbuild成功、Missing Script Sceneのbuild失敗、Missing Object Reference Sceneのbuild失敗を実際の`BuildPipeline.BuildPlayer`で確認します。
+Editor testはinactive階層、Prefab instance、削除済みRenderTexture、path escape、階層pathの逆引き、決定論的message、複数Sceneの手動scan、cancel、結果window、Scene移動、閉じたSceneの一時読込とactive Scene復元を検証します。配布gateではclean projectへtarballを導入し、menuからwindowが開くこと、有効Sceneのscan成功、Missing Script・Missing Object Referenceの一覧、正常Sceneのbuild成功、2種類の不備Sceneのbuild失敗を実際に確認します。

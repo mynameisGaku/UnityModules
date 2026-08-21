@@ -2,6 +2,19 @@
 
 このパッケージの変更履歴。書式は [Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) に、バージョン番号は [Semantic Versioning](https://semver.org/lang/ja/) に従います。
 
+## [1.2.0] - 2026-08-22
+
+### Added
+
+- active Build Profileで有効なSceneをbuild前に手動scanするEditorWindow。
+- Missing ScriptとMissing Object Referenceを同じ一覧へ表示し、対象SceneとGameObjectを開く操作。
+- scanの取消、結果copy、閉じたSceneの一時読込、元のactive Scene復元に対するEditor回帰検証。
+
+### Changed
+
+- 自動build検査と手動scanが同じScene走査・階層path・ruleを共有する構造へ整理。
+- READMEを、手動scan、自動build停止、担当範囲の順で利用手順が分かる構成へ更新。
+
 ## [1.1.0] - 2026-08-22
 
 ### Added
