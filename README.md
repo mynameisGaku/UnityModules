@@ -61,6 +61,7 @@ Unity 向けの再利用可能なモジュール置き場。各モジュール�
 | [Numeric Requirement Evaluator](NumericRequirementEvaluator/) | 最大32件の有限な実値・基準値・比較方法・許容差から、stateを変更せず全条件の成立可否と入力順の全明細を返す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [Utility Score Evaluator](UtilityScoreEvaluator/) | 最大32候補・各16factorの0〜1 utilityと正weightから、stateを変更せず最高score候補・安定tie-break・全寄与明細を返す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [Stable Score Selector](StableScoreSelector/) | 最大32候補の0〜1 scoreとcurrent IDから、同点・微差では維持し、明示優位差以上でだけ安定して切り替える。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
+| [Weighted Integer Allocator](WeightedIntegerAllocator/) | 最大32 entryへ整数総量を非負整数weight比で配分し、largest remainderと入力順tie-breakで合計を失わず返す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 
 ---
 
@@ -268,10 +269,14 @@ Assets/
         ├── Runtime/     UtilityScoreEvaluator.Runtime
         ├── Tests/       UtilityScoreEvaluator.Tests
         └── Samples~/    UtilityScoreEvaluator.Samples / UtilityScoreEvaluator.Samples.PlayMode.Tests
-    └── StableScoreSelector/
+    ├── StableScoreSelector/
         ├── Runtime/     StableScoreSelector.Runtime
         ├── Tests/       StableScoreSelector.Tests
         └── Samples~/    StableScoreSelector.Samples / StableScoreSelector.Samples.PlayMode.Tests
+    └── WeightedIntegerAllocator/
+        ├── Runtime/     WeightedIntegerAllocator.Runtime
+        ├── Tests/       WeightedIntegerAllocator.Tests
+        └── Samples~/    WeightedIntegerAllocator.Samples / WeightedIntegerAllocator.Samples.PlayMode.Tests
 ```
 
 UPM パッケージとして扱う場合は、モジュールのフォルダを `Packages/` 以下に置くか、
