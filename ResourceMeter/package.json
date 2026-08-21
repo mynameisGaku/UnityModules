@@ -1,0 +1,36 @@
+{
+  "name": "com.studiogaku.resource-meter",
+  "version": "1.0.0",
+  "displayName": "Resource Meter",
+  "description": "Applies deterministic restore, partial spend, and full-required spend operations inside an immutable finite resource capacity.",
+  "unity": "6000.5",
+  "unityRelease": "7f1",
+  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/tree/resource-meter-v1.0.0/ResourceMeter/Documentation~",
+  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/resource-meter-v1.0.0/ResourceMeter/CHANGELOG.md",
+  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/resource-meter-v1.0.0/ResourceMeter/LICENSE.md",
+  "dependencies": {
+    "com.unity.modules.uielements": "1.0.0"
+  },
+  "samples": [
+    {
+      "displayName": "Resource Meter Basics",
+      "description": "Compares restore, partial spend, full-required spend, exact depletion, invalid input rejection, and responsive UI Toolkit geometry.",
+      "path": "Samples~/Basics"
+    }
+  ],
+  "keywords": [
+    "resource-meter",
+    "resource",
+    "health",
+    "stamina",
+    "mana",
+    "capacity",
+    "restore",
+    "spend",
+    "deterministic",
+    "simulation"
+  ],
+  "author": {
+    "name": "Studio Gaku"
+  }
+}
