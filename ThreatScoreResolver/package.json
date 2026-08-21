@@ -1,0 +1,23 @@
+{
+  "name": "com.studiogaku.threat-score-resolver",
+  "version": "1.0.0",
+  "displayName": "Threat Score Resolver",
+  "description": "Applies up to 64 finite deltas to 32 nonnegative target threat scores in input order without mutation, returning every step and a stable leader.",
+  "unity": "6000.5",
+  "unityRelease": "7f1",
+  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/tree/threat-score-resolver-v1.0.0/ThreatScoreResolver/Documentation~",
+  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/threat-score-resolver-v1.0.0/ThreatScoreResolver/CHANGELOG.md",
+  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/threat-score-resolver-v1.0.0/ThreatScoreResolver/LICENSE.md",
+  "dependencies": {
+    "com.unity.modules.uielements": "1.0.0"
+  },
+  "samples": [
+    {
+      "displayName": "Threat Score Resolver Basics",
+      "description": "Compares add, reduce, ordered, clamped, and invalid threat adjustments with responsive UI Toolkit geometry.",
+      "path": "Samples~/Basics"
+    }
+  ],
+  "keywords": ["threat", "aggro", "target", "score", "ai", "combat", "deterministic", "gameplay"],
+  "author": { "name": "Studio Gaku" }
+}
