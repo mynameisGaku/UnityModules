@@ -10,6 +10,12 @@ namespace GameplayTiming
         public const int MaximumEmissionCount = 1_000_000;
 
         /// <summary>cursorと評価境界を検証し、成功時だけ不変の発火計画を返します。</summary>
+        /// <param name="state">計画前の定期発火cursorです。</param>
+        /// <param name="throughTick">このtick以下を到来済みとして評価する境界です。</param>
+        /// <param name="maximumEmissionCount">今回の計画へ含められる最大発火数です。</param>
+        /// <param name="plan">成功時の発火計画です。</param>
+        /// <param name="error">失敗理由です。成功時は<see cref="PeriodicTickError.None"/>です。</param>
+        /// <returns>入力が有効で計画を作成できた場合はtrueです。</returns>
         public static bool TryPlan(PeriodicTickState state, long throughTick, int maximumEmissionCount, out PeriodicTickPlan plan, out PeriodicTickError error)
         {
             plan = default;
