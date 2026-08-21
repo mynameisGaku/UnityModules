@@ -1,20 +1,22 @@
 {
   "name": "com.studiogaku.reference-finder",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "displayName": "Reference Finder",
-  "description": "Searches project assets that directly or transitively reference a selected Unity asset within a chosen Assets folder.",
+  "description": "Finds direct or transitive Unity asset references and safely previews and replaces exact serialized references with Undo support.",
   "unity": "6000.5",
   "unityRelease": "7f1",
-  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/blob/reference-finder-v1.1.0/ReferenceFinder/Documentation~/index.md",
-  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/reference-finder-v1.1.0/ReferenceFinder/CHANGELOG.md",
-  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/reference-finder-v1.1.0/ReferenceFinder/LICENSE.md",
+  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/blob/reference-finder-v1.2.0/ReferenceFinder/Documentation~/index.md",
+  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/reference-finder-v1.2.0/ReferenceFinder/CHANGELOG.md",
+  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/reference-finder-v1.2.0/ReferenceFinder/LICENSE.md",
   "license": "Refer to LICENSE.md file",
   "keywords": [
     "reference",
     "dependency",
     "asset",
     "editor",
-    "search"
+    "search",
+    "replace",
+    "undo"
   ],
   "author": {
     "name": "StudioGaku",
@@ -25,7 +27,7 @@
   "samples": [
     {
       "displayName": "Reference Finder Basics",
-      "description": "Three English-named ScriptableObject assets that demonstrate direct and transitive references.",
+      "description": "Four English-named ScriptableObject assets that demonstrate search, replacement preview, and transitive references.",
       "path": "Samples~/Basics"
     }
   ]

@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.2.0] - 2026-08-22
+
+### Added
+
+- Exact serialized-property previews for direct asset references.
+- Undo-supported replacement with stale-preview and inspection-failure protection.
+- Unsupported-path reporting for scenes and references that cannot be edited safely.
+- A replacement asset and imported-sample verification.
+
 ## [1.1.0] - 2026-08-22
 
 ### Added
