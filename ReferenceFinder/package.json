@@ -1,0 +1,32 @@
+{
+  "name": "com.studiogaku.reference-finder",
+  "version": "1.0.0",
+  "displayName": "Reference Finder",
+  "description": "Searches project assets that directly reference a selected Unity asset and presents deterministic editor results.",
+  "unity": "6000.5",
+  "unityRelease": "7f1",
+  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/blob/reference-finder-v1.0.0/ReferenceFinder/Documentation~/index.md",
+  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/reference-finder-v1.0.0/ReferenceFinder/CHANGELOG.md",
+  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/reference-finder-v1.0.0/ReferenceFinder/LICENSE.md",
+  "license": "Refer to LICENSE.md file",
+  "keywords": [
+    "reference",
+    "dependency",
+    "asset",
+    "editor",
+    "search"
+  ],
+  "author": {
+    "name": "StudioGaku",
+    "email": "gaku.fujimoto.business@gmail.com",
+    "url": "https://github.com/mynameisGaku/UnityModules"
+  },
+  "dependencies": {},
+  "samples": [
+    {
+      "displayName": "Reference Finder Basics",
+      "description": "Two English-named ScriptableObject assets that demonstrate one direct reference.",
+      "path": "Samples~/Basics"
+    }
+  ]
+}

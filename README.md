@@ -18,6 +18,7 @@ Unity で繰り返し発生する設定、実装、確認作業を減らすた�
 | BGM・SE の同時再生数や fade をまとめたい | [音声再生管理（AudioControl）](AudioControl/) | AudioSource pool、優先度、停止 handle、fade を管理する。 |
 | セーブ枠、破損、バックアップを毎回実装したくない | [セーブデータ管理（SaveSystem）](SaveSystem/) | 型付き JSON、複数 slot、破損検出、backup 復旧を使う。 |
 | Missing Script を build 後に見つけたくない | [ビルド前の不備チェック（BuildGuard）](BuildGuard/) | Scene と Prefab instance を Player build 前に検査する。 |
+| Assetを削除・置換する前に参照元を知りたい | [参照元検索（Reference Finder）](ReferenceFinder/) | 選択したAssetを直接参照するScene、Prefab、Material、設定Assetなどを一覧表示する。 |
 | 不具合調査用の状態とログを手動保存したい | [不具合レポート保存（DiagnosticsContext）](DiagnosticsContext/) | context、breadcrumb、Unity log を有界 JSON に書き出す。 |
 | Gameplay 入力だけ一時的に止めたい | [入力の一時停止（InputGate）](InputGate/) | PlayerInput の Action Map を入れ子で停止・復元する。 |
 | Inspector の表示整理や入力検証を減らしたい | [インスペクター入力補助（Inspector）](Inspector/) | 条件表示、group、tab、検証、button 属性を使う。 |
@@ -47,6 +48,7 @@ Unity で繰り返し発生する設定、実装、確認作業を減らすた�
 | [ゲーム時間制御（TimeControl）](TimeControl/) | Scene所有のControllerが複数leaseの相対倍率を最小値で集約し、pause・slow motion・単独fast-forwardをTime.timeScaleへ安全に反映する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [不具合レポート保存（DiagnosticsContext）](DiagnosticsContext/) | 明示追加したcontext・breadcrumbと実行中のUnity Warning・Error・Assert・Exceptionを有界に保持し、手動操作時だけJSON reportへ書き出す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [ビルド前の不備チェック（BuildGuard）](BuildGuard/) | Player build対象Sceneのactive・inactive階層とPrefab instanceを検査し、Missing MonoBehaviourを階層path・件数付きでbuild前に拒否するEditor専用module。**Unity 6000.5 以降**。 | なし |
+| [参照元検索（Reference Finder）](ReferenceFinder/) | 選択したAssetを直接参照するAssets配下のScene、Prefab、Material、ScriptableObjectなどを検索し、選択・Ping・Open・path copyまで行うEditor専用module。**Unity 6000.5 以降**。 | なし |
 | [入力の一時停止（InputGate）](InputGate/) | PlayerInputの実行中Action Mapを入れ子leaseで停止し、最後の解放時にActionごとの有効状態を復元する。**Unity 6000.5 / Input System 1.20.0 以降**。 | com.unity.inputsystem 1.20.0 / com.unity.modules.uielements 1.0.0 |
 | [音声再生管理（AudioControl）](AudioControl/) | owner付きAudioSource poolで再生、voice上限、priority steal、handle停止、非スケールfadeを管理する。**Unity 6000.5 以降**。 | com.unity.modules.audio 1.0.0 / com.unity.modules.uielements 1.0.0 |
 | [起動手順管理（StartupFlow）](StartupFlow/) | 明示した非同期stepをOrderとIdで決定論的に直列実行し、進捗・失敗位置・完了件数・協調cancelを結果として返す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
@@ -145,6 +147,10 @@ Assets/
     │   ├── Editor/      BuildGuard.Editor
     │   ├── Tests/       BuildGuard.Tests
     │   └── Samples~/    Build Guard Basics
+    ├── ReferenceFinder/
+    │   ├── Editor/      ReferenceFinder.Editor
+    │   ├── Tests/       ReferenceFinder.Tests
+    │   └── Samples~/    Reference Finder Basics
     ├── InputGate/
         ├── Runtime/     InputGate.Runtime
         ├── Tests/       InputGate.Tests / InputGate.PlayMode.Tests
