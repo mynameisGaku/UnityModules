@@ -1,6 +1,6 @@
-# Build Guard 1.3.0
+# Build Guard 1.4.0
 
-Build Guardは、Player build対象Sceneの壊れたComponent参照を手動scanとbuild時の自動検査へまとめたEditor専用moduleです。Runtime assembly、設定asset、global singleton、公開APIを持ちません。
+Build Guardは、Player build対象Sceneと選択Prefabの壊れたComponent参照を手動scanし、Sceneはbuild時にも自動検査するEditor専用moduleです。Runtime assembly、設定asset、global singleton、公開APIを持ちません。
 
 ## 利用者の操作
 
@@ -16,6 +16,12 @@ Build Guardは、Player build対象Sceneの壊れたComponent参照を手動scan
 `Open Scene`は未保存Sceneの保存確認後に対象Sceneを開き、階層pathがまだ一致すればGameObjectを選択します。対象が既に修復・移動されている場合はScene assetを選択します。`Copy`は1件を一行でclipboardへコピーします。
 
 Missing Scriptの`Open and Remove`は、確認後に同じ方法でSceneとGameObjectを特定します。対象GameObjectのmissing MonoBehaviour slotだけを`Undo.RegisterFullObjectHierarchyUndo`へ記録して除去し、Sceneをdirty状態のまま残します。自動保存しないため、利用者がInspectorを確認して保存するかUndoで戻せます。Missing Object Referenceは参照先を推測できないため自動修復しません。
+
+### 選択Prefab scan
+
+**Assets > Build Guard > Scan Selected Prefabs** は、Project windowで選択したPrefab、または選択folder以下のPrefabをpath順に検査します。各Prefabは`PrefabUtility.LoadPrefabContents`で一時展開し、Sceneと同じMissing Script／Missing Object Reference ruleを適用した後、保存せずUnloadします。
+
+`Open Prefab`はPrefab Modeを開き、兄弟index付き階層pathがまだ一致すればGameObjectを選択します。Missing Scriptの`Open and Remove`は対象hierarchyをUndoへ記録してmissing slotだけを除去し、Prefab Stageをdirty状態のまま残します。利用者が保存またはUndoするまでPrefab assetへ確定しません。
 
 ### 自動build検査
 
@@ -36,7 +42,7 @@ Sceneのroot順と各Transformのchild順でactive・inactiveに関係なく全G
 
 各Componentを`SerializedObject`として走査し、`ObjectReference`型で値を解決できない一方、保存された`EntityId`が有効なfieldを検出します。これにより、Scene保存後に削除されたTexture、Material、Prefabなどへの参照を検出できます。最初からnullの任意fieldは検出しません。
 
-Prefab instanceも展開済みScene階層として同じ規則で扱います。結果はScene順、階層path、Component順、property pathの順へ並べます。
+Prefab instanceも展開済みScene階層として同じ規則で扱います。選択Prefab scanも一時的なPrefab contents Sceneへ同じruleを適用します。結果はAsset path、階層path、Component順、property pathの順へ並べます。
 
 ## Sceneの扱い
 
@@ -55,7 +61,7 @@ GameObject名には兄弟indexを付けます。`/`、`\\`、改行、復帰、t
 
 - Missing Object Referenceの自動修復
 - 複数Sceneの一括修復と自動保存
-- project内の全Prefab・Scene・ScriptableObjectの常時scan
+- project内の全Prefab・Scene・ScriptableObjectの常時scan（Prefabは利用者が明示選択した範囲だけ）
 - Runtimeで後から設定するnull fieldの必須判定
 - Addressables、Resources、AssetBundle contentの一括検査
 - PlayerSettings、Development Build、Profiler、署名、version、secretのpolicy判定
@@ -68,10 +74,11 @@ Package ManagerからSampleをImportすると、次を確認できます。
 
 - `BuildGuardBasics.unity`: active rootとinactive childを持つscan・build可能Scene
 - `BrokenSceneExample.unity.txt`: Missing Scriptを1件含むtext template
-- Sample README: 2種類の問題を手動scanとPlayer buildで確認する手順
+- `BrokenPrefabExample.prefab.txt`: Missing Scriptを1件含むPrefab text template
+- Sample README: Scene・Prefabの問題を手動scanとPlayer buildで確認する手順
 
 失敗動作はscratch locationか使い捨てprojectで確認し、確認後は壊れたSceneを削除してください。
 
 ## 検証方針
 
-Editor testはinactive階層、Prefab instance、削除済みRenderTexture、path escape、階層pathの逆引き、決定論的message、複数Sceneの手動scan、cancel、結果window、Scene移動、Missing Script除去とUndo、閉じたSceneの一時読込とactive Scene復元を検証します。配布gateではclean projectへtarballを導入し、menuからwindowが開くこと、有効Sceneのscan成功、Missing Script・Missing Object Referenceの一覧、Missing Script除去後の未保存状態、正常Sceneのbuild成功、2種類の不備Sceneのbuild失敗を実際に確認します。
+Editor testはinactive階層、Prefab instance、削除済みRenderTexture、path escape、階層pathの逆引き、決定論的message、複数Sceneと選択Prefabの手動scan、cancel、結果window、Scene・Prefab移動、Missing Script除去とUndo、閉じたSceneとPrefab contentsの一時読込を検証します。配布gateではclean projectへtarballを導入し、有効Sceneと選択Prefabのscan、Missing Script除去後の未保存状態、正常Sceneのbuild成功、2種類の不備Sceneのbuild失敗を実際に確認します。

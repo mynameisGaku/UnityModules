@@ -27,7 +27,7 @@ README、一覧、Package Manager の表示名では、日本語で目的を先�
 | 画面フェード | ScreenTransition | 画面を覆う・戻す演出を扱う。 |
 | ゲーム時間制御 | TimeControl | 一時停止・スロー・倍速を扱う。 |
 | 入力の一時停止 | InputGate | Gameplay の入力を一時的に止める。 |
-| ビルド前の不備チェック | BuildGuard | Missing Script などを Player build 前に止める。 |
+| プロジェクト不備確認・修復 | BuildGuard | Scene・PrefabのMissing Scriptなどを見つけ、修復場所へ移動する。 |
 | 不具合レポート保存 | DiagnosticsContext | 調査用の状態とログを JSON に残す。 |
 
 `Control`、`Flow`、`Resolver`、`Evaluator` のような実装上の語だけを表示名にしない。「利用者が何をできるか」を名前にする。
