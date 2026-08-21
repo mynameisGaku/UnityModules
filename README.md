@@ -17,7 +17,7 @@ Unity で繰り返し発生する設定、実装、確認作業を減らすた�
 | Pause、Slow、Fast を複数機能から安全に使いたい | [ゲーム時間制御（TimeControl）](TimeControl/) | lease を重ねて `Time.timeScale` を競合なく制御する。 |
 | BGM・SE の同時再生数や fade をまとめたい | [音声再生管理（AudioControl）](AudioControl/) | AudioSource pool、優先度、停止 handle、fade を管理する。 |
 | セーブ枠、破損、バックアップを毎回実装したくない | [セーブデータ管理（SaveSystem）](SaveSystem/) | 型付き JSON、複数 slot、破損検出、backup 復旧を使う。 |
-| Missing Script を build 後に見つけたくない | [ビルド前の不備チェック（BuildGuard）](BuildGuard/) | Scene と Prefab instance を Player build 前に検査する。 |
+| Missing Scriptや削除済みAssetへの参照をbuild後に見つけたくない | [ビルド前の不備チェック（Build Guard）](BuildGuard/) | build対象Sceneの壊れたComponent参照と修復場所を開始前に特定する。 |
 | Assetを削除・置換する前に利用箇所を知りたい | [アセット参照検索（Reference Finder）](ReferenceFinder/) | 直接・間接参照を切り替え、選択Assetを利用するScene、Prefab、Material、設定Assetなどを一覧表示する。 |
 | 不具合調査用の状態とログを手動保存したい | [不具合レポート保存（DiagnosticsContext）](DiagnosticsContext/) | context、breadcrumb、Unity log を有界 JSON に書き出す。 |
 | Gameplay 入力だけ一時的に止めたい | [入力の一時停止（InputGate）](InputGate/) | PlayerInput の Action Map を入れ子で停止・復元する。 |
@@ -47,7 +47,7 @@ Unity で繰り返し発生する設定、実装、確認作業を減らすた�
 | [画面サイズ・ノッチ対応（AdaptiveLayout）](AdaptiveLayout/) | `Screen.safeArea`をUI ToolkitとRectTransformへ適用し、ノッチ、角丸、画面回転、解像度変更に追従する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [ゲーム時間制御（TimeControl）](TimeControl/) | Scene所有のControllerが複数leaseの相対倍率を最小値で集約し、pause・slow motion・単独fast-forwardをTime.timeScaleへ安全に反映する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [不具合レポート保存（DiagnosticsContext）](DiagnosticsContext/) | 明示追加したcontext・breadcrumbと実行中のUnity Warning・Error・Assert・Exceptionを有界に保持し、手動操作時だけJSON reportへ書き出す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
-| [ビルド前の不備チェック（BuildGuard）](BuildGuard/) | Player build対象Sceneのactive・inactive階層とPrefab instanceを検査し、Missing MonoBehaviourを階層path・件数付きでbuild前に拒否するEditor専用module。**Unity 6000.5 以降**。 | なし |
+| [ビルド前の不備チェック（Build Guard）](BuildGuard/) | Player build対象Sceneのactive・inactive階層とPrefab instanceを検査し、Missing Scriptと削除済みObject Referenceを階層・Component・field付きでbuild前に拒否するEditor専用module。**Unity 6000.5 以降**。 | なし |
 | [アセット参照検索（Reference Finder）](ReferenceFinder/) | 選択したAssetの直接・間接参照元をAssets配下から検索し、Search Root指定、選択、Ping、Open、path copyまで行うEditor専用module。**Unity 6000.5 以降**。 | なし |
 | [入力の一時停止（InputGate）](InputGate/) | PlayerInputの実行中Action Mapを入れ子leaseで停止し、最後の解放時にActionごとの有効状態を復元する。**Unity 6000.5 / Input System 1.20.0 以降**。 | com.unity.inputsystem 1.20.0 / com.unity.modules.uielements 1.0.0 |
 | [音声再生管理（AudioControl）](AudioControl/) | owner付きAudioSource poolで再生、voice上限、priority steal、handle停止、非スケールfadeを管理する。**Unity 6000.5 以降**。 | com.unity.modules.audio 1.0.0 / com.unity.modules.uielements 1.0.0 |

@@ -2,6 +2,19 @@
 
 このパッケージの変更履歴。書式は [Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) に、バージョン番号は [Semantic Versioning](https://semver.org/lang/ja/) に従います。
 
+## [1.1.0] - 2026-08-22
+
+### Added
+
+- Scene保存後に削除されたTexture、Material、Prefabなどを指すObject Reference fieldの検出。
+- GameObject階層、Component型と順番、serialized property pathを示す統合失敗message。
+- 削除済みRenderTextureとCameraの参照を使った決定論的なEditor回帰検証。
+
+### Changed
+
+- READMEを、用途、3分の導入手順、messageの読み方、対象外が先に分かる構成へ更新。
+- 実装code、test code、診断message内の説明を英語へ統一。
+
 ## [1.0.0] - 2026-08-14
 
 ### Added
