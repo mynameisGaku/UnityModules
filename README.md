@@ -47,6 +47,7 @@ Unity 向けの再利用可能なモジュール置き場。各モジュール�
 | [Input Vector Response Curve](InputVectorResponseCurve/) | 単位円内の有限2D analog入力へ4種類のmagnitude curveを方向を保って決定論的に適用する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [Input Vector Exponential Smoother](InputVectorExponentialSmoother/) | 有限2D targetとの差へ明示stepごとに一定割合を適用し、平滑状態・実適用差分・残差を再構築可能に保つ。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [Input Vector Weighted Mixer](InputVectorWeightedMixer/) | 最大32件の有限2D sourceを明示weightの正規化加重平均へ変換し、合成結果・件数・失敗位置を再構築可能に返す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
+| [Input Vector Direction Limiter](InputVectorDirectionLimiter/) | unit circle内の有限2D targetへ明示stepごとの方向回転だけを制限し、target magnitudeと回転結果を再構築可能に返す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 
 ---
 
@@ -198,10 +199,14 @@ Assets/
         ├── Runtime/     InputVectorExponentialSmoother.Runtime
         ├── Tests/       InputVectorExponentialSmoother.Tests
         └── Samples~/    InputFiltering.Samples / InputFiltering.Samples.PlayMode.Tests
-    └── InputVectorWeightedMixer/
+    ├── InputVectorWeightedMixer/
         ├── Runtime/     InputVectorWeightedMixer.Runtime
         ├── Tests/       InputVectorWeightedMixer.Tests
         └── Samples~/    InputMixing.Samples / InputMixing.Samples.PlayMode.Tests
+    └── InputVectorDirectionLimiter/
+        ├── Runtime/     InputVectorDirectionLimiter.Runtime
+        ├── Tests/       InputVectorDirectionLimiter.Tests
+        └── Samples~/    InputVectorDirectionLimiter.Samples / InputVectorDirectionLimiter.Samples.PlayMode.Tests
 ```
 
 UPM パッケージとして扱う場合は、モジュールのフォルダを `Packages/` 以下に置くか、
