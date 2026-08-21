@@ -1,0 +1,16 @@
+{
+  "name": "ResourceCostEvaluator.Samples",
+  "rootNamespace": "GameplayResources.Samples",
+  "references": [
+    "ResourceCostEvaluator.Runtime"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}
