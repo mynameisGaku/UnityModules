@@ -1,0 +1,16 @@
+{
+  "name": "InputVectorDirectionLimiter.Samples",
+  "rootNamespace": "InputSmoothing.Samples",
+  "references": [
+    "InputVectorDirectionLimiter.Runtime"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

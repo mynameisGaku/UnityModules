@@ -1,0 +1,22 @@
+{
+  "name": "InputVectorDirectionLimiter.Samples.PlayMode.Tests",
+  "rootNamespace": "InputSmoothing.Samples.PlayMode.Tests",
+  "references": [
+    "InputVectorDirectionLimiter.Runtime",
+    "InputVectorDirectionLimiter.Samples",
+    "UnityEngine.TestRunner"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": true,
+  "precompiledReferences": [
+    "nunit.framework.dll"
+  ],
+  "autoReferenced": false,
+  "defineConstraints": [
+    "UNITY_INCLUDE_TESTS"
+  ],
+  "versionDefines": [],
+  "noEngineReferences": false
+}
