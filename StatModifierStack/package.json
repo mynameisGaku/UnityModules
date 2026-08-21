@@ -1,0 +1,36 @@
+{
+  "name": "com.studiogaku.stat-modifier-stack",
+  "version": "1.0.0",
+  "displayName": "Stat Modifier Stack",
+  "description": "Combines up to 32 finite stat modifiers in deterministic ID order through flat, additive-percent, and multiplicative-factor stages.",
+  "unity": "6000.5",
+  "unityRelease": "7f1",
+  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/tree/stat-modifier-stack-v1.0.0/StatModifierStack/Documentation~",
+  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/stat-modifier-stack-v1.0.0/StatModifierStack/CHANGELOG.md",
+  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/stat-modifier-stack-v1.0.0/StatModifierStack/LICENSE.md",
+  "dependencies": {
+    "com.unity.modules.uielements": "1.0.0"
+  },
+  "samples": [
+    {
+      "displayName": "Stat Modifier Stack Basics",
+      "description": "Compares flat, additive-percent, multiplicative-factor, update, duplicate rejection, and responsive UI Toolkit geometry scenarios.",
+      "path": "Samples~/Basics"
+    }
+  ],
+  "keywords": [
+    "stat",
+    "modifier",
+    "attribute",
+    "buff",
+    "debuff",
+    "flat",
+    "percent",
+    "multiplier",
+    "deterministic",
+    "gameplay"
+  ],
+  "author": {
+    "name": "Studio Gaku"
+  }
+}
