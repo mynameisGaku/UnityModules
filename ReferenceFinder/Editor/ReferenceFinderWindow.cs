@@ -8,12 +8,15 @@ namespace ReferenceFinder
     internal sealed class ReferenceFinderWindow : EditorWindow
     {
         private UnityEngine.Object _target;
+        private UnityEngine.Object _replacement;
         [SerializeField] private AssetReferenceSearchMode _searchMode = AssetReferenceSearchMode.Direct;
         [SerializeField] private DefaultAsset _searchRoot;
         private AssetReferenceSearchResult _result;
+        private AssetReferenceReplacementPlan _replacementPlan;
         private string _resultSearchRoot = string.Empty;
         private Vector2 _scroll;
         private string _error = string.Empty;
+        private string _replacementMessage = string.Empty;
 
         [MenuItem("Tools/Reference Finder")]
         internal static void Open()
@@ -31,9 +34,9 @@ namespace ReferenceFinder
 
         private void OnGUI()
         {
-            EditorGUILayout.LabelField("Find Asset References", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Manage Asset References", EditorStyles.boldLabel);
             EditorGUILayout.HelpBox(
-                "Select a project or package asset. The search scans Assets and lists assets that directly depend on it.",
+                "Find assets that use the target, then preview exact serialized properties before an Undo-supported replacement.",
                 MessageType.Info);
 
             _target = EditorGUILayout.ObjectField("Target Asset", _target, typeof(UnityEngine.Object), false);
@@ -86,6 +89,7 @@ namespace ReferenceFinder
 
             if (_result == null)
             {
+                DrawReplacementSection();
                 return;
             }
 
@@ -110,6 +114,8 @@ namespace ReferenceFinder
                     $"{_result.FailedAssetPaths.Count} assets could not be inspected.",
                     MessageType.Warning);
             }
+
+            DrawReplacementSection();
 
             using (new EditorGUI.DisabledScope(_result.ReferenceAssetPaths.Count == 0))
             {
@@ -141,10 +147,82 @@ namespace ReferenceFinder
             EditorGUILayout.EndScrollView();
         }
 
-        private void RunSearch()
+        private void DrawReplacementSection()
+        {
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Safe Replacement", EditorStyles.boldLabel);
+            _replacement = EditorGUILayout.ObjectField(
+                "Replacement Asset",
+                _replacement,
+                typeof(UnityEngine.Object),
+                false);
+            EditorGUILayout.HelpBox(
+                "Preview scans direct serialized object-reference properties only. Scenes and unsupported asset formats are listed but never changed.",
+                MessageType.None);
+
+            using (new EditorGUI.DisabledScope(!CanSearch(_target) || !CanSearch(_replacement)))
+            {
+                if (GUILayout.Button("Preview Replacement"))
+                {
+                    PreviewReplacement();
+                }
+            }
+
+            if (!string.IsNullOrEmpty(_replacementMessage))
+            {
+                EditorGUILayout.HelpBox(_replacementMessage, MessageType.Info);
+            }
+
+            if (_replacementPlan == null)
+            {
+                return;
+            }
+
+            EditorGUILayout.LabelField("Exact References", _replacementPlan.Occurrences.Count.ToString());
+            EditorGUILayout.LabelField("Unsupported Assets", _replacementPlan.UnsupportedAssetPaths.Count.ToString());
+            EditorGUILayout.LabelField("Inspection Failures", _replacementPlan.FailedAssetPaths.Count.ToString());
+
+            foreach (var occurrence in _replacementPlan.Occurrences)
+            {
+                EditorGUILayout.LabelField(
+                    occurrence.AssetPath,
+                    $"{occurrence.OwnerName} / {occurrence.PropertyPath}");
+            }
+
+            if (_replacementPlan.UnsupportedAssetPaths.Count > 0)
+            {
+                EditorGUILayout.HelpBox(
+                    "Unsupported assets remain unchanged:\n" + string.Join("\n", _replacementPlan.UnsupportedAssetPaths),
+                    MessageType.Warning);
+            }
+
+            if (_replacementPlan.FailedAssetPaths.Count > 0)
+            {
+                EditorGUILayout.HelpBox(
+                    "Replacement is blocked because some assets could not be inspected:\n"
+                    + string.Join("\n", _replacementPlan.FailedAssetPaths),
+                    MessageType.Error);
+            }
+
+            using (new EditorGUI.DisabledScope(
+                _replacementPlan.Occurrences.Count == 0 || _replacementPlan.FailedAssetPaths.Count > 0))
+            {
+                if (GUILayout.Button("Replace Previewed References"))
+                {
+                    ApplyReplacement();
+                }
+            }
+        }
+
+        private void RunSearch(bool clearReplacementMessage = true)
         {
             _error = string.Empty;
             _result = null;
+            _replacementPlan = null;
+            if (clearReplacementMessage)
+            {
+                _replacementMessage = string.Empty;
+            }
             try
             {
                 var targetPath = AssetDatabase.GetAssetPath(_target);
@@ -166,6 +244,57 @@ namespace ReferenceFinder
             finally
             {
                 EditorUtility.ClearProgressBar();
+            }
+
+            Repaint();
+        }
+
+        private void PreviewReplacement()
+        {
+            _error = string.Empty;
+            _replacementMessage = string.Empty;
+            _replacementPlan = null;
+            try
+            {
+                _replacementPlan = AssetReferenceReplacer.Preview(_target, _replacement, GetSearchFolders());
+                _replacementMessage = _replacementPlan.Occurrences.Count == 0
+                    ? "No replaceable serialized references were found."
+                    : $"Previewed {_replacementPlan.Occurrences.Count} exact serialized references.";
+            }
+            catch (Exception exception)
+            {
+                _error = exception.Message;
+            }
+
+            Repaint();
+        }
+
+        private void ApplyReplacement()
+        {
+            var unsupportedCount = _replacementPlan.UnsupportedAssetPaths.Count;
+            var detail = unsupportedCount == 0
+                ? "Every previewed reference will be changed."
+                : $"{unsupportedCount} unsupported assets will remain unchanged.";
+            if (!EditorUtility.DisplayDialog(
+                "Replace Asset References",
+                $"Replace {_replacementPlan.Occurrences.Count} serialized references?\n\n{detail}\n\nThe operation can be reverted with Undo.",
+                "Replace",
+                "Cancel"))
+            {
+                return;
+            }
+
+            try
+            {
+                var replacementResult = AssetReferenceReplacer.Apply(_replacementPlan);
+                var successMessage = $"Replaced {replacementResult.ReplacedReferenceCount} references in {replacementResult.ChangedAssetPaths.Count} assets.";
+                _replacementPlan = null;
+                RunSearch(false);
+                _replacementMessage = successMessage;
+            }
+            catch (Exception exception)
+            {
+                _error = exception.Message;
             }
 
             Repaint();
