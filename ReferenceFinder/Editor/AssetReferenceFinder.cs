@@ -26,7 +26,10 @@ namespace ReferenceFinder
                 throw new ArgumentException("A persistent asset is required.", nameof(target));
             }
 
-            return FindDirectReferences(AssetDatabase.GetAssetPath(target), null);
+            return FindReferences(
+                AssetDatabase.GetAssetPath(target),
+                AssetReferenceSearchMode.Direct,
+                null);
         }
 
         /// <summary>
@@ -40,7 +43,44 @@ namespace ReferenceFinder
             string targetAssetPath,
             IReadOnlyList<string> searchFolders = null)
         {
-            return FindDirectReferencesInternal(targetAssetPath, searchFolders, null);
+            return FindReferences(targetAssetPath, AssetReferenceSearchMode.Direct, searchFolders);
+        }
+
+        /// <summary>
+        /// Finds direct or transitive references to an asset below the Assets folder.
+        /// </summary>
+        /// <param name="target">A persistent project or package asset.</param>
+        /// <param name="searchMode">The dependency depth to match.</param>
+        /// <param name="searchFolders">Assets folders to scan. Null or empty scans the complete Assets folder.</param>
+        /// <returns>A complete, ordinally sorted search result.</returns>
+        /// <exception cref="ArgumentException">Thrown when the target, mode, or a search folder is invalid.</exception>
+        public static AssetReferenceSearchResult FindReferences(
+            UnityEngine.Object target,
+            AssetReferenceSearchMode searchMode,
+            IReadOnlyList<string> searchFolders = null)
+        {
+            if (target == null)
+            {
+                throw new ArgumentException("A persistent asset is required.", nameof(target));
+            }
+
+            return FindReferences(AssetDatabase.GetAssetPath(target), searchMode, searchFolders);
+        }
+
+        /// <summary>
+        /// Finds direct or transitive references to an asset inside specified Assets folders.
+        /// </summary>
+        /// <param name="targetAssetPath">A canonical AssetDatabase path for a non-folder asset.</param>
+        /// <param name="searchMode">The dependency depth to match.</param>
+        /// <param name="searchFolders">Assets folders to scan. Null or empty scans the complete Assets folder.</param>
+        /// <returns>A complete, ordinally sorted search result.</returns>
+        /// <exception cref="ArgumentException">Thrown when the target, mode, or a search folder is invalid.</exception>
+        public static AssetReferenceSearchResult FindReferences(
+            string targetAssetPath,
+            AssetReferenceSearchMode searchMode,
+            IReadOnlyList<string> searchFolders = null)
+        {
+            return FindReferencesInternal(targetAssetPath, searchFolders, searchMode, null);
         }
 
         internal static AssetReferenceSearchResult FindDirectReferencesInternal(
@@ -48,7 +88,21 @@ namespace ReferenceFinder
             IReadOnlyList<string> searchFolders,
             Func<int, int, string, bool> continueSearch)
         {
+            return FindReferencesInternal(
+                targetAssetPath,
+                searchFolders,
+                AssetReferenceSearchMode.Direct,
+                continueSearch);
+        }
+
+        internal static AssetReferenceSearchResult FindReferencesInternal(
+            string targetAssetPath,
+            IReadOnlyList<string> searchFolders,
+            AssetReferenceSearchMode searchMode,
+            Func<int, int, string, bool> continueSearch)
+        {
             var canonicalTarget = ValidateTarget(targetAssetPath);
+            ValidateSearchMode(searchMode);
             var folders = NormalizeSearchFolders(searchFolders);
             var candidates = FindCandidatePaths(folders, canonicalTarget);
             var references = new List<string>();
@@ -67,7 +121,9 @@ namespace ReferenceFinder
 
                 try
                 {
-                    var dependencies = AssetDatabase.GetDependencies(candidate, false);
+                    var dependencies = AssetDatabase.GetDependencies(
+                        candidate,
+                        searchMode == AssetReferenceSearchMode.Recursive);
                     if (dependencies.Any(path => string.Equals(path, canonicalTarget, StringComparison.Ordinal)))
                     {
                         references.Add(candidate);
@@ -89,7 +145,17 @@ namespace ReferenceFinder
                 failures.ToArray(),
                 scanned,
                 candidates.Length,
-                canceled);
+                canceled,
+                searchMode);
+        }
+
+        private static void ValidateSearchMode(AssetReferenceSearchMode searchMode)
+        {
+            if (searchMode != AssetReferenceSearchMode.Direct
+                && searchMode != AssetReferenceSearchMode.Recursive)
+            {
+                throw new ArgumentException($"Unsupported search mode: {searchMode}", nameof(searchMode));
+            }
         }
 
         internal static string[] NormalizeSearchFolders(IReadOnlyList<string> searchFolders)

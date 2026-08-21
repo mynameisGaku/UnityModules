@@ -18,7 +18,8 @@ namespace ReferenceFinder
             string[] failedAssetPaths,
             int scannedAssetCount,
             int candidateAssetCount,
-            bool wasCanceled)
+            bool wasCanceled,
+            AssetReferenceSearchMode searchMode)
         {
             TargetAssetPath = targetAssetPath;
             _referenceAssetPaths = Array.AsReadOnly(referenceAssetPaths);
@@ -26,6 +27,7 @@ namespace ReferenceFinder
             ScannedAssetCount = scannedAssetCount;
             CandidateAssetCount = candidateAssetCount;
             WasCanceled = wasCanceled;
+            SearchMode = searchMode;
         }
 
         /// <summary>Gets the canonical AssetDatabase path that was searched.</summary>
@@ -45,5 +47,8 @@ namespace ReferenceFinder
 
         /// <summary>Gets whether the search stopped before every candidate was inspected.</summary>
         public bool WasCanceled { get; }
+
+        /// <summary>Gets the dependency depth used for this search.</summary>
+        public AssetReferenceSearchMode SearchMode { get; }
     }
 }
