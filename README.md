@@ -59,6 +59,7 @@ Unity 向けの再利用可能なモジュール置き場。各モジュール�
 | [Sample Statistics](SampleStatistics/) | 1〜32個の有限sampleからminimum・maximum・mean・range・母分散・母標準偏差を再構築可能に返す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [Resource Cost Evaluator](ResourceCostEvaluator/) | 最大32件ずつのresource残量とcostから、stateを変更せず全支払可否・支払後残量・不足量をresource別に返す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [Numeric Requirement Evaluator](NumericRequirementEvaluator/) | 最大32件の有限な実値・基準値・比較方法・許容差から、stateを変更せず全条件の成立可否と入力順の全明細を返す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
+| [Utility Score Evaluator](UtilityScoreEvaluator/) | 最大32候補・各16factorの0〜1 utilityと正weightから、stateを変更せず最高score候補・安定tie-break・全寄与明細を返す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 
 ---
 
@@ -258,10 +259,14 @@ Assets/
         ├── Runtime/     ResourceCostEvaluator.Runtime
         ├── Tests/       ResourceCostEvaluator.Tests
         └── Samples~/    ResourceCostEvaluator.Samples / ResourceCostEvaluator.Samples.PlayMode.Tests
-    └── NumericRequirementEvaluator/
+    ├── NumericRequirementEvaluator/
         ├── Runtime/     NumericRequirementEvaluator.Runtime
         ├── Tests/       NumericRequirementEvaluator.Tests
         └── Samples~/    NumericRequirementEvaluator.Samples / NumericRequirementEvaluator.Samples.PlayMode.Tests
+    └── UtilityScoreEvaluator/
+        ├── Runtime/     UtilityScoreEvaluator.Runtime
+        ├── Tests/       UtilityScoreEvaluator.Tests
+        └── Samples~/    UtilityScoreEvaluator.Samples / UtilityScoreEvaluator.Samples.PlayMode.Tests
 ```
 
 UPM パッケージとして扱う場合は、モジュールのフォルダを `Packages/` 以下に置くか、
