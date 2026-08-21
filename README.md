@@ -44,6 +44,7 @@ Unity 向けの再利用可能なモジュール置き場。各モジュール�
 | [Input Command Arbiter](InputCommandArbiter/) | 同一simulation stepで成立したcommand候補から最大priorityと安定した先頭tie-breakで1件を決定論的に選ぶ。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [Input Radial Dead Zone](InputRadialDeadZone/) | 有限2D analog入力をinner・outerのradial境界間で方向を保った連続成分へ決定論的に補正する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [Input Vector Slew Limiter](InputVectorSlewLimiter/) | 有限2D targetへのvector差を明示stepごとの最大magnitude以内に制限し、現在状態を再構築可能に保つ。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
+| [Input Vector Response Curve](InputVectorResponseCurve/) | 単位円内の有限2D analog入力へ4種類のmagnitude curveを方向を保って決定論的に適用する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 
 ---
 
@@ -183,10 +184,14 @@ Assets/
         ├── Runtime/     InputRadialDeadZone.Runtime
         ├── Tests/       InputRadialDeadZone.Tests
         └── Samples~/    InputDeadZones.Samples / InputDeadZones.Samples.PlayMode.Tests
-    └── InputVectorSlewLimiter/
+    ├── InputVectorSlewLimiter/
         ├── Runtime/     InputVectorSlewLimiter.Runtime
         ├── Tests/       InputVectorSlewLimiter.Tests
         └── Samples~/    InputSmoothing.Samples / InputSmoothing.Samples.PlayMode.Tests
+    └── InputVectorResponseCurve/
+        ├── Runtime/     InputVectorResponseCurve.Runtime
+        ├── Tests/       InputVectorResponseCurve.Tests
+        └── Samples~/    InputResponse.Samples / InputResponse.Samples.PlayMode.Tests
 ```
 
 UPM パッケージとして扱う場合は、モジュールのフォルダを `Packages/` 以下に置くか、
