@@ -1,0 +1,25 @@
+{
+  "name": "PiecewiseLinearCurve.Tests",
+  "rootNamespace": "GameplayMath.Tests",
+  "references": [
+    "PiecewiseLinearCurve.Runtime"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": true,
+  "precompiledReferences": [
+    "nunit.framework.dll"
+  ],
+  "autoReferenced": false,
+  "defineConstraints": [
+    "UNITY_INCLUDE_TESTS"
+  ],
+  "versionDefines": [],
+  "noEngineReferences": true,
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ]
+}
