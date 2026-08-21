@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.3.0] - 2026-08-22
+
+### Added
+
+- GUID-preserving batch rename previews for selected main assets below Assets.
+- Find, replace, prefix, and suffix rules with collision and stale-plan validation.
+- A Project context menu and editor window that show every final path before mutation.
+- Rollback of completed entries when an unexpected later rename fails.
+
+### Changed
+
+- Reframed the module as asset organization and reference management with task-oriented setup and safety guidance.
+
 ## [1.2.0] - 2026-08-22
 
 ### Added
