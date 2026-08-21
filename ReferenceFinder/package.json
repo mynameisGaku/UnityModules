@@ -1,13 +1,13 @@
 {
   "name": "com.studiogaku.reference-finder",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "displayName": "Reference Finder",
-  "description": "Searches project assets that directly reference a selected Unity asset and presents deterministic editor results.",
+  "description": "Searches project assets that directly or transitively reference a selected Unity asset within a chosen Assets folder.",
   "unity": "6000.5",
   "unityRelease": "7f1",
-  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/blob/reference-finder-v1.0.0/ReferenceFinder/Documentation~/index.md",
-  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/reference-finder-v1.0.0/ReferenceFinder/CHANGELOG.md",
-  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/reference-finder-v1.0.0/ReferenceFinder/LICENSE.md",
+  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/blob/reference-finder-v1.1.0/ReferenceFinder/Documentation~/index.md",
+  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/reference-finder-v1.1.0/ReferenceFinder/CHANGELOG.md",
+  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/reference-finder-v1.1.0/ReferenceFinder/LICENSE.md",
   "license": "Refer to LICENSE.md file",
   "keywords": [
     "reference",
@@ -25,7 +25,7 @@
   "samples": [
     {
       "displayName": "Reference Finder Basics",
-      "description": "Two English-named ScriptableObject assets that demonstrate one direct reference.",
+      "description": "Three English-named ScriptableObject assets that demonstrate direct and transitive references.",
       "path": "Samples~/Basics"
     }
   ]
