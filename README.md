@@ -42,6 +42,7 @@ Unity 向けの再利用可能なモジュール置き場。各モジュール�
 | [Input Direction Quantizer](InputDirectionQuantizer/) | 有限2D analog入力をradial dead zone付きの4-way・8-way方向へ決定論的に変換する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [Input Threshold Classifier](InputThresholdClassifier/) | 有限scalar sampleをrelease・pressの2つのinclusive thresholdで安定したpressed状態とedgeへ分類する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [Input Command Arbiter](InputCommandArbiter/) | 同一simulation stepで成立したcommand候補から最大priorityと安定した先頭tie-breakで1件を決定論的に選ぶ。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
+| [Input Radial Dead Zone](InputRadialDeadZone/) | 有限2D analog入力をinner・outerのradial境界間で方向を保った連続成分へ決定論的に補正する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 
 ---
 
@@ -173,10 +174,14 @@ Assets/
         ├── Runtime/     InputThresholdClassifier.Runtime
         ├── Tests/       InputThresholdClassifier.Tests
         └── Samples~/    InputThresholding.Samples / InputThresholding.Samples.PlayMode.Tests
-    └── InputCommandArbiter/
+    ├── InputCommandArbiter/
         ├── Runtime/     InputCommandArbiter.Runtime
         ├── Tests/       InputCommandArbiter.Tests
         └── Samples~/    InputArbitration.Samples / InputArbitration.Samples.PlayMode.Tests
+    └── InputRadialDeadZone/
+        ├── Runtime/     InputRadialDeadZone.Runtime
+        ├── Tests/       InputRadialDeadZone.Tests
+        └── Samples~/    InputDeadZones.Samples / InputDeadZones.Samples.PlayMode.Tests
 ```
 
 UPM パッケージとして扱う場合は、モジュールのフォルダを `Packages/` 以下に置くか、
