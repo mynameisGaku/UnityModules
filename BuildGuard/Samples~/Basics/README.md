@@ -18,9 +18,10 @@
 2. 複製先の拡張子を`.unity`へ変更します。
 3. そのSceneだけをPlayer build対象へ指定します。
 4. manual scanに`Broken Example[0]`と`Missing Scripts: 1`が出ることを確認します。
-5. `Open Scene`で対象GameObjectが選択されることを確認します。
-6. Player buildも同じ問題で止まることを確認します。
-7. 確認後は複製したSceneを削除します。
+5. `Open and Remove`を押し、対象GameObjectからMissing Scriptが除去されることを確認します。
+6. Sceneが未保存のまま残ることを確認し、UndoでMissing Scriptが戻ることも確認します。
+7. 再度除去してSceneを保存すると、manual scanとPlayer buildがMissing Scriptでは止まらなくなることを確認します。
+8. 確認後は複製したSceneを削除します。
 
 ## 3. Missing Object Referenceを確認する
 
@@ -37,4 +38,4 @@
 9. Player buildも同じ問題で止まることを確認します。
 10. 確認後は複製したSceneを削除します。
 
-Build GuardはSceneを修復、保存、削除しません。`Copy`で1件の修復情報を共有できます。
+Build GuardはMissing Scriptだけを明示操作で除去できます。Missing Object Referenceの推測修復、Sceneの自動保存、Asset削除は行いません。`Copy`で1件の修復情報を共有できます。

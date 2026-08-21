@@ -2,6 +2,18 @@
 
 このパッケージの変更履歴。書式は [Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) に、バージョン番号は [Semantic Versioning](https://semver.org/lang/ja/) に従います。
 
+## [1.3.0] - 2026-08-22
+
+### Added
+
+- manual scanのMissing Script結果から対象SceneとGameObjectを開き、missing MonoBehaviour slotだけを除去する明示操作。
+- 除去前の確認、Hierarchy全体のUndo記録、Sceneを自動保存しないreview境界。
+- 除去後のdirty状態とUndo復元、Missing Object Referenceを変更しないEditor回帰検証。
+
+### Changed
+
+- READMEとSample手順を、問題の検出から安全な修復確認まで一続きで分かる構成へ更新。
+
 ## [1.2.0] - 2026-08-22
 
 ### Added

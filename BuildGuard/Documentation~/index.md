@@ -1,4 +1,4 @@
-# Build Guard 1.2.0
+# Build Guard 1.3.0
 
 Build Guardは、Player build対象Sceneの壊れたComponent参照を手動scanとbuild時の自動検査へまとめたEditor専用moduleです。Runtime assembly、設定asset、global singleton、公開APIを持ちません。
 
@@ -14,6 +14,8 @@ Build Guardは、Player build対象Sceneの壊れたComponent参照を手動scan
 - Missing Script件数、またはComponent型・順番・serialized property path
 
 `Open Scene`は未保存Sceneの保存確認後に対象Sceneを開き、階層pathがまだ一致すればGameObjectを選択します。対象が既に修復・移動されている場合はScene assetを選択します。`Copy`は1件を一行でclipboardへコピーします。
+
+Missing Scriptの`Open and Remove`は、確認後に同じ方法でSceneとGameObjectを特定します。対象GameObjectのmissing MonoBehaviour slotだけを`Undo.RegisterFullObjectHierarchyUndo`へ記録して除去し、Sceneをdirty状態のまま残します。自動保存しないため、利用者がInspectorを確認して保存するかUndoで戻せます。Missing Object Referenceは参照先を推測できないため自動修復しません。
 
 ### 自動build検査
 
@@ -43,7 +45,7 @@ Prefab instanceも展開済みScene階層として同じ規則で扱います。
 - 検査前のactive Sceneが有効なら、終了時にactive状態を復元します。
 - 同じScene pathが重複している場合は、大小文字を区別せず1回だけ検査します。
 - 空pathやScene assetとして解決できないpathはUnity本体のbuild診断へ委ねます。
-- 検査はScene、Prefab instance、GameObject、Componentを変更しません。
+- scanはScene、Prefab instance、GameObject、Componentを変更しません。
 
 GameObject名には兄弟indexを付けます。`/`、`\\`、改行、復帰、tabは一行で判別できるようescapeします。このpath生成と解決は手動windowと自動build検査で共通です。
 
@@ -51,7 +53,8 @@ GameObject名には兄弟indexを付けます。`/`、`\\`、改行、復帰、t
 
 `OnProcessScene`へ渡される`BuildReport`がnullのPlayMode読込と、`BuildPipeline.isBuildingPlayer`がfalseのAssetBundle buildは拒否しません。次も対象外です。
 
-- Missing ComponentやObject Referenceの自動修復
+- Missing Object Referenceの自動修復
+- 複数Sceneの一括修復と自動保存
 - project内の全Prefab・Scene・ScriptableObjectの常時scan
 - Runtimeで後から設定するnull fieldの必須判定
 - Addressables、Resources、AssetBundle contentの一括検査
@@ -71,4 +74,4 @@ Package ManagerからSampleをImportすると、次を確認できます。
 
 ## 検証方針
 
-Editor testはinactive階層、Prefab instance、削除済みRenderTexture、path escape、階層pathの逆引き、決定論的message、複数Sceneの手動scan、cancel、結果window、Scene移動、閉じたSceneの一時読込とactive Scene復元を検証します。配布gateではclean projectへtarballを導入し、menuからwindowが開くこと、有効Sceneのscan成功、Missing Script・Missing Object Referenceの一覧、正常Sceneのbuild成功、2種類の不備Sceneのbuild失敗を実際に確認します。
+Editor testはinactive階層、Prefab instance、削除済みRenderTexture、path escape、階層pathの逆引き、決定論的message、複数Sceneの手動scan、cancel、結果window、Scene移動、Missing Script除去とUndo、閉じたSceneの一時読込とactive Scene復元を検証します。配布gateではclean projectへtarballを導入し、menuからwindowが開くこと、有効Sceneのscan成功、Missing Script・Missing Object Referenceの一覧、Missing Script除去後の未保存状態、正常Sceneのbuild成功、2種類の不備Sceneのbuild失敗を実際に確認します。
