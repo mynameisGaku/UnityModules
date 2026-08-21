@@ -1,0 +1,25 @@
+{
+  "name": "com.studiogaku.charge-cooldown",
+  "version": "1.0.0",
+  "displayName": "Charge Cooldown",
+  "description": "Computes charge spending and sequential recharge from explicit simulation ticks with reconstructable immutable state.",
+  "unity": "6000.5",
+  "unityRelease": "7f1",
+  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/tree/charge-cooldown-v1.0.0/ChargeCooldown/Documentation~",
+  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/charge-cooldown-v1.0.0/ChargeCooldown/CHANGELOG.md",
+  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/charge-cooldown-v1.0.0/ChargeCooldown/LICENSE.md",
+  "dependencies": {
+    "com.unity.modules.uielements": "1.0.0"
+  },
+  "samples": [
+    {
+      "displayName": "Charge Cooldown Basics",
+      "description": "Spends three charges and verifies boundary recharge, tick-jump catch-up, and responsive UI Toolkit geometry.",
+      "path": "Samples~/Basics"
+    }
+  ],
+  "keywords": ["charge", "cooldown", "recharge", "tick", "ability", "deterministic", "state", "gameplay"],
+  "author": {
+    "name": "Studio Gaku"
+  }
+}
