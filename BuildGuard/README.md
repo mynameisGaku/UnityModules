@@ -1,6 +1,16 @@
-# Build Guard
+# ビルド前の不備チェック（BuildGuard）
+
+## 30秒で分かる
 
 Player buildへ含めるSceneにMissing MonoBehaviourが残っている場合、buildを開始前またはScene処理中に失敗させるEditor専用moduleです。検出したScene path、兄弟index付きのGameObject階層path、GameObjectごとの件数、合計件数を一度に示します。
+
+長い Player build が終わってから Missing Script に気付く代わりに、開始時点で問題の Scene と GameObject を特定して止めます。導入後の設定は不要です。
+
+## こんなときに使う
+
+- 削除した script が Scene や Prefab instance に残りやすい。
+- CI build を、修復場所が分かる message とともに早く失敗させたい。
+- inactive GameObject も含めて build 対象 Scene を検査したい。
 
 ## インストール
 

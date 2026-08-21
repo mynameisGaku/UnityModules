@@ -1,7 +1,18 @@
-# Scene Flow
+# シーン切り替え（SceneFlow）
+
+## 30秒で分かる
 
 `SceneFlowService` が、Scene の非同期読込、有効 Scene の切替、アンロードを1件ずつ実行する小さな遷移モジュールです。
 短い Scene 名ではなく完全な Asset path を使い、開始前の条件と完了後の実 Scene 状態を結果型で確認します。
+
+Scene 名の打ち間違い、同時ロード、Build Profile への登録漏れ、Additive Scene の切替順を利用側だけで管理する手間を減らします。
+
+## こんなときに使う
+
+- タイトル、ゲーム本編、結果画面を安全に切り替えたい。
+- 常駐 Scene と Gameplay Scene を Additive で組み合わせたい。
+- Scene 操作の失敗理由を Console の文字列ではなく結果型で扱いたい。
+- Scene 移動後も参照が壊れにくい設定を Inspector で持ちたい。
 
 動作確認済み: **Unity 6000.5.7f1** / Windows / .NET Standard 2.1
 

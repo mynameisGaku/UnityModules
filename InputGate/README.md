@@ -1,6 +1,16 @@
-# Input Gate
+# 入力の一時停止（InputGate）
+
+## 30秒で分かる
 
 Input Gateは、`PlayerInput`が実行時に所有する指定Action Mapを、1件以上の`InputGateLease`が存在する間だけ停止する小さな入力制御モジュールです。最初の取得時にActionごとの有効状態を保存し、最後の解放時にその部分有効状態まで復元します。
+
+Pause menu、画面フェード、会話などが同じ Gameplay 入力を止める場合でも、それぞれが自分の lease だけを解放できるようにします。UI 用 Action Map は動かしたままにできます。
+
+## こんなときに使う
+
+- Pause menu 中は Gameplay 入力だけ止め、UI 入力を残したい。
+- 複数の画面や演出が入力停止を重ねる可能性がある。
+- `PlayerInput` が複数ある local multiplayer で、player ごとに止めたい。
 
 Scene Flow、Screen Transition、Time Controlとは依存せず、利用側ownerが必要な期間だけleaseを保持して組み合わせます。global singleton、自動生成GameObject、`DontDestroyOnLoad`は作りません。
 

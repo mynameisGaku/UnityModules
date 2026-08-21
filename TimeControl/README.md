@@ -1,6 +1,16 @@
-# Time Control
+# ゲーム時間制御（TimeControl）
+
+## 30秒で分かる
 
 Time Controlは、ゲーム全体の`Time.timeScale`を1つのScene-owned Controllerで管理します。複数の利用者は相対倍率をleaseとして取得し、有効なleaseのうち最も小さい倍率が基準値へ掛けられます。pauseは0、slow motionは0より大きく1未満、単独のfast-forwardは1より大きい倍率として同じ仕組みで共存します。
+
+Pause menu、演出、デバッグ倍速がそれぞれ `Time.timeScale` を直接書き換えて競合する問題を、破棄可能な lease へ置き換えます。
+
+## こんなときに使う
+
+- Pause と slow motion が同時に要求される可能性がある。
+- 一時停止を解除した機能が、別機能の一時停止まで解除する事故を防ぎたい。
+- Scene 終了や owner 破棄時に元の時間倍率へ確実に戻したい。
 
 動作確認済み: **Unity 6000.5.7f1** / Windows / .NET Standard 2.1
 

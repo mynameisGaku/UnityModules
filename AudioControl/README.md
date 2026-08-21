@@ -1,6 +1,16 @@
-# Audio Control
+# 音声再生管理（AudioControl）
+
+## 30秒で分かる
 
 Audio Controlは、Sceneまたはgame全体が明示的に所有する`AudioControlController`から、複数のAudioClip再生をhandle単位で管理する小さな音声制御モジュールです。Controllerは専用AudioSource poolだけを作成し、voice上限時はpriorityと開始順でsteal対象を決定します。
+
+効果音ごとに AudioSource を増やす作業、同時再生数の暴走、古い音の停止、Pause 中の fade を一つの Controller へまとめます。
+
+## こんなときに使う
+
+- 短い効果音を多数再生するための AudioSource pool が欲しい。
+- 重要な音を残し、優先度の低い古い音だけを止めたい。
+- 再生を開始した owner が、その音だけを後から停止したい。
 
 Scene Flow、Screen Transition、Time Control、Input Gateとは依存せず、利用側ownerが必要な期間だけ`AudioControlHandle`を保持して組み合わせます。global singleton、自動永続化、`DontDestroyOnLoad`は作りません。
 
