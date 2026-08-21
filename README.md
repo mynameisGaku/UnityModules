@@ -65,6 +65,7 @@ Unity 向けの再利用可能なモジュール置き場。各モジュール�
 | [Stack Transfer Planner](StackTransferPlanner/) | 最大32 sourceと32 destination間の整数unit移送を入力順で計画し、stateを変更せず両側の全明細と未充足量を返す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [Timed Stack Resolver](TimedStackResolver/) | 時限effectの現在stack数・残りtick数と追加状態を、独立した再適用方針と上限から決定論的に解決する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [Periodic Tick Planner](PeriodicTickPlanner/) | 次回tick・間隔・残り回数から、指定simulation tickまでの定期発火範囲と次cursorを有界かつ決定論的に計画する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
+| [Damage Mitigation Evaluator](DamageMitigationEvaluator/) | 元damageへ固定軽減・率軽減を入力順に適用し、各層の要求量・実適用量・残damageを再構築可能に返す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 
 ---
 
@@ -288,10 +289,14 @@ Assets/
         ├── Runtime/     TimedStackResolver.Runtime
         ├── Tests/       TimedStackResolver.Tests
         └── Samples~/    TimedStackResolver.Samples / TimedStackResolver.Samples.PlayMode.Tests
-    └── PeriodicTickPlanner/
+    ├── PeriodicTickPlanner/
         ├── Runtime/     PeriodicTickPlanner.Runtime
         ├── Tests/       PeriodicTickPlanner.Tests
         └── Samples~/    PeriodicTickPlanner.Samples / PeriodicTickPlanner.Samples.PlayMode.Tests
+    └── DamageMitigationEvaluator/
+        ├── Runtime/     DamageMitigationEvaluator.Runtime
+        ├── Tests/       DamageMitigationEvaluator.Tests
+        └── Samples~/    DamageMitigationEvaluator.Samples / DamageMitigationEvaluator.Samples.PlayMode.Tests
 ```
 
 UPM パッケージとして扱う場合は、モジュールのフォルダを `Packages/` 以下に置くか、
