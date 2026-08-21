@@ -52,6 +52,7 @@ Unity 向けの再利用可能なモジュール置き場。各モジュール�
 | [Stat Modifier Stack](StatModifierStack/) | 最大32件の有限modifierをID昇順でFlat・加算percent・乗算factorの3 stageへ合成し、最終値・stage合計・件数を再構築可能に返す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [Weighted Choice Table](WeightedChoiceTable/) | 最大32件の正weightをID昇順の累積区間へ変換し、明示sampleから選択ID・index・区間・totalを再構築可能に返す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [Piecewise Linear Curve](PiecewiseLinearCurve/) | 最大32個の有限pointをX昇順で保持し、有限queryを隣接2点から線形補間して値・segment・補間率・clamp状態を再構築可能に返す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
+| [Rolling Sample Window](RollingSampleWindow/) | 最大32件の有限sampleを固定長FIFO窓へ保持し、追加ごとの退避値と前後snapshot、count・min・max・mean・oldest・newestを再構築可能に返す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 
 ---
 
@@ -223,10 +224,14 @@ Assets/
         ├── Runtime/     WeightedChoiceTable.Runtime
         ├── Tests/       WeightedChoiceTable.Tests
         └── Samples~/    WeightedChoiceTable.Samples / WeightedChoiceTable.Samples.PlayMode.Tests
-    └── PiecewiseLinearCurve/
+    ├── PiecewiseLinearCurve/
         ├── Runtime/     PiecewiseLinearCurve.Runtime
         ├── Tests/       PiecewiseLinearCurve.Tests
         └── Samples~/    PiecewiseLinearCurve.Samples / PiecewiseLinearCurve.Samples.PlayMode.Tests
+    └── RollingSampleWindow/
+        ├── Runtime/     RollingSampleWindow.Runtime
+        ├── Tests/       RollingSampleWindow.Tests
+        └── Samples~/    RollingSampleWindow.Samples / RollingSampleWindow.Samples.PlayMode.Tests
 ```
 
 UPM パッケージとして扱う場合は、モジュールのフォルダを `Packages/` 以下に置くか、
