@@ -1,0 +1,16 @@
+{
+  "name": "AdaptiveLayout.Samples",
+  "rootNamespace": "AdaptiveLayout.Samples",
+  "references": [
+    "AdaptiveLayout.Runtime"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}
