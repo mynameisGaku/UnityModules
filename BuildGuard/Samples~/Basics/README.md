@@ -39,3 +39,18 @@
 10. 確認後は複製したSceneを削除します。
 
 Build GuardはMissing Scriptだけを明示操作で除去できます。Missing Object Referenceの推測修復、Sceneの自動保存、Asset削除は行いません。`Copy`で1件の修復情報を共有できます。
+
+## 4. PrefabのMissing Scriptを確認する
+
+`BrokenPrefabExample.prefab.txt`はMissing Scriptを1件持つPrefab YAMLです。`.txt`なのでImportしただけではPrefabとして読み込まれません。
+
+1. scratch branchか使い捨てprojectでtemplateを複製します。
+2. 複製先の拡張子を`.prefab`へ変更します。
+3. Project windowでそのPrefabを選択します。
+4. 右クリックして **Build Guard > Scan Selected Prefabs** を選びます。
+5. `BrokenPrefabExample[0]`と`Missing Scripts: 1`を確認します。
+6. `Open and Remove`を押し、Prefab ModeでMissing Scriptが除去されることを確認します。
+7. Prefabが未保存のまま残ることと、UndoでMissing Scriptが戻ることを確認します。
+8. 確認後は複製したPrefabを削除します。
+
+Prefab scanもMissing Object Referenceを表示しますが、参照先は推測しません。`Open Prefab`で対象fieldへ移動し、利用者が正しいAssetを指定してください。

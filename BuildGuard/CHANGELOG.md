@@ -2,6 +2,19 @@
 
 このパッケージの変更履歴。書式は [Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) に、バージョン番号は [Semantic Versioning](https://semver.org/lang/ja/) に従います。
 
+## [1.4.0] - 2026-08-22
+
+### Added
+
+- Project windowで選択したPrefabを一時展開し、Missing ScriptとMissing Object Referenceを一覧化する手動scan。
+- Prefab Modeで対象GameObjectを開き、Missing ScriptだけをUndo付きで除去して未保存状態へ残す明示操作。
+- path順、重複除去、cancel、Prefab非変更、navigation、Undo復元に対するEditor回帰検証。
+- 壊れたPrefabを共有branchへ残さず試せるtext template。
+
+### Changed
+
+- 利用者向け名称を「プロジェクト不備確認・修復」へ広げ、SceneとPrefabの操作手順をREADME冒頭で分離。
+
 ## [1.3.0] - 2026-08-22
 
 ### Added
