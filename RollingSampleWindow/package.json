@@ -1,0 +1,23 @@
+{
+  "name": "com.studiogaku.rolling-sample-window",
+  "version": "1.0.0",
+  "displayName": "Rolling Sample Window",
+  "description": "Keeps up to 32 finite samples in a fixed FIFO window and returns explicit eviction, bounds, mean, oldest, and newest state.",
+  "unity": "6000.5",
+  "unityRelease": "7f1",
+  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/tree/rolling-sample-window-v1.0.0/RollingSampleWindow/Documentation~",
+  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/rolling-sample-window-v1.0.0/RollingSampleWindow/CHANGELOG.md",
+  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/rolling-sample-window-v1.0.0/RollingSampleWindow/LICENSE.md",
+  "dependencies": {
+    "com.unity.modules.uielements": "1.0.0"
+  },
+  "samples": [
+    {
+      "displayName": "Rolling Sample Window Basics",
+      "description": "Adds four samples to a capacity-three FIFO window, verifies eviction and clear, and checks responsive UI Toolkit geometry.",
+      "path": "Samples~/Basics"
+    }
+  ],
+  "keywords": ["rolling", "sample", "window", "fifo", "mean", "statistics", "deterministic", "gameplay"],
+  "author": { "name": "Studio Gaku" }
+}
