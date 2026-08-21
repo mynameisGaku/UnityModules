@@ -1,0 +1,35 @@
+{
+  "name": "com.studiogaku.input-vector-exponential-smoother",
+  "version": "1.0.0",
+  "displayName": "Input Vector Exponential Smoother",
+  "description": "Applies a deterministic per-step exponential low-pass filter to bounded finite 2D target input.",
+  "unity": "6000.5",
+  "unityRelease": "7f1",
+  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/tree/input-vector-exponential-smoother-v1.0.0/InputVectorExponentialSmoother/Documentation~",
+  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/input-vector-exponential-smoother-v1.0.0/InputVectorExponentialSmoother/CHANGELOG.md",
+  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/input-vector-exponential-smoother-v1.0.0/InputVectorExponentialSmoother/LICENSE.md",
+  "dependencies": {
+    "com.unity.modules.uielements": "1.0.0"
+  },
+  "samples": [
+    {
+      "displayName": "Input Vector Exponential Smoother Basics",
+      "description": "Compares repeated filtering steps, exact factor-one arrival, explicit rejection, and responsive UI Toolkit geometry.",
+      "path": "Samples~/Basics"
+    }
+  ],
+  "keywords": [
+    "input-vector-exponential-smoother",
+    "input",
+    "analog",
+    "vector",
+    "filter",
+    "smoothing",
+    "low-pass",
+    "deterministic",
+    "simulation"
+  ],
+  "author": {
+    "name": "Studio Gaku"
+  }
+}
