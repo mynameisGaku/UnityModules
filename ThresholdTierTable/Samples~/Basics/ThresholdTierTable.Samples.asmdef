@@ -1,0 +1,16 @@
+{
+  "name": "ThresholdTierTable.Samples",
+  "rootNamespace": "GameplayProgression.Samples",
+  "references": [
+    "ThresholdTierTable.Runtime"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}
