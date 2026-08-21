@@ -1,0 +1,14 @@
+{
+  "name": "WeightedIntegerAllocator.Runtime",
+  "rootNamespace": "GameplayAllocation",
+  "references": [],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": true
+}
