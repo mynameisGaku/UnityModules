@@ -34,25 +34,13 @@ namespace BuildGuard.Editor
             }
 
             var findings = new List<MissingScriptFinding>();
-            var roots = scene.GetRootGameObjects();
-            Array.Sort(roots, CompareRootOrder);
-
-            foreach (var root in roots)
+            foreach (var root in BuildGuardHierarchyPath.GetSortedRoots(scene))
             {
-                ScanTransform(root.transform, FormatSegment(root.transform), findings);
+                ScanTransform(root.transform, BuildGuardHierarchyPath.FormatSegment(root.transform), findings);
             }
 
             findings.Sort((left, right) => string.CompareOrdinal(left.HierarchyPath, right.HierarchyPath));
             return findings;
-        }
-
-        /// <summary>
-        /// Compares root GameObjects by sibling index and then by ordinal name.
-        /// </summary>
-        private static int CompareRootOrder(GameObject left, GameObject right)
-        {
-            var indexComparison = left.transform.GetSiblingIndex().CompareTo(right.transform.GetSiblingIndex());
-            return indexComparison != 0 ? indexComparison : string.CompareOrdinal(left.name, right.name);
         }
 
         /// <summary>
@@ -69,16 +57,8 @@ namespace BuildGuard.Editor
             for (var childIndex = 0; childIndex < current.childCount; childIndex++)
             {
                 var child = current.GetChild(childIndex);
-                ScanTransform(child, $"{hierarchyPath}/{FormatSegment(child)}", findings);
+                ScanTransform(child, $"{hierarchyPath}/{BuildGuardHierarchyPath.FormatSegment(child)}", findings);
             }
-        }
-
-        /// <summary>
-        /// Creates one deterministic hierarchy segment.
-        /// </summary>
-        private static string FormatSegment(Transform transform)
-        {
-            return $"{EscapePathText(transform.name)}[{transform.GetSiblingIndex()}]";
         }
 
         /// <summary>
