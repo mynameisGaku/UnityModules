@@ -1,0 +1,33 @@
+{
+  "name": "com.studiogaku.weighted-choice-table",
+  "version": "1.0.0",
+  "displayName": "Weighted Choice Table",
+  "description": "Maps an explicit normalized sample to one of up to 32 positive weighted entries in deterministic identifier order.",
+  "unity": "6000.5",
+  "unityRelease": "7f1",
+  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/tree/weighted-choice-table-v1.0.0/WeightedChoiceTable/Documentation~",
+  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/weighted-choice-table-v1.0.0/WeightedChoiceTable/CHANGELOG.md",
+  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/weighted-choice-table-v1.0.0/WeightedChoiceTable/LICENSE.md",
+  "dependencies": {
+    "com.unity.modules.uielements": "1.0.0"
+  },
+  "samples": [
+    {
+      "displayName": "Weighted Choice Table Basics",
+      "description": "Adds three weighted entries, selects two explicit samples, and verifies responsive UI Toolkit geometry.",
+      "path": "Samples~/Basics"
+    }
+  ],
+  "keywords": [
+    "weighted",
+    "choice",
+    "selection",
+    "probability",
+    "loot",
+    "deterministic",
+    "gameplay"
+  ],
+  "author": {
+    "name": "Studio Gaku"
+  }
+}
