@@ -13,6 +13,7 @@ Unity で繰り返し発生する設定、実装、確認作業を減らすた�
 |---|---|---|
 | Scene の読込順、Additive、Unload を安全に扱いたい | [シーン切り替え（SceneFlow）](SceneFlow/) | 4 種類の Scene 操作を直列化し、失敗理由を結果で受け取る。 |
 | Scene 切り替え中に画面を隠したい | [画面フェード（ScreenTransition）](ScreenTransition/) | UI Toolkit の全画面 Cover・Reveal を実行する。 |
+| ノッチや画面回転でUIが欠けるのを防ぎたい | [画面サイズ・ノッチ対応（AdaptiveLayout）](AdaptiveLayout/) | UI ToolkitとRectTransformを`Screen.safeArea`へ自動追従させる。 |
 | Pause、Slow、Fast を複数機能から安全に使いたい | [ゲーム時間制御（TimeControl）](TimeControl/) | lease を重ねて `Time.timeScale` を競合なく制御する。 |
 | BGM・SE の同時再生数や fade をまとめたい | [音声再生管理（AudioControl）](AudioControl/) | AudioSource pool、優先度、停止 handle、fade を管理する。 |
 | セーブ枠、破損、バックアップを毎回実装したくない | [セーブデータ管理（SaveSystem）](SaveSystem/) | 型付き JSON、複数 slot、破損検出、backup 復旧を使う。 |
@@ -42,6 +43,7 @@ Unity で繰り返し発生する設定、実装、確認作業を減らすた�
 | [セーブデータ管理（SaveSystem）](SaveSystem/) | 型付きJSON保存、複数スロット、破損検出、可能な環境での原子的置換、1世代バックアップ復旧。依存なし。**Unity 6000.5 以降**。 | なし |
 | [シーン切り替え（SceneFlow）](SceneFlow/) | 完全なSceneパスでSingle・Additive読込、有効Scene切替、Unloadを直列化し、開始前条件と完了後状態を結果で返す。**Unity 6000.5 以降**。 | なし |
 | [画面フェード（ScreenTransition）](ScreenTransition/) | UI Toolkitの全画面オーバーレイでCover・Revealを非スケール時間に実行し、色・時間・補間方法・完了結果を明示する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
+| [画面サイズ・ノッチ対応（AdaptiveLayout）](AdaptiveLayout/) | `Screen.safeArea`をUI ToolkitとRectTransformへ適用し、ノッチ、角丸、画面回転、解像度変更に追従する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [ゲーム時間制御（TimeControl）](TimeControl/) | Scene所有のControllerが複数leaseの相対倍率を最小値で集約し、pause・slow motion・単独fast-forwardをTime.timeScaleへ安全に反映する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [不具合レポート保存（DiagnosticsContext）](DiagnosticsContext/) | 明示追加したcontext・breadcrumbと実行中のUnity Warning・Error・Assert・Exceptionを有界に保持し、手動操作時だけJSON reportへ書き出す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [ビルド前の不備チェック（BuildGuard）](BuildGuard/) | Player build対象Sceneのactive・inactive階層とPrefab instanceを検査し、Missing MonoBehaviourを階層path・件数付きでbuild前に拒否するEditor専用module。**Unity 6000.5 以降**。 | なし |
@@ -127,6 +129,10 @@ Assets/
     │   ├── Runtime/     ScreenTransition.Runtime
     │   ├── Tests/       ScreenTransition.Tests / ScreenTransition.PlayMode.Tests
     │   └── Samples~/    ScreenTransition.Samples / ScreenTransition.Samples.PlayMode.Tests
+    ├── AdaptiveLayout/
+    │   ├── Runtime/     AdaptiveLayout.Runtime
+    │   ├── Tests/       AdaptiveLayout.Tests / AdaptiveLayout.PlayMode.Tests
+    │   └── Samples~/    AdaptiveLayout.Samples / AdaptiveLayout.Samples.PlayMode.Tests
     ├── TimeControl/
     │   ├── Runtime/     TimeControl.Runtime
     │   ├── Tests/       TimeControl.Tests / TimeControl.PlayMode.Tests
