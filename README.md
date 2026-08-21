@@ -60,6 +60,7 @@ Unity 向けの再利用可能なモジュール置き場。各モジュール�
 | [Resource Cost Evaluator](ResourceCostEvaluator/) | 最大32件ずつのresource残量とcostから、stateを変更せず全支払可否・支払後残量・不足量をresource別に返す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [Numeric Requirement Evaluator](NumericRequirementEvaluator/) | 最大32件の有限な実値・基準値・比較方法・許容差から、stateを変更せず全条件の成立可否と入力順の全明細を返す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [Utility Score Evaluator](UtilityScoreEvaluator/) | 最大32候補・各16factorの0〜1 utilityと正weightから、stateを変更せず最高score候補・安定tie-break・全寄与明細を返す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
+| [Stable Score Selector](StableScoreSelector/) | 最大32候補の0〜1 scoreとcurrent IDから、同点・微差では維持し、明示優位差以上でだけ安定して切り替える。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 
 ---
 
@@ -263,10 +264,14 @@ Assets/
         ├── Runtime/     NumericRequirementEvaluator.Runtime
         ├── Tests/       NumericRequirementEvaluator.Tests
         └── Samples~/    NumericRequirementEvaluator.Samples / NumericRequirementEvaluator.Samples.PlayMode.Tests
-    └── UtilityScoreEvaluator/
+    ├── UtilityScoreEvaluator/
         ├── Runtime/     UtilityScoreEvaluator.Runtime
         ├── Tests/       UtilityScoreEvaluator.Tests
         └── Samples~/    UtilityScoreEvaluator.Samples / UtilityScoreEvaluator.Samples.PlayMode.Tests
+    └── StableScoreSelector/
+        ├── Runtime/     StableScoreSelector.Runtime
+        ├── Tests/       StableScoreSelector.Tests
+        └── Samples~/    StableScoreSelector.Samples / StableScoreSelector.Samples.PlayMode.Tests
 ```
 
 UPM パッケージとして扱う場合は、モジュールのフォルダを `Packages/` 以下に置くか、
