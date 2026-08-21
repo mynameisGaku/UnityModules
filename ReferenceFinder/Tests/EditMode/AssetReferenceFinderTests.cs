@@ -198,11 +198,15 @@ namespace ReferenceFinder.Tests
 
             Assert.That(exported, Is.EqualTo(new[]
             {
+                typeof(AssetBatchRenamer),
                 typeof(AssetReferenceFinder),
                 typeof(AssetReferenceOccurrence),
                 typeof(AssetReferenceReplacer),
                 typeof(AssetReferenceReplacementPlan),
                 typeof(AssetReferenceReplacementResult),
+                typeof(AssetRenameEntry),
+                typeof(AssetRenamePlan),
+                typeof(AssetRenameResult),
                 typeof(AssetReferenceSearchMode),
                 typeof(AssetReferenceSearchResult)
             }.OrderBy(type => type.FullName, StringComparer.Ordinal).ToArray()));
