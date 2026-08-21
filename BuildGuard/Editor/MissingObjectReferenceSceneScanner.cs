@@ -27,11 +27,9 @@ namespace BuildGuard.Editor
             }
 
             var findings = new List<MissingObjectReferenceFinding>();
-            var roots = scene.GetRootGameObjects();
-            Array.Sort(roots, CompareRootOrder);
-            foreach (var root in roots)
+            foreach (var root in BuildGuardHierarchyPath.GetSortedRoots(scene))
             {
-                ScanTransform(root.transform, FormatSegment(root.transform), findings);
+                ScanTransform(root.transform, BuildGuardHierarchyPath.FormatSegment(root.transform), findings);
             }
 
             findings.Sort(CompareFindings);
@@ -58,7 +56,7 @@ namespace BuildGuard.Editor
             for (var childIndex = 0; childIndex < current.childCount; childIndex++)
             {
                 var child = current.GetChild(childIndex);
-                ScanTransform(child, $"{hierarchyPath}/{FormatSegment(child)}", findings);
+                ScanTransform(child, $"{hierarchyPath}/{BuildGuardHierarchyPath.FormatSegment(child)}", findings);
             }
         }
 
@@ -92,12 +90,6 @@ namespace BuildGuard.Editor
             while (property.Next(true));
         }
 
-        private static int CompareRootOrder(GameObject left, GameObject right)
-        {
-            var siblingOrder = left.transform.GetSiblingIndex().CompareTo(right.transform.GetSiblingIndex());
-            return siblingOrder != 0 ? siblingOrder : string.CompareOrdinal(left.name, right.name);
-        }
-
         private static int CompareFindings(
             MissingObjectReferenceFinding left,
             MissingObjectReferenceFinding right)
@@ -114,9 +106,5 @@ namespace BuildGuard.Editor
                 : string.CompareOrdinal(left.PropertyPath, right.PropertyPath);
         }
 
-        private static string FormatSegment(Transform transform)
-        {
-            return $"{MissingScriptSceneScanner.EscapePathText(transform.name)}[{transform.GetSiblingIndex()}]";
-        }
     }
 }

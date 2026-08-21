@@ -43,17 +43,16 @@ namespace BuildGuard.Editor
         /// </summary>
         internal static void ValidateScene(Scene scene)
         {
-            var findings = MissingScriptSceneScanner.Scan(scene);
-            var missingObjectReferences = MissingObjectReferenceSceneScanner.Scan(scene);
-            if (findings.Count == 0 && missingObjectReferences.Count == 0)
+            var inspection = BuildGuardSceneInspector.Inspect(scene);
+            if (!inspection.HasFindings)
             {
                 return;
             }
 
             throw new BuildFailedException(BuildGuardMessageFormatter.Format(
                 scene,
-                findings,
-                missingObjectReferences));
+                inspection.MissingScripts,
+                inspection.MissingObjectReferences));
         }
     }
 }
