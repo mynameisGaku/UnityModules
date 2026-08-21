@@ -1,0 +1,23 @@
+{
+  "name": "com.studiogaku.sample-statistics",
+  "version": "1.0.0",
+  "displayName": "Sample Statistics",
+  "description": "Summarizes 1-32 finite samples as min, max, mean, range, population variance, and population standard deviation with explicit errors.",
+  "unity": "6000.5",
+  "unityRelease": "7f1",
+  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/tree/sample-statistics-v1.0.0/SampleStatistics/Documentation~",
+  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/sample-statistics-v1.0.0/SampleStatistics/CHANGELOG.md",
+  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/sample-statistics-v1.0.0/SampleStatistics/LICENSE.md",
+  "dependencies": {
+    "com.unity.modules.uielements": "1.0.0"
+  },
+  "samples": [
+    {
+      "displayName": "Sample Statistics Basics",
+      "description": "Compares balanced, constant, spread, subrange, and out-of-range samples and checks responsive UI Toolkit geometry.",
+      "path": "Samples~/Basics"
+    }
+  ],
+  "keywords": ["statistics", "variance", "standard-deviation", "mean", "samples", "analysis", "deterministic", "gameplay"],
+  "author": { "name": "Studio Gaku" }
+}
