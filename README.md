@@ -54,6 +54,7 @@ Unity 向けの再利用可能なモジュール置き場。各モジュール�
 | [Piecewise Linear Curve](PiecewiseLinearCurve/) | 最大32個の有限pointをX昇順で保持し、有限queryを隣接2点から線形補間して値・segment・補間率・clamp状態を再構築可能に返す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [Rolling Sample Window](RollingSampleWindow/) | 最大32件の有限sampleを固定長FIFO窓へ保持し、追加ごとの退避値と前後snapshot、count・min・max・mean・oldest・newestを再構築可能に返す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [Threshold Tier Table](ThresholdTierTable/) | 最大32件の有限thresholdを昇順に保持し、有限queryから現在tier・次tier・0〜1の段階内進捗を再構築可能に返す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
+| [Linear Trend Estimator](LinearTrendEstimator/) | 2〜32個の等間隔な有限sampleへ最小二乗直線を当て、mean・slope・intercept・next predictionを再構築可能に返す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 
 ---
 
@@ -233,10 +234,14 @@ Assets/
         ├── Runtime/     RollingSampleWindow.Runtime
         ├── Tests/       RollingSampleWindow.Tests
         └── Samples~/    RollingSampleWindow.Samples / RollingSampleWindow.Samples.PlayMode.Tests
-    └── ThresholdTierTable/
+    ├── ThresholdTierTable/
         ├── Runtime/     ThresholdTierTable.Runtime
         ├── Tests/       ThresholdTierTable.Tests
         └── Samples~/    ThresholdTierTable.Samples / ThresholdTierTable.Samples.PlayMode.Tests
+    └── LinearTrendEstimator/
+        ├── Runtime/     LinearTrendEstimator.Runtime
+        ├── Tests/       LinearTrendEstimator.Tests
+        └── Samples~/    LinearTrendEstimator.Samples / LinearTrendEstimator.Samples.PlayMode.Tests
 ```
 
 UPM パッケージとして扱う場合は、モジュールのフォルダを `Packages/` 以下に置くか、
