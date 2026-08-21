@@ -1,0 +1,16 @@
+{
+  "name": "StatModifierStack.Samples",
+  "rootNamespace": "GameplayStats.Samples",
+  "references": [
+    "StatModifierStack.Runtime"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}
