@@ -1,0 +1,36 @@
+{
+  "name": "com.studiogaku.input-assist",
+  "version": "1.0.0",
+  "displayName": "Input Assist",
+  "description": "Inspector-friendly 2D input filtering and button gesture tracking with explicit time and no Input System dependency.",
+  "unity": "6000.5",
+  "unityRelease": "7f1",
+  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/blob/input-assist-v1.0.0/InputAssist/Documentation~/index.md",
+  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/input-assist-v1.0.0/InputAssist/CHANGELOG.md",
+  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/input-assist-v1.0.0/InputAssist/LICENSE.md",
+  "license": "Refer to LICENSE.md file",
+  "dependencies": {
+    "com.unity.modules.uielements": "1.0.0"
+  },
+  "samples": [
+    {
+      "displayName": "Input Assist Basics",
+      "description": "Ready-to-open vector filtering and button gesture controls with responsive UI Toolkit output.",
+      "path": "Samples~/Basics"
+    }
+  ],
+  "keywords": [
+    "input",
+    "dead-zone",
+    "response-curve",
+    "smoothing",
+    "direction",
+    "tap",
+    "hold",
+    "repeat",
+    "multi-tap"
+  ],
+  "author": {
+    "name": "Studio Gaku"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "name": "InputAssist.Samples.PlayMode.Tests",
+  "rootNamespace": "InputAssist.Samples.PlayMode.Tests",
+  "references": [
+    "InputAssist.Runtime",
+    "InputAssist.Samples",
+    "UnityEngine.TestRunner"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": true,
+  "precompiledReferences": [
+    "nunit.framework.dll"
+  ],
+  "autoReferenced": false,
+  "defineConstraints": [
+    "UNITY_INCLUDE_TESTS"
+  ],
+  "versionDefines": [],
+  "noEngineReferences": false
+}
