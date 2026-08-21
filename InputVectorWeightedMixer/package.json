@@ -1,0 +1,35 @@
+{
+  "name": "com.studiogaku.input-vector-weighted-mixer",
+  "version": "1.0.0",
+  "displayName": "Input Vector Weighted Mixer",
+  "description": "Combines bounded finite 2D contributions through a deterministic normalized weighted average.",
+  "unity": "6000.5",
+  "unityRelease": "7f1",
+  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/tree/input-vector-weighted-mixer-v1.0.0/InputVectorWeightedMixer/Documentation~",
+  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/input-vector-weighted-mixer-v1.0.0/InputVectorWeightedMixer/CHANGELOG.md",
+  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/input-vector-weighted-mixer-v1.0.0/InputVectorWeightedMixer/LICENSE.md",
+  "dependencies": {
+    "com.unity.modules.uielements": "1.0.0"
+  },
+  "samples": [
+    {
+      "displayName": "Input Vector Weighted Mixer Basics",
+      "description": "Compares equal and unequal weights, zero and empty inputs, explicit rejection, and responsive UI Toolkit geometry.",
+      "path": "Samples~/Basics"
+    }
+  ],
+  "keywords": [
+    "input-vector-weighted-mixer",
+    "input",
+    "analog",
+    "vector",
+    "weighted-average",
+    "mix",
+    "ai-assist",
+    "deterministic",
+    "simulation"
+  ],
+  "author": {
+    "name": "Studio Gaku"
+  }
+}
