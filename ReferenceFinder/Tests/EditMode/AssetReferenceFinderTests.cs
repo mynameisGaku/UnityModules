@@ -40,6 +40,7 @@ namespace ReferenceFinder.Tests
                 new[] { TestRoot });
 
             Assert.That(result.WasCanceled, Is.False);
+            Assert.That(result.SearchMode, Is.EqualTo(AssetReferenceSearchMode.Direct));
             Assert.That(result.FailedAssetPaths, Is.Empty);
             Assert.That(result.ReferenceAssetPaths, Is.EqualTo(new[]
             {
@@ -47,6 +48,49 @@ namespace ReferenceFinder.Tests
                 $"{TestRoot}/ZReference.asset"
             }));
             Assert.That(result.ScannedAssetCount, Is.EqualTo(result.CandidateAssetCount));
+        }
+
+        [Test]
+        public void FindReferences_Recursive_IncludesDirectAndTransitiveReferences()
+        {
+            var target = CreateAsset("Target.asset", null);
+            var direct = CreateAsset("Direct.asset", target);
+            CreateAsset("Root.asset", direct);
+            CreateAsset("Unrelated.asset", null);
+            AssetDatabase.SaveAssets();
+
+            var result = AssetReferenceFinder.FindReferences(
+                AssetDatabase.GetAssetPath(target),
+                AssetReferenceSearchMode.Recursive,
+                new[] { TestRoot });
+
+            Assert.That(result.SearchMode, Is.EqualTo(AssetReferenceSearchMode.Recursive));
+            Assert.That(result.ReferenceAssetPaths, Is.EqualTo(new[]
+            {
+                $"{TestRoot}/Direct.asset",
+                $"{TestRoot}/Root.asset"
+            }));
+        }
+
+        [Test]
+        public void FindReferences_SearchFolder_ExcludesReferencesOutsideRoot()
+        {
+            AssetDatabase.CreateFolder(TestRoot, "Included");
+            AssetDatabase.CreateFolder(TestRoot, "Excluded");
+            var target = CreateAsset("Target.asset", null);
+            CreateAssetAtPath($"{TestRoot}/Included/Inside.asset", target);
+            CreateAssetAtPath($"{TestRoot}/Excluded/Outside.asset", target);
+            AssetDatabase.SaveAssets();
+
+            var result = AssetReferenceFinder.FindReferences(
+                AssetDatabase.GetAssetPath(target),
+                AssetReferenceSearchMode.Direct,
+                new[] { $"{TestRoot}/Included" });
+
+            Assert.That(result.ReferenceAssetPaths, Is.EqualTo(new[]
+            {
+                $"{TestRoot}/Included/Inside.asset"
+            }));
         }
 
         [Test]
@@ -70,6 +114,20 @@ namespace ReferenceFinder.Tests
                 Throws.TypeOf<ArgumentException>());
             Assert.That(
                 () => AssetReferenceFinder.FindDirectReferences(TestRoot, new[] { TestRoot }),
+                Throws.TypeOf<ArgumentException>());
+        }
+
+        [Test]
+        public void FindReferences_InvalidMode_ThrowsWithoutScanning()
+        {
+            var target = CreateAsset("Target.asset", null);
+            AssetDatabase.SaveAssets();
+
+            Assert.That(
+                () => AssetReferenceFinder.FindReferences(
+                    AssetDatabase.GetAssetPath(target),
+                    (AssetReferenceSearchMode)999,
+                    new[] { TestRoot }),
                 Throws.TypeOf<ArgumentException>());
         }
 
@@ -117,6 +175,17 @@ namespace ReferenceFinder.Tests
         }
 
         [Test]
+        public void ResolveSelectionFolder_AssetSelection_ReturnsContainingAssetsFolder()
+        {
+            var target = CreateAsset("Target.asset", null);
+            AssetDatabase.SaveAssets();
+
+            var folder = ReferenceFinderWindow.ResolveSelectionFolder(target);
+
+            Assert.That(AssetDatabase.GetAssetPath(folder), Is.EqualTo(TestRoot));
+        }
+
+        [Test]
         public void EditorAssembly_ExportsOnlySearchApiTypes()
         {
             var exported = typeof(AssetReferenceFinder).Assembly.GetExportedTypes()
@@ -126,15 +195,21 @@ namespace ReferenceFinder.Tests
             Assert.That(exported, Is.EqualTo(new[]
             {
                 typeof(AssetReferenceFinder),
+                typeof(AssetReferenceSearchMode),
                 typeof(AssetReferenceSearchResult)
             }.OrderBy(type => type.FullName, StringComparer.Ordinal).ToArray()));
         }
 
         private static ReferenceFinderTestAsset CreateAsset(string fileName, UnityEngine.Object reference)
         {
+            return CreateAssetAtPath($"{TestRoot}/{fileName}", reference);
+        }
+
+        private static ReferenceFinderTestAsset CreateAssetAtPath(string path, UnityEngine.Object reference)
+        {
             var asset = ScriptableObject.CreateInstance<ReferenceFinderTestAsset>();
             asset.Reference = reference;
-            AssetDatabase.CreateAsset(asset, $"{TestRoot}/{fileName}");
+            AssetDatabase.CreateAsset(asset, path);
             return asset;
         }
 
