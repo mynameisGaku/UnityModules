@@ -1,8 +1,11 @@
 using System;
+using System.IO;
 using System.Linq;
 using NUnit.Framework;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace ReferenceFinder.Tests
 {
@@ -21,6 +24,7 @@ namespace ReferenceFinder.Tests
         [TearDown]
         public void TearDown()
         {
+            EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             AssetDatabase.DeleteAsset(TestRoot);
             AssetDatabase.Refresh();
         }
@@ -195,9 +199,105 @@ namespace ReferenceFinder.Tests
             Assert.That(exported, Is.EqualTo(new[]
             {
                 typeof(AssetReferenceFinder),
+                typeof(AssetReferenceOccurrence),
+                typeof(AssetReferenceReplacer),
+                typeof(AssetReferenceReplacementPlan),
+                typeof(AssetReferenceReplacementResult),
                 typeof(AssetReferenceSearchMode),
                 typeof(AssetReferenceSearchResult)
             }.OrderBy(type => type.FullName, StringComparer.Ordinal).ToArray()));
+        }
+
+        [Test]
+        public void Preview_ReturnsExactSerializedPropertyWithoutMutation()
+        {
+            var target = CreateAsset("Target.asset", null);
+            var replacement = CreateAsset("Replacement.asset", null);
+            var owner = CreateAsset("Owner.asset", target);
+            AssetDatabase.SaveAssets();
+
+            var plan = AssetReferenceReplacer.Preview(target, replacement, new[] { TestRoot });
+
+            Assert.That(plan.TargetAssetPath, Is.EqualTo($"{TestRoot}/Target.asset"));
+            Assert.That(plan.ReplacementAssetPath, Is.EqualTo($"{TestRoot}/Replacement.asset"));
+            Assert.That(plan.FailedAssetPaths, Is.Empty);
+            Assert.That(plan.UnsupportedAssetPaths, Is.Empty);
+            Assert.That(plan.Occurrences, Has.Count.EqualTo(1));
+            Assert.That(plan.Occurrences[0].AssetPath, Is.EqualTo($"{TestRoot}/Owner.asset"));
+            Assert.That(plan.Occurrences[0].OwnerName, Is.EqualTo("Owner"));
+            Assert.That(plan.Occurrences[0].OwnerTypeName, Does.EndWith("ReferenceFinderTestAsset"));
+            Assert.That(plan.Occurrences[0].PropertyPath, Is.EqualTo("_reference"));
+            Assert.That(owner.Reference, Is.SameAs(target));
+        }
+
+        [Test]
+        public void Apply_ReplacesPreviewedReferenceAndSupportsUndo()
+        {
+            var target = CreateAsset("Target.asset", null);
+            var replacement = CreateAsset("Replacement.asset", null);
+            var owner = CreateAsset("Owner.asset", target);
+            AssetDatabase.SaveAssets();
+            var plan = AssetReferenceReplacer.Preview(target, replacement, new[] { TestRoot });
+
+            var result = AssetReferenceReplacer.Apply(plan);
+
+            Assert.That(result.ReplacedReferenceCount, Is.EqualTo(1));
+            Assert.That(result.ChangedAssetPaths, Is.EqualTo(new[] { $"{TestRoot}/Owner.asset" }));
+            Assert.That(owner.Reference, Is.SameAs(replacement));
+
+            Undo.PerformUndo();
+            Assert.That(owner.Reference, Is.SameAs(target));
+        }
+
+        [Test]
+        public void Apply_StalePreviewThrowsBeforeChangingAnyReference()
+        {
+            var target = CreateAsset("Target.asset", null);
+            var replacement = CreateAsset("Replacement.asset", null);
+            var firstOwner = CreateAsset("AOwner.asset", target);
+            var staleOwner = CreateAsset("ZOwner.asset", target);
+            AssetDatabase.SaveAssets();
+            var plan = AssetReferenceReplacer.Preview(target, replacement, new[] { TestRoot });
+            staleOwner.Reference = null;
+            EditorUtility.SetDirty(staleOwner);
+            AssetDatabase.SaveAssets();
+
+            Assert.That(
+                () => AssetReferenceReplacer.Apply(plan),
+                Throws.TypeOf<InvalidOperationException>());
+            Assert.That(firstOwner.Reference, Is.SameAs(target));
+            Assert.That(staleOwner.Reference, Is.Null);
+        }
+
+        [Test]
+        public void Preview_DifferentConcreteTypesThrowsWithoutMutation()
+        {
+            var target = CreateAsset("Target.asset", null);
+            var texture = new Texture2D(1, 1);
+            AssetDatabase.CreateAsset(texture, $"{TestRoot}/Replacement.asset");
+            AssetDatabase.SaveAssets();
+
+            Assert.That(
+                () => AssetReferenceReplacer.Preview(target, texture, new[] { TestRoot }),
+                Throws.TypeOf<ArgumentException>());
+        }
+
+        [Test]
+        public void Preview_SceneReferenceIsReportedAsUnsupported()
+        {
+            var target = CreatePrefab("Target.prefab");
+            var replacement = CreatePrefab("Replacement.prefab");
+            var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            PrefabUtility.InstantiatePrefab(target, scene);
+            var scenePath = $"{TestRoot}/Owner.unity";
+            Assert.That(EditorSceneManager.SaveScene(scene, scenePath), Is.True);
+            AssetDatabase.SaveAssets();
+
+            var plan = AssetReferenceReplacer.Preview(target, replacement, new[] { TestRoot });
+
+            Assert.That(plan.Occurrences, Is.Empty);
+            Assert.That(plan.FailedAssetPaths, Is.Empty);
+            Assert.That(plan.UnsupportedAssetPaths, Is.EqualTo(new[] { scenePath }));
         }
 
         private static ReferenceFinderTestAsset CreateAsset(string fileName, UnityEngine.Object reference)
@@ -213,15 +313,18 @@ namespace ReferenceFinder.Tests
             return asset;
         }
 
-        private sealed class ReferenceFinderTestAsset : ScriptableObject
+        private static GameObject CreatePrefab(string fileName)
         {
-            [SerializeField] private UnityEngine.Object _reference;
-
-            internal UnityEngine.Object Reference
+            var instance = new GameObject(Path.GetFileNameWithoutExtension(fileName));
+            try
             {
-                get => _reference;
-                set => _reference = value;
+                return PrefabUtility.SaveAsPrefabAsset(instance, $"{TestRoot}/{fileName}");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(instance);
             }
         }
+
     }
 }
