@@ -1,13 +1,13 @@
 {
   "name": "com.studiogaku.build-guard",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "displayName": "Build Guard",
-  "description": "Editor-only manual and automatic validation for missing scripts and broken serialized object references in Player build Scenes.",
+  "description": "Editor-only build Scene validation with actionable navigation and explicit Undo-supported removal of missing scripts.",
   "unity": "6000.5",
   "unityRelease": "7f1",
-  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/blob/build-guard-v1.2.0/BuildGuard/Documentation~/index.md",
-  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/build-guard-v1.2.0/BuildGuard/CHANGELOG.md",
-  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/build-guard-v1.2.0/BuildGuard/LICENSE.md",
+  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/blob/build-guard-v1.3.0/BuildGuard/Documentation~/index.md",
+  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/build-guard-v1.3.0/BuildGuard/CHANGELOG.md",
+  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/build-guard-v1.3.0/BuildGuard/LICENSE.md",
   "license": "Refer to LICENSE.md file",
   "keywords": [
     "build",
