@@ -1,0 +1,34 @@
+{
+  "name": "com.studiogaku.adaptive-layout",
+  "version": "1.0.0",
+  "displayName": "Adaptive Layout",
+  "description": "Screen.safeAreaをUI ToolkitとRectTransformへ適用し、ノッチ、角丸、画面回転、解像度変更に追従するUnity向けレイアウト補助モジュール。",
+  "unity": "6000.5",
+  "unityRelease": "7f1",
+  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/blob/adaptive-layout-v1.0.0/AdaptiveLayout/Documentation~/index.md",
+  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/adaptive-layout-v1.0.0/AdaptiveLayout/CHANGELOG.md",
+  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/adaptive-layout-v1.0.0/AdaptiveLayout/LICENSE.md",
+  "license": "Refer to LICENSE.md file",
+  "keywords": [
+    "safe-area",
+    "notch",
+    "ui-toolkit",
+    "rect-transform",
+    "mobile"
+  ],
+  "author": {
+    "name": "StudioGaku",
+    "email": "gaku.fujimoto.business@gmail.com",
+    "url": "https://github.com/mynameisGaku/UnityModules"
+  },
+  "dependencies": {
+    "com.unity.modules.uielements": "1.0.0"
+  },
+  "samples": [
+    {
+      "displayName": "Adaptive Layout Basics",
+      "description": "Device SimulatorのSafe Areaと画面回転へ追従するUI Toolkitレイアウトを確認する設定済みサンプル。",
+      "path": "Samples~/Basics"
+    }
+  ]
+}
