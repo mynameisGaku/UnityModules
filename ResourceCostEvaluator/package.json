@@ -1,0 +1,23 @@
+{
+  "name": "com.studiogaku.resource-cost-evaluator",
+  "version": "1.0.0",
+  "displayName": "Resource Cost Evaluator",
+  "description": "Evaluates up to 32 explicit resource balances and costs without mutation, returning deterministic per-resource remaining and deficit lines.",
+  "unity": "6000.5",
+  "unityRelease": "7f1",
+  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/tree/resource-cost-evaluator-v1.0.0/ResourceCostEvaluator/Documentation~",
+  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/resource-cost-evaluator-v1.0.0/ResourceCostEvaluator/CHANGELOG.md",
+  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/resource-cost-evaluator-v1.0.0/ResourceCostEvaluator/LICENSE.md",
+  "dependencies": {
+    "com.unity.modules.uielements": "1.0.0"
+  },
+  "samples": [
+    {
+      "displayName": "Resource Cost Evaluator Basics",
+      "description": "Compares payable, shortage, missing-balance, zero-cost, and invalid-input plans with responsive UI Toolkit geometry.",
+      "path": "Samples~/Basics"
+    }
+  ],
+  "keywords": ["resource", "cost", "affordability", "deficit", "plan", "atomic", "deterministic", "gameplay"],
+  "author": { "name": "Studio Gaku" }
+}
