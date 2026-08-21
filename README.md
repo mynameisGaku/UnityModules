@@ -58,6 +58,7 @@ Unity 向けの再利用可能なモジュール置き場。各モジュール�
 | [Charge Cooldown](ChargeCooldown/) | 最大32 chargeの消費と逐次回復を明示simulation tickから計算し、前後state・回復数・消費成否を再構築可能に返す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [Sample Statistics](SampleStatistics/) | 1〜32個の有限sampleからminimum・maximum・mean・range・母分散・母標準偏差を再構築可能に返す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [Resource Cost Evaluator](ResourceCostEvaluator/) | 最大32件ずつのresource残量とcostから、stateを変更せず全支払可否・支払後残量・不足量をresource別に返す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
+| [Numeric Requirement Evaluator](NumericRequirementEvaluator/) | 最大32件の有限な実値・基準値・比較方法・許容差から、stateを変更せず全条件の成立可否と入力順の全明細を返す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 
 ---
 
@@ -253,10 +254,14 @@ Assets/
         ├── Runtime/     SampleStatistics.Runtime
         ├── Tests/       SampleStatistics.Tests
         └── Samples~/    SampleStatistics.Samples / SampleStatistics.Samples.PlayMode.Tests
-    └── ResourceCostEvaluator/
+    ├── ResourceCostEvaluator/
         ├── Runtime/     ResourceCostEvaluator.Runtime
         ├── Tests/       ResourceCostEvaluator.Tests
         └── Samples~/    ResourceCostEvaluator.Samples / ResourceCostEvaluator.Samples.PlayMode.Tests
+    └── NumericRequirementEvaluator/
+        ├── Runtime/     NumericRequirementEvaluator.Runtime
+        ├── Tests/       NumericRequirementEvaluator.Tests
+        └── Samples~/    NumericRequirementEvaluator.Samples / NumericRequirementEvaluator.Samples.PlayMode.Tests
 ```
 
 UPM パッケージとして扱う場合は、モジュールのフォルダを `Packages/` 以下に置くか、
