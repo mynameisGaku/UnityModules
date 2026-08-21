@@ -63,6 +63,7 @@ Unity 向けの再利用可能なモジュール置き場。各モジュール�
 | [Stable Score Selector](StableScoreSelector/) | 最大32候補の0〜1 scoreとcurrent IDから、同点・微差では維持し、明示優位差以上でだけ安定して切り替える。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [Weighted Integer Allocator](WeightedIntegerAllocator/) | 最大32 entryへ整数総量を非負整数weight比で配分し、largest remainderと入力順tie-breakで合計を失わず返す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [Stack Transfer Planner](StackTransferPlanner/) | 最大32 sourceと32 destination間の整数unit移送を入力順で計画し、stateを変更せず両側の全明細と未充足量を返す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
+| [Timed Stack Resolver](TimedStackResolver/) | 時限effectの現在stack数・残りtick数と追加状態を、独立した再適用方針と上限から決定論的に解決する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 
 ---
 
@@ -278,10 +279,14 @@ Assets/
         ├── Runtime/     WeightedIntegerAllocator.Runtime
         ├── Tests/       WeightedIntegerAllocator.Tests
         └── Samples~/    WeightedIntegerAllocator.Samples / WeightedIntegerAllocator.Samples.PlayMode.Tests
-    └── StackTransferPlanner/
+    ├── StackTransferPlanner/
         ├── Runtime/     StackTransferPlanner.Runtime
         ├── Tests/       StackTransferPlanner.Tests
         └── Samples~/    StackTransferPlanner.Samples / StackTransferPlanner.Samples.PlayMode.Tests
+    └── TimedStackResolver/
+        ├── Runtime/     TimedStackResolver.Runtime
+        ├── Tests/       TimedStackResolver.Tests
+        └── Samples~/    TimedStackResolver.Samples / TimedStackResolver.Samples.PlayMode.Tests
 ```
 
 UPM パッケージとして扱う場合は、モジュールのフォルダを `Packages/` 以下に置くか、
