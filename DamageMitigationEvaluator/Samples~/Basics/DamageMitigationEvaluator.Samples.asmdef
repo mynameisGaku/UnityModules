@@ -1,0 +1,16 @@
+{
+  "name": "DamageMitigationEvaluator.Samples",
+  "rootNamespace": "GameplayDamage.Samples",
+  "references": [
+    "DamageMitigationEvaluator.Runtime"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}
