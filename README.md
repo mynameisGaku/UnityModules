@@ -46,6 +46,7 @@ Unity 向けの再利用可能なモジュール置き場。各モジュール�
 | [Input Vector Slew Limiter](InputVectorSlewLimiter/) | 有限2D targetへのvector差を明示stepごとの最大magnitude以内に制限し、現在状態を再構築可能に保つ。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [Input Vector Response Curve](InputVectorResponseCurve/) | 単位円内の有限2D analog入力へ4種類のmagnitude curveを方向を保って決定論的に適用する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [Input Vector Exponential Smoother](InputVectorExponentialSmoother/) | 有限2D targetとの差へ明示stepごとに一定割合を適用し、平滑状態・実適用差分・残差を再構築可能に保つ。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
+| [Input Vector Weighted Mixer](InputVectorWeightedMixer/) | 最大32件の有限2D sourceを明示weightの正規化加重平均へ変換し、合成結果・件数・失敗位置を再構築可能に返す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 
 ---
 
@@ -193,10 +194,14 @@ Assets/
         ├── Runtime/     InputVectorResponseCurve.Runtime
         ├── Tests/       InputVectorResponseCurve.Tests
         └── Samples~/    InputResponse.Samples / InputResponse.Samples.PlayMode.Tests
-    └── InputVectorExponentialSmoother/
+    ├── InputVectorExponentialSmoother/
         ├── Runtime/     InputVectorExponentialSmoother.Runtime
         ├── Tests/       InputVectorExponentialSmoother.Tests
         └── Samples~/    InputFiltering.Samples / InputFiltering.Samples.PlayMode.Tests
+    └── InputVectorWeightedMixer/
+        ├── Runtime/     InputVectorWeightedMixer.Runtime
+        ├── Tests/       InputVectorWeightedMixer.Tests
+        └── Samples~/    InputMixing.Samples / InputMixing.Samples.PlayMode.Tests
 ```
 
 UPM パッケージとして扱う場合は、モジュールのフォルダを `Packages/` 以下に置くか、
