@@ -1,0 +1,23 @@
+{
+  "name": "com.studiogaku.stack-transfer-planner",
+  "version": "1.0.0",
+  "displayName": "Stack Transfer Planner",
+  "description": "Builds a deterministic, non-mutating integer transfer plan across up to 32 source and 32 destination stacks in stable input order.",
+  "unity": "6000.5",
+  "unityRelease": "7f1",
+  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/tree/stack-transfer-planner-v1.0.0/StackTransferPlanner/Documentation~",
+  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/stack-transfer-planner-v1.0.0/StackTransferPlanner/CHANGELOG.md",
+  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/stack-transfer-planner-v1.0.0/StackTransferPlanner/LICENSE.md",
+  "dependencies": {
+    "com.unity.modules.uielements": "1.0.0"
+  },
+  "samples": [
+    {
+      "displayName": "Stack Transfer Planner Basics",
+      "description": "Demonstrates full, partial, source-limited, destination-limited, and zero-unit transfer plans with responsive UI Toolkit geometry.",
+      "path": "Samples~/Basics"
+    }
+  ],
+  "keywords": ["stack", "transfer", "inventory", "storage", "plan", "integer", "deterministic", "gameplay"],
+  "author": { "name": "Studio Gaku" }
+}
