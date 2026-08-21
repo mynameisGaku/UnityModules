@@ -14,33 +14,33 @@ using UnityEngine.SceneManagement;
 namespace BuildGuard.Tests
 {
     /// <summary>
-    /// Missing Script走査の階層・inactive・Prefab契約を検証します。
+    /// Verifies missing script scanning across hierarchy, inactive objects, and Prefab instances.
     /// </summary>
     [Parallelizable(ParallelScope.None)]
     internal sealed class MissingScriptSceneScannerTests
     {
         /// <summary>
-        /// Missing Script Scene fixtureを示すGUIDです。
+        /// Identifies the missing script Scene fixture.
         /// </summary>
         internal const string BrokenSceneFixtureGuid = "62568305b48f4bfb8de5c5786171f370";
 
         /// <summary>
-        /// Missing Script Prefab fixtureを示すGUIDです。
+        /// Identifies the missing script Prefab fixture.
         /// </summary>
         internal const string BrokenPrefabFixtureGuid = "1288dc4ed86b4939a6b9be1a70cf5ef5";
 
         /// <summary>
-        /// testごとの一時asset folderです。
+        /// Stores the temporary asset folder for the current test.
         /// </summary>
         private string _temporaryFolder;
 
         /// <summary>
-        /// processor testから利用する一時asset folderを取得します。
+        /// Gets the temporary asset folder for processor tests.
         /// </summary>
         internal string TemporaryFolder => _temporaryFolder;
 
         /// <summary>
-        /// 各test専用の一時asset folderを作成します。
+        /// Creates a dedicated temporary asset folder for each test.
         /// </summary>
         [SetUp]
         public void SetUp()
@@ -50,7 +50,7 @@ namespace BuildGuard.Tests
         }
 
         /// <summary>
-        /// 開いた一時Sceneとasset folderを必ず削除します。
+        /// Removes temporary Scenes and assets after each test.
         /// </summary>
         [TearDown]
         public void TearDown()
@@ -71,7 +71,7 @@ namespace BuildGuard.Tests
         }
 
         /// <summary>
-        /// inactive childを含む全Missing Scriptと件数を収集できることを検証します。
+        /// Verifies that all missing scripts are counted in active and inactive hierarchy nodes.
         /// </summary>
         [Test]
         public void Scan_BrokenScene_IncludesInactiveHierarchy()
@@ -88,7 +88,7 @@ namespace BuildGuard.Tests
         }
 
         /// <summary>
-        /// Missing Scriptを持たないinactive階層が検出されないことを検証します。
+        /// Verifies that a valid inactive hierarchy produces no findings.
         /// </summary>
         [Test]
         public void Scan_ValidInactiveHierarchy_ReturnsEmpty()
@@ -106,7 +106,7 @@ namespace BuildGuard.Tests
         }
 
         /// <summary>
-        /// Prefab instance内のMissing ScriptをScene階層として検出できることを検証します。
+        /// Verifies that missing scripts inside a Prefab instance are reported as Scene hierarchy paths.
         /// </summary>
         [Test]
         public void Scan_BrokenPrefabInstance_FindsNestedObject()
@@ -126,7 +126,7 @@ namespace BuildGuard.Tests
         }
 
         /// <summary>
-        /// path区切りと制御文字が一行の表現へ変換されることを検証します。
+        /// Verifies that path separators and control characters are escaped into one line.
         /// </summary>
         [Test]
         public void EscapePathText_ControlCharacters_AreEscaped()
@@ -135,7 +135,7 @@ namespace BuildGuard.Tests
         }
 
         /// <summary>
-        /// 無効なSceneを誤って空Sceneとして扱わないことを検証します。
+        /// Verifies that an invalid Scene is rejected instead of treated as empty.
         /// </summary>
         [Test]
         public void Scan_InvalidScene_ThrowsArgumentException()
@@ -144,7 +144,7 @@ namespace BuildGuard.Tests
         }
 
         /// <summary>
-        /// Missing Script Scene fixtureを一時assetとして開きます。
+        /// Opens the missing script Scene fixture as a temporary asset.
         /// </summary>
         internal Scene OpenSceneFixture()
         {
@@ -153,7 +153,7 @@ namespace BuildGuard.Tests
         }
 
         /// <summary>
-        /// GUIDで解決したtext fixtureを指定拡張子の一時assetへ複製します。
+        /// Copies a text fixture resolved by GUID into a temporary asset with the requested extension.
         /// </summary>
         private string CopyFixture(string fixtureGuid, string destinationName)
         {

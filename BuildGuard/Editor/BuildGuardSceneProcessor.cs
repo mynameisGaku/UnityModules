@@ -8,26 +8,26 @@ using UnityEngine.SceneManagement;
 namespace BuildGuard.Editor
 {
     /// <summary>
-    /// Player buildで処理される各Sceneを検査し、Missing Scriptがあればbuildを中止します。
+    /// Validates every Scene processed by a Player build and blocks missing references.
     /// </summary>
     [BuildCallbackVersion(1)]
     internal sealed class BuildGuardSceneProcessor : IProcessSceneWithReport
     {
         /// <summary>
-        /// 他のScene変換より先に検査するためのcallback順序です。
+        /// Runs before ordinary Scene processing callbacks.
         /// </summary>
         internal const int CallbackOrder = -10000;
 
         /// <summary>
-        /// Unity build callback間の実行順序を取得します。
+        /// Gets the Unity build callback order.
         /// </summary>
         public int callbackOrder => CallbackOrder;
 
         /// <summary>
-        /// Player build中だけSceneを検査し、Missing Script検出時はbuildを失敗させます。
+        /// Validates only Player build processing and ignores ordinary Play Mode loads.
         /// </summary>
-        /// <param name="scene">Unityがbuild用に処理しているScene。</param>
-        /// <param name="report">Player build report。PlayMode読込時はnull。</param>
+        /// <param name="scene">The Scene Unity is processing for a build.</param>
+        /// <param name="report">The Player build report, or null outside a Player build.</param>
         public void OnProcessScene(Scene scene, BuildReport report)
         {
             if (report == null || !BuildPipeline.isBuildingPlayer)
@@ -39,17 +39,21 @@ namespace BuildGuard.Editor
         }
 
         /// <summary>
-        /// Sceneを検査し、Missing Scriptが存在する場合はbuild失敗例外を送出します。
+        /// Validates one loaded Scene and throws when any build-blocking issue exists.
         /// </summary>
         internal static void ValidateScene(Scene scene)
         {
             var findings = MissingScriptSceneScanner.Scan(scene);
-            if (findings.Count == 0)
+            var missingObjectReferences = MissingObjectReferenceSceneScanner.Scan(scene);
+            if (findings.Count == 0 && missingObjectReferences.Count == 0)
             {
                 return;
             }
 
-            throw new BuildFailedException(MissingScriptMessageFormatter.Format(scene, findings));
+            throw new BuildFailedException(BuildGuardMessageFormatter.Format(
+                scene,
+                findings,
+                missingObjectReferences));
         }
     }
 }
