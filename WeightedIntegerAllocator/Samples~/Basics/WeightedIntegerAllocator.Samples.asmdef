@@ -1,0 +1,16 @@
+{
+  "name": "WeightedIntegerAllocator.Samples",
+  "rootNamespace": "GameplayAllocation.Samples",
+  "references": [
+    "WeightedIntegerAllocator.Runtime"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}
