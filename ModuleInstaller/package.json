@@ -1,0 +1,27 @@
+{
+  "name": "com.studiogaku.module-installer",
+  "version": "1.0.0",
+  "displayName": "Module Installer",
+  "description": "Installs pinned UnityModules packages individually or as practical task-based bundles from one Editor window.",
+  "unity": "6000.5",
+  "unityRelease": "7f1",
+  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/blob/module-installer-v1.0.0/ModuleInstaller/Documentation~/index.md",
+  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/module-installer-v1.0.0/ModuleInstaller/CHANGELOG.md",
+  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/module-installer-v1.0.0/ModuleInstaller/LICENSE.md",
+  "license": "Refer to LICENSE.md file",
+  "keywords": [
+    "package-manager",
+    "installer",
+    "modules",
+    "project-setup",
+    "editor"
+  ],
+  "author": {
+    "name": "StudioGaku",
+    "email": "gaku.fujimoto.business@gmail.com",
+    "url": "https://github.com/mynameisGaku/UnityModules"
+  },
+  "dependencies": {
+    "com.unity.modules.uielements": "1.0.0"
+  }
+}

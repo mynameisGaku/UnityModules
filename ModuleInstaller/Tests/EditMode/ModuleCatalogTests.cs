@@ -1,0 +1,62 @@
+// SPDX-License-Identifier: MIT
+
+using System;
+using System.Collections.Generic;
+using NUnit.Framework;
+
+namespace ModuleInstaller.Editor.Tests
+{
+    internal sealed class ModuleCatalogTests
+    {
+        [Test]
+        public void Catalog_UsesUniquePinnedPackageEntries()
+        {
+            Assert.That(ModuleCatalog.Entries.Count, Is.EqualTo(39));
+            var packageNames = new HashSet<string>(StringComparer.Ordinal);
+            var folderNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            for (var index = 0; index < ModuleCatalog.Entries.Count; index++)
+            {
+                var entry = ModuleCatalog.Entries[index];
+                Assert.That(packageNames.Add(entry.PackageName), Is.True, entry.PackageName);
+                Assert.That(folderNames.Add(entry.FolderName), Is.True, entry.FolderName);
+                Assert.That(entry.GitUrl, Does.Contain($"?path=/{entry.FolderName}#{entry.Tag}"));
+                Assert.That(entry.GitUrl, Does.Not.Contain("#main"));
+                Assert.That(entry.GitUrl, Does.Not.Contain("#dev"));
+                Assert.That(entry.Tag, Does.EndWith("-v1.0.0").Or.EndWith("-v1.0.1").Or.EndWith("-v1.3.0").Or.EndWith("-v1.4.0"));
+            }
+        }
+
+        [Test]
+        public void Bundles_ReferenceKnownPackagesWithoutDuplicatesWithinBundle()
+        {
+            Assert.That(ModuleCatalog.Bundles.Count, Is.EqualTo(6));
+            var bundleIds = new HashSet<string>(StringComparer.Ordinal);
+
+            for (var bundleIndex = 0; bundleIndex < ModuleCatalog.Bundles.Count; bundleIndex++)
+            {
+                var bundle = ModuleCatalog.Bundles[bundleIndex];
+                Assert.That(bundleIds.Add(bundle.Id), Is.True, bundle.Id);
+                Assert.That(bundle.PackageNames.Count, Is.GreaterThan(0));
+                var packageNames = new HashSet<string>(StringComparer.Ordinal);
+                for (var packageIndex = 0; packageIndex < bundle.PackageNames.Count; packageIndex++)
+                {
+                    var packageName = bundle.PackageNames[packageIndex];
+                    Assert.That(packageNames.Add(packageName), Is.True, packageName);
+                    Assert.That(ModuleCatalog.TryFindEntry(packageName, out _), Is.True, packageName);
+                }
+            }
+        }
+
+        [Test]
+        public void RecommendedInputBundle_DoesNotExposeLegacyMicroPackages()
+        {
+            Assert.That(ModuleCatalog.TryFindBundle("input-support", out var bundle), Is.True);
+            Assert.That(bundle.PackageNames, Is.EquivalentTo(new[]
+            {
+                "com.studiogaku.input-assist",
+                "com.studiogaku.input-gate"
+            }));
+        }
+    }
+}
