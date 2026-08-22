@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.3.9] - 2026-08-22
+
+- Updated Project Setup to v1.10.0 for Unity-ready .gitignore and .gitattributes setup.
+- Clarified that existing files are preserved and Restore removes only unchanged files created by Project Setup.
+
 ## [1.3.8] - 2026-08-22
 
 - Updated Project Setup to v1.9.0 for optional EditMode and PlayMode test assembly definition setup.
