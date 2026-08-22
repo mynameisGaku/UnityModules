@@ -1,4 +1,4 @@
-# Module Installer 1.1.0
+# Module Installer 1.2.0
 
 ## 目的
 
@@ -12,6 +12,8 @@
 4. Package Managerの解決とdomain reloadを待ちます。
 
 個別導入は`Advanced: install one module`から実行します。
+
+Project Maintenanceの「プロジェクト初期設定」はv1.1.0へ固定され、Project SettingsとTag・Layer・Sorting Layerを同じprofileから適用できます。
 
 ## 安全条件
 

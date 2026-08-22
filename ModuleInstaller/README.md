@@ -28,7 +28,7 @@ Unity Package ManagerへGit URLを1件ずつ貼り、似た名前の小さなpac
 2. `Add package from git URL...`へ次を入力します。
 
    ```text
-   https://github.com/mynameisGaku/UnityModules.git?path=/ModuleInstaller#module-installer-v1.1.0
+   https://github.com/mynameisGaku/UnityModules.git?path=/ModuleInstaller#module-installer-v1.2.0
    ```
 
 3. `Tools > Module Installer > Open`を開きます。
@@ -60,6 +60,8 @@ Runtime APIはありません。C#を書く必要はなく、Editor windowの操
 | Input Support | stick・button補助、Gameplay入力の一時停止 |
 | Deterministic Simulation | 固定step、再現乱数、state照合、replay、canonical data、固定小数点、handle |
 | Game Rules and Math | resource、能力値、条件、選択、配分、stack、定期処理、damage、threat |
+
+Project Maintenanceに含まれる「プロジェクト初期設定」は、Project Settingsに加えてTag・Layer・Sorting Layerもまとめて登録できるv1.1.0へ固定しています。
 
 ## よくある問題
 
