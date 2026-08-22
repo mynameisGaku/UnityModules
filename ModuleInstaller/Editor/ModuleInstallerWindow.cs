@@ -10,14 +10,19 @@ namespace ModuleInstaller.Editor
 {
     internal sealed class ModuleInstallerWindow : EditorWindow
     {
-        internal const string WindowTitle = "Module Installer";
+        internal const string WindowTitle = "Module Manager";
         internal const string StatusElementName = "module-installer-status";
+        internal const string UpdateSummaryElementName = "module-installer-update-summary";
+        internal const string UpdateButtonElementName = "module-installer-update-all";
         internal const string BundleListElementName = "module-installer-bundles";
         internal const string PackageListElementName = "module-installer-packages";
 
         private HelpBox _status;
+        private Label _updateSummary;
+        private Button _updateButton;
         private readonly List<InstallButtonBinding> _installButtons = new List<InstallButtonBinding>();
 
+        [MenuItem("Tools/Module Manager/Open", priority = 1200)]
         [MenuItem("Tools/Module Installer/Open", priority = 1200)]
         internal static void Open()
         {
@@ -35,13 +40,13 @@ namespace ModuleInstaller.Editor
             rootVisualElement.style.paddingTop = 12f;
             rootVisualElement.style.paddingBottom = 12f;
 
-            var title = new Label("Install modules by task");
+            var title = new Label("Install and update modules by task");
             title.style.fontSize = 22f;
             title.style.unityFontStyleAndWeight = FontStyle.Bold;
             rootVisualElement.Add(title);
 
             var description = new Label(
-                "Choose a practical bundle instead of copying Git URLs one by one. Existing Assets/Modules copies are detected before installation.");
+                "Choose a practical bundle instead of copying Git URLs one by one. Installed catalog modules can be updated to the pinned releases in one request.");
             description.style.whiteSpace = WhiteSpace.Normal;
             description.style.marginTop = 4f;
             description.style.marginBottom = 8f;
@@ -52,6 +57,28 @@ namespace ModuleInstaller.Editor
                 name = StatusElementName
             };
             rootVisualElement.Add(_status);
+
+            var updateRow = new VisualElement();
+            updateRow.style.flexDirection = FlexDirection.Row;
+            updateRow.style.alignItems = Align.Center;
+            updateRow.style.marginTop = 8f;
+            rootVisualElement.Add(updateRow);
+
+            _updateSummary = new Label { name = UpdateSummaryElementName };
+            _updateSummary.style.flexGrow = 1f;
+            _updateSummary.style.flexShrink = 1f;
+            _updateSummary.style.minWidth = 0f;
+            _updateSummary.style.whiteSpace = WhiteSpace.Normal;
+            updateRow.Add(_updateSummary);
+
+            _updateButton = new Button(UpdateInstalled)
+            {
+                text = "Check updates",
+                name = UpdateButtonElementName
+            };
+            _updateButton.style.width = 150f;
+            _updateButton.style.flexShrink = 0f;
+            updateRow.Add(_updateButton);
 
             var scrollView = new ScrollView(ScrollViewMode.Vertical);
             scrollView.style.flexGrow = 1f;
@@ -150,7 +177,7 @@ namespace ModuleInstaller.Editor
             row.style.alignItems = Align.Center;
             row.style.marginBottom = 3f;
 
-            var text = new Label($"{entry.DisplayName}  —  {entry.Summary}");
+            var text = new Label($"{entry.DisplayName} - {entry.Summary}");
             text.style.flexGrow = 1f;
             text.style.flexShrink = 1f;
             text.style.minWidth = 0f;
@@ -179,7 +206,7 @@ namespace ModuleInstaller.Editor
                     : packageNames[index];
             }
 
-            return string.Join(" · ", names);
+            return string.Join(" / ", names);
         }
 
         private void InstallBundle(ModuleBundle bundle)
@@ -191,6 +218,12 @@ namespace ModuleInstaller.Editor
         private void InstallPackage(ModuleCatalogEntry entry)
         {
             ModuleInstallDriver.TryInstallPackage(entry.PackageName, out var message);
+            ShowMessage(message);
+        }
+
+        private void UpdateInstalled()
+        {
+            ModuleInstallDriver.TryUpdateInstalled(out var message);
             ShowMessage(message);
         }
 
@@ -213,8 +246,33 @@ namespace ModuleInstaller.Editor
 
             var message = ModuleInstallDriver.LastMessage;
             _status.text = string.IsNullOrEmpty(message)
-                ? "Ready. Installed packages are skipped automatically."
+                ? "Ready. Missing modules can be installed, and outdated installed modules can be updated to pinned releases."
                 : message;
+
+            var updatePlan = ModuleInstallDriver.BuildUpdatePlan();
+            _updateSummary.text = BuildUpdateSummary(updatePlan);
+            _updateButton.tooltip = updatePlan.Issues.Count > 0 ? updatePlan.Issues[0].Message : string.Empty;
+            if (ModuleInstallDriver.IsBusy)
+            {
+                _updateButton.text = "Working...";
+                _updateButton.SetEnabled(false);
+            }
+            else if (updatePlan.Issues.Count > 0)
+            {
+                _updateButton.text = "Resolve issue";
+                _updateButton.SetEnabled(false);
+            }
+            else if (updatePlan.Entries.Count == 0)
+            {
+                _updateButton.text = "Up to date";
+                _updateButton.SetEnabled(false);
+            }
+            else
+            {
+                _updateButton.text = $"Update {updatePlan.Entries.Count}";
+                _updateButton.SetEnabled(true);
+            }
+
             for (var index = 0; index < _installButtons.Count; index++)
             {
                 var binding = _installButtons[index];
@@ -241,6 +299,27 @@ namespace ModuleInstaller.Editor
                     binding.Button.SetEnabled(true);
                 }
             }
+        }
+
+        private static string BuildUpdateSummary(ModuleInstallPlan plan)
+        {
+            if (plan.Issues.Count > 0)
+            {
+                return plan.Issues[0].Message;
+            }
+
+            if (plan.Entries.Count == 0)
+            {
+                return "Installed catalog modules are up to date.";
+            }
+
+            var names = new string[plan.Entries.Count];
+            for (var index = 0; index < plan.Entries.Count; index++)
+            {
+                names[index] = $"{plan.Entries[index].DisplayName} -> {plan.Entries[index].Version}";
+            }
+
+            return $"Updates available: {string.Join(", ", names)}";
         }
 
         private sealed class InstallButtonBinding
