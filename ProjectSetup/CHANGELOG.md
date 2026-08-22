@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.6.0] - 2026-08-22
+
+- Added one profile-owned Duplicate Naming setting for GameObject suffix style, minimum number digits, and Asset copy spacing.
+- Extended preview, backup schema v7, Apply verification, Restore, Editor UI, and real EditorSettings coverage to duplicate naming defaults.
+
 ## [1.5.0] - 2026-08-22
 
 - Added profile-owned Root Namespace and new C# script line endings.
