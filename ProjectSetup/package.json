@@ -1,0 +1,27 @@
+{
+  "name": "com.studiogaku.project-setup",
+  "version": "1.0.0",
+  "displayName": "Project Setup",
+  "description": "Previews, applies, and restores reusable Unity Project Settings profiles from one Editor window.",
+  "unity": "6000.5",
+  "unityRelease": "7f1",
+  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/blob/project-setup-v1.0.0/ProjectSetup/Documentation~/index.md",
+  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/project-setup-v1.0.0/ProjectSetup/CHANGELOG.md",
+  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/project-setup-v1.0.0/ProjectSetup/LICENSE.md",
+  "license": "Refer to LICENSE.md file",
+  "keywords": [
+    "project-settings",
+    "setup",
+    "profile",
+    "editor",
+    "backup"
+  ],
+  "author": {
+    "name": "StudioGaku",
+    "email": "gaku.fujimoto.business@gmail.com",
+    "url": "https://github.com/mynameisGaku/UnityModules"
+  },
+  "dependencies": {
+    "com.unity.modules.uielements": "1.0.0"
+  }
+}

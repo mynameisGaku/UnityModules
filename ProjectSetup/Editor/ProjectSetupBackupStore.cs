@@ -1,0 +1,138 @@
+// SPDX-License-Identifier: MIT
+
+using System;
+using System.IO;
+using System.Text;
+using UnityEditor;
+using UnityEngine;
+
+namespace ProjectSetup.Editor
+{
+    internal sealed class ProjectSetupBackupStore : IProjectSetupBackupStore
+    {
+        private const string RelativePath = "ProjectSettings/ProjectSetupLastBackup.json";
+        private readonly string _path;
+
+        internal ProjectSetupBackupStore()
+            : this(Path.GetFullPath(RelativePath))
+        {
+        }
+
+        internal ProjectSetupBackupStore(string path)
+        {
+            _path = Path.GetFullPath(path ?? throw new ArgumentNullException(nameof(path)));
+        }
+
+        public bool Exists => File.Exists(_path);
+
+        public void Save(ProjectSetupSnapshot snapshot)
+        {
+            var data = ProjectSetupSnapshotData.FromSnapshot(snapshot);
+            var json = JsonUtility.ToJson(data, true) + "\n";
+            var directory = Path.GetDirectoryName(_path) ?? throw new InvalidOperationException("Backup path has no directory.");
+            Directory.CreateDirectory(directory);
+            var temporaryPath = _path + ".tmp";
+            try
+            {
+                using (var stream = new FileStream(temporaryPath, FileMode.Create, FileAccess.Write, FileShare.None))
+                using (var writer = new StreamWriter(stream, new UTF8Encoding(false)))
+                {
+                    writer.Write(json);
+                    writer.Flush();
+                    stream.Flush(true);
+                }
+
+                if (File.Exists(_path))
+                {
+                    File.Replace(temporaryPath, _path, null);
+                }
+                else
+                {
+                    File.Move(temporaryPath, _path);
+                }
+            }
+            finally
+            {
+                if (File.Exists(temporaryPath))
+                {
+                    File.Delete(temporaryPath);
+                }
+            }
+        }
+
+        public bool TryLoad(out ProjectSetupSnapshot snapshot, out string error)
+        {
+            snapshot = default;
+            error = string.Empty;
+            if (!File.Exists(_path))
+            {
+                error = "No Project Setup backup exists.";
+                return false;
+            }
+
+            try
+            {
+                var json = File.ReadAllText(_path, new UTF8Encoding(false, true));
+                var data = JsonUtility.FromJson<ProjectSetupSnapshotData>(json);
+                if (data == null || data.schemaVersion != 1)
+                {
+                    error = "The Project Setup backup schema is unsupported.";
+                    return false;
+                }
+
+                snapshot = data.ToSnapshot();
+                return true;
+            }
+            catch (Exception exception)
+            {
+                error = $"Backup could not be read: {exception.Message}";
+                return false;
+            }
+        }
+
+        [Serializable]
+        private sealed class ProjectSetupSnapshotData
+        {
+            public int schemaVersion = 1;
+            public int assetSerialization;
+            public string versionControlMode;
+            public bool enterPlayModeOptionsEnabled;
+            public int enterPlayModeOptions;
+            public int colorSpace;
+            public bool runInBackground;
+            public string companyName;
+            public string productName;
+            public string bundleVersion;
+
+            internal static ProjectSetupSnapshotData FromSnapshot(ProjectSetupSnapshot snapshot)
+            {
+                return new ProjectSetupSnapshotData
+                {
+                    assetSerialization = (int)snapshot.AssetSerialization,
+                    versionControlMode = snapshot.VersionControlMode,
+                    enterPlayModeOptionsEnabled = snapshot.EnterPlayModeOptionsEnabled,
+                    enterPlayModeOptions = (int)snapshot.EnterPlayModeOptions,
+                    colorSpace = (int)snapshot.ColorSpace,
+                    runInBackground = snapshot.RunInBackground,
+                    companyName = snapshot.CompanyName,
+                    productName = snapshot.ProductName,
+                    bundleVersion = snapshot.BundleVersion
+                };
+            }
+
+            internal ProjectSetupSnapshot ToSnapshot()
+            {
+                return new ProjectSetupSnapshot(
+                    (SerializationMode)assetSerialization,
+                    versionControlMode,
+                    enterPlayModeOptionsEnabled,
+                    (EnterPlayModeOptions)enterPlayModeOptions,
+                    (ColorSpace)colorSpace,
+                    runInBackground,
+                    companyName,
+                    productName,
+                    bundleVersion);
+            }
+        }
+    }
+}
