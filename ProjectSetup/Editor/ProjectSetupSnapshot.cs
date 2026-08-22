@@ -47,7 +47,9 @@ namespace ProjectSetup.Editor
             string[] projectFolders = null,
             string[] projectAssetPaths = null,
             string[] createdProjectFolders = null,
-            ProjectSetupCreatedAsset[] createdProjectAssets = null)
+            ProjectSetupCreatedAsset[] createdProjectAssets = null,
+            string[] projectRootFilePaths = null,
+            ProjectSetupCreatedRootFile[] createdProjectRootFiles = null)
         {
             AssetSerialization = assetSerialization;
             VersionControlMode = versionControlMode ?? string.Empty;
@@ -86,6 +88,8 @@ namespace ProjectSetup.Editor
             ProjectAssetPaths = Clone(projectAssetPaths);
             CreatedProjectFolders = Clone(createdProjectFolders);
             CreatedProjectAssets = Clone(createdProjectAssets);
+            ProjectRootFilePaths = Clone(projectRootFilePaths);
+            CreatedProjectRootFiles = Clone(createdProjectRootFiles);
         }
 
         internal SerializationMode AssetSerialization { get; }
@@ -125,20 +129,48 @@ namespace ProjectSetup.Editor
         internal string[] ProjectAssetPaths { get; }
         internal string[] CreatedProjectFolders { get; }
         internal ProjectSetupCreatedAsset[] CreatedProjectAssets { get; }
+        internal string[] ProjectRootFilePaths { get; }
+        internal ProjectSetupCreatedRootFile[] CreatedProjectRootFiles { get; }
 
         internal ProjectSetupSnapshot WithCreatedProjectFolders(string[] paths)
         {
-            return Copy(ProjectFolders, ProjectAssetPaths, paths, CreatedProjectAssets);
+            return Copy(ProjectFolders, ProjectAssetPaths, ProjectRootFilePaths, paths, CreatedProjectAssets, CreatedProjectRootFiles);
         }
 
-        internal ProjectSetupSnapshot WithCreatedProjectState(string[] folders, ProjectSetupCreatedAsset[] assets)
+        internal ProjectSetupSnapshot WithCreatedProjectState(
+            string[] folders,
+            ProjectSetupCreatedAsset[] assets,
+            ProjectSetupCreatedRootFile[] rootFiles = null)
         {
-            return Copy(ProjectFolders, ProjectAssetPaths, folders, assets);
+            return Copy(
+                ProjectFolders,
+                ProjectAssetPaths,
+                ProjectRootFilePaths,
+                folders,
+                assets,
+                rootFiles ?? CreatedProjectRootFiles);
         }
 
         internal ProjectSetupSnapshot WithProjectFolderState(string[] folders, string[] assetPaths)
         {
-            return Copy(folders, assetPaths, CreatedProjectFolders, CreatedProjectAssets);
+            return Copy(
+                folders,
+                assetPaths,
+                ProjectRootFilePaths,
+                CreatedProjectFolders,
+                CreatedProjectAssets,
+                CreatedProjectRootFiles);
+        }
+
+        internal ProjectSetupSnapshot WithProjectRootFileState(string[] rootFilePaths)
+        {
+            return Copy(
+                ProjectFolders,
+                ProjectAssetPaths,
+                rootFilePaths,
+                CreatedProjectFolders,
+                CreatedProjectAssets,
+                CreatedProjectRootFiles);
         }
 
         public bool Equals(ProjectSetupSnapshot other)
@@ -171,9 +203,10 @@ namespace ProjectSetup.Editor
                 && (!HasNamingData
                     || (GameObjectNamingScheme == other.GameObjectNamingScheme
                         && GameObjectNamingDigits == other.GameObjectNamingDigits
-                        && AssetNamingUsesSpace == other.AssetNamingUsesSpace))
+                && AssetNamingUsesSpace == other.AssetNamingUsesSpace))
                 && SequenceEqual(CreatedProjectFolders, other.CreatedProjectFolders)
-                && SequenceEqual(CreatedProjectAssets, other.CreatedProjectAssets);
+                && SequenceEqual(CreatedProjectAssets, other.CreatedProjectAssets)
+                && SequenceEqual(CreatedProjectRootFiles, other.CreatedProjectRootFiles);
         }
 
         internal bool Matches(ProjectSetupSnapshot actual)
@@ -277,6 +310,7 @@ namespace ProjectSetup.Editor
                 }
                 hash = AddHash(hash, CreatedProjectFolders);
                 hash = AddHash(hash, CreatedProjectAssets);
+                hash = AddHash(hash, CreatedProjectRootFiles);
                 return hash;
             }
         }
@@ -284,8 +318,10 @@ namespace ProjectSetup.Editor
         private ProjectSetupSnapshot Copy(
             string[] projectFolders,
             string[] projectAssetPaths,
+            string[] projectRootFilePaths,
             string[] createdProjectFolders,
-            ProjectSetupCreatedAsset[] createdProjectAssets)
+            ProjectSetupCreatedAsset[] createdProjectAssets,
+            ProjectSetupCreatedRootFile[] createdProjectRootFiles)
         {
             return new ProjectSetupSnapshot(
                 AssetSerialization,
@@ -324,7 +360,9 @@ namespace ProjectSetup.Editor
                 projectFolders,
                 projectAssetPaths,
                 createdProjectFolders,
-                createdProjectAssets);
+                createdProjectAssets,
+                projectRootFilePaths,
+                createdProjectRootFiles);
         }
 
         private static string[] Clone(string[] values)
@@ -345,6 +383,13 @@ namespace ProjectSetup.Editor
         private static ProjectSetupCreatedAsset[] Clone(ProjectSetupCreatedAsset[] values)
         {
             return values == null ? Array.Empty<ProjectSetupCreatedAsset>() : (ProjectSetupCreatedAsset[])values.Clone();
+        }
+
+        private static ProjectSetupCreatedRootFile[] Clone(ProjectSetupCreatedRootFile[] values)
+        {
+            return values == null
+                ? Array.Empty<ProjectSetupCreatedRootFile>()
+                : (ProjectSetupCreatedRootFile[])values.Clone();
         }
 
         private static bool SequenceEqual<T>(IReadOnlyList<T> left, IReadOnlyList<T> right)

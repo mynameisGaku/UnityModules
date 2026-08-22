@@ -62,6 +62,7 @@ namespace ProjectSetup.Editor
         [SerializeField] private string editorAssemblyFolder = "Assets/Scripts/Editor";
         [SerializeField] private bool includeTestAssemblies;
         [SerializeField] private string testAssemblyRootFolder = "Assets/Tests";
+        [SerializeField] private bool configureVersionControlFiles;
 
         internal bool ConfigureAssetSerialization { get => configureAssetSerialization; set => configureAssetSerialization = value; }
         internal SerializationMode AssetSerialization { get => assetSerialization; set => assetSerialization = value; }
@@ -116,6 +117,7 @@ namespace ProjectSetup.Editor
         internal string EditorAssemblyFolder { get => editorAssemblyFolder ?? string.Empty; set => editorAssemblyFolder = value ?? string.Empty; }
         internal bool IncludeTestAssemblies { get => includeTestAssemblies; set => includeTestAssemblies = value; }
         internal string TestAssemblyRootFolder { get => testAssemblyRootFolder ?? string.Empty; set => testAssemblyRootFolder = value ?? string.Empty; }
+        internal bool ConfigureVersionControlFiles { get => configureVersionControlFiles; set => configureVersionControlFiles = value; }
 
         internal void SetRecommendedDefaults()
         {
@@ -172,6 +174,7 @@ namespace ProjectSetup.Editor
             editorAssemblyFolder = "Assets/Scripts/Editor";
             includeTestAssemblies = false;
             testAssemblyRootFolder = "Assets/Tests";
+            configureVersionControlFiles = false;
         }
 
         internal void Capture(ProjectSetupSnapshot snapshot)
@@ -231,6 +234,7 @@ namespace ProjectSetup.Editor
             editorAssemblyFolder = "Assets/Scripts/Editor";
             includeTestAssemblies = false;
             testAssemblyRootFolder = "Assets/Tests";
+            configureVersionControlFiles = false;
         }
 
         private static ProjectSetupBuildScene[] CloneBuildScenes(ProjectSetupBuildScene[] values)

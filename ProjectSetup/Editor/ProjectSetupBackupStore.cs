@@ -74,7 +74,7 @@ namespace ProjectSetup.Editor
             {
                 var json = File.ReadAllText(_path, new UTF8Encoding(false, true));
                 var data = JsonUtility.FromJson<ProjectSetupSnapshotData>(json);
-                if (data == null || data.schemaVersion < 1 || data.schemaVersion > 9)
+                if (data == null || data.schemaVersion < 1 || data.schemaVersion > 10)
                 {
                     error = "The Project Setup backup schema is unsupported.";
                     return false;
@@ -93,7 +93,7 @@ namespace ProjectSetup.Editor
         [Serializable]
         private sealed class ProjectSetupSnapshotData
         {
-            public int schemaVersion = 9;
+            public int schemaVersion = 10;
             public int assetSerialization;
             public string versionControlMode;
             public bool enterPlayModeOptionsEnabled;
@@ -128,6 +128,7 @@ namespace ProjectSetup.Editor
             public bool assetNamingUsesSpace;
             public string[] createdProjectFolders;
             public CreatedAssetData[] createdProjectAssets;
+            public CreatedRootFileData[] createdProjectRootFiles;
 
             internal static ProjectSetupSnapshotData FromSnapshot(ProjectSetupSnapshot snapshot)
             {
@@ -186,6 +187,13 @@ namespace ProjectSetup.Editor
                         {
                             path = asset.Path,
                             contentHash = asset.ContentHash
+                        }),
+                    createdProjectRootFiles = Array.ConvertAll(
+                        snapshot.CreatedProjectRootFiles,
+                        file => new CreatedRootFileData
+                        {
+                            path = file.Path,
+                            contentHash = file.ContentHash
                         })
                 };
             }
@@ -239,7 +247,12 @@ namespace ProjectSetup.Editor
                         ? Array.ConvertAll(
                             createdProjectAssets,
                             asset => new ProjectSetupCreatedAsset(asset.path, asset.contentHash))
-                        : Array.Empty<ProjectSetupCreatedAsset>());
+                        : Array.Empty<ProjectSetupCreatedAsset>(),
+                    createdProjectRootFiles: schemaVersion >= 10 && createdProjectRootFiles != null
+                        ? Array.ConvertAll(
+                            createdProjectRootFiles,
+                            file => new ProjectSetupCreatedRootFile(file.path, file.contentHash))
+                        : Array.Empty<ProjectSetupCreatedRootFile>());
             }
         }
 
@@ -261,6 +274,13 @@ namespace ProjectSetup.Editor
 
         [Serializable]
         private sealed class CreatedAssetData
+        {
+            public string path;
+            public string contentHash;
+        }
+
+        [Serializable]
+        private sealed class CreatedRootFileData
         {
             public string path;
             public string contentHash;

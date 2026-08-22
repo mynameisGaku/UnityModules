@@ -47,7 +47,10 @@ namespace ProjectSetup.Editor
             var createdAssets = ProjectSetupPlanner.GetMissingAssemblyDefinitions(profile, before)
                 .Select(definition => definition.ToCreatedAsset())
                 .ToArray();
-            var backup = before.WithCreatedProjectState(createdFolders, createdAssets);
+            var createdRootFiles = ProjectSetupPlanner.GetMissingVersionControlFiles(profile, before)
+                .Select(file => file.ToCreatedRootFile())
+                .ToArray();
+            var backup = before.WithCreatedProjectState(createdFolders, createdAssets, createdRootFiles);
             try
             {
                 _backupStore.Save(backup);
@@ -57,13 +60,19 @@ namespace ProjectSetup.Editor
                 return new ProjectSetupApplyResult(false, $"Backup could not be saved, so no Project Settings were changed: {exception.Message}", plan);
             }
 
+            var confirmedRootFiles = Array.Empty<ProjectSetupCreatedRootFile>();
             try
             {
                 var actual = _environment.Apply(profile);
+                confirmedRootFiles = actual.CreatedRootFiles;
                 if (!createdFolders.SequenceEqual(actual.CreatedFolders, StringComparer.OrdinalIgnoreCase)
-                    || !createdAssets.SequenceEqual(actual.CreatedAssets))
+                    || !createdAssets.SequenceEqual(actual.CreatedAssets)
+                    || !createdRootFiles.SequenceEqual(actual.CreatedRootFiles))
                 {
-                    backup = before.WithCreatedProjectState(actual.CreatedFolders, actual.CreatedAssets);
+                    backup = before.WithCreatedProjectState(
+                        actual.CreatedFolders,
+                        actual.CreatedAssets,
+                        actual.CreatedRootFiles);
                     _backupStore.Save(backup);
                 }
                 var verification = ProjectSetupPlanner.Build(profile, _environment.Capture());
@@ -76,7 +85,11 @@ namespace ProjectSetup.Editor
             }
             catch (Exception exception)
             {
-                TryRestore(backup);
+                var rollback = backup.WithCreatedProjectState(
+                    backup.CreatedProjectFolders,
+                    backup.CreatedProjectAssets,
+                    confirmedRootFiles);
+                TryRestore(rollback);
                 return new ProjectSetupApplyResult(false, $"Apply failed and the previous values were restored where possible: {exception.Message}", plan);
             }
         }
@@ -248,6 +261,19 @@ namespace ProjectSetup.Editor
                         "Script Assemblies",
                         $"{restorableAssets} created Assembly Definition asset(s) remain",
                         "Remove only created Assembly Definitions whose contents are unchanged"));
+                }
+
+                var currentRootFiles = new HashSet<string>(
+                    current.ProjectRootFilePaths,
+                    StringComparer.Ordinal);
+                var restorableRootFiles = desired.CreatedProjectRootFiles.Count(file => currentRootFiles.Contains(file.Path));
+                if (restorableRootFiles > 0)
+                {
+                    changes.Add(new ProjectSetupChange(
+                        ProjectSetupSettingKey.VersionControlFiles,
+                        "Version Control Files",
+                        $"{restorableRootFiles} created version control file(s) remain",
+                        "Remove only created version control files whose contents are unchanged"));
                 }
 
                 return new ProjectSetupPlan(changes, errors);

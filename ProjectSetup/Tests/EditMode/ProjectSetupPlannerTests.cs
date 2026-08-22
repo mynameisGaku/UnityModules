@@ -617,6 +617,22 @@ namespace ProjectSetup.Tests
         }
 
         [Test]
+        public void Build_VersionControlFilesPlansOnlyMissingRootFile()
+        {
+            _profile.ConfigureAssetSerialization = false;
+            _profile.ConfigureVersionControl = false;
+            _profile.ConfigureVersionControlFiles = true;
+            var current = Snapshot().WithProjectRootFileState(new[] { ".gitignore" });
+
+            var plan = ProjectSetupPlanner.Build(_profile, current);
+            var files = ProjectSetupPlanner.GetMissingVersionControlFiles(_profile, current);
+
+            Assert.That(plan.IsValid, Is.True);
+            Assert.That(plan.Changes, Has.Exactly(1).Property("Key").EqualTo(ProjectSetupSettingKey.VersionControlFiles));
+            Assert.That(files.Select(file => file.Path), Is.EqualTo(new[] { ".gitattributes" }));
+        }
+
+        [Test]
         public void Build_AssemblyDefinitionsRejectsDifferentDefinitionInTargetFolder()
         {
             _profile.ConfigureAssemblyDefinitions = true;

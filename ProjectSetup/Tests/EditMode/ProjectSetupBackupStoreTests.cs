@@ -61,7 +61,8 @@ namespace ProjectSetup.Tests
             Assert.That(actual.AssetNamingUsesSpace, Is.EqualTo(expected.AssetNamingUsesSpace));
             Assert.That(actual.CreatedProjectFolders, Is.EqualTo(expected.CreatedProjectFolders));
             Assert.That(actual.CreatedProjectAssets, Is.EqualTo(expected.CreatedProjectAssets));
-            Assert.That(File.ReadAllText(_path), Does.Contain("\"schemaVersion\": 9"));
+            Assert.That(actual.CreatedProjectRootFiles, Is.EqualTo(expected.CreatedProjectRootFiles));
+            Assert.That(File.ReadAllText(_path), Does.Contain("\"schemaVersion\": 10"));
         }
 
         [Test]
@@ -147,6 +148,23 @@ namespace ProjectSetup.Tests
             Assert.That(snapshot.HasNamingData, Is.False);
             Assert.That(snapshot.CreatedProjectFolders, Is.Empty);
             Assert.That(snapshot.CreatedProjectAssets, Is.Empty);
+            Assert.That(snapshot.CreatedProjectRootFiles, Is.Empty);
+        }
+
+        [Test]
+        public void TryLoad_SchemaNineIgnoresVersionControlOwnershipData()
+        {
+            Directory.CreateDirectory(_directory);
+            File.WriteAllText(
+                _path,
+                "{\"schemaVersion\":9,\"createdProjectRootFiles\":[{\"path\":\".gitignore\",\"contentHash\":\"hash\"}]}",
+                new UTF8Encoding(false));
+            var store = new ProjectSetupBackupStore(_path);
+
+            var loaded = store.TryLoad(out var snapshot, out var error);
+
+            Assert.That(loaded, Is.True, error);
+            Assert.That(snapshot.CreatedProjectRootFiles, Is.Empty);
         }
 
         private static ProjectSetupSnapshot Snapshot(string companyName)
@@ -199,6 +217,10 @@ namespace ProjectSetup.Tests
                 createdProjectAssets: new[]
                 {
                     new ProjectSetupCreatedAsset("Assets/Generated/Game.asmdef", "abc123")
+                },
+                createdProjectRootFiles: new[]
+                {
+                    new ProjectSetupCreatedRootFile(".gitignore", "def456")
                 });
         }
     }
