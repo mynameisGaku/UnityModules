@@ -12,7 +12,7 @@ Unity で繰り返し発生する設定、実装、確認作業を減らすた�
 | 困りごと | 推奨モジュール | まずできること |
 |---|---|---|
 | Git URLを1件ずつ追加せず、用途別にモジュールをまとめて導入・更新したい | [モジュール管理（Module Manager）](ModuleInstaller/) | 普段使う4workflowから選び、用途・最初の操作・変更範囲を確認して導入する。専門向けcollectionと個別moduleは折りたたみから選べる。 |
-| 新しいProjectごとに基本フォルダー、asmdef、Git設定、Player識別子、build方式、開始Sceneを手作業したくない | [プロジェクト一括設定（Project Setup）](ProjectSetup/) | `Assets`配下の基本フォルダー、Runtime・Editor・test用asmdef、Unity向け`.gitignore`と`.gitattributes`、Project Settings、build target別Application Identifier・Scripting Backend・API Compatibility Level、Root Namespace、Play Mode開始Scene、条件付きコンパイル記号、Tag・Layer、Build Scenesをbackup付きでまとめて適用する。 |
+| 新しいProjectごとに基本フォルダー、asmdef、Git設定、Player識別子、build方式、managed code削除強度、開始Sceneを手作業したくない | [プロジェクト一括設定（Project Setup）](ProjectSetup/) | `Assets`配下の基本フォルダー、Runtime・Editor・test用asmdef、Unity向け`.gitignore`と`.gitattributes`、Project Settings、build target別Application Identifier・Scripting Backend・API Compatibility Level・Managed Stripping Level、Root Namespace、Play Mode開始Scene、条件付きコンパイル記号、Tag・Layer、Build Scenesをbackup付きでまとめて適用する。 |
 | Scene の読込順、Additive、Unload を安全に扱いたい | [シーン切り替え（SceneFlow）](SceneFlow/) | 4 種類の Scene 操作を直列化し、失敗理由を結果で受け取る。 |
 | Scene 切り替え中に画面を隠したい | [画面フェード（ScreenTransition）](ScreenTransition/) | UI Toolkit の全画面 Cover・Reveal を実行する。 |
 | ノッチや画面回転でUIが欠けるのを防ぎたい | [画面サイズ・ノッチ対応（AdaptiveLayout）](AdaptiveLayout/) | UI ToolkitとRectTransformを`Screen.safeArea`へ自動追従させる。 |
@@ -42,7 +42,7 @@ Unity で繰り返し発生する設定、実装、確認作業を減らすた�
 | モジュール | 内容 | 依存 |
 |---|---|---|
 | [モジュール管理（Module Manager）](ModuleInstaller/) | Project Maintenance、Scene and UI、Game Services、Input Supportの4workflowを先に示し、`Quick guide`で用途・導入後の最初の操作・変更範囲を確認してから固定公開tagをまとめて追加する。決定論・ゲーム計算は専門向けcollectionへ分離し、個別moduleは公開tagのREADMEを開いてから導入できる。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
-| [プロジェクト一括設定（Project Setup）](ProjectSetup/) | `Assets`配下の基本フォルダー、Runtime・Editor・test用asmdef、Unity向け`.gitignore`と`.gitattributes`、Project Settings、build target別Application Identifier・Scripting Backend・API Compatibility Level、Root Namespace、新規scriptの改行方式、複製時の命名規則、Play Mode Start Scene、条件付きコンパイル記号、Tag・Layer・Sorting Layer、Build Scenesをprofile化する。差分Preview、backup、適用、復元を一つのEditor画面で行い、既存fileは上書きしない。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
+| [プロジェクト一括設定（Project Setup）](ProjectSetup/) | `Assets`配下の基本フォルダー、Runtime・Editor・test用asmdef、Unity向け`.gitignore`と`.gitattributes`、Project Settings、build target別Application Identifier・Scripting Backend・API Compatibility Level・Managed Stripping Level、Root Namespace、新規scriptの改行方式、複製時の命名規則、Play Mode Start Scene、条件付きコンパイル記号、Tag・Layer・Sorting Layer、Build Scenesをprofile化する。差分Preview、backup、適用、復元を一つのEditor画面で行い、既存fileは上書きしない。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [汎用データ構造（Containers）](Containers/) | コンテナ / データ構造 66 種。GC フリーのコレクション、Inspector に出せるシリアライズ対応型、空間分割、Unity のライフサイクルに耐えるコンテナ。 | なし |
 | [インスペクター入力補助（Inspector）](Inspector/) | Inspector 拡張の属性 43 種。条件による表示・非表示、グループ化とタブ、入力値の検証、メソッドのボタン化。**Unity 6000.5 以降**。 | なし |
 | [デバッグ描画（Drawing）](Drawing/) | 実行中の線・矢印・箱・球・経路・文字をコード1行で描くデバッグ可視化。Development Build専用呼び出しと持続時間に対応。**Unity 6000.5 以降**。 | なし |
@@ -95,7 +95,7 @@ Unity で繰り返し発生する設定、実装、確認作業を減らすた�
 
 新しいProjectでは、まず [モジュール管理（Module Manager）](ModuleInstaller/) をPackage Managerへ追加し、`Tools > Module Manager > Open`から4つの実用workflowを選ぶ。`Quick guide`で用途・最初の操作・変更範囲を確認し、未導入moduleの追加件数を確認してから実行する。専門向けcollectionと40件の個別一覧は初期状態で折りたたまれ、個別行の`Read guide`はcatalogと同じ公開tagのREADMEを開く。更新は公開tagへ固定され、同じversion・より新しいversion・catalog外versionを上書きしない。
 
-新規Projectの設定をそろえる場合は、[プロジェクト一括設定（Project Setup）](ProjectSetup/) を追加して `Tools > Project Setup > Open` を開く。`New recommended profile`で安全な推奨profileを作り、必要なら基本フォルダー、Runtime・Editor・test用asmdef、Unity向け`.gitignore`と`.gitattributes`、build target別Application Identifier・Scripting Backend・API Compatibility Level、Root Namespace、新規scriptの改行方式、複製時の命名規則、Play Mode Start Scene、条件付きコンパイル記号、Tag・Layer・Sorting Layer、Build Scenesを追加する。`Preview changes`で差分を確認してから`Apply profile`を実行すると、適用直前の設定とツールが作成した項目が自動backupされる。復元時は、ツールが作成した後に内容が変わっていないfileだけを削除する。
+新規Projectの設定をそろえる場合は、[プロジェクト一括設定（Project Setup）](ProjectSetup/) を追加して `Tools > Project Setup > Open` を開く。`New recommended profile`で安全な推奨profileを作り、必要なら基本フォルダー、Runtime・Editor・test用asmdef、Unity向け`.gitignore`と`.gitattributes`、build target別Application Identifier・Scripting Backend・API Compatibility Level・Managed Stripping Level、Root Namespace、新規scriptの改行方式、複製時の命名規則、Play Mode Start Scene、条件付きコンパイル記号、Tag・Layer・Sorting Layer、Build Scenesを追加する。`Preview changes`で差分を確認してから`Apply profile`を実行すると、適用直前の設定とツールが作成した項目が自動backupされる。復元時は、ツールが作成した後に内容が変わっていないfileだけを削除する。
 
 特定モジュールだけを手作業で配置する場合は、そのフォルダーをプロジェクトの `Assets/Modules/` 以下へコピーする。アセンブリ定義が同梱されているので、利用側のasmdefから必要なassemblyを参照する。
 
