@@ -23,7 +23,7 @@ namespace ModuleInstaller.Editor.Tests
                 Assert.That(entry.GitUrl, Does.Contain($"?path=/{entry.FolderName}#{entry.Tag}"));
                 Assert.That(entry.GitUrl, Does.Not.Contain("#main"));
                 Assert.That(entry.GitUrl, Does.Not.Contain("#dev"));
-                Assert.That(entry.Tag, Does.EndWith("-v1.0.0").Or.EndWith("-v1.0.1").Or.EndWith("-v1.3.0").Or.EndWith("-v1.4.0"));
+                Assert.That(entry.Tag, Does.EndWith("-v1.0.0").Or.EndWith("-v1.0.1").Or.EndWith("-v1.1.0").Or.EndWith("-v1.3.0").Or.EndWith("-v1.4.0"));
             }
         }
 
@@ -71,6 +71,14 @@ namespace ModuleInstaller.Editor.Tests
                 "com.studiogaku.build-guard",
                 "com.studiogaku.reference-finder"
             }));
+        }
+
+        [Test]
+        public void ProjectSetup_UsesTagLayerCapableRelease()
+        {
+            Assert.That(ModuleCatalog.TryFindEntry("com.studiogaku.project-setup", out var entry), Is.True);
+            Assert.That(entry.Tag, Is.EqualTo("project-setup-v1.1.0"));
+            Assert.That(entry.Summary, Does.Contain("Tags").And.Contain("Layers").And.Contain("Sorting Layers"));
         }
     }
 }
