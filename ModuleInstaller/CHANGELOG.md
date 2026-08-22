@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.4.4] - 2026-08-22
+
+- Updated Project Setup to v1.14.0 for build-target Managed Stripping Level preview, backup, apply, and restore.
+- Added managed code stripping guidance to the Project Maintenance workflow.
+
 ## [1.4.3] - 2026-08-22
 
 - Updated Project Setup to v1.13.0 for build-target API Compatibility Level preview, backup, apply, and restore.
