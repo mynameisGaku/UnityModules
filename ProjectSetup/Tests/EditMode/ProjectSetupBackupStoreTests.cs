@@ -51,7 +51,8 @@ namespace ProjectSetup.Tests
             var bytes = File.ReadAllBytes(_path);
             Assert.That(bytes, Has.Length.GreaterThan(0));
             Assert.That(bytes.Take(3).ToArray(), Is.Not.EqualTo(Encoding.UTF8.GetPreamble()));
-            Assert.That(File.ReadAllText(_path), Does.Contain("\"schemaVersion\": 2"));
+            Assert.That(actual.BuildScenes, Is.EqualTo(expected.BuildScenes));
+            Assert.That(File.ReadAllText(_path), Does.Contain("\"schemaVersion\": 3"));
         }
 
         [Test]
@@ -65,6 +66,30 @@ namespace ProjectSetup.Tests
 
             Assert.That(loaded, Is.True, error);
             Assert.That(actual.CompanyName, Is.EqualTo("Second"));
+        }
+
+        [Test]
+        public void SaveAndLoad_PreservesSnapshotWithoutBuildSceneData()
+        {
+            var expected = new ProjectSetupSnapshot(
+                SerializationMode.ForceText,
+                "Visible Meta Files",
+                false,
+                EnterPlayModeOptions.None,
+                ColorSpace.Gamma,
+                false,
+                "Company",
+                "Product",
+                "1.0.0");
+            var store = new ProjectSetupBackupStore(_path);
+
+            store.Save(expected);
+            var loaded = store.TryLoad(out var actual, out var error);
+
+            Assert.That(loaded, Is.True, error);
+            Assert.That(actual.HasBuildSceneData, Is.False);
+            Assert.That(actual.CompanyName, Is.EqualTo(expected.CompanyName));
+            Assert.That(actual.ProductName, Is.EqualTo(expected.ProductName));
         }
 
         [Test]
@@ -107,6 +132,7 @@ namespace ProjectSetup.Tests
             Assert.That(snapshot.CompanyName, Is.EqualTo("Legacy"));
             Assert.That(snapshot.HasTagManagerData, Is.False);
             Assert.That(snapshot.CustomTags, Is.Empty);
+            Assert.That(snapshot.HasBuildSceneData, Is.False);
         }
 
         private static ProjectSetupSnapshot Snapshot(string companyName)
@@ -131,6 +157,15 @@ namespace ProjectSetup.Tests
                 {
                     new ProjectSetupSortingLayer("Default", 0, false),
                     new ProjectSetupSortingLayer("Foreground", 12, false)
+                },
+                "tag manager backup",
+                true,
+                "global",
+                "Global Build Scenes",
+                new[]
+                {
+                    new ProjectSetupBuildSceneState("guid-bootstrap", "Assets/Bootstrap.unity", true),
+                    new ProjectSetupBuildSceneState("guid-gameplay", "Assets/Gameplay.unity", false)
                 });
         }
     }

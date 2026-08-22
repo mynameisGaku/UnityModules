@@ -26,6 +26,8 @@ namespace ProjectSetup.Editor
         [SerializeField] private string productName = "New Unity Project";
         [SerializeField] private bool configureBundleVersion;
         [SerializeField] private string bundleVersion = "1.0.0";
+        [SerializeField] private bool configureBuildScenes;
+        [SerializeField] private ProjectSetupBuildScene[] buildScenes = Array.Empty<ProjectSetupBuildScene>();
         [SerializeField] private bool configureTags;
         [SerializeField] private string[] tags = Array.Empty<string>();
         [SerializeField] private bool configureLayers;
@@ -50,6 +52,12 @@ namespace ProjectSetup.Editor
         internal string ProductName { get => productName; set => productName = value; }
         internal bool ConfigureBundleVersion { get => configureBundleVersion; set => configureBundleVersion = value; }
         internal string BundleVersion { get => bundleVersion; set => bundleVersion = value; }
+        internal bool ConfigureBuildScenes { get => configureBuildScenes; set => configureBuildScenes = value; }
+        internal ProjectSetupBuildScene[] BuildScenes
+        {
+            get => buildScenes ?? Array.Empty<ProjectSetupBuildScene>();
+            set => buildScenes = CloneBuildScenes(value);
+        }
         internal bool ConfigureTags { get => configureTags; set => configureTags = value; }
         internal string[] Tags { get => tags ?? Array.Empty<string>(); set => tags = value ?? Array.Empty<string>(); }
         internal bool ConfigureLayers { get => configureLayers; set => configureLayers = value; }
@@ -76,6 +84,8 @@ namespace ProjectSetup.Editor
             productName = "New Unity Project";
             configureBundleVersion = false;
             bundleVersion = "1.0.0";
+            configureBuildScenes = false;
+            buildScenes = Array.Empty<ProjectSetupBuildScene>();
             configureTags = false;
             tags = Array.Empty<string>();
             configureLayers = false;
@@ -103,12 +113,26 @@ namespace ProjectSetup.Editor
             productName = snapshot.ProductName;
             configureBundleVersion = true;
             bundleVersion = snapshot.BundleVersion;
+            configureBuildScenes = snapshot.HasBuildSceneData;
+            buildScenes = snapshot.BuildScenes
+                .Select(scene => new ProjectSetupBuildScene(scene.SceneGuid, scene.Path, scene.Enabled))
+                .ToArray();
             configureTags = snapshot.HasTagManagerData;
             tags = snapshot.CustomTags.ToArray();
             configureLayers = snapshot.HasTagManagerData;
             layers = snapshot.Layers.Skip(8).Where(value => !string.IsNullOrEmpty(value)).ToArray();
             configureSortingLayers = snapshot.HasTagManagerData;
             sortingLayers = snapshot.SortingLayers.Where(layer => layer.UniqueId != 0).Select(layer => layer.Name).ToArray();
+        }
+
+        private static ProjectSetupBuildScene[] CloneBuildScenes(ProjectSetupBuildScene[] values)
+        {
+            if (values == null || values.Length == 0)
+            {
+                return Array.Empty<ProjectSetupBuildScene>();
+            }
+
+            return values.Select(value => value?.Clone() ?? new ProjectSetupBuildScene()).ToArray();
         }
     }
 }

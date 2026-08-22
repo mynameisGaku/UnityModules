@@ -14,6 +14,7 @@ namespace ProjectSetup.Editor
         private const int MaximumVersionLength = 64;
         private const int MaximumNameLength = 64;
         private const int MaximumRequestedNameCount = 64;
+        private const int MaximumBuildSceneCount = 64;
         private const EnterPlayModeOptions KnownEnterPlayModeOptions = EnterPlayModeOptions.DisableDomainReload
             | EnterPlayModeOptions.DisableSceneReload;
 
@@ -92,6 +93,7 @@ namespace ProjectSetup.Editor
             AddTextChange(profile.ConfigureCompanyName, profile.CompanyName, current.CompanyName, ProjectSetupSettingKey.CompanyName, "Company Name", MaximumTextLength, changes, errors);
             AddTextChange(profile.ConfigureProductName, profile.ProductName, current.ProductName, ProjectSetupSettingKey.ProductName, "Product Name", MaximumTextLength, changes, errors);
             AddTextChange(profile.ConfigureBundleVersion, profile.BundleVersion, current.BundleVersion, ProjectSetupSettingKey.BundleVersion, "Bundle Version", MaximumVersionLength, changes, errors);
+            AddBuildSceneChange(profile, current, changes, errors);
             AddNameListChange(profile.ConfigureTags, profile.Tags, current.Tags, ProjectSetupSettingKey.Tags, "Tags", changes, errors);
             AddLayerChange(profile, current, changes, errors);
             AddNameListChange(
@@ -103,6 +105,66 @@ namespace ProjectSetup.Editor
                 changes,
                 errors);
             return new ProjectSetupPlan(changes, errors);
+        }
+
+        private static void AddBuildSceneChange(
+            ProjectSetupProfile profile,
+            ProjectSetupSnapshot current,
+            ICollection<ProjectSetupChange> changes,
+            ICollection<string> errors)
+        {
+            if (!profile.ConfigureBuildScenes)
+            {
+                return;
+            }
+
+            var requested = profile.BuildScenes;
+            if (requested.Length == 0)
+            {
+                errors.Add("Build Scenes requires at least one Scene.");
+                return;
+            }
+
+            if (requested.Length > MaximumBuildSceneCount)
+            {
+                errors.Add($"Build Scenes supports at most {MaximumBuildSceneCount} Scenes.");
+                return;
+            }
+
+            if (requested[0] == null || !requested[0].Enabled)
+            {
+                errors.Add("The first Build Scene must be enabled because it is the Player startup Scene.");
+                return;
+            }
+
+            var desired = new ProjectSetupBuildSceneState[requested.Length];
+            var paths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            for (var index = 0; index < requested.Length; index++)
+            {
+                var entry = requested[index];
+                if (entry == null || !entry.TryResolve(out var path))
+                {
+                    errors.Add($"Build Scene {index + 1} must reference an existing Scene Asset.");
+                    return;
+                }
+
+                if (!paths.Add(path))
+                {
+                    errors.Add($"Build Scenes contains the duplicate Scene '{path}'.");
+                    return;
+                }
+
+                desired[index] = new ProjectSetupBuildSceneState(AssetDatabase.AssetPathToGUID(path), path, entry.Enabled);
+            }
+
+            if (!SequenceEqual(current.BuildScenes, desired))
+            {
+                changes.Add(new ProjectSetupChange(
+                    ProjectSetupSettingKey.BuildScenes,
+                    "Build Scenes",
+                    FormatBuildScenes(current.BuildScenes),
+                    FormatBuildScenes(desired)));
+            }
         }
 
         private static void AddLayerChange(
@@ -263,6 +325,35 @@ namespace ProjectSetup.Editor
         private static void Add<T>(ICollection<ProjectSetupChange> changes, ProjectSetupSettingKey key, string label, T current, T desired)
         {
             changes.Add(new ProjectSetupChange(key, label, current?.ToString() ?? string.Empty, desired?.ToString() ?? string.Empty));
+        }
+
+        private static bool SequenceEqual(IReadOnlyList<ProjectSetupBuildSceneState> left, IReadOnlyList<ProjectSetupBuildSceneState> right)
+        {
+            if (left == null || right == null || left.Count != right.Count)
+            {
+                return false;
+            }
+
+            for (var index = 0; index < left.Count; index++)
+            {
+                if (!left[index].Equals(right[index]))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        internal static string FormatBuildScenes(IReadOnlyList<ProjectSetupBuildSceneState> scenes)
+        {
+            if (scenes == null || scenes.Count == 0)
+            {
+                return "No Scenes";
+            }
+
+            return string.Join(", ", scenes.Select((scene, index) =>
+                $"{index + 1}. {System.IO.Path.GetFileNameWithoutExtension(scene.Path)} ({(scene.Enabled ? "Enabled" : "Disabled")})"));
         }
     }
 }

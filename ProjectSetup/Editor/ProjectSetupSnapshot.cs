@@ -25,7 +25,11 @@ namespace ProjectSetup.Editor
             string[] customTags = null,
             string[] layers = null,
             ProjectSetupSortingLayer[] sortingLayers = null,
-            string tagManagerFileText = null)
+            string tagManagerFileText = null,
+            bool hasBuildSceneData = false,
+            string buildSceneTargetId = null,
+            string buildSceneTargetLabel = null,
+            ProjectSetupBuildSceneState[] buildScenes = null)
         {
             AssetSerialization = assetSerialization;
             VersionControlMode = versionControlMode ?? string.Empty;
@@ -42,6 +46,10 @@ namespace ProjectSetup.Editor
             Layers = Clone(layers);
             SortingLayers = Clone(sortingLayers);
             TagManagerFileText = tagManagerFileText ?? string.Empty;
+            HasBuildSceneData = hasBuildSceneData;
+            BuildSceneTargetId = buildSceneTargetId ?? string.Empty;
+            BuildSceneTargetLabel = buildSceneTargetLabel ?? string.Empty;
+            BuildScenes = Clone(buildScenes);
         }
 
         internal SerializationMode AssetSerialization { get; }
@@ -59,6 +67,10 @@ namespace ProjectSetup.Editor
         internal string[] Layers { get; }
         internal ProjectSetupSortingLayer[] SortingLayers { get; }
         internal string TagManagerFileText { get; }
+        internal bool HasBuildSceneData { get; }
+        internal string BuildSceneTargetId { get; }
+        internal string BuildSceneTargetLabel { get; }
+        internal ProjectSetupBuildSceneState[] BuildScenes { get; }
 
         public bool Equals(ProjectSetupSnapshot other)
         {
@@ -68,7 +80,10 @@ namespace ProjectSetup.Editor
                 && SequenceEqual(CustomTags, other.CustomTags)
                 && SequenceEqual(Layers, other.Layers)
                 && SequenceEqual(SortingLayers, other.SortingLayers)
-                && string.Equals(TagManagerFileText, other.TagManagerFileText, StringComparison.Ordinal);
+                && string.Equals(TagManagerFileText, other.TagManagerFileText, StringComparison.Ordinal)
+                && HasBuildSceneData == other.HasBuildSceneData
+                && string.Equals(BuildSceneTargetId, other.BuildSceneTargetId, StringComparison.Ordinal)
+                && SequenceEqual(BuildScenes, other.BuildScenes);
         }
 
         internal bool Matches(ProjectSetupSnapshot actual)
@@ -80,7 +95,11 @@ namespace ProjectSetup.Editor
                         && SequenceEqual(CustomTags, actual.CustomTags)
                         && SequenceEqual(Layers, actual.Layers)
                         && SequenceEqual(SortingLayers, actual.SortingLayers)
-                        && string.Equals(TagManagerFileText, actual.TagManagerFileText, StringComparison.Ordinal)));
+                        && string.Equals(TagManagerFileText, actual.TagManagerFileText, StringComparison.Ordinal)))
+                && (!HasBuildSceneData
+                    || (actual.HasBuildSceneData
+                        && string.Equals(BuildSceneTargetId, actual.BuildSceneTargetId, StringComparison.Ordinal)
+                        && SequenceEqual(BuildScenes, actual.BuildScenes)));
         }
 
         private bool ScalarEquals(ProjectSetupSnapshot other)
@@ -120,6 +139,9 @@ namespace ProjectSetup.Editor
                 hash = AddHash(hash, Layers);
                 hash = AddHash(hash, SortingLayers);
                 hash = (hash * 397) ^ StringComparer.Ordinal.GetHashCode(TagManagerFileText ?? string.Empty);
+                hash = (hash * 397) ^ HasBuildSceneData.GetHashCode();
+                hash = (hash * 397) ^ StringComparer.Ordinal.GetHashCode(BuildSceneTargetId ?? string.Empty);
+                hash = AddHash(hash, BuildScenes);
                 return hash;
             }
         }
@@ -132,6 +154,11 @@ namespace ProjectSetup.Editor
         private static ProjectSetupSortingLayer[] Clone(ProjectSetupSortingLayer[] values)
         {
             return values == null ? Array.Empty<ProjectSetupSortingLayer>() : (ProjectSetupSortingLayer[])values.Clone();
+        }
+
+        private static ProjectSetupBuildSceneState[] Clone(ProjectSetupBuildSceneState[] values)
+        {
+            return values == null ? Array.Empty<ProjectSetupBuildSceneState>() : (ProjectSetupBuildSceneState[])values.Clone();
         }
 
         private static bool SequenceEqual<T>(IReadOnlyList<T> left, IReadOnlyList<T> right)
