@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 
+using System.IO;
 using NUnit.Framework;
 using ProjectSetup.Editor;
 using UnityEditor;
@@ -7,6 +8,7 @@ using UnityEngine;
 
 namespace ProjectSetup.Tests
 {
+    [Parallelizable(ParallelScope.None)]
     internal sealed class ProjectSetupCodeGenerationIntegrationTests
     {
         [Test]
@@ -36,7 +38,11 @@ namespace ProjectSetup.Tests
                 Assert.That(EditorSettings.projectGenerationRootNamespace, Is.EqualTo(desiredNamespace));
                 Assert.That(EditorSettings.lineEndingsForNewScripts, Is.EqualTo(desiredLineEndings));
 
-                environment.Apply(snapshot);
+                var tagManagerPath = Path.GetFullPath("ProjectSettings/TagManager.asset");
+                using (new FileStream(tagManagerPath, FileMode.Open, FileAccess.Read, FileShare.Read))
+                {
+                    environment.Apply(snapshot);
+                }
 
                 Assert.That(EditorSettings.projectGenerationRootNamespace, Is.EqualTo(originalNamespace));
                 Assert.That(EditorSettings.lineEndingsForNewScripts, Is.EqualTo(originalLineEndings));

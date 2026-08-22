@@ -79,6 +79,12 @@ namespace ProjectSetup.Editor
         private static void RestoreFileText(string text)
         {
             var path = Path.GetFullPath(TagManagerPath);
+            if (File.Exists(path)
+                && string.Equals(File.ReadAllText(path), text, StringComparison.Ordinal))
+            {
+                return;
+            }
+
             var temporaryPath = path + ".project-setup.tmp";
             try
             {
