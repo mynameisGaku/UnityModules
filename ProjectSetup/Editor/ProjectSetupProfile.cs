@@ -16,6 +16,8 @@ namespace ProjectSetup.Editor
         [SerializeField] private bool configureEnterPlayMode;
         [SerializeField] private bool enterPlayModeOptionsEnabled;
         [SerializeField] private EnterPlayModeOptions enterPlayModeOptions = EnterPlayModeOptions.None;
+        [SerializeField] private bool configurePlayModeStartScene;
+        [SerializeField] private ProjectSetupSceneReference playModeStartScene = new ProjectSetupSceneReference();
         [SerializeField] private bool configureColorSpace;
         [SerializeField] private ColorSpace colorSpace = ColorSpace.Linear;
         [SerializeField] private bool configureRunInBackground;
@@ -42,6 +44,12 @@ namespace ProjectSetup.Editor
         internal bool ConfigureEnterPlayMode { get => configureEnterPlayMode; set => configureEnterPlayMode = value; }
         internal bool EnterPlayModeOptionsEnabled { get => enterPlayModeOptionsEnabled; set => enterPlayModeOptionsEnabled = value; }
         internal EnterPlayModeOptions EnterPlayModeOptions { get => enterPlayModeOptions; set => enterPlayModeOptions = value; }
+        internal bool ConfigurePlayModeStartScene { get => configurePlayModeStartScene; set => configurePlayModeStartScene = value; }
+        internal ProjectSetupSceneReference PlayModeStartScene
+        {
+            get => playModeStartScene ??= new ProjectSetupSceneReference();
+            set => playModeStartScene = value?.Clone() ?? new ProjectSetupSceneReference();
+        }
         internal bool ConfigureColorSpace { get => configureColorSpace; set => configureColorSpace = value; }
         internal ColorSpace ColorSpace { get => colorSpace; set => colorSpace = value; }
         internal bool ConfigureRunInBackground { get => configureRunInBackground; set => configureRunInBackground = value; }
@@ -74,6 +82,8 @@ namespace ProjectSetup.Editor
             configureEnterPlayMode = false;
             enterPlayModeOptionsEnabled = false;
             enterPlayModeOptions = EnterPlayModeOptions.None;
+            configurePlayModeStartScene = false;
+            playModeStartScene = new ProjectSetupSceneReference();
             configureColorSpace = false;
             colorSpace = ColorSpace.Linear;
             configureRunInBackground = false;
@@ -103,6 +113,8 @@ namespace ProjectSetup.Editor
             configureEnterPlayMode = true;
             enterPlayModeOptionsEnabled = snapshot.EnterPlayModeOptionsEnabled;
             enterPlayModeOptions = snapshot.EnterPlayModeOptions;
+            configurePlayModeStartScene = snapshot.HasPlayModeStartSceneData;
+            playModeStartScene = new ProjectSetupSceneReference(snapshot.PlayModeStartSceneGuid, snapshot.PlayModeStartScenePath);
             configureColorSpace = true;
             colorSpace = snapshot.ColorSpace;
             configureRunInBackground = true;

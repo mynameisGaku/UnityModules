@@ -212,6 +212,79 @@ namespace ProjectSetup.Tests
             Assert.That(afterMove.GetHashCode(), Is.EqualTo(beforeMove.GetHashCode()));
         }
 
+        [Test]
+        public void Build_PlayModeStartSceneCanReturnToCurrentlyOpenScenes()
+        {
+            _profile.ConfigureAssetSerialization = false;
+            _profile.ConfigureVersionControl = false;
+            _profile.ConfigurePlayModeStartScene = true;
+            var current = new ProjectSetupSnapshot(
+                SerializationMode.ForceText,
+                "Visible Meta Files",
+                false,
+                EnterPlayModeOptions.None,
+                ColorSpace.Gamma,
+                false,
+                "DefaultCompany",
+                "New Unity Project",
+                "1.0.0",
+                hasPlayModeStartSceneData: true,
+                playModeStartSceneGuid: "bootstrap-guid",
+                playModeStartScenePath: "Assets/Bootstrap.unity");
+
+            var plan = ProjectSetupPlanner.Build(_profile, current);
+
+            Assert.That(plan.IsValid, Is.True);
+            Assert.That(plan.Changes, Has.Exactly(1).Property("Key").EqualTo(ProjectSetupSettingKey.PlayModeStartScene));
+            Assert.That(plan.Changes[0].DesiredValue, Is.EqualTo("Currently open Scenes"));
+        }
+
+        [Test]
+        public void Build_RejectsMissingPlayModeStartScene()
+        {
+            _profile.ConfigurePlayModeStartScene = true;
+            _profile.PlayModeStartScene = new ProjectSetupSceneReference("missing-guid", "Assets/Missing.unity");
+
+            var plan = ProjectSetupPlanner.Build(_profile, Snapshot());
+
+            Assert.That(plan.IsValid, Is.False);
+            Assert.That(plan.Errors, Has.Some.Contains("Play Mode Start Scene"));
+        }
+
+        [Test]
+        public void Snapshot_PlayModeStartSceneUsesGuidIdentityAfterMove()
+        {
+            var beforeMove = new ProjectSetupSnapshot(
+                SerializationMode.ForceText,
+                "Visible Meta Files",
+                false,
+                EnterPlayModeOptions.None,
+                ColorSpace.Gamma,
+                false,
+                "DefaultCompany",
+                "New Unity Project",
+                "1.0.0",
+                hasPlayModeStartSceneData: true,
+                playModeStartSceneGuid: "scene-guid",
+                playModeStartScenePath: "Assets/Old/Bootstrap.unity");
+            var afterMove = new ProjectSetupSnapshot(
+                SerializationMode.ForceText,
+                "Visible Meta Files",
+                false,
+                EnterPlayModeOptions.None,
+                ColorSpace.Gamma,
+                false,
+                "DefaultCompany",
+                "New Unity Project",
+                "1.0.0",
+                hasPlayModeStartSceneData: true,
+                playModeStartSceneGuid: "scene-guid",
+                playModeStartScenePath: "Assets/New/Bootstrap.unity");
+
+            Assert.That(afterMove, Is.EqualTo(beforeMove));
+            Assert.That(afterMove.GetHashCode(), Is.EqualTo(beforeMove.GetHashCode()));
+        }
+
         private static ProjectSetupSnapshot Snapshot(
             SerializationMode serializationMode = SerializationMode.ForceText,
             string versionControl = "Visible Meta Files",

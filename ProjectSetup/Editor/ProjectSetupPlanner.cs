@@ -93,6 +93,7 @@ namespace ProjectSetup.Editor
             AddTextChange(profile.ConfigureCompanyName, profile.CompanyName, current.CompanyName, ProjectSetupSettingKey.CompanyName, "Company Name", MaximumTextLength, changes, errors);
             AddTextChange(profile.ConfigureProductName, profile.ProductName, current.ProductName, ProjectSetupSettingKey.ProductName, "Product Name", MaximumTextLength, changes, errors);
             AddTextChange(profile.ConfigureBundleVersion, profile.BundleVersion, current.BundleVersion, ProjectSetupSettingKey.BundleVersion, "Bundle Version", MaximumVersionLength, changes, errors);
+            AddPlayModeStartSceneChange(profile, current, changes, errors);
             AddBuildSceneChange(profile, current, changes, errors);
             AddNameListChange(profile.ConfigureTags, profile.Tags, current.Tags, ProjectSetupSettingKey.Tags, "Tags", changes, errors);
             AddLayerChange(profile, current, changes, errors);
@@ -105,6 +106,45 @@ namespace ProjectSetup.Editor
                 changes,
                 errors);
             return new ProjectSetupPlan(changes, errors);
+        }
+
+        private static void AddPlayModeStartSceneChange(
+            ProjectSetupProfile profile,
+            ProjectSetupSnapshot current,
+            ICollection<ProjectSetupChange> changes,
+            ICollection<string> errors)
+        {
+            if (!profile.ConfigurePlayModeStartScene)
+            {
+                return;
+            }
+
+            var desiredReference = profile.PlayModeStartScene;
+            var desiredGuid = string.Empty;
+            var desiredPath = string.Empty;
+            if (!desiredReference.IsEmpty)
+            {
+                if (!desiredReference.TryResolve(out desiredPath))
+                {
+                    errors.Add("Play Mode Start Scene must be empty or reference an existing Scene Asset.");
+                    return;
+                }
+
+                desiredGuid = AssetDatabase.AssetPathToGUID(desiredPath);
+            }
+
+            if (!ProjectSetupSceneReference.SameIdentity(
+                    current.PlayModeStartSceneGuid,
+                    current.PlayModeStartScenePath,
+                    desiredGuid,
+                    desiredPath))
+            {
+                changes.Add(new ProjectSetupChange(
+                    ProjectSetupSettingKey.PlayModeStartScene,
+                    "Play Mode Start Scene",
+                    FormatPlayModeStartScene(current.PlayModeStartScenePath),
+                    FormatPlayModeStartScene(desiredPath)));
+            }
         }
 
         private static void AddBuildSceneChange(
@@ -354,6 +394,11 @@ namespace ProjectSetup.Editor
 
             return string.Join(", ", scenes.Select((scene, index) =>
                 $"{index + 1}. {System.IO.Path.GetFileNameWithoutExtension(scene.Path)} ({(scene.Enabled ? "Enabled" : "Disabled")})"));
+        }
+
+        private static string FormatPlayModeStartScene(string path)
+        {
+            return string.IsNullOrEmpty(path) ? "Currently open Scenes" : path;
         }
     }
 }

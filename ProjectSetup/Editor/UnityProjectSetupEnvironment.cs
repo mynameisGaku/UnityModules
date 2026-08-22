@@ -3,6 +3,7 @@
 using System;
 using UnityEditor;
 using UnityEditor.Build.Profile;
+using UnityEditor.SceneManagement;
 
 namespace ProjectSetup.Editor
 {
@@ -16,6 +17,7 @@ namespace ProjectSetup.Editor
         {
             ProjectSetupTagManagerStore.Capture(out var tags, out var customTags, out var layers, out var sortingLayers, out var tagManagerFileText);
             CaptureBuildScenes(out var buildSceneTargetId, out var buildSceneTargetLabel, out var buildScenes);
+            CapturePlayModeStartScene(out var playModeStartSceneGuid, out var playModeStartScenePath);
             return new ProjectSetupSnapshot(
                 EditorSettings.serializationMode,
                 VersionControlSettings.mode,
@@ -35,7 +37,10 @@ namespace ProjectSetup.Editor
                 true,
                 buildSceneTargetId,
                 buildSceneTargetLabel,
-                buildScenes);
+                buildScenes,
+                true,
+                playModeStartSceneGuid,
+                playModeStartScenePath);
         }
 
         public void Apply(ProjectSetupProfile profile)
@@ -54,6 +59,11 @@ namespace ProjectSetup.Editor
             {
                 EditorSettings.enterPlayModeOptionsEnabled = profile.EnterPlayModeOptionsEnabled;
                 EditorSettings.enterPlayModeOptions = profile.EnterPlayModeOptions;
+            }
+
+            if (profile.ConfigurePlayModeStartScene)
+            {
+                ApplyPlayModeStartScene(profile.PlayModeStartScene);
             }
 
             if (profile.ConfigureColorSpace)
@@ -105,6 +115,10 @@ namespace ProjectSetup.Editor
             VersionControlSettings.mode = snapshot.VersionControlMode;
             EditorSettings.enterPlayModeOptionsEnabled = snapshot.EnterPlayModeOptionsEnabled;
             EditorSettings.enterPlayModeOptions = snapshot.EnterPlayModeOptions;
+            if (snapshot.HasPlayModeStartSceneData)
+            {
+                ApplyPlayModeStartScene(new ProjectSetupSceneReference(snapshot.PlayModeStartSceneGuid, snapshot.PlayModeStartScenePath));
+            }
             PlayerSettings.colorSpace = snapshot.ColorSpace;
             PlayerSettings.runInBackground = snapshot.RunInBackground;
             PlayerSettings.companyName = snapshot.CompanyName;
@@ -148,6 +162,35 @@ namespace ProjectSetup.Editor
                     var path = NormalizePath(scene.path);
                     return new ProjectSetupBuildSceneState(AssetDatabase.AssetPathToGUID(path), path, scene.enabled);
                 });
+        }
+
+        private static void CapturePlayModeStartScene(out string sceneGuid, out string scenePath)
+        {
+            var scene = EditorSceneManager.playModeStartScene;
+            scenePath = scene == null ? string.Empty : NormalizePath(AssetDatabase.GetAssetPath(scene));
+            sceneGuid = string.IsNullOrEmpty(scenePath) ? string.Empty : AssetDatabase.AssetPathToGUID(scenePath);
+        }
+
+        private static void ApplyPlayModeStartScene(ProjectSetupSceneReference sceneReference)
+        {
+            if (sceneReference == null || sceneReference.IsEmpty)
+            {
+                EditorSceneManager.playModeStartScene = null;
+                return;
+            }
+
+            if (!sceneReference.TryResolve(out var path))
+            {
+                throw new InvalidOperationException("The Play Mode Start Scene could not be resolved.");
+            }
+
+            var scene = AssetDatabase.LoadAssetAtPath<SceneAsset>(path);
+            if (scene == null)
+            {
+                throw new InvalidOperationException("The Play Mode Start Scene is not a Scene Asset.");
+            }
+
+            EditorSceneManager.playModeStartScene = scene;
         }
 
         private static EditorBuildSettingsScene[] ToEditorBuildSettingsScenes(ProjectSetupBuildScene[] scenes)

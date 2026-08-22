@@ -41,6 +41,8 @@ namespace ProjectSetup.Tests
                     new ProjectSetupBuildScene(AssetDatabase.AssetPathToGUID(bootstrapPath), bootstrapPath, true),
                     new ProjectSetupBuildScene(AssetDatabase.AssetPathToGUID(gameplayPath), gameplayPath, false)
                 };
+                profile.ConfigurePlayModeStartScene = true;
+                profile.PlayModeStartScene.SceneAsset = AssetDatabase.LoadAssetAtPath<SceneAsset>(bootstrapPath);
                 var service = new ProjectSetupService(environment, new ProjectSetupBackupStore(backupPath));
 
                 var preview = service.Preview(profile);
@@ -49,9 +51,12 @@ namespace ProjectSetup.Tests
 
                 Assert.That(preview.IsValid, Is.True, string.Join(" | ", preview.Errors));
                 Assert.That(preview.Changes, Has.Some.Property("Key").EqualTo(ProjectSetupSettingKey.BuildScenes));
+                Assert.That(preview.Changes, Has.Some.Property("Key").EqualTo(ProjectSetupSettingKey.PlayModeStartScene));
                 Assert.That(applied.Succeeded, Is.True, applied.Message);
                 Assert.That(changed.BuildScenes.Select(scene => scene.Path), Is.EqualTo(new[] { bootstrapPath, gameplayPath }));
                 Assert.That(changed.BuildScenes.Select(scene => scene.Enabled), Is.EqualTo(new[] { true, false }));
+                Assert.That(changed.PlayModeStartSceneGuid, Is.EqualTo(AssetDatabase.AssetPathToGUID(bootstrapPath)));
+                Assert.That(changed.PlayModeStartScenePath, Is.EqualTo(bootstrapPath));
 
                 var restored = service.RestoreLast();
 

@@ -74,7 +74,7 @@ namespace ProjectSetup.Editor
             {
                 var json = File.ReadAllText(_path, new UTF8Encoding(false, true));
                 var data = JsonUtility.FromJson<ProjectSetupSnapshotData>(json);
-                if (data == null || (data.schemaVersion != 1 && data.schemaVersion != 2 && data.schemaVersion != 3))
+                if (data == null || (data.schemaVersion != 1 && data.schemaVersion != 2 && data.schemaVersion != 3 && data.schemaVersion != 4))
                 {
                     error = "The Project Setup backup schema is unsupported.";
                     return false;
@@ -93,7 +93,7 @@ namespace ProjectSetup.Editor
         [Serializable]
         private sealed class ProjectSetupSnapshotData
         {
-            public int schemaVersion = 3;
+            public int schemaVersion = 4;
             public int assetSerialization;
             public string versionControlMode;
             public bool enterPlayModeOptionsEnabled;
@@ -112,6 +112,9 @@ namespace ProjectSetup.Editor
             public string buildSceneTargetId;
             public string buildSceneTargetLabel;
             public BuildSceneData[] buildScenes;
+            public bool hasPlayModeStartSceneData;
+            public string playModeStartSceneGuid;
+            public string playModeStartScenePath;
 
             internal static ProjectSetupSnapshotData FromSnapshot(ProjectSetupSnapshot snapshot)
             {
@@ -148,7 +151,10 @@ namespace ProjectSetup.Editor
                             sceneGuid = scene.SceneGuid,
                             path = scene.Path,
                             enabled = scene.Enabled
-                        })
+                        }),
+                    hasPlayModeStartSceneData = snapshot.HasPlayModeStartSceneData,
+                    playModeStartSceneGuid = snapshot.PlayModeStartSceneGuid,
+                    playModeStartScenePath = snapshot.PlayModeStartScenePath
                 };
             }
 
@@ -181,7 +187,10 @@ namespace ProjectSetup.Editor
                         ? Array.ConvertAll(
                             buildScenes,
                             scene => new ProjectSetupBuildSceneState(scene.sceneGuid, scene.path, scene.enabled))
-                        : Array.Empty<ProjectSetupBuildSceneState>());
+                        : Array.Empty<ProjectSetupBuildSceneState>(),
+                    schemaVersion >= 4 && hasPlayModeStartSceneData,
+                    schemaVersion >= 4 ? playModeStartSceneGuid : string.Empty,
+                    schemaVersion >= 4 ? playModeStartScenePath : string.Empty);
             }
         }
 

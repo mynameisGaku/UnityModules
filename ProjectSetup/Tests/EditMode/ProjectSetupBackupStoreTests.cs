@@ -52,7 +52,8 @@ namespace ProjectSetup.Tests
             Assert.That(bytes, Has.Length.GreaterThan(0));
             Assert.That(bytes.Take(3).ToArray(), Is.Not.EqualTo(Encoding.UTF8.GetPreamble()));
             Assert.That(actual.BuildScenes, Is.EqualTo(expected.BuildScenes));
-            Assert.That(File.ReadAllText(_path), Does.Contain("\"schemaVersion\": 3"));
+            Assert.That(actual.PlayModeStartSceneGuid, Is.EqualTo(expected.PlayModeStartSceneGuid));
+            Assert.That(File.ReadAllText(_path), Does.Contain("\"schemaVersion\": 4"));
         }
 
         [Test]
@@ -133,6 +134,7 @@ namespace ProjectSetup.Tests
             Assert.That(snapshot.HasTagManagerData, Is.False);
             Assert.That(snapshot.CustomTags, Is.Empty);
             Assert.That(snapshot.HasBuildSceneData, Is.False);
+            Assert.That(snapshot.HasPlayModeStartSceneData, Is.False);
         }
 
         private static ProjectSetupSnapshot Snapshot(string companyName)
@@ -166,7 +168,10 @@ namespace ProjectSetup.Tests
                 {
                     new ProjectSetupBuildSceneState("guid-bootstrap", "Assets/Bootstrap.unity", true),
                     new ProjectSetupBuildSceneState("guid-gameplay", "Assets/Gameplay.unity", false)
-                });
+                },
+                true,
+                "guid-bootstrap",
+                "Assets/Bootstrap.unity");
         }
     }
 }

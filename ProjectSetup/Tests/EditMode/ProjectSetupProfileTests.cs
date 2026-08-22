@@ -23,6 +23,8 @@ namespace ProjectSetup.Tests
                 Assert.That(profile.ConfigureVersionControl, Is.True);
                 Assert.That(profile.VersionControlMode, Is.EqualTo("Visible Meta Files"));
                 Assert.That(profile.ConfigureEnterPlayMode, Is.False);
+                Assert.That(profile.ConfigurePlayModeStartScene, Is.False);
+                Assert.That(profile.PlayModeStartScene.IsEmpty, Is.True);
                 Assert.That(profile.ConfigureColorSpace, Is.False);
                 Assert.That(profile.ConfigureRunInBackground, Is.False);
                 Assert.That(profile.ConfigureCompanyName, Is.False);
@@ -79,7 +81,10 @@ namespace ProjectSetup.Tests
                     {
                         new ProjectSetupBuildSceneState("guid-a", "Assets/Bootstrap.unity", true),
                         new ProjectSetupBuildSceneState("guid-b", "Assets/Gameplay.unity", false)
-                    });
+                    },
+                    true,
+                    "guid-a",
+                    "Assets/Bootstrap.unity");
 
                 profile.Capture(snapshot);
 
@@ -89,6 +94,9 @@ namespace ProjectSetup.Tests
                 Assert.That(profile.VersionControlMode, Is.EqualTo("Hidden Meta Files"));
                 Assert.That(profile.ConfigureEnterPlayMode, Is.True);
                 Assert.That(profile.EnterPlayModeOptions, Is.EqualTo(EnterPlayModeOptions.DisableSceneReload));
+                Assert.That(profile.ConfigurePlayModeStartScene, Is.True);
+                Assert.That(profile.PlayModeStartScene.SceneGuid, Is.EqualTo("guid-a"));
+                Assert.That(profile.PlayModeStartScene.FallbackPath, Is.EqualTo("Assets/Bootstrap.unity"));
                 Assert.That(profile.ConfigureColorSpace, Is.True);
                 Assert.That(profile.ColorSpace, Is.EqualTo(ColorSpace.Linear));
                 Assert.That(profile.ConfigureRunInBackground, Is.True);
