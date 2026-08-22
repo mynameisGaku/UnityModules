@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.2.0] - 2026-08-22
+
+- Updated Project Setup to v1.1.0 for Tags, Layers, and Sorting Layers.
+- Added a catalog regression test for the pinned Project Setup release.
+- Kept individual module descriptions and install buttons inside the minimum window width.
+
 ## [1.1.0] - 2026-08-22
 
 - Added Project Setup to the catalog and Project Maintenance bundle.
