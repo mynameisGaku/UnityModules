@@ -38,6 +38,8 @@ namespace ProjectSetup.Editor
         internal const string AssemblyNameFieldName = "assembly-name-field";
         internal const string RuntimeAssemblyFolderFieldName = "runtime-assembly-folder-field";
         internal const string EditorAssemblyFolderFieldName = "editor-assembly-folder-field";
+        internal const string IncludeTestAssembliesToggleName = "include-test-assemblies-toggle";
+        internal const string TestAssemblyRootFolderFieldName = "test-assembly-root-folder-field";
         internal const string ActionBarName = "action-bar";
         private const string MenuPath = "Tools/Project Setup/Open";
 
@@ -315,7 +317,7 @@ namespace ProjectSetup.Editor
             var card = CreateCard(
                 AssemblyDefinitionsCardName,
                 "Script Assemblies",
-                "Create a Runtime Assembly Definition and a matching Editor Assembly Definition with the correct reference. Existing files are never overwritten.");
+                "Create Runtime and Editor Assembly Definitions, with optional EditMode and PlayMode test assemblies. Existing files are never overwritten.");
             var enabled = new Toggle("Create missing Runtime and Editor assemblies")
             {
                 value = _profile.ConfigureAssemblyDefinitions
@@ -335,14 +337,28 @@ namespace ProjectSetup.Editor
                 name = EditorAssemblyFolderFieldName,
                 value = _profile.EditorAssemblyFolder
             };
+            var includeTests = new Toggle("Include EditMode and PlayMode test assemblies")
+            {
+                name = IncludeTestAssembliesToggleName,
+                value = _profile.IncludeTestAssemblies
+            };
+            var testRootFolder = new TextField("Test root folder")
+            {
+                name = TestAssemblyRootFolderFieldName,
+                value = _profile.TestAssemblyRootFolder
+            };
             enabled.RegisterValueChangedCallback(change => ChangeProfile(() => _profile.ConfigureAssemblyDefinitions = change.newValue));
             assemblyName.RegisterValueChangedCallback(change => ChangeProfile(() => _profile.AssemblyName = change.newValue));
             runtimeFolder.RegisterValueChangedCallback(change => ChangeProfile(() => _profile.RuntimeAssemblyFolder = change.newValue));
             editorFolder.RegisterValueChangedCallback(change => ChangeProfile(() => _profile.EditorAssemblyFolder = change.newValue));
+            includeTests.RegisterValueChangedCallback(change => ChangeProfile(() => _profile.IncludeTestAssemblies = change.newValue));
+            testRootFolder.RegisterValueChangedCallback(change => ChangeProfile(() => _profile.TestAssemblyRootFolder = change.newValue));
             card.Add(enabled);
             card.Add(assemblyName);
             card.Add(runtimeFolder);
             card.Add(editorFolder);
+            card.Add(includeTests);
+            card.Add(testRootFolder);
             return card;
         }
 
