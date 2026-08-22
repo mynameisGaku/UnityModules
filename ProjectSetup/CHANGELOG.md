@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.11.0] - 2026-08-22
+
+- Added profile-owned Application Identifier setup for the active build target.
+- Added portable reverse-domain validation, target-aware preview, backup schema v11, exact Restore, and target-switch protection.
+- Added deterministic planner, backup, service, window, and real PlayerSettings round-trip coverage.
+
 ## [1.10.0] - 2026-08-22
 
 - Added one Version Control Files workflow that creates Unity-ready .gitignore and .gitattributes files.
