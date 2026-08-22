@@ -27,6 +27,8 @@ namespace ProjectSetup.Editor
         internal const string AddBuildSceneButtonName = "add-build-scene-button";
         internal const string PlayModeStartSceneCardName = "play-mode-start-scene";
         internal const string PlayModeStartSceneFieldName = "play-mode-start-scene-field";
+        internal const string ScriptingDefineCardName = "scripting-define-symbols";
+        internal const string ScriptingDefineFieldName = "scripting-define-symbols-field";
         internal const string ActionBarName = "action-bar";
         private const string MenuPath = "Tools/Project Setup/Open";
 
@@ -198,6 +200,7 @@ namespace ProjectSetup.Editor
             content.Add(CreateTextCard("company-name", "Company Name", "Shared Player identity value.", _profile.ConfigureCompanyName, _profile.CompanyName, value => _profile.ConfigureCompanyName = value, value => _profile.CompanyName = value));
             content.Add(CreateTextCard("product-name", "Product Name", "Shared Player product name.", _profile.ConfigureProductName, _profile.ProductName, value => _profile.ConfigureProductName = value, value => _profile.ProductName = value));
             content.Add(CreateTextCard("bundle-version", "Bundle Version", "Shared application version string.", _profile.ConfigureBundleVersion, _profile.BundleVersion, value => _profile.ConfigureBundleVersion = value, value => _profile.BundleVersion = value));
+            content.Add(CreateScriptingDefineCard());
             content.Add(CreateBuildScenesCard());
             content.Add(CreateNameListCard(
                 "tags",
@@ -421,6 +424,27 @@ namespace ProjectSetup.Editor
             sceneField.RegisterValueChangedCallback(change => ChangeProfile(() => _profile.PlayModeStartScene.SceneAsset = change.newValue as SceneAsset));
             card.Add(enabled);
             card.Add(sceneField);
+            return card;
+        }
+
+        private VisualElement CreateScriptingDefineCard()
+        {
+            var card = CreateCard(
+                ScriptingDefineCardName,
+                "Scripting Define Symbols",
+                "Add required compile symbols for the active build target without removing existing symbols. Enter one symbol per line.");
+            var enabled = new Toggle("Add missing symbols") { value = _profile.ConfigureScriptingDefineSymbols };
+            var field = new TextField("Required symbols")
+            {
+                name = ScriptingDefineFieldName,
+                multiline = true,
+                value = string.Join("\n", _profile.ScriptingDefineSymbols)
+            };
+            field.style.minHeight = 58f;
+            enabled.RegisterValueChangedCallback(change => ChangeProfile(() => _profile.ConfigureScriptingDefineSymbols = change.newValue));
+            field.RegisterValueChangedCallback(change => ChangeProfile(() => _profile.ScriptingDefineSymbols = ParseNameList(change.newValue)));
+            card.Add(enabled);
+            card.Add(field);
             return card;
         }
 
