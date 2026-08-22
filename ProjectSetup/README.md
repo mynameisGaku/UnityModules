@@ -2,13 +2,13 @@
 
 Unityの新規Projectで毎回行う設定を、1つのprofileからまとめてPreview・適用・復元するEditor専用ツールです。
 
-`Assets`配下の基本フォルダー、`Project Settings`、C#のRoot Namespaceと改行方式、複製時の命名規則、Play Modeの開始Scene、条件付きコンパイル記号、Tag、Layer、Sorting Layer、Build Scenesを別々の画面やscriptで設定する手間を減らします。自動適用はせず、実際に変わる項目を確認してから実行できます。
+`Assets`配下の基本フォルダー、Runtime／Editor asmdef、`Project Settings`、C#のRoot Namespaceと改行方式、複製時の命名規則、Play Modeの開始Scene、条件付きコンパイル記号、Tag、Layer、Sorting Layer、Build Scenesを別々の画面やscriptで設定する手間を減らします。自動適用はせず、実際に変わる項目を確認してから実行できます。
 
 ## まず知りたいこと
 
 | 質問 | 答え |
 |---|---|
-| 何が楽になる？ | 基本フォルダー作成、Project設定、C#生成時の既定値、複製名、Play Modeの開始Scene、条件付きコンパイル記号、Tag/Layer、Build Scenesを1つのprofileからまとめて設定できます。 |
+| 何が楽になる？ | 基本フォルダーとasmdefの作成、Project設定、C#生成時の既定値、複製名、Play Modeの開始Scene、条件付きコンパイル記号、Tag/Layer、Build Scenesを1つのprofileからまとめて設定できます。 |
 | 勝手に変更される？ | されません。import時やUnity起動時には何も適用しません。 |
 | 実行前に確認できる？ | `Preview changes`で変更前と変更後を一覧表示します。 |
 | 失敗したら？ | Apply前にbackupし、書込後の検証に失敗した場合は可能な範囲で自動復元します。 |
@@ -22,6 +22,17 @@ Unityの新規Projectで毎回行う設定を、1つのprofileからまとめて
 3. `Preview changes`で確認し、`Apply profile`を押します。
 
 初期profileは、version controlで扱いやすい`Force Text`と`Visible Meta Files`だけを対象にします。それ以外は利用者が有効にするまで変更しません。
+
+## 目的から選ぶ
+
+| やりたいこと | 有効にするcard |
+|---|---|
+| 新規Projectの基本フォルダーを作る | `Project Folders` |
+| Runtime codeとEditor codeをasmdefで分離する | `Script Assemblies` |
+| どのSceneからでもBootstrap SceneでPlayする | `Play Mode Start Scene` |
+| Playerへ入れるSceneと順序をそろえる | `Build Scenes` |
+| Tag、Layer、compile記号を手入力せず追加する | `Tags`、`Layers`、`Scripting Define Symbols` |
+| 直前の一括変更を戻す | `Restore last backup` |
 
 ## できること
 
@@ -78,6 +89,27 @@ asmdefに個別のRoot Namespaceが設定されているscriptではasmdef側が
 - 既にあるフォルダーやAssetには触れない。
 
 初期profileでは無効です。`Project Folders` cardの`Create missing folders`を有効にした時だけ、不足フォルダーを作成します。
+
+### Runtime／Editor asmdefの作成
+
+- Runtime用の`Game.asmdef`とEditor専用の`Game.Editor.asmdef`をまとめて作る。
+- Editor asmdefからRuntime asmdefへの参照と`Editor` platform制限を自動設定する。
+- assembly名、Runtime folder、Editor folderをProjectごとに変更する。
+- 既存asmdefや既存fileを上書きしない。
+- 同じfolderに別のasmdefがある場合は、実行前のPreviewで停止する。
+
+初期profileでは無効です。asmdefを使わないProjectには何も作成しません。
+
+## Runtime／Editor asmdefをまとめて作る
+
+1. `Script Assemblies` cardで`Create missing Runtime and Editor assemblies`を有効にします。
+2. `Assembly name`へ`Game`や`Studio.Game`を入力します。
+3. Runtime codeを置くfolderと、その配下のEditor code用folderを指定します。
+4. Previewで新規asmdefと不足folderを確認し、Applyします。
+
+既定値では`Assets/Scripts/Game.asmdef`と`Assets/Scripts/Editor/Game.Editor.asmdef`を作ります。Editor asmdefは`Game`を参照し、Editorだけでcompileされます。assembly名には`.`で区切ったC#識別子を使用してください。
+
+Restoreが削除するのは、直前のApplyが作成し、内容が作成時から変わっていないasmdefだけです。利用者が編集したasmdef、Apply前からあったfile、別名のasmdefは削除しません。asmdefを削除した後に空になった作成folderだけを続けて削除します。
 
 ## 基本フォルダーをまとめて作る
 
@@ -165,6 +197,7 @@ Apply後に複製したGameObjectとAssetだけへ反映されます。既に存
 - New Script Line EndingsはApply後に作成するC# scriptだけへ影響し、既存scriptを一括変換しません。
 - Duplicate NamingはApply後の複製名だけへ影響し、既存GameObjectやAssetを一括改名しません。
 - Project Foldersは不足フォルダーだけを作成します。既存file、既存フォルダー、既存Assetの名前や場所は変更しません。
+- Script Assembliesは新しいasmdefをimportするため、Unityがscriptを再コンパイルします。既存asmdefや同名fileは上書きしません。
 - Build Scenesは不足分の追加ではなく、profileの一覧へ完全に置き換えます。
 - RestoreはApply直前へ戻すため、その後に追加したTag/Layer/Sceneを取り除く場合があります。
 
@@ -178,7 +211,7 @@ Build Scenesを復元する場合は、backup作成時と同じBuild Profileを�
 
 Scripting Define Symbolsを復元する場合は、backup作成時と同じbuild targetを選択してください。別のtargetへ切り替わっている場合は、誤ったtargetを書き換えないよう復元を停止します。復元時はApply直前の記号一覧へ正確に戻すため、Apply後に手動追加した記号も取り除く場合があります。
 
-backupはUTF-8 BOMなしのJSONです。schema v8はProject設定、Applyが作成したフォルダー、Root Namespace、新規scriptの改行方式、複製時の命名規則、Play Mode Start Scene、Scripting Define Symbolsと対象build target、TagManager全体、Build SceneのGUID・順序・Enabled状態・保存先を保持します。schema v1からv7も読み取れますが、そのversionに存在しない項目は復元しません。
+backupはUTF-8 BOMなしのJSONです。schema v9はProject設定、Applyが作成したフォルダーとasmdefのpath・内容hash、Root Namespace、新規scriptの改行方式、複製時の命名規則、Play Mode Start Scene、Scripting Define Symbolsと対象build target、TagManager全体、Build SceneのGUID・順序・Enabled状態・保存先を保持します。schema v1からv8も読み取れますが、そのversionに存在しない項目は復元しません。
 
 ## profileを別Projectで使う
 
@@ -218,7 +251,7 @@ Build Scenesをprofileで有効にすると、既存一覧をprofileの内容へ
 Package Managerの`Add package from git URL...`へ次を入力します。
 
 ```text
-https://github.com/mynameisGaku/UnityModules.git?path=/ProjectSetup#project-setup-v1.7.0
+https://github.com/mynameisGaku/UnityModules.git?path=/ProjectSetup#project-setup-v1.8.0
 ```
 
 ## 対応環境
