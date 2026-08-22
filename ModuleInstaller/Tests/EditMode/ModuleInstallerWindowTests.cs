@@ -43,7 +43,7 @@ namespace ModuleInstaller.Editor.Tests
                 Assert.That(projectSetupLabel.style.flexShrink.value, Is.EqualTo(1f));
                 Assert.That(projectSetupReadmeButton.style.flexShrink.value, Is.EqualTo(0f));
                 Assert.That(projectSetupInstallButton.style.flexShrink.value, Is.EqualTo(0f));
-                Assert.That(projectSetupReadmeButton.tooltip, Does.Contain("project-setup-v1.10.0/ProjectSetup/README.md"));
+                Assert.That(projectSetupReadmeButton.tooltip, Does.Contain("project-setup-v1.11.0/ProjectSetup/README.md"));
             }
             finally
             {
