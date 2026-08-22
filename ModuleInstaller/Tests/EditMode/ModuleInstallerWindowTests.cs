@@ -25,6 +25,8 @@ namespace ModuleInstaller.Editor.Tests
                 Assert.That(packages.childCount, Is.EqualTo(ModuleCatalog.Entries.Count));
                 Assert.That(window.rootVisualElement.Q<Button>("install-bundle-game-rules"), Is.Not.Null);
                 Assert.That(window.rootVisualElement.Q<Button>("install-package-com.studiogaku.build-guard"), Is.Not.Null);
+                Assert.That(window.rootVisualElement.Q<Label>(ModuleInstallerWindow.UpdateSummaryElementName), Is.Not.Null);
+                Assert.That(window.rootVisualElement.Q<Button>(ModuleInstallerWindow.UpdateButtonElementName), Is.Not.Null);
 
                 var projectSetupRow = window.rootVisualElement.Q<VisualElement>("package-com.studiogaku.project-setup");
                 var projectSetupLabel = projectSetupRow.Q<Label>();
