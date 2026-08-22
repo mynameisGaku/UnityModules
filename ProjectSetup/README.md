@@ -2,13 +2,13 @@
 
 Unityの新規Projectで毎回行う設定を、1つのprofileからまとめてPreview・適用・復元するEditor専用ツールです。
 
-`Assets`配下の基本フォルダー、Runtime／Editor／test asmdef、`.gitignore`、`.gitattributes`、`Project Settings`、build target別のApplication Identifier・Scripting Backend・API Compatibility Level、C#のRoot Namespaceと改行方式、複製時の命名規則、Play Modeの開始Scene、条件付きコンパイル記号、Tag、Layer、Sorting Layer、Build Scenesを別々の画面やscriptで設定する手間を減らします。自動適用はせず、実際に変わる項目を確認してから実行できます。
+`Assets`配下の基本フォルダー、Runtime／Editor／test asmdef、`.gitignore`、`.gitattributes`、`Project Settings`、build target別のApplication Identifier・Scripting Backend・API Compatibility Level・Managed Stripping Level、C#のRoot Namespaceと改行方式、複製時の命名規則、Play Modeの開始Scene、条件付きコンパイル記号、Tag、Layer、Sorting Layer、Build Scenesを別々の画面やscriptで設定する手間を減らします。自動適用はせず、実際に変わる項目を確認してから実行できます。
 
 ## まず知りたいこと
 
 | 質問 | 答え |
 |---|---|
-| 何が楽になる？ | 基本フォルダー、asmdef、Git用fileの作成と、Application Identifier・Scripting Backend・API Compatibility Levelを含むProject設定、C#生成時の既定値、複製名、Play Modeの開始Scene、条件付きコンパイル記号、Tag/Layer、Build Scenesを1つのprofileからまとめて設定できます。 |
+| 何が楽になる？ | 基本フォルダー、asmdef、Git用fileの作成と、Application Identifier・Scripting Backend・API Compatibility Level・Managed Stripping Levelを含むProject設定、C#生成時の既定値、複製名、Play Modeの開始Scene、条件付きコンパイル記号、Tag/Layer、Build Scenesを1つのprofileからまとめて設定できます。 |
 | 勝手に変更される？ | されません。import時やUnity起動時には何も適用しません。 |
 | 実行前に確認できる？ | `Preview changes`で変更前と変更後を一覧表示します。 |
 | 失敗したら？ | Apply前にbackupし、書込後の検証に失敗した場合は可能な範囲で自動復元します。 |
@@ -35,6 +35,7 @@ Unityの新規Projectで毎回行う設定を、1つのprofileからまとめて
 | build targetごとのapplication IDをそろえる | `Application Identifier` |
 | build targetごとにMono／IL2CPPをそろえる | `Scripting Backend` |
 | build targetごとの.NET API範囲をそろえる | `API Compatibility Level` |
+| build targetごとのmanaged code削除強度をそろえる | `Managed Stripping Level` |
 | Tag、Layer、compile記号を手入力せず追加する | `Tags`、`Layers`、`Scripting Define Symbols` |
 | 直前の一括変更を戻す | `Restore last backup` |
 
@@ -54,6 +55,7 @@ Unityの新規Projectで毎回行う設定を、1つのprofileからまとめて
 - Application Identifier（選択中build target）
 - Scripting Backend（選択中build target）
 - API Compatibility Level（選択中build target）
+- Managed Stripping Level（選択中build target）
 
 ### Application Identifier
 
@@ -87,6 +89,17 @@ Apply直前のtargetとbackendはbackupへ保存します。Restore時にbuild t
 4. 利用するplug-inやlibraryが必要とするAPI範囲を確認してからApplyします。
 
 Apply直前のtargetと値はbackupへ保存します。Restore時にbuild targetが変わっている場合は復元を停止し、別targetを誤って書き換えません。`.NET Framework`は利用できるAPIが広い一方、build sizeやplatform互換性へ影響する場合があります。この項目は初期profileでは無効です。
+
+### Managed Stripping Level
+
+現在選択中のbuild targetへ`Disabled`、`Minimal`、`Low`、`Medium`、`High`のいずれかを設定できます。Player Settingsを開き、platformごとにmanaged codeの削除強度を探して切り替える手間を減らします。
+
+1. 先に設定したいbuild targetへ切り替えます。
+2. `Managed Stripping Level` cardで`Apply this setting`を有効にします。
+3. 5段階から値を選び、Previewのtarget名と変更前後を確認します。
+4. reflection、serialization、動的に参照される型を使うplug-inの保全方法を確認してからApplyします。
+
+高いlevelほどbuild sizeを減らせる場合がありますが、静的解析から参照されないcodeが削除される可能性も高くなります。必要に応じて`link.xml`や`Preserve`属性など、利用側の保全設定を用意してください。Apply直前のtargetと値はbackupへ保存し、別targetへ切り替わっている場合はRestoreを停止します。この項目は初期profileでは無効です。
 
 ### 名前の一括登録
 
@@ -254,6 +267,7 @@ Apply後に複製したGameObjectとAssetだけへ反映されます。既に存
 - Scripting Define Symbolsを変更すると、Unityがscriptを再コンパイルし、設定によってはDomain Reloadが発生します。
 - Scripting Backendは選択中build targetだけを変更します。platformが対応するbackendはUnityのBuild Settingsと必要なplatform moduleで確認してください。
 - API Compatibility Levelは選択中build targetだけを変更します。plug-inやlibraryが必要とするAPI範囲とplatform対応を確認してください。
+- Managed Stripping Levelは選択中build targetだけを変更します。高いlevelを使う場合はreflection、serialization、動的生成で必要なcodeがbuildから削除されないことを実機buildで確認してください。
 - Root Namespaceを変更すると、Unityが生成する`.csproj`のRoot Namespaceが変わります。asmdef固有のRoot Namespaceは変更しません。
 - New Script Line EndingsはApply後に作成するC# scriptだけへ影響し、既存scriptを一括変換しません。
 - Duplicate NamingはApply後の複製名だけへ影響し、既存GameObjectやAssetを一括改名しません。
@@ -273,9 +287,9 @@ Build Scenesを復元する場合は、backup作成時と同じBuild Profileを�
 
 Scripting Define Symbolsを復元する場合は、backup作成時と同じbuild targetを選択してください。別のtargetへ切り替わっている場合は、誤ったtargetを書き換えないよう復元を停止します。復元時はApply直前の記号一覧へ正確に戻すため、Apply後に手動追加した記号も取り除く場合があります。
 
-Application Identifier、Scripting Backend、API Compatibility Levelを復元する場合も、backup作成時と同じbuild targetを選択してください。別targetへ切り替わっている場合は復元を停止します。
+Application Identifier、Scripting Backend、API Compatibility Level、Managed Stripping Levelを復元する場合も、backup作成時と同じbuild targetを選択してください。別targetへ切り替わっている場合は復元を停止します。
 
-backupはUTF-8 BOMなしのJSONです。schema v13はProject設定、Application Identifier・Scripting Backend・API Compatibility Levelと対象build target、Applyが作成したフォルダー・asmdef・version control fileのpathと内容hash、Root Namespace、新規scriptの改行方式、複製時の命名規則、Play Mode Start Scene、Scripting Define Symbolsと対象build target、TagManager全体、Build SceneのGUID・順序・Enabled状態・保存先を保持します。schema v1からv12も読み取れますが、そのversionに存在しない項目は復元しません。
+backupはUTF-8 BOMなしのJSONです。schema v14はProject設定、Application Identifier・Scripting Backend・API Compatibility Level・Managed Stripping Levelと対象build target、Applyが作成したフォルダー・asmdef・version control fileのpathと内容hash、Root Namespace、新規scriptの改行方式、複製時の命名規則、Play Mode Start Scene、Scripting Define Symbolsと対象build target、TagManager全体、Build SceneのGUID・順序・Enabled状態・保存先を保持します。schema v1からv13も読み取れますが、そのversionに存在しない項目は復元しません。
 
 ## profileを別Projectで使う
 
@@ -315,7 +329,7 @@ Build Scenesをprofileで有効にすると、既存一覧をprofileの内容へ
 Package Managerの`Add package from git URL...`へ次を入力します。
 
 ```text
-https://github.com/mynameisGaku/UnityModules.git?path=/ProjectSetup#project-setup-v1.13.0
+https://github.com/mynameisGaku/UnityModules.git?path=/ProjectSetup#project-setup-v1.14.0
 ```
 
 ## 対応環境
