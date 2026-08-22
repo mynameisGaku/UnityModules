@@ -9,6 +9,7 @@ namespace ModuleInstaller.Editor
     {
         private static readonly ModuleCatalogEntry[] CatalogEntries =
         {
+            Entry("com.studiogaku.project-setup", "ProjectSetup", "project-setup-v1.0.0", "Project Setup", "Previews, backs up, applies, and restores reusable Project Settings profiles."),
             Entry("com.studiogaku.inspector", "Inspector", "inspector-v1.0.0", "Inspector Helpers", "Organizes and validates Inspector input."),
             Entry("com.studiogaku.drawing", "Drawing", "drawing-v1.0.0", "Debug Drawing", "Draws runtime lines, shapes, paths, and labels."),
             Entry("com.studiogaku.build-guard", "BuildGuard", "build-guard-v1.4.0", "Project Issue Scanner", "Finds and repairs missing references in Scenes and Prefabs."),
@@ -52,8 +53,8 @@ namespace ModuleInstaller.Editor
 
         private static readonly ModuleBundle[] CatalogBundles =
         {
-            Bundle("project-maintenance", "Project Maintenance", "Inspectors, debugging, broken-reference repair, and asset organization.",
-                "com.studiogaku.inspector", "com.studiogaku.drawing", "com.studiogaku.build-guard", "com.studiogaku.reference-finder"),
+            Bundle("project-maintenance", "Project Maintenance", "Project setup, Inspector helpers, debugging, broken-reference repair, and asset organization.",
+                "com.studiogaku.project-setup", "com.studiogaku.inspector", "com.studiogaku.drawing", "com.studiogaku.build-guard", "com.studiogaku.reference-finder"),
             Bundle("scene-and-ui", "Scene and UI", "Scene switching, fades, safe areas, time control, and startup sequencing.",
                 "com.studiogaku.scene-flow", "com.studiogaku.screen-transition", "com.studiogaku.adaptive-layout", "com.studiogaku.time-control", "com.studiogaku.startup-flow"),
             Bundle("game-services", "Game Services", "Save data, audio playback, and manual issue reports.",
