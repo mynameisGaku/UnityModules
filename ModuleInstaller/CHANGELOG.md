@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.3.4] - 2026-08-22
+
+- Updated Project Setup to v1.5.0 for profile-owned C# root namespace and new-script line ending defaults.
+- Clarified that Project Maintenance applies and restores code generation defaults together with existing project settings.
+
 ## [1.3.3] - 2026-08-22
 
 - Updated Project Setup to v1.4.0 for additive scripting define symbols with target-aware backup restoration.
