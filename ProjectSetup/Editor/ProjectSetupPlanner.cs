@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
+using UnityEditor.Build;
 using UnityEngine;
 
 namespace ProjectSetup.Editor
@@ -113,6 +114,7 @@ namespace ProjectSetup.Editor
             AddScriptingBackendChange(profile, current, changes, errors);
             AddApiCompatibilityLevelChange(profile, current, changes, errors);
             AddManagedStrippingLevelChange(profile, current, changes, errors);
+            AddIl2CppCodeGenerationChange(profile, current, changes, errors);
             AddPlayModeStartSceneChange(profile, current, changes, errors);
             AddBuildSceneChange(profile, current, changes, errors);
             AddScriptingDefineChange(profile, current, changes, errors);
@@ -939,6 +941,58 @@ namespace ProjectSetup.Editor
                 || value == ManagedStrippingLevel.Low
                 || value == ManagedStrippingLevel.Medium
                 || value == ManagedStrippingLevel.High;
+        }
+
+        private static void AddIl2CppCodeGenerationChange(
+            ProjectSetupProfile profile,
+            ProjectSetupSnapshot current,
+            List<ProjectSetupChange> changes,
+            List<string> errors)
+        {
+            if (!profile.ConfigureIl2CppCodeGeneration)
+            {
+                return;
+            }
+
+            if (!current.HasIl2CppCodeGenerationData)
+            {
+                errors.Add("IL2CPP Code Generation is unavailable for the active build target.");
+                return;
+            }
+
+            if (profile.ConfigureScriptingBackend && profile.ScriptingBackend != ScriptingImplementation.IL2CPP)
+            {
+                errors.Add("IL2CPP Code Generation requires the configured Scripting Backend to be IL2CPP.");
+                return;
+            }
+
+            if (current.HasScriptingBackendData && current.ScriptingBackend != ScriptingImplementation.IL2CPP)
+            {
+                errors.Add("IL2CPP Code Generation requires the current Scripting Backend to use IL2CPP.");
+                return;
+            }
+
+            if (!IsSupportedIl2CppCodeGeneration(profile.Il2CppCodeGeneration))
+            {
+                errors.Add($"IL2CPP Code Generation value '{profile.Il2CppCodeGeneration}' is not supported.");
+                return;
+            }
+
+            if (current.Il2CppCodeGeneration != profile.Il2CppCodeGeneration)
+            {
+                Add(
+                    changes,
+                    ProjectSetupSettingKey.Il2CppCodeGeneration,
+                    $"IL2CPP Code Generation ({current.Il2CppCodeGenerationTargetLabel})",
+                    current.Il2CppCodeGeneration,
+                    profile.Il2CppCodeGeneration);
+            }
+        }
+
+        internal static bool IsSupportedIl2CppCodeGeneration(Il2CppCodeGeneration value)
+        {
+            return value == Il2CppCodeGeneration.OptimizeSpeed
+                || value == Il2CppCodeGeneration.OptimizeSize;
         }
 
         internal static bool IsValidApplicationIdentifier(string value)

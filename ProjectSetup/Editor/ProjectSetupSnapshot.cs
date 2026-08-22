@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEditor;
+using UnityEditor.Build;
 using UnityEngine;
 
 namespace ProjectSetup.Editor
@@ -65,7 +66,11 @@ namespace ProjectSetup.Editor
             bool hasManagedStrippingLevelData = false,
             string managedStrippingLevelTargetId = null,
             string managedStrippingLevelTargetLabel = null,
-            ManagedStrippingLevel managedStrippingLevel = ManagedStrippingLevel.Minimal)
+            ManagedStrippingLevel managedStrippingLevel = ManagedStrippingLevel.Minimal,
+            bool hasIl2CppCodeGenerationData = false,
+            string il2CppCodeGenerationTargetId = null,
+            string il2CppCodeGenerationTargetLabel = null,
+            Il2CppCodeGeneration il2CppCodeGeneration = Il2CppCodeGeneration.OptimizeSpeed)
         {
             AssetSerialization = assetSerialization;
             VersionControlMode = versionControlMode ?? string.Empty;
@@ -122,6 +127,10 @@ namespace ProjectSetup.Editor
             ManagedStrippingLevelTargetId = managedStrippingLevelTargetId ?? string.Empty;
             ManagedStrippingLevelTargetLabel = managedStrippingLevelTargetLabel ?? string.Empty;
             ManagedStrippingLevel = managedStrippingLevel;
+            HasIl2CppCodeGenerationData = hasIl2CppCodeGenerationData;
+            Il2CppCodeGenerationTargetId = il2CppCodeGenerationTargetId ?? string.Empty;
+            Il2CppCodeGenerationTargetLabel = il2CppCodeGenerationTargetLabel ?? string.Empty;
+            Il2CppCodeGeneration = il2CppCodeGeneration;
         }
 
         internal SerializationMode AssetSerialization { get; }
@@ -179,6 +188,10 @@ namespace ProjectSetup.Editor
         internal string ManagedStrippingLevelTargetId { get; }
         internal string ManagedStrippingLevelTargetLabel { get; }
         internal ManagedStrippingLevel ManagedStrippingLevel { get; }
+        internal bool HasIl2CppCodeGenerationData { get; }
+        internal string Il2CppCodeGenerationTargetId { get; }
+        internal string Il2CppCodeGenerationTargetLabel { get; }
+        internal Il2CppCodeGeneration Il2CppCodeGeneration { get; }
 
         internal ProjectSetupSnapshot WithCreatedProjectFolders(string[] paths)
         {
@@ -270,7 +283,11 @@ namespace ProjectSetup.Editor
                 && HasManagedStrippingLevelData == other.HasManagedStrippingLevelData
                 && (!HasManagedStrippingLevelData
                     || (string.Equals(ManagedStrippingLevelTargetId, other.ManagedStrippingLevelTargetId, StringComparison.Ordinal)
-                        && ManagedStrippingLevel == other.ManagedStrippingLevel));
+                        && ManagedStrippingLevel == other.ManagedStrippingLevel))
+                && HasIl2CppCodeGenerationData == other.HasIl2CppCodeGenerationData
+                && (!HasIl2CppCodeGenerationData
+                    || (string.Equals(Il2CppCodeGenerationTargetId, other.Il2CppCodeGenerationTargetId, StringComparison.Ordinal)
+                        && Il2CppCodeGeneration == other.Il2CppCodeGeneration));
         }
 
         internal bool Matches(ProjectSetupSnapshot actual)
@@ -322,7 +339,11 @@ namespace ProjectSetup.Editor
                 && (!HasManagedStrippingLevelData
                     || (actual.HasManagedStrippingLevelData
                         && string.Equals(ManagedStrippingLevelTargetId, actual.ManagedStrippingLevelTargetId, StringComparison.Ordinal)
-                        && ManagedStrippingLevel == actual.ManagedStrippingLevel));
+                        && ManagedStrippingLevel == actual.ManagedStrippingLevel))
+                && (!HasIl2CppCodeGenerationData
+                    || (actual.HasIl2CppCodeGenerationData
+                        && string.Equals(Il2CppCodeGenerationTargetId, actual.Il2CppCodeGenerationTargetId, StringComparison.Ordinal)
+                        && Il2CppCodeGeneration == actual.Il2CppCodeGeneration));
         }
 
         private bool ScalarEquals(ProjectSetupSnapshot other)
@@ -415,6 +436,12 @@ namespace ProjectSetup.Editor
                     hash = (hash * 397) ^ StringComparer.Ordinal.GetHashCode(ManagedStrippingLevelTargetId ?? string.Empty);
                     hash = (hash * 397) ^ (int)ManagedStrippingLevel;
                 }
+                hash = (hash * 397) ^ HasIl2CppCodeGenerationData.GetHashCode();
+                if (HasIl2CppCodeGenerationData)
+                {
+                    hash = (hash * 397) ^ StringComparer.Ordinal.GetHashCode(Il2CppCodeGenerationTargetId ?? string.Empty);
+                    hash = (hash * 397) ^ (int)Il2CppCodeGeneration;
+                }
                 return hash;
             }
         }
@@ -482,7 +509,11 @@ namespace ProjectSetup.Editor
                 HasManagedStrippingLevelData,
                 ManagedStrippingLevelTargetId,
                 ManagedStrippingLevelTargetLabel,
-                ManagedStrippingLevel);
+                ManagedStrippingLevel,
+                HasIl2CppCodeGenerationData,
+                Il2CppCodeGenerationTargetId,
+                Il2CppCodeGenerationTargetLabel,
+                Il2CppCodeGeneration);
         }
 
         private static string[] Clone(string[] values)

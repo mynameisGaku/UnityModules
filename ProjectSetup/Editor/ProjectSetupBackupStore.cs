@@ -4,6 +4,7 @@ using System;
 using System.IO;
 using System.Text;
 using UnityEditor;
+using UnityEditor.Build;
 using UnityEngine;
 
 namespace ProjectSetup.Editor
@@ -74,7 +75,7 @@ namespace ProjectSetup.Editor
             {
                 var json = File.ReadAllText(_path, new UTF8Encoding(false, true));
                 var data = JsonUtility.FromJson<ProjectSetupSnapshotData>(json);
-                if (data == null || data.schemaVersion < 1 || data.schemaVersion > 14)
+                if (data == null || data.schemaVersion < 1 || data.schemaVersion > 15)
                 {
                     error = "The Project Setup backup schema is unsupported.";
                     return false;
@@ -93,7 +94,7 @@ namespace ProjectSetup.Editor
         [Serializable]
         private sealed class ProjectSetupSnapshotData
         {
-            public int schemaVersion = 14;
+            public int schemaVersion = 15;
             public int assetSerialization;
             public string versionControlMode;
             public bool enterPlayModeOptionsEnabled;
@@ -145,6 +146,10 @@ namespace ProjectSetup.Editor
             public string managedStrippingLevelTargetId;
             public string managedStrippingLevelTargetLabel;
             public int managedStrippingLevel;
+            public bool hasIl2CppCodeGenerationData;
+            public string il2CppCodeGenerationTargetId;
+            public string il2CppCodeGenerationTargetLabel;
+            public int il2CppCodeGeneration;
 
             internal static ProjectSetupSnapshotData FromSnapshot(ProjectSetupSnapshot snapshot)
             {
@@ -226,7 +231,11 @@ namespace ProjectSetup.Editor
                     hasManagedStrippingLevelData = snapshot.HasManagedStrippingLevelData,
                     managedStrippingLevelTargetId = snapshot.ManagedStrippingLevelTargetId,
                     managedStrippingLevelTargetLabel = snapshot.ManagedStrippingLevelTargetLabel,
-                    managedStrippingLevel = (int)snapshot.ManagedStrippingLevel
+                    managedStrippingLevel = (int)snapshot.ManagedStrippingLevel,
+                    hasIl2CppCodeGenerationData = snapshot.HasIl2CppCodeGenerationData,
+                    il2CppCodeGenerationTargetId = snapshot.Il2CppCodeGenerationTargetId,
+                    il2CppCodeGenerationTargetLabel = snapshot.Il2CppCodeGenerationTargetLabel,
+                    il2CppCodeGeneration = (int)snapshot.Il2CppCodeGeneration
                 };
             }
 
@@ -306,7 +315,13 @@ namespace ProjectSetup.Editor
                     managedStrippingLevelTargetLabel: schemaVersion >= 14 ? managedStrippingLevelTargetLabel : string.Empty,
                     managedStrippingLevel: schemaVersion >= 14
                         ? (ManagedStrippingLevel)managedStrippingLevel
-                        : ManagedStrippingLevel.Minimal);
+                        : ManagedStrippingLevel.Minimal,
+                    hasIl2CppCodeGenerationData: schemaVersion >= 15 && hasIl2CppCodeGenerationData,
+                    il2CppCodeGenerationTargetId: schemaVersion >= 15 ? il2CppCodeGenerationTargetId : string.Empty,
+                    il2CppCodeGenerationTargetLabel: schemaVersion >= 15 ? il2CppCodeGenerationTargetLabel : string.Empty,
+                    il2CppCodeGeneration: schemaVersion >= 15
+                        ? (Il2CppCodeGeneration)il2CppCodeGeneration
+                        : Il2CppCodeGeneration.OptimizeSpeed);
             }
         }
 

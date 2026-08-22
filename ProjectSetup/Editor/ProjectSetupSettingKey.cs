@@ -29,6 +29,7 @@ namespace ProjectSetup.Editor
         ApplicationIdentifier = 22,
         ScriptingBackend = 23,
         ApiCompatibilityLevel = 24,
-        ManagedStrippingLevel = 25
+        ManagedStrippingLevel = 25,
+        Il2CppCodeGeneration = 26
     }
 }

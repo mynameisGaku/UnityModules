@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
+using UnityEditor.Build;
 using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -44,6 +45,8 @@ namespace ProjectSetup.Editor
         internal const string ApiCompatibilityLevelFieldName = "api-compatibility-level-field";
         internal const string ManagedStrippingLevelCardName = "managed-stripping-level";
         internal const string ManagedStrippingLevelFieldName = "managed-stripping-level-field";
+        internal const string Il2CppCodeGenerationCardName = "il2cpp-code-generation";
+        internal const string Il2CppCodeGenerationFieldName = "il2cpp-code-generation-field";
         internal const string AssemblyNameFieldName = "assembly-name-field";
         internal const string RuntimeAssemblyFolderFieldName = "runtime-assembly-folder-field";
         internal const string EditorAssemblyFolderFieldName = "editor-assembly-folder-field";
@@ -239,6 +242,7 @@ namespace ProjectSetup.Editor
                 value => _profile.ScriptingBackend = (ScriptingImplementation)value));
             content.Add(CreateApiCompatibilityLevelCard());
             content.Add(CreateManagedStrippingLevelCard());
+            content.Add(CreateIl2CppCodeGenerationCard());
             content.Add(CreateScriptingDefineCard());
             content.Add(CreateTextCard(
                 RootNamespaceCardName,
@@ -675,6 +679,31 @@ namespace ProjectSetup.Editor
             field.RegisterValueChangedCallback(change => ChangeProfile(() =>
             {
                 _profile.ManagedStrippingLevel = (ManagedStrippingLevel)Enum.Parse(typeof(ManagedStrippingLevel), change.newValue);
+            }));
+            card.Add(enabled);
+            card.Add(field);
+            return card;
+        }
+
+        private VisualElement CreateIl2CppCodeGenerationCard()
+        {
+            var choices = new List<string> { "OptimizeSpeed", "OptimizeSize" };
+            var card = CreateCard(
+                Il2CppCodeGenerationCardName,
+                "IL2CPP Code Generation",
+                "Choose whether IL2CPP prioritizes runtime speed or generated code size. This applies only when the active build target uses IL2CPP.");
+            var enabled = new Toggle("Apply this setting") { value = _profile.ConfigureIl2CppCodeGeneration };
+            var selected = ProjectSetupPlanner.IsSupportedIl2CppCodeGeneration(_profile.Il2CppCodeGeneration)
+                ? _profile.Il2CppCodeGeneration.ToString()
+                : Il2CppCodeGeneration.OptimizeSpeed.ToString();
+            var field = new DropdownField("Desired value", choices, selected)
+            {
+                name = Il2CppCodeGenerationFieldName
+            };
+            enabled.RegisterValueChangedCallback(change => ChangeProfile(() => _profile.ConfigureIl2CppCodeGeneration = change.newValue));
+            field.RegisterValueChangedCallback(change => ChangeProfile(() =>
+            {
+                _profile.Il2CppCodeGeneration = (Il2CppCodeGeneration)Enum.Parse(typeof(Il2CppCodeGeneration), change.newValue);
             }));
             card.Add(enabled);
             card.Add(field);
