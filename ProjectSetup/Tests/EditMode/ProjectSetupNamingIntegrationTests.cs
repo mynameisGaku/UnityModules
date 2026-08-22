@@ -72,10 +72,6 @@ namespace ProjectSetup.Tests
                 }
             }
 
-            while (EditorApplication.isCompiling || EditorApplication.isUpdating)
-            {
-                yield return null;
-            }
         }
     }
 }

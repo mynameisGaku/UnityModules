@@ -79,10 +79,6 @@ namespace ProjectSetup.Tests
                 UnityEngine.Object.DestroyImmediate(profile);
             }
 
-            while (EditorApplication.isCompiling || EditorApplication.isUpdating)
-            {
-                yield return null;
-            }
         }
     }
 }
