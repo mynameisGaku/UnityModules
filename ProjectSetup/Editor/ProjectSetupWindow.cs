@@ -29,6 +29,8 @@ namespace ProjectSetup.Editor
         internal const string PlayModeStartSceneFieldName = "play-mode-start-scene-field";
         internal const string ScriptingDefineCardName = "scripting-define-symbols";
         internal const string ScriptingDefineFieldName = "scripting-define-symbols-field";
+        internal const string RootNamespaceCardName = "root-namespace";
+        internal const string NewScriptLineEndingsCardName = "new-script-line-endings";
         internal const string ActionBarName = "action-bar";
         private const string MenuPath = "Tools/Project Setup/Open";
 
@@ -201,6 +203,22 @@ namespace ProjectSetup.Editor
             content.Add(CreateTextCard("product-name", "Product Name", "Shared Player product name.", _profile.ConfigureProductName, _profile.ProductName, value => _profile.ConfigureProductName = value, value => _profile.ProductName = value));
             content.Add(CreateTextCard("bundle-version", "Bundle Version", "Shared application version string.", _profile.ConfigureBundleVersion, _profile.BundleVersion, value => _profile.ConfigureBundleVersion = value, value => _profile.BundleVersion = value));
             content.Add(CreateScriptingDefineCard());
+            content.Add(CreateTextCard(
+                RootNamespaceCardName,
+                "Root Namespace",
+                "Set the default namespace used by generated C# projects. Leave the value empty to clear it.",
+                _profile.ConfigureRootNamespace,
+                _profile.RootNamespace,
+                value => _profile.ConfigureRootNamespace = value,
+                value => _profile.RootNamespace = value));
+            content.Add(CreateEnumCard(
+                NewScriptLineEndingsCardName,
+                "New Script Line Endings",
+                "Choose the line ending written into new C# scripts created by Unity.",
+                _profile.ConfigureNewScriptLineEndings,
+                _profile.NewScriptLineEndings,
+                value => _profile.ConfigureNewScriptLineEndings = value,
+                value => _profile.NewScriptLineEndings = (LineEndingsMode)value));
             content.Add(CreateBuildScenesCard());
             content.Add(CreateNameListCard(
                 "tags",
