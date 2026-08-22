@@ -30,7 +30,7 @@ Unity Package ManagerへGit URLを1件ずつ貼り、導入済みmoduleの公開
 2. `Add package from git URL...`へ次を入力します。
 
    ```text
-   https://github.com/mynameisGaku/UnityModules.git?path=/ModuleInstaller#module-installer-v1.3.3
+   https://github.com/mynameisGaku/UnityModules.git?path=/ModuleInstaller#module-installer-v1.3.4
    ```
 
 3. `Tools > Module Manager > Open`を開きます。
@@ -51,7 +51,7 @@ Runtime APIはありません。C#を書く必要はなく、Editor windowの操
 
 | やりたいこと | 最初に見るセット |
 |---|---|
-| 新しいProjectの設定、条件付きコンパイル記号、Build Scenes、Play Mode開始Scene、壊れた参照、Asset整理をまとめて扱う | `Project Maintenance` |
+| 新しいProjectのC# namespace・改行方式、条件付きコンパイル記号、Build Scenes、Play Mode開始Scene、壊れた参照、Asset整理をまとめて扱う | `Project Maintenance` |
 | Scene切り替え、画面fade、safe area、pause、起動順を整える | `Scene and UI` |
 | save、音声、不具合reportを用意する | `Game Services` |
 | 入力の補助やGameplay入力の一時停止を追加する | `Input Support` |
@@ -72,14 +72,14 @@ Runtime APIはありません。C#を書く必要はなく、Editor windowの操
 
 | セット | 含まれる用途 |
 |---|---|
-| Project Maintenance | Project Settings、条件付きコンパイル記号、Tag・Layer、Build Scenes、Play Mode開始Scene、Inspector整理、debug描画、Scene・Prefab不備修復、Asset参照・名前整理 |
+| Project Maintenance | Project Settings、C# Root Namespace、新規script改行方式、条件付きコンパイル記号、Tag・Layer、Build Scenes、Play Mode開始Scene、Inspector整理、debug描画、Scene・Prefab不備修復、Asset参照・名前整理 |
 | Scene and UI | Scene切り替え、画面fade、safe area、ゲーム時間、起動手順 |
 | Game Services | save data、音声再生、不具合report |
 | Input Support | stick・button補助、Gameplay入力の一時停止 |
 | Deterministic Simulation | 固定step、再現乱数、state照合、replay、canonical data、固定小数点、handle |
 | Game Rules and Math | resource、能力値、条件、選択、配分、stack、定期処理、damage、threat |
 
-Project Maintenanceに含まれる「プロジェクト一括設定」はv1.4.0へ固定しています。Project Settings、条件付きコンパイル記号、Player Build Scenes、EditorのPlay Mode開始Sceneを別々の項目として同じprofileから適用・復元できます。条件付きコンパイル記号は現在の記号を削除せず、不足分だけを追加します。Play Mode開始Sceneを空欄にすれば、現在開いているSceneから始めるUnity標準動作を維持します。
+Project Maintenanceに含まれる「プロジェクト一括設定」はv1.5.0へ固定しています。C# Root Namespace、新規scriptの改行方式、条件付きコンパイル記号、Player Build Scenes、EditorのPlay Mode開始Sceneを別々の項目として同じprofileから適用・復元できます。Root Namespaceは新しく生成するC# fileへ適用され、既存sourceは書き換えません。条件付きコンパイル記号は現在の記号を削除せず、不足分だけを追加します。Play Mode開始Sceneを空欄にすれば、現在開いているSceneから始めるUnity標準動作を維持します。
 
 ## よくある問題
 
