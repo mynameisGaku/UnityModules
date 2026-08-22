@@ -1,6 +1,6 @@
-# プロジェクト一括設定（Project Setup）1.14.0
+# プロジェクト一括設定（Project Setup）1.15.0
 
-基本フォルダー、Runtime／Editor／test asmdef、`.gitignore`、`.gitattributes`、Application Identifier・Scripting Backend・API Compatibility Level・Managed Stripping Levelを含むProject設定、C#生成時のRoot Namespaceと改行方式、複製時の命名規則、Play Modeの開始Scene、条件付きコンパイル記号、Tag/Layer、Build Scenesをprofile化し、差分確認、backup、適用、復元を1つのEditor windowで行います。
+基本フォルダー、Runtime／Editor／test asmdef、`.gitignore`、`.gitattributes`、Application Identifier・Scripting Backend・API Compatibility Level・Managed Stripping Level・IL2CPP Code Generationを含むProject設定、C#生成時のRoot Namespaceと改行方式、複製時の命名規則、Play Modeの開始Scene、条件付きコンパイル記号、Tag/Layer、Build Scenesをprofile化し、差分確認、backup、適用、復元を1つのEditor windowで行います。
 
 ## 最短手順
 
@@ -34,6 +34,7 @@ import時やUnity起動時には適用しません。
 - Scripting Backend（選択中build target）
 - API Compatibility Level（選択中build target）
 - Managed Stripping Level（選択中build target）
+- IL2CPP Code Generation（選択中build target、IL2CPPのみ）
 - Build Scenesの順序とEnabled状態
 - Tags
 - User Layers
@@ -52,6 +53,8 @@ Scripting Backendは、現在選択中のbuild targetへ`Mono`または`IL2CPP`�
 API Compatibility Levelは、現在選択中のbuild targetへ`.NET Standard`または`.NET Framework`を設定します。利用するplug-inが必要とするAPI範囲を確認してから有効にしてください。Previewにはtarget名と変更前後を表示し、Restore時にtargetが変わっている場合は停止します。初期profileでは無効です。
 
 Managed Stripping Levelは、現在選択中のbuild targetへ`Disabled`、`Minimal`、`Low`、`Medium`、`High`のいずれかを設定します。高くするほど未使用と判断されたmanaged codeを削除しやすくなるため、reflection、serialization、動的生成を使うplug-inの保全設定を確認してから有効にしてください。Previewにはtarget名と変更前後を表示し、Restore時にtargetが変わっている場合は停止します。初期profileでは無効です。
+
+IL2CPP Code Generationは、現在選択中のbuild targetがIL2CPPの場合だけ`OptimizeSpeed`または`OptimizeSize`を設定します。Mono targetでは変更を作らず、Scripting Backendとの組み合わせをPreviewで検証します。生成コードの速度、サイズ、build時間へ影響するため、対象projectのPlayer buildで確認してください。Apply直前のtargetと値はbackupへ保存し、Restore時にtargetが変わっている場合は停止します。初期profileでは無効です。
 
 Root NamespaceはUnityが生成するC# projectの既定namespaceを設定します。asmdefに個別のRoot Namespaceがある場合はasmdef側が優先されます。New Script Line EndingsはApply後に新しく作成するC# scriptだけへ反映し、既存fileは変更しません。
 
@@ -77,7 +80,8 @@ Version Control FilesはProject rootへUnity向け`.gitignore`と`.gitattributes
 - build targetがbackup時から変わった場合、Scripting Backendの復元を停止します。
 - build targetがbackup時から変わった場合、API Compatibility Levelの復元を停止します。
 - build targetがbackup時から変わった場合、Managed Stripping Levelの復元を停止します。
-- backup schema v14はApplication Identifier、Scripting Backend、API Compatibility Level、Managed Stripping Level、Project Folders、asmdef、Version Control Filesの作成履歴、Root Namespace、新規scriptの改行方式、Duplicate Naming、Play Mode Start Scene、Scripting Define Symbols、TagManager、Build Scenesを含みます。
+- build targetがbackup時から変わった場合、IL2CPP Code Generationの復元を停止します。
+- backup schema v15はApplication Identifier、Scripting Backend、API Compatibility Level、Managed Stripping Level、IL2CPP Code Generation、Project Folders、asmdef、Version Control Filesの作成履歴、Root Namespace、新規scriptの改行方式、Duplicate Naming、Play Mode Start Scene、Scripting Define Symbols、TagManager、Build Scenesを含みます。
 
 通常のApplyではTag、Layer、Sorting Layerの既存項目を削除・改名・並べ替えません。Build Scenesはprofileの一覧へ完全に置き換えるため、順序とEnabled状態をPreviewで確認してください。
 
