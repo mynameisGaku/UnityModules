@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.3.3] - 2026-08-22
+
+- Updated Project Setup to v1.4.0 for additive scripting define symbols with target-aware backup restoration.
+- Clarified that Project Maintenance can configure compile conditions without replacing existing symbols.
+
 ## [1.3.2] - 2026-08-22
 
 - Updated Project Setup to v1.3.0 for a profile-owned Play Mode Start Scene in addition to ordered Player Build Scenes.

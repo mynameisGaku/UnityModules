@@ -1,13 +1,13 @@
 {
   "name": "com.studiogaku.module-installer",
-  "version": "1.3.2",
+  "version": "1.3.3",
   "displayName": "Module Manager",
   "description": "Installs practical UnityModules bundles and updates installed catalog packages to pinned releases from one Editor window.",
   "unity": "6000.5",
   "unityRelease": "7f1",
-  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/blob/module-installer-v1.3.2/ModuleInstaller/Documentation~/index.md",
-  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/module-installer-v1.3.2/ModuleInstaller/CHANGELOG.md",
-  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/module-installer-v1.3.2/ModuleInstaller/LICENSE.md",
+  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/blob/module-installer-v1.3.3/ModuleInstaller/Documentation~/index.md",
+  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/module-installer-v1.3.3/ModuleInstaller/CHANGELOG.md",
+  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/module-installer-v1.3.3/ModuleInstaller/LICENSE.md",
   "license": "Refer to LICENSE.md file",
   "keywords": [
     "package-manager",
