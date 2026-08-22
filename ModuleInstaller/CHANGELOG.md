@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.3.8] - 2026-08-22
+
+- Updated Project Setup to v1.9.0 for optional EditMode and PlayMode test assembly definition setup.
+- Clarified the generated test assembly names, references, and safe restore behavior.
+
 ## [1.3.7] - 2026-08-22
 
 - Updated Project Setup to v1.8.0 for safe Runtime and Editor assembly definition setup.
