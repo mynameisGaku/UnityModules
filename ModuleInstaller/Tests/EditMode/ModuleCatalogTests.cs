@@ -79,8 +79,8 @@ namespace ModuleInstaller.Editor.Tests
         public void ProjectSetup_UsesPlayModeStartSceneCapableRelease()
         {
             Assert.That(ModuleCatalog.TryFindEntry("com.studiogaku.project-setup", out var entry), Is.True);
-            Assert.That(entry.Tag, Is.EqualTo("project-setup-v1.3.0"));
-            Assert.That(entry.Summary, Does.Contain("Tags").And.Contain("Layers").And.Contain("Sorting Layers").And.Contain("Build Scenes").And.Contain("Play Mode Start Scene"));
+            Assert.That(entry.Tag, Is.EqualTo("project-setup-v1.4.0"));
+            Assert.That(entry.Summary, Does.Contain("scripting define symbols").And.Contain("Tags").And.Contain("Layers").And.Contain("Build Scenes").And.Contain("Play Mode Start Scene"));
         }
     }
 }

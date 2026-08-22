@@ -97,7 +97,7 @@ namespace ModuleInstaller.Editor.Tests
 
             Assert.That(coordinator.TryStartUpdates(plan, out _), Is.True);
             Assert.That(client.CallCount, Is.EqualTo(1));
-            Assert.That(client.LastUrls[0], Does.EndWith("#project-setup-v1.3.0"));
+            Assert.That(client.LastUrls[0], Does.EndWith("#project-setup-v1.4.0"));
 
             client.Request.IsCompletedValue = true;
             client.Request.SucceededValue = true;
@@ -118,7 +118,7 @@ namespace ModuleInstaller.Editor.Tests
                 environment.InstalledVersions);
             Assert.That(first.TryStartUpdates(plan, out _), Is.True);
 
-            environment.InstalledVersions["com.studiogaku.project-setup"] = "1.3.0";
+            environment.InstalledVersions["com.studiogaku.project-setup"] = "1.4.0";
             var resumedClient = new FakeClient();
             var resumed = CreateCoordinator(resumedClient, environment, store);
             resumed.Tick();
