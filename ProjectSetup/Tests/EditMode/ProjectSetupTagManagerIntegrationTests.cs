@@ -1,21 +1,30 @@
 // SPDX-License-Identifier: MIT
 
 using System;
+using System.Collections;
 using System.IO;
 using System.Linq;
 using NUnit.Framework;
 using ProjectSetup.Editor;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.TestTools;
 
 namespace ProjectSetup.Tests
 {
     [Parallelizable(ParallelScope.None)]
     internal sealed class ProjectSetupTagManagerIntegrationTests
     {
-        [Test]
-        public void ApplyAndRestore_AddsMissingNamesThenRestoresTagManagerBytesExactly()
+        [UnityTest]
+        public IEnumerator ApplyAndRestore_AddsMissingNamesThenRestoresTagManagerBytesExactly()
         {
+            while (EditorApplication.isCompiling
+                || EditorApplication.isUpdating
+                || EditorApplication.isPlayingOrWillChangePlaymode)
+            {
+                yield return null;
+            }
+
             var tagManagerPath = Path.GetFullPath("ProjectSettings/TagManager.asset");
             var originalBytes = File.ReadAllBytes(tagManagerPath);
             var backupDirectory = Path.Combine(Path.GetTempPath(), "ProjectSetupTagManagerTests", Guid.NewGuid().ToString("N"));
@@ -68,6 +77,11 @@ namespace ProjectSetup.Tests
                 }
 
                 UnityEngine.Object.DestroyImmediate(profile);
+            }
+
+            while (EditorApplication.isCompiling || EditorApplication.isUpdating)
+            {
+                yield return null;
             }
         }
     }

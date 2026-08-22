@@ -1,19 +1,28 @@
 // SPDX-License-Identifier: MIT
 
 using System;
+using System.Collections;
 using System.IO;
 using NUnit.Framework;
 using ProjectSetup.Editor;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.TestTools;
 
 namespace ProjectSetup.Tests
 {
     internal sealed class ProjectSetupNamingIntegrationTests
     {
-        [Test]
-        public void ApplyAndRestore_RoundTripsDuplicateNamingSettings()
+        [UnityTest]
+        public IEnumerator ApplyAndRestore_RoundTripsDuplicateNamingSettings()
         {
+            while (EditorApplication.isCompiling
+                || EditorApplication.isUpdating
+                || EditorApplication.isPlayingOrWillChangePlaymode)
+            {
+                yield return null;
+            }
+
             var originalScheme = EditorSettings.gameObjectNamingScheme;
             var originalDigits = EditorSettings.gameObjectNamingDigits;
             var originalSpacing = EditorSettings.assetNamingUsesSpace;
@@ -61,6 +70,11 @@ namespace ProjectSetup.Tests
                 {
                     Directory.Delete(directory, true);
                 }
+            }
+
+            while (EditorApplication.isCompiling || EditorApplication.isUpdating)
+            {
+                yield return null;
             }
         }
     }
