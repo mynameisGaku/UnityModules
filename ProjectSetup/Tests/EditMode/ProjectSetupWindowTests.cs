@@ -54,6 +54,10 @@ namespace ProjectSetup.Tests
                 var managedStrippingLevel = root.Q<DropdownField>(ProjectSetupWindow.ManagedStrippingLevelFieldName);
                 Assert.That(managedStrippingLevel, Is.Not.Null);
                 Assert.That(managedStrippingLevel.choices, Is.EqualTo(new[] { "Disabled", "Minimal", "Low", "Medium", "High" }));
+                Assert.That(root.Q<VisualElement>(ProjectSetupWindow.Il2CppCodeGenerationCardName), Is.Not.Null);
+                var il2CppCodeGeneration = root.Q<DropdownField>(ProjectSetupWindow.Il2CppCodeGenerationFieldName);
+                Assert.That(il2CppCodeGeneration, Is.Not.Null);
+                Assert.That(il2CppCodeGeneration.choices, Is.EqualTo(new[] { "OptimizeSpeed", "OptimizeSize" }));
                 Assert.That(root.Q<TextField>(ProjectSetupWindow.AssemblyNameFieldName), Is.Not.Null);
                 Assert.That(root.Q<TextField>(ProjectSetupWindow.RuntimeAssemblyFolderFieldName), Is.Not.Null);
                 Assert.That(root.Q<TextField>(ProjectSetupWindow.EditorAssemblyFolderFieldName), Is.Not.Null);

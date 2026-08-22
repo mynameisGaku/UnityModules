@@ -41,6 +41,7 @@ namespace ProjectSetup.Editor
             CaptureScriptingBackend(out var hasScriptingBackendData, out var scriptingBackendTargetId, out var scriptingBackendTargetLabel, out var scriptingBackend);
             CaptureApiCompatibilityLevel(out var hasApiCompatibilityLevelData, out var apiCompatibilityLevelTargetId, out var apiCompatibilityLevelTargetLabel, out var apiCompatibilityLevel);
             CaptureManagedStrippingLevel(out var hasManagedStrippingLevelData, out var managedStrippingLevelTargetId, out var managedStrippingLevelTargetLabel, out var managedStrippingLevel);
+            CaptureIl2CppCodeGeneration(out var hasIl2CppCodeGenerationData, out var il2CppCodeGenerationTargetId, out var il2CppCodeGenerationTargetLabel, out var il2CppCodeGeneration);
             CaptureProjectFolders(out var projectFolders, out var projectAssetPaths);
             return new ProjectSetupSnapshot(
                 EditorSettings.serializationMode,
@@ -94,7 +95,11 @@ namespace ProjectSetup.Editor
                 hasManagedStrippingLevelData: hasManagedStrippingLevelData,
                 managedStrippingLevelTargetId: managedStrippingLevelTargetId,
                 managedStrippingLevelTargetLabel: managedStrippingLevelTargetLabel,
-                managedStrippingLevel: managedStrippingLevel);
+                managedStrippingLevel: managedStrippingLevel,
+                hasIl2CppCodeGenerationData: hasIl2CppCodeGenerationData,
+                il2CppCodeGenerationTargetId: il2CppCodeGenerationTargetId,
+                il2CppCodeGenerationTargetLabel: il2CppCodeGenerationTargetLabel,
+                il2CppCodeGeneration: il2CppCodeGeneration);
         }
 
         public ProjectSetupEnvironmentApplyResult Apply(ProjectSetupProfile profile)
@@ -166,6 +171,11 @@ namespace ProjectSetup.Editor
             if (profile.ConfigureManagedStrippingLevel)
             {
                 SetManagedStrippingLevel(profile.ManagedStrippingLevel);
+            }
+
+            if (profile.ConfigureIl2CppCodeGeneration)
+            {
+                SetIl2CppCodeGeneration(profile.Il2CppCodeGeneration);
             }
 
             if (profile.ConfigureBuildScenes)
@@ -277,6 +287,15 @@ namespace ProjectSetup.Editor
                 }
             }
 
+            if (snapshot.HasIl2CppCodeGenerationData)
+            {
+                CaptureIl2CppCodeGeneration(out var available, out var currentTargetId, out _, out _);
+                if (!available || !string.Equals(currentTargetId, snapshot.Il2CppCodeGenerationTargetId, StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException("The active IL2CPP Code Generation target changed after the backup was created.");
+                }
+            }
+
             EditorSettings.serializationMode = snapshot.AssetSerialization;
             VersionControlSettings.mode = snapshot.VersionControlMode;
             EditorSettings.enterPlayModeOptionsEnabled = snapshot.EnterPlayModeOptionsEnabled;
@@ -305,6 +324,10 @@ namespace ProjectSetup.Editor
             if (snapshot.HasManagedStrippingLevelData)
             {
                 SetManagedStrippingLevel(snapshot.ManagedStrippingLevel);
+            }
+            if (snapshot.HasIl2CppCodeGenerationData)
+            {
+                SetIl2CppCodeGeneration(snapshot.Il2CppCodeGeneration);
             }
             if (snapshot.HasBuildSceneData)
             {
@@ -546,6 +569,35 @@ namespace ProjectSetup.Editor
             PlayerSettings.SetManagedStrippingLevel(
                 NamedBuildTarget.FromBuildTargetGroup(group),
                 managedStrippingLevel);
+        }
+
+        private static void CaptureIl2CppCodeGeneration(
+            out bool available,
+            out string targetId,
+            out string targetLabel,
+            out Il2CppCodeGeneration il2CppCodeGeneration)
+        {
+            var activeTarget = EditorUserBuildSettings.activeBuildTarget;
+            var group = BuildPipeline.GetBuildTargetGroup(activeTarget);
+            available = group != BuildTargetGroup.Unknown;
+            targetId = available ? group.ToString() : string.Empty;
+            targetLabel = available ? activeTarget.ToString() : string.Empty;
+            il2CppCodeGeneration = available
+                ? PlayerSettings.GetIl2CppCodeGeneration(NamedBuildTarget.FromBuildTargetGroup(group))
+                : Il2CppCodeGeneration.OptimizeSpeed;
+        }
+
+        private static void SetIl2CppCodeGeneration(Il2CppCodeGeneration il2CppCodeGeneration)
+        {
+            var group = BuildPipeline.GetBuildTargetGroup(EditorUserBuildSettings.activeBuildTarget);
+            if (group == BuildTargetGroup.Unknown)
+            {
+                throw new InvalidOperationException("IL2CPP Code Generation is unavailable for the active build target.");
+            }
+
+            PlayerSettings.SetIl2CppCodeGeneration(
+                NamedBuildTarget.FromBuildTargetGroup(group),
+                il2CppCodeGeneration);
         }
 
         private static string[] SplitScriptingDefines(string value)

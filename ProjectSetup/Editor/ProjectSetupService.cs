@@ -172,6 +172,7 @@ namespace ProjectSetup.Editor
                 profile.ConfigureScriptingBackend = false;
                 profile.ConfigureApiCompatibilityLevel = false;
                 profile.ConfigureManagedStrippingLevel = false;
+                profile.ConfigureIl2CppCodeGeneration = false;
                 profile.ConfigureProjectFolders = false;
                 profile.ConfigureAssemblyDefinitions = false;
                 var scalarPlan = ProjectSetupPlanner.Build(profile, current);
@@ -311,6 +312,23 @@ namespace ProjectSetup.Editor
                             $"Managed Stripping Level ({desired.ManagedStrippingLevelTargetLabel})",
                             current.ManagedStrippingLevel.ToString(),
                             desired.ManagedStrippingLevel.ToString()));
+                    }
+                }
+
+                if (desired.HasIl2CppCodeGenerationData)
+                {
+                    if (!current.HasIl2CppCodeGenerationData
+                        || !string.Equals(desired.Il2CppCodeGenerationTargetId, current.Il2CppCodeGenerationTargetId, StringComparison.Ordinal))
+                    {
+                        errors.Add($"The active IL2CPP Code Generation target must remain '{desired.Il2CppCodeGenerationTargetLabel}' before restoring this backup.");
+                    }
+                    else if (desired.Il2CppCodeGeneration != current.Il2CppCodeGeneration)
+                    {
+                        changes.Add(new ProjectSetupChange(
+                            ProjectSetupSettingKey.Il2CppCodeGeneration,
+                            $"IL2CPP Code Generation ({desired.Il2CppCodeGenerationTargetLabel})",
+                            current.Il2CppCodeGeneration.ToString(),
+                            desired.Il2CppCodeGeneration.ToString()));
                     }
                 }
 

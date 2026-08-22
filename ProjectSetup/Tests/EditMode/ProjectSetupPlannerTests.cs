@@ -4,6 +4,7 @@ using System.Linq;
 using NUnit.Framework;
 using ProjectSetup.Editor;
 using UnityEditor;
+using UnityEditor.Build;
 using UnityEngine;
 
 namespace ProjectSetup.Tests
@@ -306,6 +307,99 @@ namespace ProjectSetup.Tests
 
             Assert.That(plan.IsValid, Is.False);
             Assert.That(plan.Errors, Has.Some.Contains("Managed Stripping Level is unavailable"));
+        }
+
+        [Test]
+        public void Build_PlansIl2CppCodeGenerationForIl2CppTarget()
+        {
+            _profile.ConfigureAssetSerialization = false;
+            _profile.ConfigureVersionControl = false;
+            _profile.ConfigureIl2CppCodeGeneration = true;
+            _profile.Il2CppCodeGeneration = Il2CppCodeGeneration.OptimizeSize;
+            var current = new ProjectSetupSnapshot(
+                SerializationMode.ForceText,
+                "Visible Meta Files",
+                false,
+                EnterPlayModeOptions.None,
+                ColorSpace.Linear,
+                false,
+                "Company",
+                "Product",
+                "1.0.0",
+                hasScriptingBackendData: true,
+                scriptingBackendTargetId: "Standalone",
+                scriptingBackendTargetLabel: "Windows",
+                scriptingBackend: ScriptingImplementation.IL2CPP,
+                hasIl2CppCodeGenerationData: true,
+                il2CppCodeGenerationTargetId: "Standalone",
+                il2CppCodeGenerationTargetLabel: "Windows",
+                il2CppCodeGeneration: Il2CppCodeGeneration.OptimizeSpeed);
+
+            var plan = ProjectSetupPlanner.Build(_profile, current);
+
+            Assert.That(plan.Errors, Is.Empty);
+            Assert.That(plan.Changes, Has.Exactly(1).Property("Key").EqualTo(ProjectSetupSettingKey.Il2CppCodeGeneration));
+            Assert.That(plan.Changes[0].Label, Does.Contain("Windows"));
+        }
+
+        [Test]
+        public void Build_RejectsIl2CppCodeGenerationForMonoTarget()
+        {
+            _profile.ConfigureIl2CppCodeGeneration = true;
+            _profile.Il2CppCodeGeneration = Il2CppCodeGeneration.OptimizeSize;
+            var current = new ProjectSetupSnapshot(
+                SerializationMode.ForceText,
+                "Visible Meta Files",
+                false,
+                EnterPlayModeOptions.None,
+                ColorSpace.Linear,
+                false,
+                "Company",
+                "Product",
+                "1.0.0",
+                hasScriptingBackendData: true,
+                scriptingBackendTargetId: "Standalone",
+                scriptingBackendTargetLabel: "Windows",
+                scriptingBackend: ScriptingImplementation.Mono2x,
+                hasIl2CppCodeGenerationData: true,
+                il2CppCodeGenerationTargetId: "Standalone",
+                il2CppCodeGenerationTargetLabel: "Windows",
+                il2CppCodeGeneration: Il2CppCodeGeneration.OptimizeSpeed);
+
+            var plan = ProjectSetupPlanner.Build(_profile, current);
+
+            Assert.That(plan.IsValid, Is.False);
+            Assert.That(plan.Errors, Has.Some.Contains("current Scripting Backend"));
+        }
+
+        [Test]
+        public void Build_RejectsUnsupportedIl2CppCodeGeneration()
+        {
+            _profile.ConfigureIl2CppCodeGeneration = true;
+            _profile.Il2CppCodeGeneration = (Il2CppCodeGeneration)99;
+            var current = new ProjectSetupSnapshot(
+                SerializationMode.ForceText,
+                "Visible Meta Files",
+                false,
+                EnterPlayModeOptions.None,
+                ColorSpace.Linear,
+                false,
+                "Company",
+                "Product",
+                "1.0.0",
+                hasScriptingBackendData: true,
+                scriptingBackendTargetId: "Standalone",
+                scriptingBackendTargetLabel: "Windows",
+                scriptingBackend: ScriptingImplementation.IL2CPP,
+                hasIl2CppCodeGenerationData: true,
+                il2CppCodeGenerationTargetId: "Standalone",
+                il2CppCodeGenerationTargetLabel: "Windows",
+                il2CppCodeGeneration: Il2CppCodeGeneration.OptimizeSpeed);
+
+            var plan = ProjectSetupPlanner.Build(_profile, current);
+
+            Assert.That(plan.IsValid, Is.False);
+            Assert.That(plan.Errors, Has.Some.Contains("not supported"));
         }
 
         [TestCase("game")]

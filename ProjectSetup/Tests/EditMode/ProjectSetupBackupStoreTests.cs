@@ -7,6 +7,7 @@ using System.Text;
 using NUnit.Framework;
 using ProjectSetup.Editor;
 using UnityEditor;
+using UnityEditor.Build;
 using UnityEngine;
 
 namespace ProjectSetup.Tests
@@ -68,7 +69,9 @@ namespace ProjectSetup.Tests
             Assert.That(actual.ApiCompatibilityLevel, Is.EqualTo(expected.ApiCompatibilityLevel));
             Assert.That(actual.ManagedStrippingLevelTargetId, Is.EqualTo(expected.ManagedStrippingLevelTargetId));
             Assert.That(actual.ManagedStrippingLevel, Is.EqualTo(expected.ManagedStrippingLevel));
-            Assert.That(File.ReadAllText(_path), Does.Contain("\"schemaVersion\": 14"));
+            Assert.That(actual.Il2CppCodeGenerationTargetId, Is.EqualTo(expected.Il2CppCodeGenerationTargetId));
+            Assert.That(actual.Il2CppCodeGeneration, Is.EqualTo(expected.Il2CppCodeGeneration));
+            Assert.That(File.ReadAllText(_path), Does.Contain("\"schemaVersion\": 15"));
         }
 
         [Test]
@@ -159,6 +162,7 @@ namespace ProjectSetup.Tests
             Assert.That(snapshot.HasScriptingBackendData, Is.False);
             Assert.That(snapshot.HasApiCompatibilityLevelData, Is.False);
             Assert.That(snapshot.HasManagedStrippingLevelData, Is.False);
+            Assert.That(snapshot.HasIl2CppCodeGenerationData, Is.False);
         }
 
         [Test]
@@ -263,7 +267,11 @@ namespace ProjectSetup.Tests
                 hasManagedStrippingLevelData: true,
                 managedStrippingLevelTargetId: "Standalone",
                 managedStrippingLevelTargetLabel: "Windows",
-                managedStrippingLevel: ManagedStrippingLevel.High);
+                managedStrippingLevel: ManagedStrippingLevel.High,
+                hasIl2CppCodeGenerationData: true,
+                il2CppCodeGenerationTargetId: "Standalone",
+                il2CppCodeGenerationTargetLabel: "Windows",
+                il2CppCodeGeneration: Il2CppCodeGeneration.OptimizeSize);
         }
     }
 }

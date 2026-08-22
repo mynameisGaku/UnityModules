@@ -3,6 +3,7 @@
 using System;
 using System.Linq;
 using UnityEditor;
+using UnityEditor.Build;
 using UnityEngine;
 
 namespace ProjectSetup.Editor
@@ -36,6 +37,8 @@ namespace ProjectSetup.Editor
         [SerializeField] private ApiCompatibilityLevel apiCompatibilityLevel = ApiCompatibilityLevel.NET_Standard;
         [SerializeField] private bool configureManagedStrippingLevel;
         [SerializeField] private ManagedStrippingLevel managedStrippingLevel = ManagedStrippingLevel.Minimal;
+        [SerializeField] private bool configureIl2CppCodeGeneration;
+        [SerializeField] private Il2CppCodeGeneration il2CppCodeGeneration = Il2CppCodeGeneration.OptimizeSpeed;
         [SerializeField] private bool configureBuildScenes;
         [SerializeField] private ProjectSetupBuildScene[] buildScenes = Array.Empty<ProjectSetupBuildScene>();
         [SerializeField] private bool configureTags;
@@ -103,6 +106,8 @@ namespace ProjectSetup.Editor
         internal ApiCompatibilityLevel ApiCompatibilityLevel { get => apiCompatibilityLevel; set => apiCompatibilityLevel = value; }
         internal bool ConfigureManagedStrippingLevel { get => configureManagedStrippingLevel; set => configureManagedStrippingLevel = value; }
         internal ManagedStrippingLevel ManagedStrippingLevel { get => managedStrippingLevel; set => managedStrippingLevel = value; }
+        internal bool ConfigureIl2CppCodeGeneration { get => configureIl2CppCodeGeneration; set => configureIl2CppCodeGeneration = value; }
+        internal Il2CppCodeGeneration Il2CppCodeGeneration { get => il2CppCodeGeneration; set => il2CppCodeGeneration = value; }
         internal bool ConfigureBuildScenes { get => configureBuildScenes; set => configureBuildScenes = value; }
         internal ProjectSetupBuildScene[] BuildScenes
         {
@@ -164,6 +169,8 @@ namespace ProjectSetup.Editor
             apiCompatibilityLevel = ApiCompatibilityLevel.NET_Standard;
             configureManagedStrippingLevel = false;
             managedStrippingLevel = ManagedStrippingLevel.Minimal;
+            configureIl2CppCodeGeneration = false;
+            il2CppCodeGeneration = Il2CppCodeGeneration.OptimizeSpeed;
             configureBuildScenes = false;
             buildScenes = Array.Empty<ProjectSetupBuildScene>();
             configureTags = false;
@@ -230,6 +237,8 @@ namespace ProjectSetup.Editor
             apiCompatibilityLevel = snapshot.ApiCompatibilityLevel;
             configureManagedStrippingLevel = snapshot.HasManagedStrippingLevelData;
             managedStrippingLevel = snapshot.ManagedStrippingLevel;
+            configureIl2CppCodeGeneration = snapshot.HasIl2CppCodeGenerationData;
+            il2CppCodeGeneration = snapshot.Il2CppCodeGeneration;
             configureBuildScenes = snapshot.HasBuildSceneData;
             buildScenes = snapshot.BuildScenes
                 .Select(scene => new ProjectSetupBuildScene(scene.SceneGuid, scene.Path, scene.Enabled))
