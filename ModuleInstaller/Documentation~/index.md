@@ -1,4 +1,4 @@
-# Module Manager 1.3.4
+# Module Manager 1.3.5
 
 ## 目的
 
@@ -17,7 +17,7 @@
 
 最初に40件の個別一覧を読む必要はありません。新規ProjectのC#生成既定値、条件付きコンパイル記号、Asset整理は`Project Maintenance`、Scene切り替えやUIは`Scene and UI`、save・音声・reportは`Game Services`、入力補助は`Input Support`から確認します。個別一覧は必要なmoduleが明確な場合や既存projectとの互換用です。
 
-Project Maintenanceの「プロジェクト一括設定」はv1.5.0へ固定されています。C# Root Namespace、新規scriptの改行方式、条件付きコンパイル記号、Tag・Layer・Sorting Layerに加え、Player buildへ含めるSceneとEditorでPlayを押したときだけ使う開始Sceneを、独立した項目として同じprofileから適用・復元できます。Root Namespaceと改行方式は今後生成するC# fileへ適用され、既存sourceは変更しません。条件付きコンパイル記号は既存一覧を維持して不足分だけを追加します。
+Project Maintenanceの「プロジェクト一括設定」はv1.6.0へ固定されています。C# Root Namespace、新規scriptの改行方式、複製時のGameObject・Asset命名規則、条件付きコンパイル記号、Tag・Layer・Sorting Layerに加え、Player buildへ含めるSceneとEditorでPlayを押したときだけ使う開始Sceneを、独立した項目として同じprofileから適用・復元できます。Root Namespaceと改行方式は今後生成するC# fileへ、複製命名は今後の複製操作へ適用され、既存source・既存GameObject・既存Assetは変更しません。条件付きコンパイル記号は既存一覧を維持して不足分だけを追加します。
 
 ## 安全条件
 

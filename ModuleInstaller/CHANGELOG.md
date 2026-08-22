@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.3.5] - 2026-08-22
+
+- Updated Project Setup to v1.6.0 for profile-owned duplicate GameObject and Asset naming defaults.
+- Clarified that duplicate naming affects future duplicate operations and does not rename existing objects or assets.
+
 ## [1.3.4] - 2026-08-22
 
 - Updated Project Setup to v1.5.0 for profile-owned C# root namespace and new-script line ending defaults.
