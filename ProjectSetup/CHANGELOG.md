@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.9.0] - 2026-08-22
+
+- Extended Script Assemblies with optional EditMode and PlayMode test Assembly Definitions.
+- Added deterministic TestAssemblies references, Editor-only EditMode restrictions, and profile-owned test folder creation.
+- Kept the existing no-overwrite and unchanged-content-only restore guarantees for all four generated Assembly Definitions.
+
 ## [1.8.0] - 2026-08-22
 
 - Added one Script Assemblies workflow that creates a Runtime Assembly Definition and a matching Editor Assembly Definition with the correct reference.
