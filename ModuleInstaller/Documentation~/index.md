@@ -1,4 +1,4 @@
-# Module Manager 1.3.0
+# Module Manager 1.3.1
 
 ## 目的
 
@@ -15,7 +15,9 @@
 
 導入済みmoduleに更新がある場合は、上部に`Module Name -> target version`が表示されます。対象を確認して`Update N`を押すと、古いversionだけを1回のPackage Manager要求で更新します。
 
-Project Maintenanceの「プロジェクト初期設定」はv1.1.0へ固定され、Project SettingsとTag・Layer・Sorting Layerを同じprofileから適用できます。
+最初に40件の個別一覧を読む必要はありません。新規Projectの設定と整理は`Project Maintenance`、Scene切り替えやUIは`Scene and UI`、save・音声・reportは`Game Services`、入力補助は`Input Support`から確認します。個別一覧は必要なmoduleが明確な場合や既存projectとの互換用です。
+
+Project Maintenanceの「プロジェクト一括設定」はv1.2.0へ固定され、Project Settings、Tag・Layer・Sorting Layer、Build Scenesの順序とEnabled状態を同じprofileから適用・復元できます。
 
 ## 安全条件
 

@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.3.1] - 2026-08-22
+
+- Updated Project Setup to v1.2.0 for ordered Build Scenes with enabled-state restoration.
+- Clarified which workflow bundle to choose before opening the compatibility-focused individual list.
+- Simplified the catalog version assertion so future semantic versions remain covered.
+
 ## [1.3.0] - 2026-08-22
 
 - Renamed the visible tool to Module Manager while keeping the package ID and legacy menu path compatible.
