@@ -11,6 +11,7 @@ Unity で繰り返し発生する設定、実装、確認作業を減らすた�
 
 | 困りごと | 推奨モジュール | まずできること |
 |---|---|---|
+| Git URLを1件ずつ追加せず、用途別にモジュールをまとめて導入したい | [モジュール導入アシスタント（Module Installer）](ModuleInstaller/) | 6つの用途別セットか39件の個別一覧から、公開tagを固定してまとめて追加する。 |
 | Scene の読込順、Additive、Unload を安全に扱いたい | [シーン切り替え（SceneFlow）](SceneFlow/) | 4 種類の Scene 操作を直列化し、失敗理由を結果で受け取る。 |
 | Scene 切り替え中に画面を隠したい | [画面フェード（ScreenTransition）](ScreenTransition/) | UI Toolkit の全画面 Cover・Reveal を実行する。 |
 | ノッチや画面回転でUIが欠けるのを防ぎたい | [画面サイズ・ノッチ対応（AdaptiveLayout）](AdaptiveLayout/) | UI ToolkitとRectTransformを`Screen.safeArea`へ自動追従させる。 |
@@ -39,6 +40,7 @@ Unity で繰り返し発生する設定、実装、確認作業を減らすた�
 
 | モジュール | 内容 | 依存 |
 |---|---|---|
+| [モジュール導入アシスタント（Module Installer）](ModuleInstaller/) | Project Maintenance、Scene and UI、Game Services、Input Support、Deterministic Simulation、Game Rules and Mathの6用途から必要な公開tagをまとめて追加する。既存packageは自動で除外し、`Assets/Modules`との競合は追加前に表示するEditor専用module。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [汎用データ構造（Containers）](Containers/) | コンテナ / データ構造 66 種。GC フリーのコレクション、Inspector に出せるシリアライズ対応型、空間分割、Unity のライフサイクルに耐えるコンテナ。 | なし |
 | [インスペクター入力補助（Inspector）](Inspector/) | Inspector 拡張の属性 43 種。条件による表示・非表示、グループ化とタブ、入力値の検証、メソッドのボタン化。**Unity 6000.5 以降**。 | なし |
 | [デバッグ描画（Drawing）](Drawing/) | 実行中の線・矢印・箱・球・経路・文字をコード1行で描くデバッグ可視化。Development Build専用呼び出しと持続時間に対応。**Unity 6000.5 以降**。 | なし |
@@ -89,12 +91,16 @@ Unity で繰り返し発生する設定、実装、確認作業を減らすた�
 
 ## 使い方
 
-使いたいモジュールのフォルダを、プロジェクトの `Assets/` 以下にコピーする。
-アセンブリ定義が同梱されているので、利用側の asmdef からそれを参照する。
+新しいProjectでは、まず [モジュール導入アシスタント（Module Installer）](ModuleInstaller/) をPackage Managerへ追加し、`Tools > Module Installer > Open`から用途別セットを選ぶ。導入済みpackageは自動で除外され、追加される件数を実行前に確認できる。
+
+特定モジュールだけを手作業で配置する場合は、そのフォルダーをプロジェクトの `Assets/Modules/` 以下へコピーする。アセンブリ定義が同梱されているので、利用側のasmdefから必要なassemblyを参照する。
 
 ```
 Assets/
 └── Modules/
+    ├── ModuleInstaller/
+    │   ├── Editor/      ModuleInstaller.Editor
+    │   └── Tests/       ModuleInstaller.Tests
     ├── Containers/
     │   ├── Runtime/     Containers.Runtime
     │   ├── Editor/      Containers.Editor
