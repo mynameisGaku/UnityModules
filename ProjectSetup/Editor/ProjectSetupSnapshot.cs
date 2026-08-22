@@ -36,7 +36,10 @@ namespace ProjectSetup.Editor
             bool hasScriptingDefineData = false,
             string scriptingDefineTargetId = null,
             string scriptingDefineTargetLabel = null,
-            string[] scriptingDefineSymbols = null)
+            string[] scriptingDefineSymbols = null,
+            bool hasCodeGenerationData = false,
+            string rootNamespace = null,
+            LineEndingsMode newScriptLineEndings = LineEndingsMode.OSNative)
         {
             AssetSerialization = assetSerialization;
             VersionControlMode = versionControlMode ?? string.Empty;
@@ -64,6 +67,9 @@ namespace ProjectSetup.Editor
             ScriptingDefineTargetId = scriptingDefineTargetId ?? string.Empty;
             ScriptingDefineTargetLabel = scriptingDefineTargetLabel ?? string.Empty;
             ScriptingDefineSymbols = Clone(scriptingDefineSymbols);
+            HasCodeGenerationData = hasCodeGenerationData;
+            RootNamespace = rootNamespace ?? string.Empty;
+            NewScriptLineEndings = newScriptLineEndings;
         }
 
         internal SerializationMode AssetSerialization { get; }
@@ -92,6 +98,9 @@ namespace ProjectSetup.Editor
         internal string ScriptingDefineTargetId { get; }
         internal string ScriptingDefineTargetLabel { get; }
         internal string[] ScriptingDefineSymbols { get; }
+        internal bool HasCodeGenerationData { get; }
+        internal string RootNamespace { get; }
+        internal LineEndingsMode NewScriptLineEndings { get; }
 
         public bool Equals(ProjectSetupSnapshot other)
         {
@@ -114,7 +123,11 @@ namespace ProjectSetup.Editor
                         other.PlayModeStartScenePath))
                 && HasScriptingDefineData == other.HasScriptingDefineData
                 && string.Equals(ScriptingDefineTargetId, other.ScriptingDefineTargetId, StringComparison.Ordinal)
-                && SequenceEqual(ScriptingDefineSymbols, other.ScriptingDefineSymbols);
+                && SequenceEqual(ScriptingDefineSymbols, other.ScriptingDefineSymbols)
+                && HasCodeGenerationData == other.HasCodeGenerationData
+                && (!HasCodeGenerationData
+                    || (string.Equals(RootNamespace, other.RootNamespace, StringComparison.Ordinal)
+                        && NewScriptLineEndings == other.NewScriptLineEndings));
         }
 
         internal bool Matches(ProjectSetupSnapshot actual)
@@ -141,7 +154,11 @@ namespace ProjectSetup.Editor
                 && (!HasScriptingDefineData
                     || (actual.HasScriptingDefineData
                         && string.Equals(ScriptingDefineTargetId, actual.ScriptingDefineTargetId, StringComparison.Ordinal)
-                        && SequenceEqual(ScriptingDefineSymbols, actual.ScriptingDefineSymbols)));
+                        && SequenceEqual(ScriptingDefineSymbols, actual.ScriptingDefineSymbols)))
+                && (!HasCodeGenerationData
+                    || (actual.HasCodeGenerationData
+                        && string.Equals(RootNamespace, actual.RootNamespace, StringComparison.Ordinal)
+                        && NewScriptLineEndings == actual.NewScriptLineEndings));
         }
 
         private bool ScalarEquals(ProjectSetupSnapshot other)
@@ -194,6 +211,12 @@ namespace ProjectSetup.Editor
                 hash = (hash * 397) ^ HasScriptingDefineData.GetHashCode();
                 hash = (hash * 397) ^ StringComparer.Ordinal.GetHashCode(ScriptingDefineTargetId ?? string.Empty);
                 hash = AddHash(hash, ScriptingDefineSymbols);
+                hash = (hash * 397) ^ HasCodeGenerationData.GetHashCode();
+                if (HasCodeGenerationData)
+                {
+                    hash = (hash * 397) ^ StringComparer.Ordinal.GetHashCode(RootNamespace ?? string.Empty);
+                    hash = (hash * 397) ^ (int)NewScriptLineEndings;
+                }
                 return hash;
             }
         }

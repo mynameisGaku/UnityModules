@@ -46,7 +46,10 @@ namespace ProjectSetup.Editor
                 hasScriptingDefineData,
                 scriptingDefineTargetId,
                 scriptingDefineTargetLabel,
-                scriptingDefineSymbols);
+                scriptingDefineSymbols,
+                true,
+                EditorSettings.projectGenerationRootNamespace,
+                EditorSettings.lineEndingsForNewScripts);
         }
 
         public void Apply(ProjectSetupProfile profile)
@@ -107,6 +110,16 @@ namespace ProjectSetup.Editor
                 ApplyMissingScriptingDefines(profile.ScriptingDefineSymbols);
             }
 
+            if (profile.ConfigureRootNamespace)
+            {
+                EditorSettings.projectGenerationRootNamespace = profile.RootNamespace;
+            }
+
+            if (profile.ConfigureNewScriptLineEndings)
+            {
+                EditorSettings.lineEndingsForNewScripts = profile.NewScriptLineEndings;
+            }
+
             ProjectSetupTagManagerStore.Apply(profile);
             AssetDatabase.SaveAssets();
         }
@@ -152,6 +165,12 @@ namespace ProjectSetup.Editor
             if (snapshot.HasScriptingDefineData)
             {
                 SetScriptingDefines(snapshot.ScriptingDefineSymbols);
+            }
+
+            if (snapshot.HasCodeGenerationData)
+            {
+                EditorSettings.projectGenerationRootNamespace = snapshot.RootNamespace;
+                EditorSettings.lineEndingsForNewScripts = snapshot.NewScriptLineEndings;
             }
 
             ProjectSetupTagManagerStore.Restore(snapshot);

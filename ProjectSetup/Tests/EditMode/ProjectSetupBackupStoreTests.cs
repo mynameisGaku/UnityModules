@@ -54,7 +54,9 @@ namespace ProjectSetup.Tests
             Assert.That(actual.BuildScenes, Is.EqualTo(expected.BuildScenes));
             Assert.That(actual.PlayModeStartSceneGuid, Is.EqualTo(expected.PlayModeStartSceneGuid));
             Assert.That(actual.ScriptingDefineSymbols, Is.EqualTo(expected.ScriptingDefineSymbols));
-            Assert.That(File.ReadAllText(_path), Does.Contain("\"schemaVersion\": 5"));
+            Assert.That(actual.RootNamespace, Is.EqualTo(expected.RootNamespace));
+            Assert.That(actual.NewScriptLineEndings, Is.EqualTo(expected.NewScriptLineEndings));
+            Assert.That(File.ReadAllText(_path), Does.Contain("\"schemaVersion\": 6"));
         }
 
         [Test]
@@ -136,6 +138,7 @@ namespace ProjectSetup.Tests
             Assert.That(snapshot.CustomTags, Is.Empty);
             Assert.That(snapshot.HasBuildSceneData, Is.False);
             Assert.That(snapshot.HasPlayModeStartSceneData, Is.False);
+            Assert.That(snapshot.HasCodeGenerationData, Is.False);
         }
 
         private static ProjectSetupSnapshot Snapshot(string companyName)
@@ -176,7 +179,10 @@ namespace ProjectSetup.Tests
                 true,
                 "Standalone",
                 "Standalone",
-                new[] { "PROJECT_FEATURE", "DEBUG_MENU" });
+                new[] { "PROJECT_FEATURE", "DEBUG_MENU" },
+                true,
+                "Studio.Game",
+                LineEndingsMode.Unix);
         }
     }
 }

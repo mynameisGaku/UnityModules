@@ -17,6 +17,8 @@ namespace ProjectSetup.Editor
         SortingLayers = 10,
         BuildScenes = 11,
         PlayModeStartScene = 12,
-        ScriptingDefineSymbols = 13
+        ScriptingDefineSymbols = 13,
+        RootNamespace = 14,
+        NewScriptLineEndings = 15
     }
 }
