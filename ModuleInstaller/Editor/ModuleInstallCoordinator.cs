@@ -6,6 +6,12 @@ using UnityEngine;
 
 namespace ModuleInstaller.Editor
 {
+    internal enum ModuleInstallOperation
+    {
+        Install = 0,
+        Update = 1
+    }
+
     internal sealed class ModuleInstallCoordinator
     {
         private readonly IModulePackageClient _client;
@@ -28,6 +34,19 @@ namespace ModuleInstaller.Editor
 
         internal bool TryStart(ModuleInstallPlan plan, out string message)
         {
+            return TryStart(plan, ModuleInstallOperation.Install, out message);
+        }
+
+        internal bool TryStartUpdates(ModuleInstallPlan plan, out string message)
+        {
+            return TryStart(plan, ModuleInstallOperation.Update, out message);
+        }
+
+        private bool TryStart(
+            ModuleInstallPlan plan,
+            ModuleInstallOperation operation,
+            out string message)
+        {
             if (plan == null)
             {
                 throw new ArgumentNullException(nameof(plan));
@@ -35,7 +54,7 @@ namespace ModuleInstaller.Editor
 
             if (IsBusy)
             {
-                message = "Another installation is already in progress.";
+                message = "Another package operation is already in progress.";
                 return false;
             }
 
@@ -47,21 +66,28 @@ namespace ModuleInstaller.Editor
 
             if (plan.Entries.Count == 0)
             {
-                message = plan.InstalledCount > 0
-                    ? "Every selected module is already installed."
-                    : "No module was selected.";
+                message = operation == ModuleInstallOperation.Update
+                    ? "Every installed catalog module is up to date."
+                    : plan.InstalledCount > 0
+                        ? "Every selected module is already installed."
+                        : "No module was selected.";
                 return false;
             }
 
-            var state = new ModuleInstallQueueState();
+            var state = new ModuleInstallQueueState
+            {
+                Operation = operation
+            };
             for (var index = 0; index < plan.Entries.Count; index++)
             {
                 var entry = plan.Entries[index];
-                state.Items.Add(new ModuleInstallQueueItem(entry.PackageName, entry.GitUrl));
+                state.Items.Add(new ModuleInstallQueueItem(entry.PackageName, entry.GitUrl, entry.Version));
             }
 
             WriteQueue(state);
-            _store.LastMessage = $"Preparing {state.Items.Count} module(s).";
+            _store.LastMessage = operation == ModuleInstallOperation.Update
+                ? $"Preparing {state.Items.Count} module update(s)."
+                : $"Preparing {state.Items.Count} module installation(s).";
             message = _store.LastMessage;
             Tick();
             return true;
@@ -85,23 +111,40 @@ namespace ModuleInstaller.Editor
 
                 if (!_request.Succeeded)
                 {
-                    _store.LastMessage = $"Installation failed: {_request.ErrorMessage}";
+                    _store.LastMessage = state.Operation == ModuleInstallOperation.Update
+                        ? $"Update failed: {_request.ErrorMessage}"
+                        : $"Installation failed: {_request.ErrorMessage}";
                     ClearQueue();
                     _request = null;
                     return;
                 }
 
-                _store.LastMessage = $"Installed {state.Items.Count} module(s).";
+                _store.LastMessage = state.Operation == ModuleInstallOperation.Update
+                    ? $"Updated {state.Items.Count} module(s)."
+                    : $"Installed {state.Items.Count} module(s).";
                 ClearQueue();
                 _request = null;
                 return;
             }
 
-            var installed = _environment.GetInstalledPackageNames();
-            state.Items.RemoveAll(item => installed.Contains(item.PackageName));
+            if (state.Operation == ModuleInstallOperation.Update)
+            {
+                var installedVersions = _environment.GetInstalledPackageVersions();
+                state.Items.RemoveAll(item =>
+                    installedVersions.TryGetValue(item.PackageName, out var installedVersion)
+                    && !ModuleInstallPlanner.IsUpdateRequired(installedVersion, item.TargetVersion));
+            }
+            else
+            {
+                var installed = _environment.GetInstalledPackageNames();
+                state.Items.RemoveAll(item => installed.Contains(item.PackageName));
+            }
+
             if (state.Items.Count == 0)
             {
-                _store.LastMessage = "Every selected module is installed.";
+                _store.LastMessage = state.Operation == ModuleInstallOperation.Update
+                    ? "Every selected module is up to date."
+                    : "Every selected module is installed.";
                 ClearQueue();
                 return;
             }
@@ -113,7 +156,9 @@ namespace ModuleInstaller.Editor
                 urls[index] = state.Items[index].Url;
             }
 
-            _store.LastMessage = $"Installing {state.Items.Count} module(s)...";
+            _store.LastMessage = state.Operation == ModuleInstallOperation.Update
+                ? $"Updating {state.Items.Count} module(s)..."
+                : $"Installing {state.Items.Count} module(s)...";
             _request = _client.AddAndRemove(urls);
         }
 
@@ -150,7 +195,16 @@ namespace ModuleInstaller.Editor
         private sealed class ModuleInstallQueueState
         {
             [SerializeField]
+            private ModuleInstallOperation operation;
+
+            [SerializeField]
             private List<ModuleInstallQueueItem> items = new List<ModuleInstallQueueItem>();
+
+            internal ModuleInstallOperation Operation
+            {
+                get => operation;
+                set => operation = value;
+            }
 
             internal List<ModuleInstallQueueItem> Items => items;
         }
@@ -164,14 +218,19 @@ namespace ModuleInstaller.Editor
             [SerializeField]
             private string url;
 
-            internal ModuleInstallQueueItem(string packageName, string url)
+            [SerializeField]
+            private string targetVersion;
+
+            internal ModuleInstallQueueItem(string packageName, string url, string targetVersion)
             {
                 this.packageName = packageName;
                 this.url = url;
+                this.targetVersion = targetVersion;
             }
 
             internal string PackageName => packageName;
             internal string Url => url;
+            internal string TargetVersion => targetVersion;
         }
     }
 }
