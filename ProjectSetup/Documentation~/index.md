@@ -20,8 +20,11 @@ Project Settingsの現在値とprofileを比較し、差分確認、backup、適
 - Company Name
 - Product Name
 - Bundle Version
+- Tags
+- User Layers（slot 8から31）
+- Sorting Layers
 
-各項目はprofile側で個別に無効化できます。無効な項目は適用しません。
+各項目はprofile側で個別に無効化できます。無効な項目は適用しません。Tag、Layer、Sorting Layerは1行1名称で入力し、通常のApplyでは不足分だけを追加します。
 
 ## 安全性
 
@@ -31,7 +34,10 @@ Project Settingsの現在値とprofileを比較し、差分確認、backup、適
 - 書込後に値を再取得し、一致を検証します。
 - `Restore last backup`は復元内容をPreviewしてから実行します。
 - Color Space変更はAssetの再importを発生させる場合があります。
+- TagManagerの変更前には重複名、文字数、Layerの空きslot数を検証します。
+- Tag、Layer、Sorting Layerの既存項目は通常のApplyで削除・改名・並べ替えません。
+- backup schema v2はTagManager全体を保存し、Restore時には名称、slot、順序、Sorting Layer IDを正確に戻します。
 
 ## 責務外
 
-TagManager、Layer、Physics matrix、Build Profile、package導入、Scene作成、folder templateは扱いません。公開APIだけで安全に読み書きできるProject Settingsへ範囲を限定しています。
+Physics matrix、Build Profile、package導入、Scene作成、folder templateは扱いません。TagとLayerは名称の初期登録だけを扱い、Physicsやcollisionの設定には触れません。

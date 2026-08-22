@@ -4,7 +4,7 @@
 
 新しいUnity Projectを作るたびに、`Project Settings`を開いて同じ値を設定し直す作業を減らすEditor専用ツールです。
 
-Asset Serialization、Version Control、Enter Play Mode、Color Space、Run In Background、Company Name、Product Name、Bundle Versionを一つのprofileへ保存します。現在値との差分を一覧で確認してから適用し、直前の状態へ復元できます。
+Asset Serialization、Version Control、Enter Play Mode、Color Space、Player情報に加え、Tag、Layer、Sorting Layerを一つのprofileへ保存します。現在値との差分を一覧で確認してから適用し、直前の状態へ復元できます。
 
 ## できること
 
@@ -14,10 +14,13 @@ Asset Serialization、Version Control、Enter Play Mode、Color Space、Run In B
 - 適用後の値を読み直し、profileと一致しない場合は失敗として扱う。
 - 最後のbackupをPreviewし、確認後にまとめて復元する。
 - profileごとに対象設定を有効・無効にし、不要な設定へ触れない。
+- よく使うTag、Layer、Sorting Layerを1行1名称でまとめて登録する。
+- TagManagerへ適用するときは不足する名称だけを追加し、既存の名称・順序・IDを維持する。
+- Layerの空きslot不足、重複名、不正な名称をProject Settingsへ書き込む前に検出する。
 
 ## 使わない方がよい場合
 
-- Tag、Layer、Sorting Layer、Physics matrixを設定したい場合。このversionでは内部YAMLを直接編集しません。
+- Physics matrixやLayer間の衝突設定を変更したい場合。このmoduleは名称の初期登録だけを扱います。
 - Build ProfileのScene一覧を管理したい場合。Scene切り替えとBuild対象の検査はSceneFlowとBuild Guardの責務です。
 - packageを導入したい場合。用途別のpackage追加にはModule Installerを使ってください。
 - 起動時に自動で設定を変更したい場合。このmoduleは利用者の明示操作なしにProject Settingsを書き換えません。
@@ -27,14 +30,15 @@ Asset Serialization、Version Control、Enter Play Mode、Color Space、Run In B
 1. Package Managerの`Add package from git URL...`へ次を入力します。
 
    ```text
-   https://github.com/mynameisGaku/UnityModules.git?path=/ProjectSetup#project-setup-v1.0.0
+   https://github.com/mynameisGaku/UnityModules.git?path=/ProjectSetup#project-setup-v1.1.0
    ```
 
 2. `Tools > Project Setup > Open`を開きます。
 3. `New recommended profile`を押します。
 4. 保存先を選びます。初期状態ではForce TextとVisible Meta Filesだけが対象です。
-5. 必要な項目だけを有効にし、`Preview changes`を押します。
-6. 変更内容を確認し、`Apply profile`を押します。
+5. Tag、Layer、Sorting Layerを登録する場合は、対象cardを有効にして名称を1行ずつ入力します。
+6. 必要な項目だけを有効にし、`Preview changes`を押します。
+7. 変更内容を確認し、`Apply profile`を押します。
 
 ## 最小コード
 
@@ -49,6 +53,8 @@ Runtime APIはありません。C#を書く必要はなく、Editor windowとpro
 - Apply後はProject Settingsの現在値を再取得して一致を確認します。
 - `Restore last backup`を使うと、最後にApplyする直前の状態へ戻ります。
 - 差分がない場合はProject Settingsとbackup fileを変更しません。
+- 通常のApplyはTag、Layer、Sorting Layerを削除・改名・並べ替えません。不足分だけ追加します。
+- Restoreはbackup時点のTagManager配列とSorting Layer IDを正確に戻します。
 
 ## よくある問題
 
@@ -70,6 +76,12 @@ Domain Reloadを無効にすると、static fieldやstatic eventを利用側が�
 
 `ProjectSettings/ProjectSetupLastBackup.json`は直前復元用のローカル作業fileです。Project固有の共有設定はprofile assetをversion controlへ追加してください。
 
+### 既存のTagやLayerが消えないか
+
+`Apply profile`では消えません。profileに書いた名称のうち、現在存在しないものだけを追加します。削除や順序変更が必要な場合はUnity標準のProject Settingsで明示的に行ってください。
+
+`Restore last backup`だけは、Apply直前の状態へ戻すため、直前backup以降に追加した名称を取り除く場合があります。復元内容は実行前にPreviewされます。
+
 ## 詳しい契約
 
 - Editor専用で、Player buildへRuntime assemblyを追加しません。
@@ -77,6 +89,7 @@ Domain Reloadを無効にすると、static fieldやstatic eventを利用側が�
 - Applyは現在値のsnapshot、backup保存、設定書込、再読取検証の順に実行します。
 - 書込または検証に失敗した場合は、取得済みsnapshotを使って可能な範囲で元へ戻します。
 - backup fileはUTF-8 BOMなしのJSONです。一時fileへflushしてから同じfolderの最終fileへ置き換えます。
+- backup schema v2はTag、Layer、Sorting Layerの名称・slot・順序・IDを保存します。v1 backupも読み取れますが、TagManagerは復元対象にしません。
 - profile asset、backup、Project Settingsの変更はmain threadのEdit Modeだけで実行します。
 
 ## 対応環境
