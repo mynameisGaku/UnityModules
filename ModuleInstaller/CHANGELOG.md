@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.4.7] - 2026-08-23
+
+- Added Asset Import Audit v1.1.0 to the catalog and Project Maintenance workflow.
+- Moved each workflow install action below its guide and package list so the window reads from selection to confirmation to installation.
+- Clarified that texture importer settings change only after Asset Import Audit's own preview and apply actions.
+- Expanded catalog and Editor window regression coverage to 41 pinned modules.
+- Added real Editor screenshots and a numbered top-to-bottom operation guide.
+
 ## [1.4.6] - 2026-08-23
 
 - Corrected the documentation heading and pinned package URLs for the v1.4.6 release.
