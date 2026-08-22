@@ -26,6 +26,7 @@ namespace ProjectSetup.Editor
         ProjectFolders = 19,
         AssemblyDefinitions = 20,
         VersionControlFiles = 21,
-        ApplicationIdentifier = 22
+        ApplicationIdentifier = 22,
+        ScriptingBackend = 23
     }
 }

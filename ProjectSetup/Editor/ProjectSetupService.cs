@@ -169,6 +169,7 @@ namespace ProjectSetup.Editor
                 profile.ConfigureBuildScenes = false;
                 profile.ConfigureScriptingDefineSymbols = false;
                 profile.ConfigureApplicationIdentifier = false;
+                profile.ConfigureScriptingBackend = false;
                 profile.ConfigureProjectFolders = false;
                 profile.ConfigureAssemblyDefinitions = false;
                 var scalarPlan = ProjectSetupPlanner.Build(profile, current);
@@ -257,6 +258,23 @@ namespace ProjectSetup.Editor
                             $"Application Identifier ({desired.ApplicationIdentifierTargetLabel})",
                             current.ApplicationIdentifier,
                             desired.ApplicationIdentifier));
+                    }
+                }
+
+                if (desired.HasScriptingBackendData)
+                {
+                    if (!current.HasScriptingBackendData
+                        || !string.Equals(desired.ScriptingBackendTargetId, current.ScriptingBackendTargetId, StringComparison.Ordinal))
+                    {
+                        errors.Add($"The active Scripting Backend target must remain '{desired.ScriptingBackendTargetLabel}' before restoring this backup.");
+                    }
+                    else if (desired.ScriptingBackend != current.ScriptingBackend)
+                    {
+                        changes.Add(new ProjectSetupChange(
+                            ProjectSetupSettingKey.ScriptingBackend,
+                            $"Scripting Backend ({desired.ScriptingBackendTargetLabel})",
+                            current.ScriptingBackend.ToString(),
+                            desired.ScriptingBackend.ToString()));
                     }
                 }
 

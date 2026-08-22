@@ -107,6 +107,73 @@ namespace ProjectSetup.Tests
             Assert.That(plan.Changes.Single().DesiredValue, Is.EqualTo("com.studiogaku.sample"));
         }
 
+        [Test]
+        public void Build_PlansScriptingBackendForActiveTarget()
+        {
+            _profile.ConfigureAssetSerialization = false;
+            _profile.ConfigureVersionControl = false;
+            _profile.ConfigureScriptingBackend = true;
+            _profile.ScriptingBackend = ScriptingImplementation.IL2CPP;
+            var current = new ProjectSetupSnapshot(
+                SerializationMode.ForceText,
+                "Visible Meta Files",
+                false,
+                EnterPlayModeOptions.None,
+                ColorSpace.Linear,
+                false,
+                "Company",
+                "Product",
+                "1.0.0",
+                hasScriptingBackendData: true,
+                scriptingBackendTargetId: "Standalone",
+                scriptingBackendTargetLabel: "Windows",
+                scriptingBackend: ScriptingImplementation.Mono2x);
+
+            var plan = ProjectSetupPlanner.Build(_profile, current);
+
+            Assert.That(plan.Errors, Is.Empty);
+            Assert.That(plan.Changes, Has.Exactly(1).Property("Key").EqualTo(ProjectSetupSettingKey.ScriptingBackend));
+            Assert.That(plan.Changes[0].Label, Does.Contain("Windows"));
+        }
+
+        [Test]
+        public void Build_RejectsUnsupportedScriptingBackend()
+        {
+            _profile.ConfigureScriptingBackend = true;
+            _profile.ScriptingBackend = ScriptingImplementation.WinRTDotNET;
+            var current = new ProjectSetupSnapshot(
+                SerializationMode.ForceText,
+                "Visible Meta Files",
+                false,
+                EnterPlayModeOptions.None,
+                ColorSpace.Linear,
+                false,
+                "Company",
+                "Product",
+                "1.0.0",
+                hasScriptingBackendData: true,
+                scriptingBackendTargetId: "Standalone",
+                scriptingBackendTargetLabel: "Windows",
+                scriptingBackend: ScriptingImplementation.Mono2x);
+
+            var plan = ProjectSetupPlanner.Build(_profile, current);
+
+            Assert.That(plan.IsValid, Is.False);
+            Assert.That(plan.Errors, Has.Some.Contains("Mono or IL2CPP"));
+        }
+
+        [Test]
+        public void Build_RejectsScriptingBackendWhenActiveTargetIsUnavailable()
+        {
+            _profile.ConfigureScriptingBackend = true;
+            _profile.ScriptingBackend = ScriptingImplementation.IL2CPP;
+
+            var plan = ProjectSetupPlanner.Build(_profile, Snapshot());
+
+            Assert.That(plan.IsValid, Is.False);
+            Assert.That(plan.Errors, Has.Some.Contains("unavailable"));
+        }
+
         [TestCase("game")]
         [TestCase("Com.company.game")]
         [TestCase("com.1company.game")]

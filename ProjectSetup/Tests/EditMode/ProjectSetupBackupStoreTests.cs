@@ -62,7 +62,9 @@ namespace ProjectSetup.Tests
             Assert.That(actual.CreatedProjectFolders, Is.EqualTo(expected.CreatedProjectFolders));
             Assert.That(actual.CreatedProjectAssets, Is.EqualTo(expected.CreatedProjectAssets));
             Assert.That(actual.CreatedProjectRootFiles, Is.EqualTo(expected.CreatedProjectRootFiles));
-            Assert.That(File.ReadAllText(_path), Does.Contain("\"schemaVersion\": 11"));
+            Assert.That(actual.ScriptingBackendTargetId, Is.EqualTo(expected.ScriptingBackendTargetId));
+            Assert.That(actual.ScriptingBackend, Is.EqualTo(expected.ScriptingBackend));
+            Assert.That(File.ReadAllText(_path), Does.Contain("\"schemaVersion\": 12"));
         }
 
         [Test]
@@ -150,6 +152,7 @@ namespace ProjectSetup.Tests
             Assert.That(snapshot.CreatedProjectAssets, Is.Empty);
             Assert.That(snapshot.CreatedProjectRootFiles, Is.Empty);
             Assert.That(snapshot.HasApplicationIdentifierData, Is.False);
+            Assert.That(snapshot.HasScriptingBackendData, Is.False);
         }
 
         [Test]
@@ -226,7 +229,11 @@ namespace ProjectSetup.Tests
                 hasApplicationIdentifierData: true,
                 applicationIdentifierTargetId: "Standalone",
                 applicationIdentifierTargetLabel: "Standalone",
-                applicationIdentifier: "com.studiogaku.product");
+                applicationIdentifier: "com.studiogaku.product",
+                hasScriptingBackendData: true,
+                scriptingBackendTargetId: "Standalone",
+                scriptingBackendTargetLabel: "Windows",
+                scriptingBackend: ScriptingImplementation.IL2CPP);
         }
     }
 }

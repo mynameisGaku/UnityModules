@@ -38,6 +38,7 @@ namespace ProjectSetup.Editor
             CapturePlayModeStartScene(out var playModeStartSceneGuid, out var playModeStartScenePath);
             CaptureScriptingDefines(out var hasScriptingDefineData, out var scriptingDefineTargetId, out var scriptingDefineTargetLabel, out var scriptingDefineSymbols);
             CaptureApplicationIdentifier(out var hasApplicationIdentifierData, out var applicationIdentifierTargetId, out var applicationIdentifierTargetLabel, out var applicationIdentifier);
+            CaptureScriptingBackend(out var hasScriptingBackendData, out var scriptingBackendTargetId, out var scriptingBackendTargetLabel, out var scriptingBackend);
             CaptureProjectFolders(out var projectFolders, out var projectAssetPaths);
             return new ProjectSetupSnapshot(
                 EditorSettings.serializationMode,
@@ -79,7 +80,11 @@ namespace ProjectSetup.Editor
                 hasApplicationIdentifierData: hasApplicationIdentifierData,
                 applicationIdentifierTargetId: applicationIdentifierTargetId,
                 applicationIdentifierTargetLabel: applicationIdentifierTargetLabel,
-                applicationIdentifier: applicationIdentifier);
+                applicationIdentifier: applicationIdentifier,
+                hasScriptingBackendData: hasScriptingBackendData,
+                scriptingBackendTargetId: scriptingBackendTargetId,
+                scriptingBackendTargetLabel: scriptingBackendTargetLabel,
+                scriptingBackend: scriptingBackend);
         }
 
         public ProjectSetupEnvironmentApplyResult Apply(ProjectSetupProfile profile)
@@ -136,6 +141,11 @@ namespace ProjectSetup.Editor
             if (profile.ConfigureApplicationIdentifier)
             {
                 SetApplicationIdentifier(profile.ApplicationIdentifier);
+            }
+
+            if (profile.ConfigureScriptingBackend)
+            {
+                SetScriptingBackend(profile.ScriptingBackend);
             }
 
             if (profile.ConfigureBuildScenes)
@@ -220,6 +230,15 @@ namespace ProjectSetup.Editor
                 }
             }
 
+            if (snapshot.HasScriptingBackendData)
+            {
+                CaptureScriptingBackend(out var available, out var currentTargetId, out _, out _);
+                if (!available || !string.Equals(currentTargetId, snapshot.ScriptingBackendTargetId, StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException("The active Scripting Backend target changed after the backup was created.");
+                }
+            }
+
             EditorSettings.serializationMode = snapshot.AssetSerialization;
             VersionControlSettings.mode = snapshot.VersionControlMode;
             EditorSettings.enterPlayModeOptionsEnabled = snapshot.EnterPlayModeOptionsEnabled;
@@ -236,6 +255,10 @@ namespace ProjectSetup.Editor
             if (snapshot.HasApplicationIdentifierData)
             {
                 SetApplicationIdentifier(snapshot.ApplicationIdentifier);
+            }
+            if (snapshot.HasScriptingBackendData)
+            {
+                SetScriptingBackend(snapshot.ScriptingBackend);
             }
             if (snapshot.HasBuildSceneData)
             {
@@ -390,6 +413,35 @@ namespace ProjectSetup.Editor
             PlayerSettings.SetApplicationIdentifier(
                 NamedBuildTarget.FromBuildTargetGroup(group),
                 applicationIdentifier ?? string.Empty);
+        }
+
+        private static void CaptureScriptingBackend(
+            out bool available,
+            out string targetId,
+            out string targetLabel,
+            out ScriptingImplementation scriptingBackend)
+        {
+            var activeTarget = EditorUserBuildSettings.activeBuildTarget;
+            var group = BuildPipeline.GetBuildTargetGroup(activeTarget);
+            available = group != BuildTargetGroup.Unknown;
+            targetId = available ? group.ToString() : string.Empty;
+            targetLabel = available ? activeTarget.ToString() : string.Empty;
+            scriptingBackend = available
+                ? PlayerSettings.GetScriptingBackend(NamedBuildTarget.FromBuildTargetGroup(group))
+                : ScriptingImplementation.Mono2x;
+        }
+
+        private static void SetScriptingBackend(ScriptingImplementation scriptingBackend)
+        {
+            var group = BuildPipeline.GetBuildTargetGroup(EditorUserBuildSettings.activeBuildTarget);
+            if (group == BuildTargetGroup.Unknown)
+            {
+                throw new InvalidOperationException("Scripting Backend is unavailable for the active build target.");
+            }
+
+            PlayerSettings.SetScriptingBackend(
+                NamedBuildTarget.FromBuildTargetGroup(group),
+                scriptingBackend);
         }
 
         private static string[] SplitScriptingDefines(string value)

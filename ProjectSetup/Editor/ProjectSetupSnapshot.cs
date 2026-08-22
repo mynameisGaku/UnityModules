@@ -53,7 +53,11 @@ namespace ProjectSetup.Editor
             bool hasApplicationIdentifierData = false,
             string applicationIdentifierTargetId = null,
             string applicationIdentifierTargetLabel = null,
-            string applicationIdentifier = null)
+            string applicationIdentifier = null,
+            bool hasScriptingBackendData = false,
+            string scriptingBackendTargetId = null,
+            string scriptingBackendTargetLabel = null,
+            ScriptingImplementation scriptingBackend = ScriptingImplementation.Mono2x)
         {
             AssetSerialization = assetSerialization;
             VersionControlMode = versionControlMode ?? string.Empty;
@@ -98,6 +102,10 @@ namespace ProjectSetup.Editor
             ApplicationIdentifierTargetId = applicationIdentifierTargetId ?? string.Empty;
             ApplicationIdentifierTargetLabel = applicationIdentifierTargetLabel ?? string.Empty;
             ApplicationIdentifier = applicationIdentifier ?? string.Empty;
+            HasScriptingBackendData = hasScriptingBackendData;
+            ScriptingBackendTargetId = scriptingBackendTargetId ?? string.Empty;
+            ScriptingBackendTargetLabel = scriptingBackendTargetLabel ?? string.Empty;
+            ScriptingBackend = scriptingBackend;
         }
 
         internal SerializationMode AssetSerialization { get; }
@@ -143,6 +151,10 @@ namespace ProjectSetup.Editor
         internal string ApplicationIdentifierTargetId { get; }
         internal string ApplicationIdentifierTargetLabel { get; }
         internal string ApplicationIdentifier { get; }
+        internal bool HasScriptingBackendData { get; }
+        internal string ScriptingBackendTargetId { get; }
+        internal string ScriptingBackendTargetLabel { get; }
+        internal ScriptingImplementation ScriptingBackend { get; }
 
         internal ProjectSetupSnapshot WithCreatedProjectFolders(string[] paths)
         {
@@ -222,7 +234,11 @@ namespace ProjectSetup.Editor
                 && HasApplicationIdentifierData == other.HasApplicationIdentifierData
                 && (!HasApplicationIdentifierData
                     || (string.Equals(ApplicationIdentifierTargetId, other.ApplicationIdentifierTargetId, StringComparison.Ordinal)
-                        && string.Equals(ApplicationIdentifier, other.ApplicationIdentifier, StringComparison.Ordinal)));
+                        && string.Equals(ApplicationIdentifier, other.ApplicationIdentifier, StringComparison.Ordinal)))
+                && HasScriptingBackendData == other.HasScriptingBackendData
+                && (!HasScriptingBackendData
+                    || (string.Equals(ScriptingBackendTargetId, other.ScriptingBackendTargetId, StringComparison.Ordinal)
+                        && ScriptingBackend == other.ScriptingBackend));
         }
 
         internal bool Matches(ProjectSetupSnapshot actual)
@@ -262,7 +278,11 @@ namespace ProjectSetup.Editor
                 && (!HasApplicationIdentifierData
                     || (actual.HasApplicationIdentifierData
                         && string.Equals(ApplicationIdentifierTargetId, actual.ApplicationIdentifierTargetId, StringComparison.Ordinal)
-                        && string.Equals(ApplicationIdentifier, actual.ApplicationIdentifier, StringComparison.Ordinal)));
+                        && string.Equals(ApplicationIdentifier, actual.ApplicationIdentifier, StringComparison.Ordinal)))
+                && (!HasScriptingBackendData
+                    || (actual.HasScriptingBackendData
+                        && string.Equals(ScriptingBackendTargetId, actual.ScriptingBackendTargetId, StringComparison.Ordinal)
+                        && ScriptingBackend == actual.ScriptingBackend));
         }
 
         private bool ScalarEquals(ProjectSetupSnapshot other)
@@ -337,6 +357,12 @@ namespace ProjectSetup.Editor
                     hash = (hash * 397) ^ StringComparer.Ordinal.GetHashCode(ApplicationIdentifierTargetId ?? string.Empty);
                     hash = (hash * 397) ^ StringComparer.Ordinal.GetHashCode(ApplicationIdentifier ?? string.Empty);
                 }
+                hash = (hash * 397) ^ HasScriptingBackendData.GetHashCode();
+                if (HasScriptingBackendData)
+                {
+                    hash = (hash * 397) ^ StringComparer.Ordinal.GetHashCode(ScriptingBackendTargetId ?? string.Empty);
+                    hash = (hash * 397) ^ (int)ScriptingBackend;
+                }
                 return hash;
             }
         }
@@ -392,7 +418,11 @@ namespace ProjectSetup.Editor
                 HasApplicationIdentifierData,
                 ApplicationIdentifierTargetId,
                 ApplicationIdentifierTargetLabel,
-                ApplicationIdentifier);
+                ApplicationIdentifier,
+                HasScriptingBackendData,
+                ScriptingBackendTargetId,
+                ScriptingBackendTargetLabel,
+                ScriptingBackend);
         }
 
         private static string[] Clone(string[] values)
