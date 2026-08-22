@@ -56,7 +56,10 @@ namespace ProjectSetup.Tests
             Assert.That(actual.ScriptingDefineSymbols, Is.EqualTo(expected.ScriptingDefineSymbols));
             Assert.That(actual.RootNamespace, Is.EqualTo(expected.RootNamespace));
             Assert.That(actual.NewScriptLineEndings, Is.EqualTo(expected.NewScriptLineEndings));
-            Assert.That(File.ReadAllText(_path), Does.Contain("\"schemaVersion\": 6"));
+            Assert.That(actual.GameObjectNamingScheme, Is.EqualTo(expected.GameObjectNamingScheme));
+            Assert.That(actual.GameObjectNamingDigits, Is.EqualTo(expected.GameObjectNamingDigits));
+            Assert.That(actual.AssetNamingUsesSpace, Is.EqualTo(expected.AssetNamingUsesSpace));
+            Assert.That(File.ReadAllText(_path), Does.Contain("\"schemaVersion\": 7"));
         }
 
         [Test]
@@ -139,6 +142,7 @@ namespace ProjectSetup.Tests
             Assert.That(snapshot.HasBuildSceneData, Is.False);
             Assert.That(snapshot.HasPlayModeStartSceneData, Is.False);
             Assert.That(snapshot.HasCodeGenerationData, Is.False);
+            Assert.That(snapshot.HasNamingData, Is.False);
         }
 
         private static ProjectSetupSnapshot Snapshot(string companyName)
@@ -182,7 +186,11 @@ namespace ProjectSetup.Tests
                 new[] { "PROJECT_FEATURE", "DEBUG_MENU" },
                 true,
                 "Studio.Game",
-                LineEndingsMode.Unix);
+                LineEndingsMode.Unix,
+                true,
+                EditorSettings.NamingScheme.Dot,
+                4,
+                false);
         }
     }
 }

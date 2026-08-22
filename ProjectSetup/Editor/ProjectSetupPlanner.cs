@@ -17,6 +17,8 @@ namespace ProjectSetup.Editor
         private const int MaximumBuildSceneCount = 64;
         private const int MaximumScriptingDefineLength = 64;
         private const int MaximumRootNamespaceLength = 128;
+        private const int MinimumGameObjectNamingDigits = 1;
+        private const int MaximumGameObjectNamingDigits = 9;
         private const EnterPlayModeOptions KnownEnterPlayModeOptions = EnterPlayModeOptions.DisableDomainReload
             | EnterPlayModeOptions.DisableSceneReload;
         private static readonly HashSet<string> CSharpKeywords = new HashSet<string>(StringComparer.Ordinal)
@@ -110,6 +112,7 @@ namespace ProjectSetup.Editor
             AddBuildSceneChange(profile, current, changes, errors);
             AddScriptingDefineChange(profile, current, changes, errors);
             AddCodeGenerationChange(profile, current, changes, errors);
+            AddNamingDefaultsChange(profile, current, changes, errors);
             AddNameListChange(profile.ConfigureTags, profile.Tags, current.Tags, ProjectSetupSettingKey.Tags, "Tags", changes, errors);
             AddLayerChange(profile, current, changes, errors);
             AddNameListChange(
@@ -121,6 +124,63 @@ namespace ProjectSetup.Editor
                 changes,
                 errors);
             return new ProjectSetupPlan(changes, errors);
+        }
+
+        private static void AddNamingDefaultsChange(
+            ProjectSetupProfile profile,
+            ProjectSetupSnapshot current,
+            ICollection<ProjectSetupChange> changes,
+            ICollection<string> errors)
+        {
+            if (!profile.ConfigureNamingDefaults)
+            {
+                return;
+            }
+
+            if (!current.HasNamingData)
+            {
+                errors.Add("Duplicate Naming settings are unavailable in this Unity version.");
+                return;
+            }
+
+            if (!Enum.IsDefined(typeof(EditorSettings.NamingScheme), profile.GameObjectNamingScheme))
+            {
+                errors.Add("GameObject Naming Scheme contains an unsupported value.");
+            }
+            else if (current.GameObjectNamingScheme != profile.GameObjectNamingScheme)
+            {
+                Add(
+                    changes,
+                    ProjectSetupSettingKey.GameObjectNamingScheme,
+                    "GameObject Naming Scheme",
+                    current.GameObjectNamingScheme,
+                    profile.GameObjectNamingScheme);
+            }
+
+            if (profile.GameObjectNamingDigits < MinimumGameObjectNamingDigits
+                || profile.GameObjectNamingDigits > MaximumGameObjectNamingDigits)
+            {
+                errors.Add($"GameObject Naming Digits must be between {MinimumGameObjectNamingDigits} and {MaximumGameObjectNamingDigits}.");
+            }
+            else if (current.GameObjectNamingDigits != profile.GameObjectNamingDigits)
+            {
+                Add(
+                    changes,
+                    ProjectSetupSettingKey.GameObjectNamingDigits,
+                    "GameObject Naming Digits",
+                    current.GameObjectNamingDigits,
+                    profile.GameObjectNamingDigits);
+            }
+
+            if (current.AssetNamingUsesSpace != profile.AssetNamingUsesSpace)
+            {
+                Add(
+                    changes,
+                    ProjectSetupSettingKey.AssetNamingUsesSpace,
+                    "Asset Copy Number Spacing",
+                    current.AssetNamingUsesSpace ? "Use a space" : "No space",
+                    profile.AssetNamingUsesSpace ? "Use a space" : "No space");
+            }
         }
 
         private static void AddCodeGenerationChange(

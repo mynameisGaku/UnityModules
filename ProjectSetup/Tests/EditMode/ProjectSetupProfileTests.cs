@@ -44,6 +44,10 @@ namespace ProjectSetup.Tests
                 Assert.That(profile.RootNamespace, Is.Empty);
                 Assert.That(profile.ConfigureNewScriptLineEndings, Is.False);
                 Assert.That(profile.NewScriptLineEndings, Is.EqualTo(LineEndingsMode.OSNative));
+                Assert.That(profile.ConfigureNamingDefaults, Is.False);
+                Assert.That(profile.GameObjectNamingScheme, Is.EqualTo(EditorSettings.NamingScheme.SpaceParenthesis));
+                Assert.That(profile.GameObjectNamingDigits, Is.EqualTo(1));
+                Assert.That(profile.AssetNamingUsesSpace, Is.True);
             }
             finally
             {
@@ -97,7 +101,11 @@ namespace ProjectSetup.Tests
                     new[] { "PROJECT_FEATURE", "DEBUG_MENU" },
                     true,
                     "Studio.Game",
-                    LineEndingsMode.Unix);
+                    LineEndingsMode.Unix,
+                    true,
+                    EditorSettings.NamingScheme.Underscore,
+                    3,
+                    false);
 
                 profile.Capture(snapshot);
 
@@ -135,6 +143,10 @@ namespace ProjectSetup.Tests
                 Assert.That(profile.RootNamespace, Is.EqualTo("Studio.Game"));
                 Assert.That(profile.ConfigureNewScriptLineEndings, Is.True);
                 Assert.That(profile.NewScriptLineEndings, Is.EqualTo(LineEndingsMode.Unix));
+                Assert.That(profile.ConfigureNamingDefaults, Is.True);
+                Assert.That(profile.GameObjectNamingScheme, Is.EqualTo(EditorSettings.NamingScheme.Underscore));
+                Assert.That(profile.GameObjectNamingDigits, Is.EqualTo(3));
+                Assert.That(profile.AssetNamingUsesSpace, Is.False);
             }
             finally
             {
