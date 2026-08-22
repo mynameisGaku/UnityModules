@@ -1,0 +1,72 @@
+// SPDX-License-Identifier: MIT
+
+using System;
+using System.Collections.Generic;
+using UnityEditor;
+
+namespace ModuleInstaller.Editor
+{
+    [InitializeOnLoad]
+    internal static class ModuleInstallDriver
+    {
+        private static readonly UnityModuleInstallEnvironment Environment = new UnityModuleInstallEnvironment();
+        private static readonly ModuleInstallCoordinator Coordinator = new ModuleInstallCoordinator(
+            new UnityModulePackageClient(),
+            Environment,
+            new ModuleInstallSessionStore());
+
+        static ModuleInstallDriver()
+        {
+            EditorApplication.update -= Update;
+            EditorApplication.update += Update;
+        }
+
+        internal static event Action Changed;
+
+        internal static bool IsBusy => Coordinator.IsBusy;
+        internal static string LastMessage => Coordinator.LastMessage;
+
+        internal static ModuleInstallPlan BuildPlan(IEnumerable<string> packageNames)
+        {
+            return ModuleInstallPlanner.Build(
+                packageNames,
+                Environment.GetInstalledPackageNames(),
+                Environment.GetAssetModuleFolders());
+        }
+
+        internal static bool TryInstallBundle(string bundleId, out string message)
+        {
+            if (!ModuleCatalog.TryFindBundle(bundleId, out var bundle))
+            {
+                message = $"Unknown bundle: {bundleId}";
+                return false;
+            }
+
+            return TryInstall(bundle.PackageNames, out message);
+        }
+
+        internal static bool TryInstallPackage(string packageName, out string message)
+        {
+            return TryInstall(new[] { packageName }, out message);
+        }
+
+        private static bool TryInstall(IEnumerable<string> packageNames, out string message)
+        {
+            var result = Coordinator.TryStart(BuildPlan(packageNames), out message);
+            Changed?.Invoke();
+            return result;
+        }
+
+        private static void Update()
+        {
+            var wasBusy = Coordinator.IsBusy;
+            var previousMessage = Coordinator.LastMessage;
+            Coordinator.Tick();
+            if (wasBusy != Coordinator.IsBusy
+                || !string.Equals(previousMessage, Coordinator.LastMessage, StringComparison.Ordinal))
+            {
+                Changed?.Invoke();
+            }
+        }
+    }
+}
