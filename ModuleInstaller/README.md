@@ -9,7 +9,7 @@ Unity Package ManagerへGit URLを1件ずつ貼り、似た名前の小さなpac
 ## できること
 
 - 用途別の6セットから、必要なmodule群をまとめて導入する。
-- 39個の公開moduleを詳細一覧から1件ずつ導入する。
+- 40個の公開moduleを詳細一覧から1件ずつ導入する。
 - 既に導入済みのpackageを自動で除外する。
 - `Assets/Modules/<Folder>`に同じmoduleのcopyがある場合、assembly重複を避けるため導入前に停止する。
 - `main`や`dev`ではなく、一覧に固定した公開tagのGit URLだけをPackage Managerへ渡す。
@@ -28,12 +28,12 @@ Unity Package ManagerへGit URLを1件ずつ貼り、似た名前の小さなpac
 2. `Add package from git URL...`へ次を入力します。
 
    ```text
-   https://github.com/mynameisGaku/UnityModules.git?path=/ModuleInstaller#module-installer-v1.0.0
+   https://github.com/mynameisGaku/UnityModules.git?path=/ModuleInstaller#module-installer-v1.1.0
    ```
 
 3. `Tools > Module Installer > Open`を開きます。
 4. 最初は`Project Maintenance`を確認します。
-5. cardに並ぶmodule名と追加件数を確認し、`Install 4`のように表示されたbuttonを押します。
+5. cardに並ぶmodule名と追加件数を確認し、`Install 5`のように表示されたbuttonを押します。
 6. Package Managerの解決とscript reloadが終わるまで待ちます。
 
 ## 最小コード
@@ -54,7 +54,7 @@ Runtime APIはありません。C#を書く必要はなく、Editor windowの操
 
 | セット | 含まれる用途 |
 |---|---|
-| Project Maintenance | Inspector整理、debug描画、Scene・Prefab不備修復、Asset参照・名前整理 |
+| Project Maintenance | Project初期設定、Inspector整理、debug描画、Scene・Prefab不備修復、Asset参照・名前整理 |
 | Scene and UI | Scene切り替え、画面fade、safe area、ゲーム時間、起動手順 |
 | Game Services | save data、音声再生、不具合report |
 | Input Support | stick・button補助、Gameplay入力の一時停止 |

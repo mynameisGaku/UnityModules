@@ -11,7 +11,7 @@ namespace ModuleInstaller.Editor.Tests
         [Test]
         public void Catalog_UsesUniquePinnedPackageEntries()
         {
-            Assert.That(ModuleCatalog.Entries.Count, Is.EqualTo(39));
+            Assert.That(ModuleCatalog.Entries.Count, Is.EqualTo(40));
             var packageNames = new HashSet<string>(StringComparer.Ordinal);
             var folderNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -56,6 +56,20 @@ namespace ModuleInstaller.Editor.Tests
             {
                 "com.studiogaku.input-assist",
                 "com.studiogaku.input-gate"
+            }));
+        }
+
+        [Test]
+        public void ProjectMaintenanceBundle_IncludesSetupAndRepairWorkflows()
+        {
+            Assert.That(ModuleCatalog.TryFindBundle("project-maintenance", out var bundle), Is.True);
+            Assert.That(bundle.PackageNames, Is.EquivalentTo(new[]
+            {
+                "com.studiogaku.project-setup",
+                "com.studiogaku.inspector",
+                "com.studiogaku.drawing",
+                "com.studiogaku.build-guard",
+                "com.studiogaku.reference-finder"
             }));
         }
     }

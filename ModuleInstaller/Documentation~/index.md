@@ -1,4 +1,4 @@
-# Module Installer 1.0.0
+# Module Installer 1.1.0
 
 ## 目的
 
@@ -44,4 +44,4 @@ Unity Editor自体を終了すると`SessionState`は保証されません。再
 - Assets copy競合とunknown packageのmutation前停止
 - 複数URLを1要求へまとめること
 - 成功・失敗・domain reload相当のqueue復元
-- Editor windowの6 bundle cardと39個の個別導入行
+- Editor windowの6 bundle cardと40個の個別導入行

@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.1.0] - 2026-08-22
+
+- Added Project Setup to the catalog and Project Maintenance bundle.
+- Added a catalog regression test for the complete Project Maintenance workflow.
+
 ## [1.0.0] - 2026-08-22
 
 ### Added
