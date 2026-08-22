@@ -74,7 +74,7 @@ namespace ProjectSetup.Editor
             {
                 var json = File.ReadAllText(_path, new UTF8Encoding(false, true));
                 var data = JsonUtility.FromJson<ProjectSetupSnapshotData>(json);
-                if (data == null || (data.schemaVersion != 1 && data.schemaVersion != 2 && data.schemaVersion != 3 && data.schemaVersion != 4))
+                if (data == null || (data.schemaVersion != 1 && data.schemaVersion != 2 && data.schemaVersion != 3 && data.schemaVersion != 4 && data.schemaVersion != 5))
                 {
                     error = "The Project Setup backup schema is unsupported.";
                     return false;
@@ -93,7 +93,7 @@ namespace ProjectSetup.Editor
         [Serializable]
         private sealed class ProjectSetupSnapshotData
         {
-            public int schemaVersion = 4;
+            public int schemaVersion = 5;
             public int assetSerialization;
             public string versionControlMode;
             public bool enterPlayModeOptionsEnabled;
@@ -115,6 +115,10 @@ namespace ProjectSetup.Editor
             public bool hasPlayModeStartSceneData;
             public string playModeStartSceneGuid;
             public string playModeStartScenePath;
+            public bool hasScriptingDefineData;
+            public string scriptingDefineTargetId;
+            public string scriptingDefineTargetLabel;
+            public string[] scriptingDefineSymbols;
 
             internal static ProjectSetupSnapshotData FromSnapshot(ProjectSetupSnapshot snapshot)
             {
@@ -154,7 +158,11 @@ namespace ProjectSetup.Editor
                         }),
                     hasPlayModeStartSceneData = snapshot.HasPlayModeStartSceneData,
                     playModeStartSceneGuid = snapshot.PlayModeStartSceneGuid,
-                    playModeStartScenePath = snapshot.PlayModeStartScenePath
+                    playModeStartScenePath = snapshot.PlayModeStartScenePath,
+                    hasScriptingDefineData = snapshot.HasScriptingDefineData,
+                    scriptingDefineTargetId = snapshot.ScriptingDefineTargetId,
+                    scriptingDefineTargetLabel = snapshot.ScriptingDefineTargetLabel,
+                    scriptingDefineSymbols = snapshot.ScriptingDefineSymbols
                 };
             }
 
@@ -190,7 +198,11 @@ namespace ProjectSetup.Editor
                         : Array.Empty<ProjectSetupBuildSceneState>(),
                     schemaVersion >= 4 && hasPlayModeStartSceneData,
                     schemaVersion >= 4 ? playModeStartSceneGuid : string.Empty,
-                    schemaVersion >= 4 ? playModeStartScenePath : string.Empty);
+                    schemaVersion >= 4 ? playModeStartScenePath : string.Empty,
+                    schemaVersion >= 5 && hasScriptingDefineData,
+                    schemaVersion >= 5 ? scriptingDefineTargetId : string.Empty,
+                    schemaVersion >= 5 ? scriptingDefineTargetLabel : string.Empty,
+                    schemaVersion >= 5 ? scriptingDefineSymbols : Array.Empty<string>());
             }
         }
 

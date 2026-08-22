@@ -2,6 +2,7 @@
 
 using System;
 using UnityEditor;
+using UnityEditor.Build;
 using UnityEditor.Build.Profile;
 using UnityEditor.SceneManagement;
 
@@ -18,6 +19,7 @@ namespace ProjectSetup.Editor
             ProjectSetupTagManagerStore.Capture(out var tags, out var customTags, out var layers, out var sortingLayers, out var tagManagerFileText);
             CaptureBuildScenes(out var buildSceneTargetId, out var buildSceneTargetLabel, out var buildScenes);
             CapturePlayModeStartScene(out var playModeStartSceneGuid, out var playModeStartScenePath);
+            CaptureScriptingDefines(out var hasScriptingDefineData, out var scriptingDefineTargetId, out var scriptingDefineTargetLabel, out var scriptingDefineSymbols);
             return new ProjectSetupSnapshot(
                 EditorSettings.serializationMode,
                 VersionControlSettings.mode,
@@ -40,7 +42,11 @@ namespace ProjectSetup.Editor
                 buildScenes,
                 true,
                 playModeStartSceneGuid,
-                playModeStartScenePath);
+                playModeStartScenePath,
+                hasScriptingDefineData,
+                scriptingDefineTargetId,
+                scriptingDefineTargetLabel,
+                scriptingDefineSymbols);
         }
 
         public void Apply(ProjectSetupProfile profile)
@@ -96,6 +102,11 @@ namespace ProjectSetup.Editor
                 ApplyBuildScenes(ToEditorBuildSettingsScenes(profile.BuildScenes));
             }
 
+            if (profile.ConfigureScriptingDefineSymbols)
+            {
+                ApplyMissingScriptingDefines(profile.ScriptingDefineSymbols);
+            }
+
             ProjectSetupTagManagerStore.Apply(profile);
             AssetDatabase.SaveAssets();
         }
@@ -108,6 +119,15 @@ namespace ProjectSetup.Editor
                 if (!string.Equals(currentTargetId, snapshot.BuildSceneTargetId, StringComparison.Ordinal))
                 {
                     throw new InvalidOperationException("The active Build Scene target changed after the backup was created.");
+                }
+            }
+
+            if (snapshot.HasScriptingDefineData)
+            {
+                CaptureScriptingDefines(out var available, out var currentTargetId, out _, out _);
+                if (!available || !string.Equals(currentTargetId, snapshot.ScriptingDefineTargetId, StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException("The active scripting define target changed after the backup was created.");
                 }
             }
 
@@ -127,6 +147,11 @@ namespace ProjectSetup.Editor
             if (snapshot.HasBuildSceneData)
             {
                 ApplyBuildScenes(ToEditorBuildSettingsScenes(snapshot.BuildScenes));
+            }
+
+            if (snapshot.HasScriptingDefineData)
+            {
+                SetScriptingDefines(snapshot.ScriptingDefineSymbols);
             }
 
             ProjectSetupTagManagerStore.Restore(snapshot);
@@ -169,6 +194,67 @@ namespace ProjectSetup.Editor
             var scene = EditorSceneManager.playModeStartScene;
             scenePath = scene == null ? string.Empty : NormalizePath(AssetDatabase.GetAssetPath(scene));
             sceneGuid = string.IsNullOrEmpty(scenePath) ? string.Empty : AssetDatabase.AssetPathToGUID(scenePath);
+        }
+
+        private static void CaptureScriptingDefines(
+            out bool available,
+            out string targetId,
+            out string targetLabel,
+            out string[] symbols)
+        {
+            var group = BuildPipeline.GetBuildTargetGroup(EditorUserBuildSettings.activeBuildTarget);
+            available = group != BuildTargetGroup.Unknown;
+            targetId = available ? group.ToString() : string.Empty;
+            targetLabel = targetId;
+            if (!available)
+            {
+                symbols = Array.Empty<string>();
+                return;
+            }
+
+            var raw = PlayerSettings.GetScriptingDefineSymbols(NamedBuildTarget.FromBuildTargetGroup(group));
+            symbols = SplitScriptingDefines(raw);
+        }
+
+        private static void ApplyMissingScriptingDefines(string[] requested)
+        {
+            CaptureScriptingDefines(out var available, out _, out _, out var current);
+            if (!available)
+            {
+                throw new InvalidOperationException("Scripting Define Symbols are unavailable for the active build target.");
+            }
+
+            var existing = new System.Collections.Generic.HashSet<string>(current, StringComparer.Ordinal);
+            var merged = new System.Collections.Generic.List<string>(current);
+            foreach (var symbol in requested ?? Array.Empty<string>())
+            {
+                if (existing.Add(symbol))
+                {
+                    merged.Add(symbol);
+                }
+            }
+
+            SetScriptingDefines(merged.ToArray());
+        }
+
+        private static void SetScriptingDefines(string[] symbols)
+        {
+            var group = BuildPipeline.GetBuildTargetGroup(EditorUserBuildSettings.activeBuildTarget);
+            if (group == BuildTargetGroup.Unknown)
+            {
+                throw new InvalidOperationException("Scripting Define Symbols are unavailable for the active build target.");
+            }
+
+            PlayerSettings.SetScriptingDefineSymbols(
+                NamedBuildTarget.FromBuildTargetGroup(group),
+                string.Join(";", symbols ?? Array.Empty<string>()));
+        }
+
+        private static string[] SplitScriptingDefines(string value)
+        {
+            return string.IsNullOrEmpty(value)
+                ? Array.Empty<string>()
+                : value.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
         }
 
         private static void ApplyPlayModeStartScene(ProjectSetupSceneReference sceneReference)

@@ -38,6 +38,8 @@ namespace ProjectSetup.Tests
                 Assert.That(profile.Layers, Is.Empty);
                 Assert.That(profile.ConfigureSortingLayers, Is.False);
                 Assert.That(profile.SortingLayers, Is.Empty);
+                Assert.That(profile.ConfigureScriptingDefineSymbols, Is.False);
+                Assert.That(profile.ScriptingDefineSymbols, Is.Empty);
             }
             finally
             {
@@ -84,7 +86,11 @@ namespace ProjectSetup.Tests
                     },
                     true,
                     "guid-a",
-                    "Assets/Bootstrap.unity");
+                    "Assets/Bootstrap.unity",
+                    true,
+                    "Standalone",
+                    "Standalone",
+                    new[] { "PROJECT_FEATURE", "DEBUG_MENU" });
 
                 profile.Capture(snapshot);
 
@@ -116,6 +122,8 @@ namespace ProjectSetup.Tests
                 Assert.That(profile.Layers, Is.EqualTo(new[] { "Gameplay", "Interaction" }));
                 Assert.That(profile.ConfigureSortingLayers, Is.True);
                 Assert.That(profile.SortingLayers, Is.EqualTo(new[] { "Foreground" }));
+                Assert.That(profile.ConfigureScriptingDefineSymbols, Is.True);
+                Assert.That(profile.ScriptingDefineSymbols, Is.EqualTo(new[] { "PROJECT_FEATURE", "DEBUG_MENU" }));
             }
             finally
             {

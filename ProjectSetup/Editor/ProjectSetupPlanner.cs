@@ -15,6 +15,7 @@ namespace ProjectSetup.Editor
         private const int MaximumNameLength = 64;
         private const int MaximumRequestedNameCount = 64;
         private const int MaximumBuildSceneCount = 64;
+        private const int MaximumScriptingDefineLength = 64;
         private const EnterPlayModeOptions KnownEnterPlayModeOptions = EnterPlayModeOptions.DisableDomainReload
             | EnterPlayModeOptions.DisableSceneReload;
 
@@ -95,6 +96,7 @@ namespace ProjectSetup.Editor
             AddTextChange(profile.ConfigureBundleVersion, profile.BundleVersion, current.BundleVersion, ProjectSetupSettingKey.BundleVersion, "Bundle Version", MaximumVersionLength, changes, errors);
             AddPlayModeStartSceneChange(profile, current, changes, errors);
             AddBuildSceneChange(profile, current, changes, errors);
+            AddScriptingDefineChange(profile, current, changes, errors);
             AddNameListChange(profile.ConfigureTags, profile.Tags, current.Tags, ProjectSetupSettingKey.Tags, "Tags", changes, errors);
             AddLayerChange(profile, current, changes, errors);
             AddNameListChange(
@@ -106,6 +108,64 @@ namespace ProjectSetup.Editor
                 changes,
                 errors);
             return new ProjectSetupPlan(changes, errors);
+        }
+
+        private static void AddScriptingDefineChange(
+            ProjectSetupProfile profile,
+            ProjectSetupSnapshot current,
+            ICollection<ProjectSetupChange> changes,
+            ICollection<string> errors)
+        {
+            if (!profile.ConfigureScriptingDefineSymbols)
+            {
+                return;
+            }
+
+            if (!current.HasScriptingDefineData)
+            {
+                errors.Add("Scripting Define Symbols are unavailable for the active build target.");
+                return;
+            }
+
+            var requested = profile.ScriptingDefineSymbols;
+            if (requested.Length > MaximumRequestedNameCount)
+            {
+                errors.Add($"Scripting Define Symbols supports at most {MaximumRequestedNameCount} requested symbols.");
+                return;
+            }
+
+            var requestedSet = new HashSet<string>(StringComparer.Ordinal);
+            var desired = new List<string>(current.ScriptingDefineSymbols);
+            var existing = new HashSet<string>(current.ScriptingDefineSymbols, StringComparer.Ordinal);
+            for (var index = 0; index < requested.Length; index++)
+            {
+                var symbol = requested[index];
+                if (!IsValidScriptingDefine(symbol))
+                {
+                    errors.Add($"Scripting Define Symbols entry {index + 1} must use 1 to {MaximumScriptingDefineLength} ASCII letters, digits, or underscores and cannot start with a digit.");
+                    return;
+                }
+
+                if (!requestedSet.Add(symbol))
+                {
+                    errors.Add($"Scripting Define Symbols contains the duplicate symbol '{symbol}'.");
+                    return;
+                }
+
+                if (existing.Add(symbol))
+                {
+                    desired.Add(symbol);
+                }
+            }
+
+            if (desired.Count != current.ScriptingDefineSymbols.Length)
+            {
+                changes.Add(new ProjectSetupChange(
+                    ProjectSetupSettingKey.ScriptingDefineSymbols,
+                    $"Scripting Define Symbols ({current.ScriptingDefineTargetLabel})",
+                    FormatScriptingDefines(current.ScriptingDefineSymbols),
+                    FormatScriptingDefines(desired)));
+            }
         }
 
         private static void AddPlayModeStartSceneChange(
@@ -313,6 +373,35 @@ namespace ProjectSetup.Editor
             return true;
         }
 
+        private static bool IsValidScriptingDefine(string value)
+        {
+            if (string.IsNullOrEmpty(value) || value.Length > MaximumScriptingDefineLength)
+            {
+                return false;
+            }
+
+            if (!IsAsciiLetter(value[0]) && value[0] != '_')
+            {
+                return false;
+            }
+
+            for (var index = 1; index < value.Length; index++)
+            {
+                var character = value[index];
+                if (!IsAsciiLetter(character) && !char.IsDigit(character) && character != '_')
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private static bool IsAsciiLetter(char value)
+        {
+            return (value >= 'A' && value <= 'Z') || (value >= 'a' && value <= 'z');
+        }
+
         private static void AddMissingNames(
             ICollection<ProjectSetupChange> changes,
             ProjectSetupSettingKey key,
@@ -394,6 +483,11 @@ namespace ProjectSetup.Editor
 
             return string.Join(", ", scenes.Select((scene, index) =>
                 $"{index + 1}. {System.IO.Path.GetFileNameWithoutExtension(scene.Path)} ({(scene.Enabled ? "Enabled" : "Disabled")})"));
+        }
+
+        internal static string FormatScriptingDefines(IReadOnlyList<string> symbols)
+        {
+            return symbols == null || symbols.Count == 0 ? "No custom symbols" : string.Join(";", symbols);
         }
 
         private static string FormatPlayModeStartScene(string path)

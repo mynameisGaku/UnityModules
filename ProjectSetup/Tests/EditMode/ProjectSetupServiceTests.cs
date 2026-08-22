@@ -189,6 +189,39 @@ namespace ProjectSetup.Tests
             Assert.That(environment.ApplySnapshotCount, Is.Zero);
         }
 
+        [Test]
+        public void PreviewRestore_WhenScriptingDefineTargetChangedReturnsError()
+        {
+            var current = SnapshotWithScriptingDefines("Android", "CURRENT_SYMBOL");
+            var desired = SnapshotWithScriptingDefines("Standalone", "BACKUP_SYMBOL");
+            var environment = new FakeEnvironment(current);
+            var backup = new FakeBackupStore { Snapshot = desired, HasSnapshot = true };
+            var service = new ProjectSetupService(environment, backup);
+
+            var plan = service.PreviewRestore(out _, out _);
+
+            Assert.That(plan.IsValid, Is.False);
+            Assert.That(plan.Errors, Has.Some.Contains("scripting define target"));
+            Assert.That(environment.ApplySnapshotCount, Is.Zero);
+        }
+
+        [Test]
+        public void PreviewRestore_WhenScriptingDefinesDifferShowsExactBackupList()
+        {
+            var current = SnapshotWithScriptingDefines("Standalone", "CURRENT_SYMBOL", "AFTER_APPLY_SYMBOL");
+            var desired = SnapshotWithScriptingDefines("Standalone", "CURRENT_SYMBOL", "BACKUP_SYMBOL");
+            var environment = new FakeEnvironment(current);
+            var backup = new FakeBackupStore { Snapshot = desired, HasSnapshot = true };
+            var service = new ProjectSetupService(environment, backup);
+
+            var plan = service.PreviewRestore(out _, out var error);
+
+            Assert.That(plan.IsValid, Is.True, error);
+            Assert.That(plan.Changes, Has.Exactly(1).Property("Key").EqualTo(ProjectSetupSettingKey.ScriptingDefineSymbols));
+            Assert.That(plan.Changes[0].CurrentValue, Is.EqualTo("CURRENT_SYMBOL;AFTER_APPLY_SYMBOL"));
+            Assert.That(plan.Changes[0].DesiredValue, Is.EqualTo("CURRENT_SYMBOL;BACKUP_SYMBOL"));
+        }
+
         private static ProjectSetupSnapshot Snapshot(SerializationMode serializationMode = SerializationMode.ForceText, string versionControl = "Visible Meta Files")
         {
             return new ProjectSetupSnapshot(
@@ -250,6 +283,24 @@ namespace ProjectSetup.Tests
                 targetId,
                 targetId,
                 new[] { new ProjectSetupBuildSceneState(string.Empty, path, true) });
+        }
+
+        private static ProjectSetupSnapshot SnapshotWithScriptingDefines(string targetId, params string[] symbols)
+        {
+            return new ProjectSetupSnapshot(
+                SerializationMode.ForceText,
+                "Visible Meta Files",
+                false,
+                EnterPlayModeOptions.None,
+                ColorSpace.Gamma,
+                false,
+                "DefaultCompany",
+                "New Unity Project",
+                "1.0.0",
+                hasScriptingDefineData: true,
+                scriptingDefineTargetId: targetId,
+                scriptingDefineTargetLabel: targetId,
+                scriptingDefineSymbols: symbols);
         }
 
         private sealed class FakeEnvironment : IProjectSetupEnvironment

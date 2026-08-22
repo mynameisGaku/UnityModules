@@ -36,6 +36,8 @@ namespace ProjectSetup.Editor
         [SerializeField] private string[] layers = Array.Empty<string>();
         [SerializeField] private bool configureSortingLayers;
         [SerializeField] private string[] sortingLayers = Array.Empty<string>();
+        [SerializeField] private bool configureScriptingDefineSymbols;
+        [SerializeField] private string[] scriptingDefineSymbols = Array.Empty<string>();
 
         internal bool ConfigureAssetSerialization { get => configureAssetSerialization; set => configureAssetSerialization = value; }
         internal SerializationMode AssetSerialization { get => assetSerialization; set => assetSerialization = value; }
@@ -72,6 +74,8 @@ namespace ProjectSetup.Editor
         internal string[] Layers { get => layers ?? Array.Empty<string>(); set => layers = value ?? Array.Empty<string>(); }
         internal bool ConfigureSortingLayers { get => configureSortingLayers; set => configureSortingLayers = value; }
         internal string[] SortingLayers { get => sortingLayers ?? Array.Empty<string>(); set => sortingLayers = value ?? Array.Empty<string>(); }
+        internal bool ConfigureScriptingDefineSymbols { get => configureScriptingDefineSymbols; set => configureScriptingDefineSymbols = value; }
+        internal string[] ScriptingDefineSymbols { get => scriptingDefineSymbols ?? Array.Empty<string>(); set => scriptingDefineSymbols = value ?? Array.Empty<string>(); }
 
         internal void SetRecommendedDefaults()
         {
@@ -102,6 +106,8 @@ namespace ProjectSetup.Editor
             layers = Array.Empty<string>();
             configureSortingLayers = false;
             sortingLayers = Array.Empty<string>();
+            configureScriptingDefineSymbols = false;
+            scriptingDefineSymbols = Array.Empty<string>();
         }
 
         internal void Capture(ProjectSetupSnapshot snapshot)
@@ -135,6 +141,8 @@ namespace ProjectSetup.Editor
             layers = snapshot.Layers.Skip(8).Where(value => !string.IsNullOrEmpty(value)).ToArray();
             configureSortingLayers = snapshot.HasTagManagerData;
             sortingLayers = snapshot.SortingLayers.Where(layer => layer.UniqueId != 0).Select(layer => layer.Name).ToArray();
+            configureScriptingDefineSymbols = snapshot.HasScriptingDefineData;
+            scriptingDefineSymbols = snapshot.ScriptingDefineSymbols.ToArray();
         }
 
         private static ProjectSetupBuildScene[] CloneBuildScenes(ProjectSetupBuildScene[] values)
