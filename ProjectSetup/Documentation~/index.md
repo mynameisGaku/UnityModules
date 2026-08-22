@@ -1,6 +1,6 @@
-# プロジェクト一括設定（Project Setup）1.8.0
+# プロジェクト一括設定（Project Setup）1.9.0
 
-基本フォルダー、Runtime／Editor asmdef、Project設定、C#生成時のRoot Namespaceと改行方式、複製時の命名規則、Play Modeの開始Scene、条件付きコンパイル記号、Tag/Layer、Build Scenesをprofile化し、差分確認、backup、適用、復元を1つのEditor windowで行います。
+基本フォルダー、Runtime／Editor／test asmdef、Project設定、C#生成時のRoot Namespaceと改行方式、複製時の命名規則、Play Modeの開始Scene、条件付きコンパイル記号、Tag/Layer、Build Scenesをprofile化し、差分確認、backup、適用、復元を1つのEditor windowで行います。
 
 ## 最短手順
 
@@ -23,7 +23,7 @@ import時やUnity起動時には適用しません。
 - New Script Line Endings
 - Duplicate Naming（GameObject suffix、連番桁数、Asset copy spacing）
 - Project Folders（`Assets/...`配下の不足フォルダー）
-- Script Assemblies（Runtime asmdefと、それを参照するEditor asmdef）
+- Script Assemblies（Runtime／Editor asmdefと、任意のEditMode／PlayMode test asmdef）
 - Color Space
 - Run In Background
 - Company Name
@@ -46,7 +46,7 @@ Duplicate Namingは、GameObject複製時のsuffix形式と連番の最小桁数
 
 Project Foldersは、profileに列挙した`Assets/...`配下の不足フォルダーと親フォルダーだけを作成します。初期profileでは無効です。Restoreは直前のApplyが作成したフォルダーを深い階層から確認し、空のものだけを削除します。既存フォルダーや内容が追加されたフォルダーは削除しません。
 
-Script Assembliesは、指定したRuntime folderへRuntime asmdefを、その配下のEditor folderへEditor専用asmdefを作成します。Editor asmdefにはRuntime assembly参照とEditor platform制限が入ります。既存fileは上書きせず、同じfolderに別のasmdefがある場合はPreviewで停止します。Restoreは作成後に内容が変わっていないasmdefだけを削除し、編集済みfileを保持します。
+Script Assembliesは、指定したRuntime folderへRuntime asmdefを、その配下のEditor folderへEditor専用asmdefを作成します。任意でtest root folderを指定すると、`EditMode`と`PlayMode`のfolder、Runtime／Editor assemblyを参照するEditMode test asmdef、Runtime assemblyを参照するPlayMode test asmdefも作成します。両方へ`TestAssemblies`参照を設定し、EditMode側だけをEditor platformへ制限します。既存fileは上書きせず、同じfolderに別のasmdefがある場合はPreviewで停止します。Restoreは作成後に内容が変わっていないasmdefだけを削除し、編集済みfileを保持します。
 
 ## 安全性
 

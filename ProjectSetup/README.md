@@ -2,7 +2,7 @@
 
 Unityの新規Projectで毎回行う設定を、1つのprofileからまとめてPreview・適用・復元するEditor専用ツールです。
 
-`Assets`配下の基本フォルダー、Runtime／Editor asmdef、`Project Settings`、C#のRoot Namespaceと改行方式、複製時の命名規則、Play Modeの開始Scene、条件付きコンパイル記号、Tag、Layer、Sorting Layer、Build Scenesを別々の画面やscriptで設定する手間を減らします。自動適用はせず、実際に変わる項目を確認してから実行できます。
+`Assets`配下の基本フォルダー、Runtime／Editor／test asmdef、`Project Settings`、C#のRoot Namespaceと改行方式、複製時の命名規則、Play Modeの開始Scene、条件付きコンパイル記号、Tag、Layer、Sorting Layer、Build Scenesを別々の画面やscriptで設定する手間を減らします。自動適用はせず、実際に変わる項目を確認してから実行できます。
 
 ## まず知りたいこと
 
@@ -28,7 +28,7 @@ Unityの新規Projectで毎回行う設定を、1つのprofileからまとめて
 | やりたいこと | 有効にするcard |
 |---|---|
 | 新規Projectの基本フォルダーを作る | `Project Folders` |
-| Runtime codeとEditor codeをasmdefで分離する | `Script Assemblies` |
+| Runtime、Editor、EditMode test、PlayMode testをasmdefで分離する | `Script Assemblies` |
 | どのSceneからでもBootstrap SceneでPlayする | `Play Mode Start Scene` |
 | Playerへ入れるSceneと順序をそろえる | `Build Scenes` |
 | Tag、Layer、compile記号を手入力せず追加する | `Tags`、`Layers`、`Scripting Define Symbols` |
@@ -90,24 +90,26 @@ asmdefに個別のRoot Namespaceが設定されているscriptではasmdef側が
 
 初期profileでは無効です。`Project Folders` cardの`Create missing folders`を有効にした時だけ、不足フォルダーを作成します。
 
-### Runtime／Editor asmdefの作成
+### Runtime／Editor／test asmdefの作成
 
 - Runtime用の`Game.asmdef`とEditor専用の`Game.Editor.asmdef`をまとめて作る。
 - Editor asmdefからRuntime asmdefへの参照と`Editor` platform制限を自動設定する。
+- 任意で`Game.Tests.asmdef`と`Game.PlayMode.Tests.asmdef`も作り、必要なRuntime／Editor参照と`TestAssemblies`参照を自動設定する。
 - assembly名、Runtime folder、Editor folderをProjectごとに変更する。
 - 既存asmdefや既存fileを上書きしない。
 - 同じfolderに別のasmdefがある場合は、実行前のPreviewで停止する。
 
 初期profileでは無効です。asmdefを使わないProjectには何も作成しません。
 
-## Runtime／Editor asmdefをまとめて作る
+## Runtime／Editor／test asmdefをまとめて作る
 
 1. `Script Assemblies` cardで`Create missing Runtime and Editor assemblies`を有効にします。
 2. `Assembly name`へ`Game`や`Studio.Game`を入力します。
 3. Runtime codeを置くfolderと、その配下のEditor code用folderを指定します。
-4. Previewで新規asmdefと不足folderを確認し、Applyします。
+4. test assemblyも必要な場合は`Include EditMode and PlayMode test assemblies`を有効にし、test root folderを指定します。
+5. Previewで新規asmdefと不足folderを確認し、Applyします。
 
-既定値では`Assets/Scripts/Game.asmdef`と`Assets/Scripts/Editor/Game.Editor.asmdef`を作ります。Editor asmdefは`Game`を参照し、Editorだけでcompileされます。assembly名には`.`で区切ったC#識別子を使用してください。
+既定値では`Assets/Scripts/Game.asmdef`と`Assets/Scripts/Editor/Game.Editor.asmdef`を作ります。test assemblyを有効にすると、`Assets/Tests/EditMode/Game.Tests.asmdef`と`Assets/Tests/PlayMode/Game.PlayMode.Tests.asmdef`も追加します。EditMode側は`Game`と`Game.Editor`を参照してEditorだけでcompileされ、PlayMode側は`Game`を参照します。assembly名には`.`で区切ったC#識別子を使用してください。
 
 Restoreが削除するのは、直前のApplyが作成し、内容が作成時から変わっていないasmdefだけです。利用者が編集したasmdef、Apply前からあったfile、別名のasmdefは削除しません。asmdefを削除した後に空になった作成folderだけを続けて削除します。
 
@@ -251,7 +253,7 @@ Build Scenesをprofileで有効にすると、既存一覧をprofileの内容へ
 Package Managerの`Add package from git URL...`へ次を入力します。
 
 ```text
-https://github.com/mynameisGaku/UnityModules.git?path=/ProjectSetup#project-setup-v1.8.0
+https://github.com/mynameisGaku/UnityModules.git?path=/ProjectSetup#project-setup-v1.9.0
 ```
 
 ## 対応環境
