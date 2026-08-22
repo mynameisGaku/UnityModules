@@ -110,6 +110,7 @@ namespace ProjectSetup.Editor
             AddTextChange(profile.ConfigureProductName, profile.ProductName, current.ProductName, ProjectSetupSettingKey.ProductName, "Product Name", MaximumTextLength, changes, errors);
             AddTextChange(profile.ConfigureBundleVersion, profile.BundleVersion, current.BundleVersion, ProjectSetupSettingKey.BundleVersion, "Bundle Version", MaximumVersionLength, changes, errors);
             AddApplicationIdentifierChange(profile, current, changes, errors);
+            AddScriptingBackendChange(profile, current, changes, errors);
             AddPlayModeStartSceneChange(profile, current, changes, errors);
             AddBuildSceneChange(profile, current, changes, errors);
             AddScriptingDefineChange(profile, current, changes, errors);
@@ -813,6 +814,41 @@ namespace ProjectSetup.Editor
                     $"Application Identifier ({current.ApplicationIdentifierTargetLabel})",
                     current.ApplicationIdentifier,
                     profile.ApplicationIdentifier));
+            }
+        }
+
+        private static void AddScriptingBackendChange(
+            ProjectSetupProfile profile,
+            ProjectSetupSnapshot current,
+            ICollection<ProjectSetupChange> changes,
+            ICollection<string> errors)
+        {
+            if (!profile.ConfigureScriptingBackend)
+            {
+                return;
+            }
+
+            if (!current.HasScriptingBackendData)
+            {
+                errors.Add("Scripting Backend is unavailable for the active build target.");
+                return;
+            }
+
+            if (profile.ScriptingBackend != ScriptingImplementation.Mono2x
+                && profile.ScriptingBackend != ScriptingImplementation.IL2CPP)
+            {
+                errors.Add("Scripting Backend must be Mono or IL2CPP.");
+                return;
+            }
+
+            if (current.ScriptingBackend != profile.ScriptingBackend)
+            {
+                Add(
+                    changes,
+                    ProjectSetupSettingKey.ScriptingBackend,
+                    $"Scripting Backend ({current.ScriptingBackendTargetLabel})",
+                    current.ScriptingBackend,
+                    profile.ScriptingBackend);
             }
         }
 

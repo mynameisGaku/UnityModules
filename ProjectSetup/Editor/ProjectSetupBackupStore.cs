@@ -74,7 +74,7 @@ namespace ProjectSetup.Editor
             {
                 var json = File.ReadAllText(_path, new UTF8Encoding(false, true));
                 var data = JsonUtility.FromJson<ProjectSetupSnapshotData>(json);
-                if (data == null || data.schemaVersion < 1 || data.schemaVersion > 11)
+                if (data == null || data.schemaVersion < 1 || data.schemaVersion > 12)
                 {
                     error = "The Project Setup backup schema is unsupported.";
                     return false;
@@ -93,7 +93,7 @@ namespace ProjectSetup.Editor
         [Serializable]
         private sealed class ProjectSetupSnapshotData
         {
-            public int schemaVersion = 11;
+            public int schemaVersion = 12;
             public int assetSerialization;
             public string versionControlMode;
             public bool enterPlayModeOptionsEnabled;
@@ -133,6 +133,10 @@ namespace ProjectSetup.Editor
             public string applicationIdentifierTargetId;
             public string applicationIdentifierTargetLabel;
             public string applicationIdentifier;
+            public bool hasScriptingBackendData;
+            public string scriptingBackendTargetId;
+            public string scriptingBackendTargetLabel;
+            public int scriptingBackend;
 
             internal static ProjectSetupSnapshotData FromSnapshot(ProjectSetupSnapshot snapshot)
             {
@@ -202,7 +206,11 @@ namespace ProjectSetup.Editor
                     hasApplicationIdentifierData = snapshot.HasApplicationIdentifierData,
                     applicationIdentifierTargetId = snapshot.ApplicationIdentifierTargetId,
                     applicationIdentifierTargetLabel = snapshot.ApplicationIdentifierTargetLabel,
-                    applicationIdentifier = snapshot.ApplicationIdentifier
+                    applicationIdentifier = snapshot.ApplicationIdentifier,
+                    hasScriptingBackendData = snapshot.HasScriptingBackendData,
+                    scriptingBackendTargetId = snapshot.ScriptingBackendTargetId,
+                    scriptingBackendTargetLabel = snapshot.ScriptingBackendTargetLabel,
+                    scriptingBackend = (int)snapshot.ScriptingBackend
                 };
             }
 
@@ -264,7 +272,13 @@ namespace ProjectSetup.Editor
                     hasApplicationIdentifierData: schemaVersion >= 11 && hasApplicationIdentifierData,
                     applicationIdentifierTargetId: schemaVersion >= 11 ? applicationIdentifierTargetId : string.Empty,
                     applicationIdentifierTargetLabel: schemaVersion >= 11 ? applicationIdentifierTargetLabel : string.Empty,
-                    applicationIdentifier: schemaVersion >= 11 ? applicationIdentifier : string.Empty);
+                    applicationIdentifier: schemaVersion >= 11 ? applicationIdentifier : string.Empty,
+                    hasScriptingBackendData: schemaVersion >= 12 && hasScriptingBackendData,
+                    scriptingBackendTargetId: schemaVersion >= 12 ? scriptingBackendTargetId : string.Empty,
+                    scriptingBackendTargetLabel: schemaVersion >= 12 ? scriptingBackendTargetLabel : string.Empty,
+                    scriptingBackend: schemaVersion >= 12
+                        ? (ScriptingImplementation)scriptingBackend
+                        : ScriptingImplementation.Mono2x);
             }
         }
 

@@ -337,6 +337,42 @@ namespace ProjectSetup.Tests
             Assert.That(plan.Changes[0].DesiredValue, Is.EqualTo("com.studiogaku.backup"));
         }
 
+        [Test]
+        public void PreviewRestore_WhenScriptingBackendTargetChangedReturnsError()
+        {
+            var current = SnapshotWithScriptingBackend("Android", ScriptingImplementation.IL2CPP);
+            var desired = SnapshotWithScriptingBackend("Standalone", ScriptingImplementation.Mono2x);
+            var environment = new FakeEnvironment(current);
+            var backup = new FakeBackupStore { Snapshot = desired, HasSnapshot = true };
+            var service = new ProjectSetupService(environment, backup);
+
+            var plan = service.PreviewRestore(out _, out _);
+            var result = service.RestoreLast();
+
+            Assert.That(plan.IsValid, Is.False);
+            Assert.That(plan.Errors, Has.Some.Contains("Scripting Backend target"));
+            Assert.That(result.Succeeded, Is.False);
+            Assert.That(result.Message, Does.Contain("Scripting Backend target"));
+            Assert.That(environment.ApplySnapshotCount, Is.Zero);
+        }
+
+        [Test]
+        public void PreviewRestore_WhenScriptingBackendDiffersShowsExactBackupValue()
+        {
+            var current = SnapshotWithScriptingBackend("Standalone", ScriptingImplementation.IL2CPP);
+            var desired = SnapshotWithScriptingBackend("Standalone", ScriptingImplementation.Mono2x);
+            var environment = new FakeEnvironment(current);
+            var backup = new FakeBackupStore { Snapshot = desired, HasSnapshot = true };
+            var service = new ProjectSetupService(environment, backup);
+
+            var plan = service.PreviewRestore(out _, out var error);
+
+            Assert.That(plan.IsValid, Is.True, error);
+            Assert.That(plan.Changes, Has.Exactly(1).Property("Key").EqualTo(ProjectSetupSettingKey.ScriptingBackend));
+            Assert.That(plan.Changes[0].CurrentValue, Is.EqualTo("IL2CPP"));
+            Assert.That(plan.Changes[0].DesiredValue, Is.EqualTo("Mono2x"));
+        }
+
         private static ProjectSetupSnapshot Snapshot(SerializationMode serializationMode = SerializationMode.ForceText, string versionControl = "Visible Meta Files")
         {
             return new ProjectSetupSnapshot(
@@ -434,6 +470,24 @@ namespace ProjectSetup.Tests
                 applicationIdentifierTargetId: targetId,
                 applicationIdentifierTargetLabel: targetId,
                 applicationIdentifier: applicationIdentifier);
+        }
+
+        private static ProjectSetupSnapshot SnapshotWithScriptingBackend(string targetId, ScriptingImplementation scriptingBackend)
+        {
+            return new ProjectSetupSnapshot(
+                SerializationMode.ForceText,
+                "Visible Meta Files",
+                false,
+                EnterPlayModeOptions.None,
+                ColorSpace.Gamma,
+                false,
+                "DefaultCompany",
+                "New Unity Project",
+                "1.0.0",
+                hasScriptingBackendData: true,
+                scriptingBackendTargetId: targetId,
+                scriptingBackendTargetLabel: targetId,
+                scriptingBackend: scriptingBackend);
         }
 
         private sealed class FakeEnvironment : IProjectSetupEnvironment

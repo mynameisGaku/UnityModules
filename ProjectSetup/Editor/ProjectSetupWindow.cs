@@ -38,6 +38,7 @@ namespace ProjectSetup.Editor
         internal const string VersionControlFilesToggleName = "version-control-files-toggle";
         internal const string AssemblyDefinitionsCardName = "script-assemblies";
         internal const string ApplicationIdentifierCardName = "application-identifier";
+        internal const string ScriptingBackendCardName = "scripting-backend";
         internal const string AssemblyNameFieldName = "assembly-name-field";
         internal const string RuntimeAssemblyFolderFieldName = "runtime-assembly-folder-field";
         internal const string EditorAssemblyFolderFieldName = "editor-assembly-folder-field";
@@ -223,6 +224,14 @@ namespace ProjectSetup.Editor
                 _profile.ApplicationIdentifier,
                 value => _profile.ConfigureApplicationIdentifier = value,
                 value => _profile.ApplicationIdentifier = value));
+            content.Add(CreateEnumCard(
+                ScriptingBackendCardName,
+                "Scripting Backend",
+                "Choose Mono or IL2CPP for the active build target. Confirm platform support before applying.",
+                _profile.ConfigureScriptingBackend,
+                _profile.ScriptingBackend,
+                value => _profile.ConfigureScriptingBackend = value,
+                value => _profile.ScriptingBackend = (ScriptingImplementation)value));
             content.Add(CreateScriptingDefineCard());
             content.Add(CreateTextCard(
                 RootNamespaceCardName,
