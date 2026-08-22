@@ -39,6 +39,7 @@ namespace ProjectSetup.Editor
             CaptureScriptingDefines(out var hasScriptingDefineData, out var scriptingDefineTargetId, out var scriptingDefineTargetLabel, out var scriptingDefineSymbols);
             CaptureApplicationIdentifier(out var hasApplicationIdentifierData, out var applicationIdentifierTargetId, out var applicationIdentifierTargetLabel, out var applicationIdentifier);
             CaptureScriptingBackend(out var hasScriptingBackendData, out var scriptingBackendTargetId, out var scriptingBackendTargetLabel, out var scriptingBackend);
+            CaptureApiCompatibilityLevel(out var hasApiCompatibilityLevelData, out var apiCompatibilityLevelTargetId, out var apiCompatibilityLevelTargetLabel, out var apiCompatibilityLevel);
             CaptureProjectFolders(out var projectFolders, out var projectAssetPaths);
             return new ProjectSetupSnapshot(
                 EditorSettings.serializationMode,
@@ -84,7 +85,11 @@ namespace ProjectSetup.Editor
                 hasScriptingBackendData: hasScriptingBackendData,
                 scriptingBackendTargetId: scriptingBackendTargetId,
                 scriptingBackendTargetLabel: scriptingBackendTargetLabel,
-                scriptingBackend: scriptingBackend);
+                scriptingBackend: scriptingBackend,
+                hasApiCompatibilityLevelData: hasApiCompatibilityLevelData,
+                apiCompatibilityLevelTargetId: apiCompatibilityLevelTargetId,
+                apiCompatibilityLevelTargetLabel: apiCompatibilityLevelTargetLabel,
+                apiCompatibilityLevel: apiCompatibilityLevel);
         }
 
         public ProjectSetupEnvironmentApplyResult Apply(ProjectSetupProfile profile)
@@ -146,6 +151,11 @@ namespace ProjectSetup.Editor
             if (profile.ConfigureScriptingBackend)
             {
                 SetScriptingBackend(profile.ScriptingBackend);
+            }
+
+            if (profile.ConfigureApiCompatibilityLevel)
+            {
+                SetApiCompatibilityLevel(profile.ApiCompatibilityLevel);
             }
 
             if (profile.ConfigureBuildScenes)
@@ -239,6 +249,15 @@ namespace ProjectSetup.Editor
                 }
             }
 
+            if (snapshot.HasApiCompatibilityLevelData)
+            {
+                CaptureApiCompatibilityLevel(out var available, out var currentTargetId, out _, out _);
+                if (!available || !string.Equals(currentTargetId, snapshot.ApiCompatibilityLevelTargetId, StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException("The active API Compatibility Level target changed after the backup was created.");
+                }
+            }
+
             EditorSettings.serializationMode = snapshot.AssetSerialization;
             VersionControlSettings.mode = snapshot.VersionControlMode;
             EditorSettings.enterPlayModeOptionsEnabled = snapshot.EnterPlayModeOptionsEnabled;
@@ -259,6 +278,10 @@ namespace ProjectSetup.Editor
             if (snapshot.HasScriptingBackendData)
             {
                 SetScriptingBackend(snapshot.ScriptingBackend);
+            }
+            if (snapshot.HasApiCompatibilityLevelData)
+            {
+                SetApiCompatibilityLevel(snapshot.ApiCompatibilityLevel);
             }
             if (snapshot.HasBuildSceneData)
             {
@@ -442,6 +465,35 @@ namespace ProjectSetup.Editor
             PlayerSettings.SetScriptingBackend(
                 NamedBuildTarget.FromBuildTargetGroup(group),
                 scriptingBackend);
+        }
+
+        private static void CaptureApiCompatibilityLevel(
+            out bool available,
+            out string targetId,
+            out string targetLabel,
+            out ApiCompatibilityLevel apiCompatibilityLevel)
+        {
+            var activeTarget = EditorUserBuildSettings.activeBuildTarget;
+            var group = BuildPipeline.GetBuildTargetGroup(activeTarget);
+            available = group != BuildTargetGroup.Unknown;
+            targetId = available ? group.ToString() : string.Empty;
+            targetLabel = available ? activeTarget.ToString() : string.Empty;
+            apiCompatibilityLevel = available
+                ? PlayerSettings.GetApiCompatibilityLevel(NamedBuildTarget.FromBuildTargetGroup(group))
+                : ApiCompatibilityLevel.NET_Standard;
+        }
+
+        private static void SetApiCompatibilityLevel(ApiCompatibilityLevel apiCompatibilityLevel)
+        {
+            var group = BuildPipeline.GetBuildTargetGroup(EditorUserBuildSettings.activeBuildTarget);
+            if (group == BuildTargetGroup.Unknown)
+            {
+                throw new InvalidOperationException("API Compatibility Level is unavailable for the active build target.");
+            }
+
+            PlayerSettings.SetApiCompatibilityLevel(
+                NamedBuildTarget.FromBuildTargetGroup(group),
+                apiCompatibilityLevel);
         }
 
         private static string[] SplitScriptingDefines(string value)

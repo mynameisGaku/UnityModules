@@ -48,6 +48,8 @@ namespace ProjectSetup.Tests
                 Assert.That(root.Q<VisualElement>(ProjectSetupWindow.AssemblyDefinitionsCardName), Is.Not.Null);
                 Assert.That(root.Q<VisualElement>(ProjectSetupWindow.ApplicationIdentifierCardName), Is.Not.Null);
                 Assert.That(root.Q<VisualElement>(ProjectSetupWindow.ScriptingBackendCardName), Is.Not.Null);
+                Assert.That(root.Q<VisualElement>(ProjectSetupWindow.ApiCompatibilityLevelCardName), Is.Not.Null);
+                Assert.That(root.Q<DropdownField>(ProjectSetupWindow.ApiCompatibilityLevelFieldName), Is.Not.Null);
                 Assert.That(root.Q<TextField>(ProjectSetupWindow.AssemblyNameFieldName), Is.Not.Null);
                 Assert.That(root.Q<TextField>(ProjectSetupWindow.RuntimeAssemblyFolderFieldName), Is.Not.Null);
                 Assert.That(root.Q<TextField>(ProjectSetupWindow.EditorAssemblyFolderFieldName), Is.Not.Null);

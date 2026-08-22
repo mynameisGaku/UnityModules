@@ -373,6 +373,41 @@ namespace ProjectSetup.Tests
             Assert.That(plan.Changes[0].DesiredValue, Is.EqualTo("Mono2x"));
         }
 
+        [Test]
+        public void PreviewRestore_WhenApiCompatibilityTargetChangedReturnsError()
+        {
+            var current = SnapshotWithApiCompatibilityLevel("Android", ApiCompatibilityLevel.NET_Standard);
+            var desired = SnapshotWithApiCompatibilityLevel("Standalone", ApiCompatibilityLevel.NET_Unity_4_8);
+            var environment = new FakeEnvironment(current);
+            var backup = new FakeBackupStore { Snapshot = desired, HasSnapshot = true };
+            var service = new ProjectSetupService(environment, backup);
+
+            var plan = service.PreviewRestore(out _, out _);
+            var result = service.RestoreLast();
+
+            Assert.That(plan.IsValid, Is.False);
+            Assert.That(plan.Errors, Has.Some.Contains("API Compatibility Level target"));
+            Assert.That(result.Succeeded, Is.False);
+            Assert.That(environment.ApplySnapshotCount, Is.Zero);
+        }
+
+        [Test]
+        public void PreviewRestore_WhenApiCompatibilityLevelDiffersShowsExactBackupValue()
+        {
+            var current = SnapshotWithApiCompatibilityLevel("Standalone", ApiCompatibilityLevel.NET_Standard);
+            var desired = SnapshotWithApiCompatibilityLevel("Standalone", ApiCompatibilityLevel.NET_Unity_4_8);
+            var environment = new FakeEnvironment(current);
+            var backup = new FakeBackupStore { Snapshot = desired, HasSnapshot = true };
+            var service = new ProjectSetupService(environment, backup);
+
+            var plan = service.PreviewRestore(out _, out var error);
+
+            Assert.That(plan.IsValid, Is.True, error);
+            Assert.That(plan.Changes, Has.Exactly(1).Property("Key").EqualTo(ProjectSetupSettingKey.ApiCompatibilityLevel));
+            Assert.That(plan.Changes[0].CurrentValue, Is.EqualTo(".NET Standard"));
+            Assert.That(plan.Changes[0].DesiredValue, Is.EqualTo(".NET Framework"));
+        }
+
         private static ProjectSetupSnapshot Snapshot(SerializationMode serializationMode = SerializationMode.ForceText, string versionControl = "Visible Meta Files")
         {
             return new ProjectSetupSnapshot(
@@ -488,6 +523,24 @@ namespace ProjectSetup.Tests
                 scriptingBackendTargetId: targetId,
                 scriptingBackendTargetLabel: targetId,
                 scriptingBackend: scriptingBackend);
+        }
+
+        private static ProjectSetupSnapshot SnapshotWithApiCompatibilityLevel(string targetId, ApiCompatibilityLevel apiCompatibilityLevel)
+        {
+            return new ProjectSetupSnapshot(
+                SerializationMode.ForceText,
+                "Visible Meta Files",
+                false,
+                EnterPlayModeOptions.None,
+                ColorSpace.Gamma,
+                false,
+                "DefaultCompany",
+                "New Unity Project",
+                "1.0.0",
+                hasApiCompatibilityLevelData: true,
+                apiCompatibilityLevelTargetId: targetId,
+                apiCompatibilityLevelTargetLabel: targetId,
+                apiCompatibilityLevel: apiCompatibilityLevel);
         }
 
         private sealed class FakeEnvironment : IProjectSetupEnvironment

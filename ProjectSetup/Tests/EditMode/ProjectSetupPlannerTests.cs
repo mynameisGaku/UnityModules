@@ -174,6 +174,73 @@ namespace ProjectSetup.Tests
             Assert.That(plan.Errors, Has.Some.Contains("unavailable"));
         }
 
+        [Test]
+        public void Build_PlansApiCompatibilityLevelForActiveTarget()
+        {
+            _profile.ConfigureAssetSerialization = false;
+            _profile.ConfigureVersionControl = false;
+            _profile.ConfigureApiCompatibilityLevel = true;
+            _profile.ApiCompatibilityLevel = ApiCompatibilityLevel.NET_Unity_4_8;
+            var current = new ProjectSetupSnapshot(
+                SerializationMode.ForceText,
+                "Visible Meta Files",
+                false,
+                EnterPlayModeOptions.None,
+                ColorSpace.Linear,
+                false,
+                "Company",
+                "Product",
+                "1.0.0",
+                hasApiCompatibilityLevelData: true,
+                apiCompatibilityLevelTargetId: "Standalone",
+                apiCompatibilityLevelTargetLabel: "Windows",
+                apiCompatibilityLevel: ApiCompatibilityLevel.NET_Standard);
+
+            var plan = ProjectSetupPlanner.Build(_profile, current);
+
+            Assert.That(plan.Errors, Is.Empty);
+            Assert.That(plan.Changes, Has.Exactly(1).Property("Key").EqualTo(ProjectSetupSettingKey.ApiCompatibilityLevel));
+            Assert.That(plan.Changes[0].Label, Does.Contain("Windows"));
+        }
+
+        [Test]
+        public void Build_RejectsLegacyApiCompatibilityLevel()
+        {
+            _profile.ConfigureApiCompatibilityLevel = true;
+            _profile.ApiCompatibilityLevel = ApiCompatibilityLevel.NET_2_0;
+            var current = new ProjectSetupSnapshot(
+                SerializationMode.ForceText,
+                "Visible Meta Files",
+                false,
+                EnterPlayModeOptions.None,
+                ColorSpace.Linear,
+                false,
+                "Company",
+                "Product",
+                "1.0.0",
+                hasApiCompatibilityLevelData: true,
+                apiCompatibilityLevelTargetId: "Standalone",
+                apiCompatibilityLevelTargetLabel: "Windows",
+                apiCompatibilityLevel: ApiCompatibilityLevel.NET_Standard);
+
+            var plan = ProjectSetupPlanner.Build(_profile, current);
+
+            Assert.That(plan.IsValid, Is.False);
+            Assert.That(plan.Errors, Has.Some.Contains(".NET Standard or .NET Framework"));
+        }
+
+        [Test]
+        public void Build_RejectsApiCompatibilityLevelWhenActiveTargetIsUnavailable()
+        {
+            _profile.ConfigureApiCompatibilityLevel = true;
+            _profile.ApiCompatibilityLevel = ApiCompatibilityLevel.NET_Unity_4_8;
+
+            var plan = ProjectSetupPlanner.Build(_profile, Snapshot());
+
+            Assert.That(plan.IsValid, Is.False);
+            Assert.That(plan.Errors, Has.Some.Contains("API Compatibility Level is unavailable"));
+        }
+
         [TestCase("game")]
         [TestCase("Com.company.game")]
         [TestCase("com.1company.game")]
