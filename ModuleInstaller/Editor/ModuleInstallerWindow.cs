@@ -153,16 +153,14 @@ namespace ModuleInstaller.Editor
             card.style.paddingBottom = 8f;
             card.style.marginBottom = 7f;
 
-            var header = new VisualElement();
-            header.style.flexDirection = FlexDirection.Row;
-            header.style.alignItems = Align.Center;
-            card.Add(header);
-
-            var heading = new Label(bundle.DisplayName);
+            var heading = new Label(bundle.DisplayName)
+            {
+                name = $"heading-bundle-{bundle.Id}"
+            };
             heading.style.unityFontStyleAndWeight = FontStyle.Bold;
             heading.style.fontSize = 14f;
             heading.style.flexGrow = 1f;
-            header.Add(heading);
+            card.Add(heading);
 
             var button = new Button(() => InstallBundle(bundle))
             {
@@ -170,10 +168,13 @@ namespace ModuleInstaller.Editor
                 name = $"install-bundle-{bundle.Id}"
             };
             button.style.width = 118f;
-            header.Add(button);
-            _installButtons.Add(new InstallButtonBinding(button, bundle.PackageNames, true));
+            button.style.alignSelf = Align.FlexEnd;
+            button.style.marginTop = 7f;
 
-            var summary = new Label(bundle.Summary);
+            var summary = new Label(bundle.Summary)
+            {
+                name = $"summary-bundle-{bundle.Id}"
+            };
             summary.style.whiteSpace = WhiteSpace.Normal;
             summary.style.marginTop = 4f;
             card.Add(summary);
@@ -190,12 +191,17 @@ namespace ModuleInstaller.Editor
             guide.Add(CreateGuideLine("Change scope", bundle.ChangeScope));
             card.Add(guide);
 
-            var packageSummary = new Label(BuildPackageSummary(bundle.PackageNames));
+            var packageSummary = new Label(BuildPackageSummary(bundle.PackageNames))
+            {
+                name = $"packages-bundle-{bundle.Id}"
+            };
             packageSummary.style.whiteSpace = WhiteSpace.Normal;
             packageSummary.style.fontSize = 10f;
             packageSummary.style.opacity = 0.75f;
             packageSummary.style.marginTop = 4f;
             card.Add(packageSummary);
+            card.Add(button);
+            _installButtons.Add(new InstallButtonBinding(button, bundle.PackageNames, true));
             return card;
         }
 
