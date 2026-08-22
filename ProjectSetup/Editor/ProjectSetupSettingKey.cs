@@ -15,6 +15,7 @@ namespace ProjectSetup.Editor
         Tags = 8,
         Layers = 9,
         SortingLayers = 10,
-        BuildScenes = 11
+        BuildScenes = 11,
+        PlayModeStartScene = 12
     }
 }

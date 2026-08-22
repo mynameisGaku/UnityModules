@@ -29,7 +29,10 @@ namespace ProjectSetup.Editor
             bool hasBuildSceneData = false,
             string buildSceneTargetId = null,
             string buildSceneTargetLabel = null,
-            ProjectSetupBuildSceneState[] buildScenes = null)
+            ProjectSetupBuildSceneState[] buildScenes = null,
+            bool hasPlayModeStartSceneData = false,
+            string playModeStartSceneGuid = null,
+            string playModeStartScenePath = null)
         {
             AssetSerialization = assetSerialization;
             VersionControlMode = versionControlMode ?? string.Empty;
@@ -50,6 +53,9 @@ namespace ProjectSetup.Editor
             BuildSceneTargetId = buildSceneTargetId ?? string.Empty;
             BuildSceneTargetLabel = buildSceneTargetLabel ?? string.Empty;
             BuildScenes = Clone(buildScenes);
+            HasPlayModeStartSceneData = hasPlayModeStartSceneData;
+            PlayModeStartSceneGuid = playModeStartSceneGuid ?? string.Empty;
+            PlayModeStartScenePath = NormalizePath(playModeStartScenePath);
         }
 
         internal SerializationMode AssetSerialization { get; }
@@ -71,6 +77,9 @@ namespace ProjectSetup.Editor
         internal string BuildSceneTargetId { get; }
         internal string BuildSceneTargetLabel { get; }
         internal ProjectSetupBuildSceneState[] BuildScenes { get; }
+        internal bool HasPlayModeStartSceneData { get; }
+        internal string PlayModeStartSceneGuid { get; }
+        internal string PlayModeStartScenePath { get; }
 
         public bool Equals(ProjectSetupSnapshot other)
         {
@@ -83,7 +92,14 @@ namespace ProjectSetup.Editor
                 && string.Equals(TagManagerFileText, other.TagManagerFileText, StringComparison.Ordinal)
                 && HasBuildSceneData == other.HasBuildSceneData
                 && string.Equals(BuildSceneTargetId, other.BuildSceneTargetId, StringComparison.Ordinal)
-                && SequenceEqual(BuildScenes, other.BuildScenes);
+                && SequenceEqual(BuildScenes, other.BuildScenes)
+                && HasPlayModeStartSceneData == other.HasPlayModeStartSceneData
+                && (!HasPlayModeStartSceneData
+                    || ProjectSetupSceneReference.SameIdentity(
+                        PlayModeStartSceneGuid,
+                        PlayModeStartScenePath,
+                        other.PlayModeStartSceneGuid,
+                        other.PlayModeStartScenePath));
         }
 
         internal bool Matches(ProjectSetupSnapshot actual)
@@ -99,7 +115,14 @@ namespace ProjectSetup.Editor
                 && (!HasBuildSceneData
                     || (actual.HasBuildSceneData
                         && string.Equals(BuildSceneTargetId, actual.BuildSceneTargetId, StringComparison.Ordinal)
-                        && SequenceEqual(BuildScenes, actual.BuildScenes)));
+                        && SequenceEqual(BuildScenes, actual.BuildScenes)))
+                && (!HasPlayModeStartSceneData
+                    || (actual.HasPlayModeStartSceneData
+                        && ProjectSetupSceneReference.SameIdentity(
+                            PlayModeStartSceneGuid,
+                            PlayModeStartScenePath,
+                            actual.PlayModeStartSceneGuid,
+                            actual.PlayModeStartScenePath)));
         }
 
         private bool ScalarEquals(ProjectSetupSnapshot other)
@@ -142,6 +165,13 @@ namespace ProjectSetup.Editor
                 hash = (hash * 397) ^ HasBuildSceneData.GetHashCode();
                 hash = (hash * 397) ^ StringComparer.Ordinal.GetHashCode(BuildSceneTargetId ?? string.Empty);
                 hash = AddHash(hash, BuildScenes);
+                hash = (hash * 397) ^ HasPlayModeStartSceneData.GetHashCode();
+                if (HasPlayModeStartSceneData)
+                {
+                    hash = (hash * 397) ^ (!string.IsNullOrEmpty(PlayModeStartSceneGuid)
+                        ? StringComparer.Ordinal.GetHashCode(PlayModeStartSceneGuid)
+                        : StringComparer.OrdinalIgnoreCase.GetHashCode(PlayModeStartScenePath ?? string.Empty));
+                }
                 return hash;
             }
         }
@@ -207,6 +237,11 @@ namespace ProjectSetup.Editor
 
                 return hash;
             }
+        }
+
+        private static string NormalizePath(string path)
+        {
+            return string.IsNullOrEmpty(path) ? string.Empty : path.Replace('\\', '/');
         }
     }
 }
