@@ -22,6 +22,10 @@ namespace ProjectSetup.Editor
         internal const string PreviewButtonName = "preview-button";
         internal const string ApplyButtonName = "apply-button";
         internal const string RestoreButtonName = "restore-button";
+        internal const string BuildScenesCardName = "build-scenes";
+        internal const string BuildScenesListName = "build-scenes-list";
+        internal const string AddBuildSceneButtonName = "add-build-scene-button";
+        internal const string ActionBarName = "action-bar";
         private const string MenuPath = "Tools/Project Setup/Open";
 
         private ProjectSetupProfile _profile;
@@ -31,6 +35,7 @@ namespace ProjectSetup.Editor
         private VisualElement _changeList;
         private Button _applyButton;
         private Button _restoreButton;
+        private VisualElement _buildSceneList;
 
         [MenuItem(MenuPath)]
         private static void Open()
@@ -101,6 +106,7 @@ namespace ProjectSetup.Editor
         {
             var toolbar = new VisualElement { name = ProfileToolbarName };
             toolbar.style.flexDirection = FlexDirection.Column;
+            toolbar.style.flexShrink = 0f;
             toolbar.style.marginBottom = 4f;
 
             _profileField = new ObjectField("Profile")
@@ -116,6 +122,8 @@ namespace ProjectSetup.Editor
             var actions = new VisualElement { name = ProfileActionsName };
             actions.style.flexDirection = FlexDirection.Row;
             actions.style.justifyContent = Justify.FlexEnd;
+            actions.style.flexShrink = 0f;
+            actions.style.minHeight = 26f;
             actions.style.marginTop = 5f;
             actions.style.marginBottom = 7f;
 
@@ -124,6 +132,7 @@ namespace ProjectSetup.Editor
                 name = NewProfileButtonName,
                 text = "New recommended profile"
             };
+            newButton.style.minHeight = 22f;
             actions.Add(newButton);
 
             var captureButton = new Button(CaptureCurrent)
@@ -132,6 +141,7 @@ namespace ProjectSetup.Editor
                 text = "Capture current"
             };
             captureButton.style.marginLeft = 4f;
+            captureButton.style.minHeight = 22f;
             actions.Add(captureButton);
 
             var saveButton = new Button(SaveProfileAs)
@@ -140,6 +150,7 @@ namespace ProjectSetup.Editor
                 text = "Save profile as"
             };
             saveButton.style.marginLeft = 4f;
+            saveButton.style.minHeight = 22f;
             actions.Add(saveButton);
             toolbar.Add(actions);
             return toolbar;
@@ -184,6 +195,7 @@ namespace ProjectSetup.Editor
             content.Add(CreateTextCard("company-name", "Company Name", "Shared Player identity value.", _profile.ConfigureCompanyName, _profile.CompanyName, value => _profile.ConfigureCompanyName = value, value => _profile.CompanyName = value));
             content.Add(CreateTextCard("product-name", "Product Name", "Shared Player product name.", _profile.ConfigureProductName, _profile.ProductName, value => _profile.ConfigureProductName = value, value => _profile.ProductName = value));
             content.Add(CreateTextCard("bundle-version", "Bundle Version", "Shared application version string.", _profile.ConfigureBundleVersion, _profile.BundleVersion, value => _profile.ConfigureBundleVersion = value, value => _profile.BundleVersion = value));
+            content.Add(CreateBuildScenesCard());
             content.Add(CreateNameListCard(
                 "tags",
                 "Tags",
@@ -220,6 +232,158 @@ namespace ProjectSetup.Editor
             _changeList.style.marginBottom = 10f;
             content.Add(_changeList);
             return content;
+        }
+
+        private VisualElement CreateBuildScenesCard()
+        {
+            var card = CreateCard(
+                BuildScenesCardName,
+                "Build Scenes",
+                "Replace the active Build Profile scene list in this exact order. The first enabled Scene is the Player startup Scene.");
+            var enabled = new Toggle("Apply this scene list") { value = _profile.ConfigureBuildScenes };
+            enabled.RegisterValueChangedCallback(change => ChangeProfile(() => _profile.ConfigureBuildScenes = change.newValue));
+            card.Add(enabled);
+
+            _buildSceneList = new VisualElement { name = BuildScenesListName };
+            _buildSceneList.style.marginTop = 4f;
+            card.Add(_buildSceneList);
+            RefreshBuildSceneRows();
+
+            var addButton = new Button(() =>
+            {
+                var scenes = CloneBuildScenes();
+                Array.Resize(ref scenes, scenes.Length + 1);
+                scenes[scenes.Length - 1] = new ProjectSetupBuildScene();
+                _profile.BuildScenes = scenes;
+                MarkProfileDirty();
+                RefreshBuildSceneRows();
+                RefreshPreview();
+            })
+            {
+                name = AddBuildSceneButtonName,
+                text = "Add scene"
+            };
+            addButton.style.alignSelf = Align.FlexStart;
+            addButton.style.marginTop = 5f;
+            card.Add(addButton);
+            return card;
+        }
+
+        private void RefreshBuildSceneRows()
+        {
+            if (_buildSceneList == null)
+            {
+                return;
+            }
+
+            _buildSceneList.Clear();
+            var scenes = _profile.BuildScenes;
+            if (scenes.Length == 0)
+            {
+                var empty = new Label("No Scenes are configured. Add the startup Scene first.");
+                empty.style.whiteSpace = WhiteSpace.Normal;
+                empty.style.marginBottom = 3f;
+                _buildSceneList.Add(empty);
+                return;
+            }
+
+            for (var index = 0; index < scenes.Length; index++)
+            {
+                AddBuildSceneRow(index, scenes[index]);
+            }
+        }
+
+        private void AddBuildSceneRow(int index, ProjectSetupBuildScene entry)
+        {
+            var row = new VisualElement { name = $"build-scene-row-{index}" };
+            row.style.flexDirection = FlexDirection.Row;
+            row.style.flexWrap = Wrap.Wrap;
+            row.style.alignItems = Align.Center;
+            row.style.marginBottom = 4f;
+
+            var sceneField = new ObjectField($"Scene {index + 1}")
+            {
+                objectType = typeof(SceneAsset),
+                value = entry?.SceneAsset
+            };
+            sceneField.style.flexGrow = 1f;
+            sceneField.style.minWidth = 260f;
+            sceneField.RegisterValueChangedCallback(change =>
+            {
+                UpdateBuildScene(index, scene => scene.SceneAsset = change.newValue as SceneAsset, false);
+            });
+            row.Add(sceneField);
+
+            var sceneEnabled = new Toggle("Enabled") { value = entry?.Enabled ?? true };
+            sceneEnabled.style.marginLeft = 5f;
+            sceneEnabled.RegisterValueChangedCallback(change =>
+            {
+                UpdateBuildScene(index, scene => scene.Enabled = change.newValue, false);
+            });
+            row.Add(sceneEnabled);
+
+            var upButton = new Button(() => MoveBuildScene(index, index - 1)) { text = "Up" };
+            upButton.style.marginLeft = 4f;
+            upButton.SetEnabled(index > 0);
+            row.Add(upButton);
+
+            var downButton = new Button(() => MoveBuildScene(index, index + 1)) { text = "Down" };
+            downButton.style.marginLeft = 2f;
+            downButton.SetEnabled(index + 1 < _profile.BuildScenes.Length);
+            row.Add(downButton);
+
+            var removeButton = new Button(() => RemoveBuildScene(index)) { text = "Remove" };
+            removeButton.style.marginLeft = 2f;
+            row.Add(removeButton);
+            _buildSceneList.Add(row);
+        }
+
+        private void UpdateBuildScene(int index, Action<ProjectSetupBuildScene> update, bool rebuildRows)
+        {
+            var scenes = CloneBuildScenes();
+            if (index < 0 || index >= scenes.Length)
+            {
+                return;
+            }
+
+            update(scenes[index]);
+            _profile.BuildScenes = scenes;
+            MarkProfileDirty();
+            if (rebuildRows)
+            {
+                RefreshBuildSceneRows();
+            }
+
+            RefreshPreview();
+        }
+
+        private void MoveBuildScene(int sourceIndex, int destinationIndex)
+        {
+            var scenes = CloneBuildScenes();
+            if (sourceIndex < 0 || destinationIndex < 0 || sourceIndex >= scenes.Length || destinationIndex >= scenes.Length)
+            {
+                return;
+            }
+
+            (scenes[sourceIndex], scenes[destinationIndex]) = (scenes[destinationIndex], scenes[sourceIndex]);
+            _profile.BuildScenes = scenes;
+            MarkProfileDirty();
+            RefreshBuildSceneRows();
+            RefreshPreview();
+        }
+
+        private void RemoveBuildScene(int index)
+        {
+            var scenes = CloneBuildScenes().Where((_, itemIndex) => itemIndex != index).ToArray();
+            _profile.BuildScenes = scenes;
+            MarkProfileDirty();
+            RefreshBuildSceneRows();
+            RefreshPreview();
+        }
+
+        private ProjectSetupBuildScene[] CloneBuildScenes()
+        {
+            return _profile.BuildScenes.Select(scene => scene?.Clone() ?? new ProjectSetupBuildScene()).ToArray();
         }
 
         private VisualElement CreateEnterPlayModeCard()
@@ -342,18 +506,24 @@ namespace ProjectSetup.Editor
 
         private VisualElement CreateActionBar()
         {
-            var bar = new VisualElement();
+            var bar = new VisualElement { name = ActionBarName };
             bar.style.flexDirection = FlexDirection.Row;
             bar.style.justifyContent = Justify.FlexEnd;
+            bar.style.alignItems = Align.Center;
+            bar.style.flexShrink = 0f;
+            bar.style.minHeight = 30f;
             bar.style.paddingTop = 8f;
 
             var previewButton = new Button(RefreshPreview) { name = PreviewButtonName, text = "Preview changes" };
+            previewButton.style.minHeight = 22f;
             bar.Add(previewButton);
             _restoreButton = new Button(RestoreLast) { name = RestoreButtonName, text = "Restore last backup" };
             _restoreButton.style.marginLeft = 6f;
+            _restoreButton.style.minHeight = 22f;
             bar.Add(_restoreButton);
             _applyButton = new Button(ApplyProfile) { name = ApplyButtonName, text = "Apply profile" };
             _applyButton.style.marginLeft = 6f;
+            _applyButton.style.minHeight = 22f;
             bar.Add(_applyButton);
             return bar;
         }

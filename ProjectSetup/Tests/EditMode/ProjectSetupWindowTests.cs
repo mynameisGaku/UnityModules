@@ -30,14 +30,21 @@ namespace ProjectSetup.Tests
                 Assert.That(root.Q<Button>(ProjectSetupWindow.PreviewButtonName), Is.Not.Null);
                 Assert.That(root.Q<Button>(ProjectSetupWindow.ApplyButtonName), Is.Not.Null);
                 Assert.That(root.Q<Button>(ProjectSetupWindow.RestoreButtonName), Is.Not.Null);
+                Assert.That(root.Q<VisualElement>(ProjectSetupWindow.ActionBarName), Is.Not.Null);
                 Assert.That(root.Q<VisualElement>("asset-serialization"), Is.Not.Null);
                 Assert.That(root.Q<VisualElement>("version-control"), Is.Not.Null);
                 Assert.That(root.Q<VisualElement>("enter-play-mode"), Is.Not.Null);
                 Assert.That(root.Q<VisualElement>("color-space"), Is.Not.Null);
                 Assert.That(root.Q<VisualElement>("run-in-background"), Is.Not.Null);
+                Assert.That(root.Q<VisualElement>(ProjectSetupWindow.BuildScenesCardName), Is.Not.Null);
+                Assert.That(root.Q<VisualElement>(ProjectSetupWindow.BuildScenesListName), Is.Not.Null);
+                Assert.That(root.Q<Button>(ProjectSetupWindow.AddBuildSceneButtonName), Is.Not.Null);
                 Assert.That(root.Q<VisualElement>("tags"), Is.Not.Null);
                 Assert.That(root.Q<VisualElement>("layers"), Is.Not.Null);
                 Assert.That(root.Q<VisualElement>("sorting-layers"), Is.Not.Null);
+                Assert.That(root.Q<VisualElement>(ProjectSetupWindow.ProfileToolbarName).style.flexShrink.value, Is.Zero);
+                Assert.That(root.Q<VisualElement>(ProjectSetupWindow.ActionBarName).style.flexShrink.value, Is.Zero);
+                Assert.That(root.Q<VisualElement>(ProjectSetupWindow.ActionBarName).style.minHeight.value.value, Is.EqualTo(30f));
             }
             finally
             {
