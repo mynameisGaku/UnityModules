@@ -11,7 +11,7 @@ namespace ModuleInstaller.Editor.Tests
         [Test]
         public void Catalog_UsesUniquePinnedPackageEntries()
         {
-            Assert.That(ModuleCatalog.Entries.Count, Is.EqualTo(40));
+            Assert.That(ModuleCatalog.Entries.Count, Is.EqualTo(41));
             var packageNames = new HashSet<string>(StringComparer.Ordinal);
             var folderNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -86,6 +86,7 @@ namespace ModuleInstaller.Editor.Tests
             Assert.That(bundle.PackageNames, Is.EquivalentTo(new[]
             {
                 "com.studiogaku.project-setup",
+                "com.studiogaku.asset-import-audit",
                 "com.studiogaku.inspector",
                 "com.studiogaku.drawing",
                 "com.studiogaku.build-guard",
@@ -99,6 +100,16 @@ namespace ModuleInstaller.Editor.Tests
             Assert.That(ModuleCatalog.TryFindEntry("com.studiogaku.project-setup", out var entry), Is.True);
             Assert.That(entry.Tag, Is.EqualTo("project-setup-v1.15.0"));
             Assert.That(entry.Summary, Does.Contain("project folders").And.Contain("test assembly definitions").And.Contain("version control files").And.Contain("managed stripping levels").And.Contain("code generation defaults").And.Contain("duplicate naming defaults").And.Contain("scripting define symbols").And.Contain("Tags").And.Contain("Layers").And.Contain("Build Scenes").And.Contain("Play Mode Start Scene"));
+        }
+
+        [Test]
+        public void AssetImportAudit_UsesPlatformTextureAuditRelease()
+        {
+            Assert.That(ModuleCatalog.TryFindEntry("com.studiogaku.asset-import-audit", out var entry), Is.True);
+            Assert.That(entry.FolderName, Is.EqualTo("AssetImportAudit"));
+            Assert.That(entry.Tag, Is.EqualTo("asset-import-audit-v1.1.0"));
+            Assert.That(entry.DisplayName, Is.EqualTo("Texture Import Settings"));
+            Assert.That(entry.Summary, Does.Contain("shared").And.Contain("Standalone").And.Contain("Android").And.Contain("iOS").And.Contain("reviewed preview"));
         }
     }
 }
