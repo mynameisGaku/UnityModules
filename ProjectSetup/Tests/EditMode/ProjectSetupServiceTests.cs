@@ -2,6 +2,7 @@
 
 using System;
 using System.IO;
+using System.Linq;
 using NUnit.Framework;
 using ProjectSetup.Editor;
 using UnityEditor;
@@ -86,6 +87,23 @@ namespace ProjectSetup.Tests
             Assert.That(environment.ApplyProfileCount, Is.Zero);
             Assert.That(environment.ApplySnapshotCount, Is.Zero);
             Assert.That(environment.State, Is.EqualTo(before));
+        }
+
+        [Test]
+        public void Apply_ProjectFoldersRecordsOnlyMissingFoldersInBackup()
+        {
+            _profile.ConfigureProjectFolders = true;
+            _profile.ProjectFolders = new[] { "Assets/Game/Data" };
+            var before = Snapshot().WithProjectFolderState(new[] { "Assets" }, new[] { "Assets" });
+            var environment = new FakeEnvironment(before);
+            var backup = new FakeBackupStore();
+            var service = new ProjectSetupService(environment, backup);
+
+            var result = service.Apply(_profile);
+
+            Assert.That(result.Succeeded, Is.True, result.Message);
+            Assert.That(backup.Snapshot.CreatedProjectFolders, Is.EqualTo(new[] { "Assets/Game", "Assets/Game/Data" }));
+            Assert.That(environment.State.ProjectFolders, Does.Contain("Assets/Game").And.Contain("Assets/Game/Data"));
         }
 
         [Test]
@@ -324,7 +342,7 @@ namespace ProjectSetup.Tests
                 return State;
             }
 
-            public void Apply(ProjectSetupProfile profile)
+            public string[] Apply(ProjectSetupProfile profile)
             {
                 ApplyProfileCount++;
                 if (ThrowOnProfileApply)
@@ -332,7 +350,7 @@ namespace ProjectSetup.Tests
                     throw new InvalidOperationException("Expected failure");
                 }
 
-                State = new ProjectSetupSnapshot(
+                var updated = new ProjectSetupSnapshot(
                     profile.ConfigureAssetSerialization ? profile.AssetSerialization : State.AssetSerialization,
                     profile.ConfigureVersionControl ? profile.VersionControlMode : State.VersionControlMode,
                     profile.ConfigureEnterPlayMode ? profile.EnterPlayModeOptionsEnabled : State.EnterPlayModeOptionsEnabled,
@@ -342,6 +360,18 @@ namespace ProjectSetup.Tests
                     profile.ConfigureCompanyName ? profile.CompanyName : State.CompanyName,
                     profile.ConfigureProductName ? profile.ProductName : State.ProductName,
                     profile.ConfigureBundleVersion ? profile.BundleVersion : State.BundleVersion);
+                var folders = State.ProjectFolders;
+                var assets = State.ProjectAssetPaths;
+                var missing = Array.Empty<string>();
+                if (profile.ConfigureProjectFolders)
+                {
+                    missing = ProjectSetupFolderUtility.ExpandMissingFolders(profile.ProjectFolders, folders);
+                    folders = folders.Concat(missing).ToArray();
+                    assets = assets.Concat(missing).ToArray();
+                }
+
+                State = updated.WithProjectFolderState(folders, assets);
+                return missing;
             }
 
             public void Apply(ProjectSetupSnapshot snapshot)

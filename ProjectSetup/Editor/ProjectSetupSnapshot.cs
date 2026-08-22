@@ -43,7 +43,10 @@ namespace ProjectSetup.Editor
             bool hasNamingData = false,
             EditorSettings.NamingScheme gameObjectNamingScheme = EditorSettings.NamingScheme.SpaceParenthesis,
             int gameObjectNamingDigits = 1,
-            bool assetNamingUsesSpace = true)
+            bool assetNamingUsesSpace = true,
+            string[] projectFolders = null,
+            string[] projectAssetPaths = null,
+            string[] createdProjectFolders = null)
         {
             AssetSerialization = assetSerialization;
             VersionControlMode = versionControlMode ?? string.Empty;
@@ -78,6 +81,9 @@ namespace ProjectSetup.Editor
             GameObjectNamingScheme = gameObjectNamingScheme;
             GameObjectNamingDigits = gameObjectNamingDigits;
             AssetNamingUsesSpace = assetNamingUsesSpace;
+            ProjectFolders = Clone(projectFolders);
+            ProjectAssetPaths = Clone(projectAssetPaths);
+            CreatedProjectFolders = Clone(createdProjectFolders);
         }
 
         internal SerializationMode AssetSerialization { get; }
@@ -113,6 +119,19 @@ namespace ProjectSetup.Editor
         internal EditorSettings.NamingScheme GameObjectNamingScheme { get; }
         internal int GameObjectNamingDigits { get; }
         internal bool AssetNamingUsesSpace { get; }
+        internal string[] ProjectFolders { get; }
+        internal string[] ProjectAssetPaths { get; }
+        internal string[] CreatedProjectFolders { get; }
+
+        internal ProjectSetupSnapshot WithCreatedProjectFolders(string[] paths)
+        {
+            return Copy(ProjectFolders, ProjectAssetPaths, paths);
+        }
+
+        internal ProjectSetupSnapshot WithProjectFolderState(string[] folders, string[] assetPaths)
+        {
+            return Copy(folders, assetPaths, CreatedProjectFolders);
+        }
 
         public bool Equals(ProjectSetupSnapshot other)
         {
@@ -144,7 +163,8 @@ namespace ProjectSetup.Editor
                 && (!HasNamingData
                     || (GameObjectNamingScheme == other.GameObjectNamingScheme
                         && GameObjectNamingDigits == other.GameObjectNamingDigits
-                        && AssetNamingUsesSpace == other.AssetNamingUsesSpace));
+                        && AssetNamingUsesSpace == other.AssetNamingUsesSpace))
+                && SequenceEqual(CreatedProjectFolders, other.CreatedProjectFolders);
         }
 
         internal bool Matches(ProjectSetupSnapshot actual)
@@ -246,8 +266,50 @@ namespace ProjectSetup.Editor
                     hash = (hash * 397) ^ GameObjectNamingDigits;
                     hash = (hash * 397) ^ AssetNamingUsesSpace.GetHashCode();
                 }
+                hash = AddHash(hash, CreatedProjectFolders);
                 return hash;
             }
+        }
+
+        private ProjectSetupSnapshot Copy(string[] projectFolders, string[] projectAssetPaths, string[] createdProjectFolders)
+        {
+            return new ProjectSetupSnapshot(
+                AssetSerialization,
+                VersionControlMode,
+                EnterPlayModeOptionsEnabled,
+                EnterPlayModeOptions,
+                ColorSpace,
+                RunInBackground,
+                CompanyName,
+                ProductName,
+                BundleVersion,
+                HasTagManagerData,
+                Tags,
+                CustomTags,
+                Layers,
+                SortingLayers,
+                TagManagerFileText,
+                HasBuildSceneData,
+                BuildSceneTargetId,
+                BuildSceneTargetLabel,
+                BuildScenes,
+                HasPlayModeStartSceneData,
+                PlayModeStartSceneGuid,
+                PlayModeStartScenePath,
+                HasScriptingDefineData,
+                ScriptingDefineTargetId,
+                ScriptingDefineTargetLabel,
+                ScriptingDefineSymbols,
+                HasCodeGenerationData,
+                RootNamespace,
+                NewScriptLineEndings,
+                HasNamingData,
+                GameObjectNamingScheme,
+                GameObjectNamingDigits,
+                AssetNamingUsesSpace,
+                projectFolders,
+                projectAssetPaths,
+                createdProjectFolders);
         }
 
         private static string[] Clone(string[] values)

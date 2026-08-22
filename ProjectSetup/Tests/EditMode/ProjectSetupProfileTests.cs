@@ -48,6 +48,16 @@ namespace ProjectSetup.Tests
                 Assert.That(profile.GameObjectNamingScheme, Is.EqualTo(EditorSettings.NamingScheme.SpaceParenthesis));
                 Assert.That(profile.GameObjectNamingDigits, Is.EqualTo(1));
                 Assert.That(profile.AssetNamingUsesSpace, Is.True);
+                Assert.That(profile.ConfigureProjectFolders, Is.False);
+                Assert.That(profile.ProjectFolders, Is.EqualTo(new[]
+                {
+                    "Assets/Art",
+                    "Assets/Audio",
+                    "Assets/Prefabs",
+                    "Assets/Scenes",
+                    "Assets/Scripts",
+                    "Assets/Settings"
+                }));
             }
             finally
             {
@@ -147,6 +157,8 @@ namespace ProjectSetup.Tests
                 Assert.That(profile.GameObjectNamingScheme, Is.EqualTo(EditorSettings.NamingScheme.Underscore));
                 Assert.That(profile.GameObjectNamingDigits, Is.EqualTo(3));
                 Assert.That(profile.AssetNamingUsesSpace, Is.False);
+                Assert.That(profile.ConfigureProjectFolders, Is.False);
+                Assert.That(profile.ProjectFolders, Contains.Item("Assets/Scripts"));
             }
             finally
             {

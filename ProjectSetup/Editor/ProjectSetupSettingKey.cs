@@ -22,6 +22,7 @@ namespace ProjectSetup.Editor
         NewScriptLineEndings = 15,
         GameObjectNamingScheme = 16,
         GameObjectNamingDigits = 17,
-        AssetNamingUsesSpace = 18
+        AssetNamingUsesSpace = 18,
+        ProjectFolders = 19
     }
 }

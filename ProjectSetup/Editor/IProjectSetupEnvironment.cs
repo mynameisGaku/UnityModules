@@ -6,7 +6,7 @@ namespace ProjectSetup.Editor
     {
         bool IsAvailable { get; }
         ProjectSetupSnapshot Capture();
-        void Apply(ProjectSetupProfile profile);
+        string[] Apply(ProjectSetupProfile profile);
         void Apply(ProjectSetupSnapshot snapshot);
     }
 

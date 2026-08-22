@@ -113,6 +113,7 @@ namespace ProjectSetup.Editor
             AddScriptingDefineChange(profile, current, changes, errors);
             AddCodeGenerationChange(profile, current, changes, errors);
             AddNamingDefaultsChange(profile, current, changes, errors);
+            AddProjectFolderChange(profile, current, changes, errors);
             AddNameListChange(profile.ConfigureTags, profile.Tags, current.Tags, ProjectSetupSettingKey.Tags, "Tags", changes, errors);
             AddLayerChange(profile, current, changes, errors);
             AddNameListChange(
@@ -124,6 +125,90 @@ namespace ProjectSetup.Editor
                 changes,
                 errors);
             return new ProjectSetupPlan(changes, errors);
+        }
+
+        internal static string[] GetMissingProjectFolders(ProjectSetupProfile profile, ProjectSetupSnapshot current)
+        {
+            if (profile == null || !profile.ConfigureProjectFolders)
+            {
+                return Array.Empty<string>();
+            }
+
+            var normalized = profile.ProjectFolders
+                .Select(value => ProjectSetupFolderUtility.TryNormalize(value, out var path, out _) ? path : string.Empty)
+                .Where(value => value.Length > 0)
+                .ToArray();
+            return ProjectSetupFolderUtility.ExpandMissingFolders(normalized, current.ProjectFolders);
+        }
+
+        private static void AddProjectFolderChange(
+            ProjectSetupProfile profile,
+            ProjectSetupSnapshot current,
+            ICollection<ProjectSetupChange> changes,
+            ICollection<string> errors)
+        {
+            if (!profile.ConfigureProjectFolders)
+            {
+                return;
+            }
+
+            var requested = profile.ProjectFolders;
+            if (requested.Length == 0)
+            {
+                errors.Add("Project Folders requires at least one folder path.");
+                return;
+            }
+
+            if (requested.Length > ProjectSetupFolderUtility.MaximumFolderCount)
+            {
+                errors.Add($"Project Folders supports at most {ProjectSetupFolderUtility.MaximumFolderCount} folder paths.");
+                return;
+            }
+
+            var normalized = new string[requested.Length];
+            var unique = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            for (var index = 0; index < requested.Length; index++)
+            {
+                if (!ProjectSetupFolderUtility.TryNormalize(requested[index], out normalized[index], out var error))
+                {
+                    errors.Add($"Project Folders entry {index + 1}: {error}");
+                    return;
+                }
+
+                if (!unique.Add(normalized[index]))
+                {
+                    errors.Add($"Project Folders contains the duplicate path '{normalized[index]}'.");
+                    return;
+                }
+            }
+
+            var folders = new HashSet<string>(current.ProjectFolders, StringComparer.OrdinalIgnoreCase);
+            var assets = new HashSet<string>(current.ProjectAssetPaths, StringComparer.OrdinalIgnoreCase);
+            var missing = ProjectSetupFolderUtility.ExpandMissingFolders(normalized, current.ProjectFolders);
+            var collision = missing.FirstOrDefault(path => assets.Contains(path) && !folders.Contains(path));
+            if (!string.IsNullOrEmpty(collision))
+            {
+                errors.Add($"Project Folders cannot create '{collision}' because an Asset already uses that path.");
+                return;
+            }
+
+            if (missing.Length == 0)
+            {
+                return;
+            }
+
+            changes.Add(new ProjectSetupChange(
+                ProjectSetupSettingKey.ProjectFolders,
+                "Project Folders",
+                "All requested folders are not present",
+                $"Create {missing.Length} missing folder(s): {FormatFolderList(missing)}"));
+        }
+
+        private static string FormatFolderList(IReadOnlyList<string> paths)
+        {
+            const int visibleCount = 5;
+            var visible = string.Join(", ", paths.Take(visibleCount));
+            return paths.Count <= visibleCount ? visible : visible + $", and {paths.Count - visibleCount} more";
         }
 
         private static void AddNamingDefaultsChange(

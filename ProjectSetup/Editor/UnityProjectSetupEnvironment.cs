@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 
 using System;
+using System.IO;
+using System.Linq;
 using UnityEditor;
 using UnityEditor.Build;
 using UnityEditor.Build.Profile;
@@ -20,6 +22,7 @@ namespace ProjectSetup.Editor
             CaptureBuildScenes(out var buildSceneTargetId, out var buildSceneTargetLabel, out var buildScenes);
             CapturePlayModeStartScene(out var playModeStartSceneGuid, out var playModeStartScenePath);
             CaptureScriptingDefines(out var hasScriptingDefineData, out var scriptingDefineTargetId, out var scriptingDefineTargetLabel, out var scriptingDefineSymbols);
+            CaptureProjectFolders(out var projectFolders, out var projectAssetPaths);
             return new ProjectSetupSnapshot(
                 EditorSettings.serializationMode,
                 VersionControlSettings.mode,
@@ -53,11 +56,14 @@ namespace ProjectSetup.Editor
                 true,
                 EditorSettings.gameObjectNamingScheme,
                 EditorSettings.gameObjectNamingDigits,
-                EditorSettings.assetNamingUsesSpace);
+                EditorSettings.assetNamingUsesSpace,
+                projectFolders,
+                projectAssetPaths);
         }
 
-        public void Apply(ProjectSetupProfile profile)
+        public string[] Apply(ProjectSetupProfile profile)
         {
+            var createdProjectFolders = Array.Empty<string>();
             if (profile.ConfigureAssetSerialization)
             {
                 EditorSettings.serializationMode = profile.AssetSerialization;
@@ -131,8 +137,15 @@ namespace ProjectSetup.Editor
                 EditorSettings.assetNamingUsesSpace = profile.AssetNamingUsesSpace;
             }
 
+            if (profile.ConfigureProjectFolders)
+            {
+                var current = Capture();
+                createdProjectFolders = CreateProjectFolders(ProjectSetupPlanner.GetMissingProjectFolders(profile, current));
+            }
+
             ProjectSetupTagManagerStore.Apply(profile);
             AssetDatabase.SaveAssets();
+            return createdProjectFolders;
         }
 
         public void Apply(ProjectSetupSnapshot snapshot)
@@ -190,6 +203,12 @@ namespace ProjectSetup.Editor
                 EditorSettings.gameObjectNamingDigits = snapshot.GameObjectNamingDigits;
                 EditorSettings.assetNamingUsesSpace = snapshot.AssetNamingUsesSpace;
             }
+
+            CreateProjectFolders(snapshot.ProjectFolders
+                .OrderBy(ProjectSetupFolderUtility.GetDepth)
+                .ThenBy(path => path, StringComparer.OrdinalIgnoreCase)
+                .ToArray());
+            RestoreCreatedProjectFolders(snapshot.CreatedProjectFolders);
 
             ProjectSetupTagManagerStore.Restore(snapshot);
             AssetDatabase.SaveAssets();
@@ -364,6 +383,81 @@ namespace ProjectSetup.Editor
             }
 
             EditorBuildSettings.scenes = scenes;
+        }
+
+        private static void CaptureProjectFolders(out string[] folders, out string[] assetPaths)
+        {
+            assetPaths = AssetDatabase.GetAllAssetPaths()
+                .Select(NormalizePath)
+                .Where(path => string.Equals(path, "Assets", StringComparison.OrdinalIgnoreCase)
+                    || path.StartsWith("Assets/", StringComparison.OrdinalIgnoreCase))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+            folders = assetPaths
+                .Where(AssetDatabase.IsValidFolder)
+                .ToArray();
+        }
+
+        private static string[] CreateProjectFolders(string[] paths)
+        {
+            var created = new System.Collections.Generic.List<string>();
+            foreach (var path in paths ?? Array.Empty<string>())
+            {
+                if (AssetDatabase.IsValidFolder(path))
+                {
+                    continue;
+                }
+
+                var separator = path.LastIndexOf('/');
+                var parent = path.Substring(0, separator);
+                var name = path.Substring(separator + 1);
+                var guid = AssetDatabase.CreateFolder(parent, name);
+                var createdPath = NormalizePath(AssetDatabase.GUIDToAssetPath(guid));
+                if (!string.Equals(createdPath, path, StringComparison.OrdinalIgnoreCase))
+                {
+                    if (!string.IsNullOrEmpty(createdPath))
+                    {
+                        AssetDatabase.DeleteAsset(createdPath);
+                    }
+
+                    throw new InvalidOperationException($"Unity could not create the exact folder path '{path}'.");
+                }
+
+                created.Add(path);
+            }
+
+            return created.ToArray();
+        }
+
+        private static void RestoreCreatedProjectFolders(string[] createdFolders)
+        {
+            CaptureProjectFolders(out var currentFolders, out var currentAssetPaths);
+            var removable = ProjectSetupFolderUtility.GetRestorableFolders(createdFolders, currentFolders, currentAssetPaths);
+            foreach (var path in removable)
+            {
+                if (!AssetDatabase.IsValidFolder(path) || !IsDirectoryEmpty(path))
+                {
+                    continue;
+                }
+
+                if (!AssetDatabase.DeleteAsset(path))
+                {
+                    throw new InvalidOperationException($"Unity could not remove the empty folder '{path}'.");
+                }
+            }
+        }
+
+        private static bool IsDirectoryEmpty(string assetPath)
+        {
+            var projectRoot = Path.GetDirectoryName(UnityEngine.Application.dataPath);
+            if (string.IsNullOrEmpty(projectRoot))
+            {
+                return false;
+            }
+
+            var fullPath = Path.GetFullPath(Path.Combine(projectRoot, assetPath.Replace('/', Path.DirectorySeparatorChar)));
+            return Directory.Exists(fullPath) && !Directory.EnumerateFileSystemEntries(fullPath).Any();
         }
 
         private static string NormalizePath(string path)
