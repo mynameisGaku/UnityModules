@@ -46,7 +46,8 @@ namespace ProjectSetup.Editor
             bool assetNamingUsesSpace = true,
             string[] projectFolders = null,
             string[] projectAssetPaths = null,
-            string[] createdProjectFolders = null)
+            string[] createdProjectFolders = null,
+            ProjectSetupCreatedAsset[] createdProjectAssets = null)
         {
             AssetSerialization = assetSerialization;
             VersionControlMode = versionControlMode ?? string.Empty;
@@ -84,6 +85,7 @@ namespace ProjectSetup.Editor
             ProjectFolders = Clone(projectFolders);
             ProjectAssetPaths = Clone(projectAssetPaths);
             CreatedProjectFolders = Clone(createdProjectFolders);
+            CreatedProjectAssets = Clone(createdProjectAssets);
         }
 
         internal SerializationMode AssetSerialization { get; }
@@ -122,15 +124,21 @@ namespace ProjectSetup.Editor
         internal string[] ProjectFolders { get; }
         internal string[] ProjectAssetPaths { get; }
         internal string[] CreatedProjectFolders { get; }
+        internal ProjectSetupCreatedAsset[] CreatedProjectAssets { get; }
 
         internal ProjectSetupSnapshot WithCreatedProjectFolders(string[] paths)
         {
-            return Copy(ProjectFolders, ProjectAssetPaths, paths);
+            return Copy(ProjectFolders, ProjectAssetPaths, paths, CreatedProjectAssets);
+        }
+
+        internal ProjectSetupSnapshot WithCreatedProjectState(string[] folders, ProjectSetupCreatedAsset[] assets)
+        {
+            return Copy(ProjectFolders, ProjectAssetPaths, folders, assets);
         }
 
         internal ProjectSetupSnapshot WithProjectFolderState(string[] folders, string[] assetPaths)
         {
-            return Copy(folders, assetPaths, CreatedProjectFolders);
+            return Copy(folders, assetPaths, CreatedProjectFolders, CreatedProjectAssets);
         }
 
         public bool Equals(ProjectSetupSnapshot other)
@@ -164,7 +172,8 @@ namespace ProjectSetup.Editor
                     || (GameObjectNamingScheme == other.GameObjectNamingScheme
                         && GameObjectNamingDigits == other.GameObjectNamingDigits
                         && AssetNamingUsesSpace == other.AssetNamingUsesSpace))
-                && SequenceEqual(CreatedProjectFolders, other.CreatedProjectFolders);
+                && SequenceEqual(CreatedProjectFolders, other.CreatedProjectFolders)
+                && SequenceEqual(CreatedProjectAssets, other.CreatedProjectAssets);
         }
 
         internal bool Matches(ProjectSetupSnapshot actual)
@@ -267,11 +276,16 @@ namespace ProjectSetup.Editor
                     hash = (hash * 397) ^ AssetNamingUsesSpace.GetHashCode();
                 }
                 hash = AddHash(hash, CreatedProjectFolders);
+                hash = AddHash(hash, CreatedProjectAssets);
                 return hash;
             }
         }
 
-        private ProjectSetupSnapshot Copy(string[] projectFolders, string[] projectAssetPaths, string[] createdProjectFolders)
+        private ProjectSetupSnapshot Copy(
+            string[] projectFolders,
+            string[] projectAssetPaths,
+            string[] createdProjectFolders,
+            ProjectSetupCreatedAsset[] createdProjectAssets)
         {
             return new ProjectSetupSnapshot(
                 AssetSerialization,
@@ -309,7 +323,8 @@ namespace ProjectSetup.Editor
                 AssetNamingUsesSpace,
                 projectFolders,
                 projectAssetPaths,
-                createdProjectFolders);
+                createdProjectFolders,
+                createdProjectAssets);
         }
 
         private static string[] Clone(string[] values)
@@ -325,6 +340,11 @@ namespace ProjectSetup.Editor
         private static ProjectSetupBuildSceneState[] Clone(ProjectSetupBuildSceneState[] values)
         {
             return values == null ? Array.Empty<ProjectSetupBuildSceneState>() : (ProjectSetupBuildSceneState[])values.Clone();
+        }
+
+        private static ProjectSetupCreatedAsset[] Clone(ProjectSetupCreatedAsset[] values)
+        {
+            return values == null ? Array.Empty<ProjectSetupCreatedAsset>() : (ProjectSetupCreatedAsset[])values.Clone();
         }
 
         private static bool SequenceEqual<T>(IReadOnlyList<T> left, IReadOnlyList<T> right)

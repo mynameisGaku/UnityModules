@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: MIT
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using UnityEditor;
 using UnityEditor.Build;
 using UnityEditor.Build.Profile;
@@ -61,9 +63,10 @@ namespace ProjectSetup.Editor
                 projectAssetPaths);
         }
 
-        public string[] Apply(ProjectSetupProfile profile)
+        public ProjectSetupEnvironmentApplyResult Apply(ProjectSetupProfile profile)
         {
             var createdProjectFolders = Array.Empty<string>();
+            var createdProjectAssets = Array.Empty<ProjectSetupCreatedAsset>();
             if (profile.ConfigureAssetSerialization)
             {
                 EditorSettings.serializationMode = profile.AssetSerialization;
@@ -137,15 +140,21 @@ namespace ProjectSetup.Editor
                 EditorSettings.assetNamingUsesSpace = profile.AssetNamingUsesSpace;
             }
 
-            if (profile.ConfigureProjectFolders)
+            if (profile.ConfigureProjectFolders || profile.ConfigureAssemblyDefinitions)
             {
                 var current = Capture();
                 createdProjectFolders = CreateProjectFolders(ProjectSetupPlanner.GetMissingProjectFolders(profile, current));
             }
 
+            if (profile.ConfigureAssemblyDefinitions)
+            {
+                createdProjectAssets = CreateAssemblyDefinitions(
+                    ProjectSetupPlanner.GetMissingAssemblyDefinitions(profile, Capture()));
+            }
+
             ProjectSetupTagManagerStore.Apply(profile);
             AssetDatabase.SaveAssets();
-            return createdProjectFolders;
+            return new ProjectSetupEnvironmentApplyResult(createdProjectFolders, createdProjectAssets);
         }
 
         public void Apply(ProjectSetupSnapshot snapshot)
@@ -208,6 +217,7 @@ namespace ProjectSetup.Editor
                 .OrderBy(ProjectSetupFolderUtility.GetDepth)
                 .ThenBy(path => path, StringComparer.OrdinalIgnoreCase)
                 .ToArray());
+            RestoreCreatedProjectAssets(snapshot.CreatedProjectAssets);
             RestoreCreatedProjectFolders(snapshot.CreatedProjectFolders);
 
             ProjectSetupTagManagerStore.Restore(snapshot);
@@ -430,6 +440,85 @@ namespace ProjectSetup.Editor
             return created.ToArray();
         }
 
+        private static ProjectSetupCreatedAsset[] CreateAssemblyDefinitions(ProjectSetupAssemblyDefinitionPlan[] plans)
+        {
+            var created = new List<ProjectSetupCreatedAsset>();
+            foreach (var plan in plans ?? Array.Empty<ProjectSetupAssemblyDefinitionPlan>())
+            {
+                var fullPath = GetFullAssetPath(plan.Path);
+                if (File.Exists(fullPath) || Directory.Exists(fullPath))
+                {
+                    throw new InvalidOperationException($"The Assembly Definition target '{plan.Path}' already exists.");
+                }
+
+                try
+                {
+                    using (var stream = new FileStream(fullPath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+                    using (var writer = new StreamWriter(stream, new UTF8Encoding(false)))
+                    {
+                        writer.Write(plan.Content);
+                        writer.Flush();
+                        stream.Flush(true);
+                    }
+
+                    AssetDatabase.ImportAsset(plan.Path, ImportAssetOptions.ForceSynchronousImport);
+                    if (!File.Exists(fullPath))
+                    {
+                        throw new InvalidOperationException($"Unity could not import the Assembly Definition '{plan.Path}'.");
+                    }
+
+                    var asset = new ProjectSetupCreatedAsset(
+                        plan.Path,
+                        ProjectSetupAssemblyDefinitionUtility.ComputeContentHash(File.ReadAllBytes(fullPath)));
+                    created.Add(asset);
+                }
+                catch
+                {
+                    if (File.Exists(fullPath))
+                    {
+                        if (!AssetDatabase.DeleteAsset(plan.Path))
+                        {
+                            File.Delete(fullPath);
+                            var metaPath = fullPath + ".meta";
+                            if (File.Exists(metaPath))
+                            {
+                                File.Delete(metaPath);
+                            }
+
+                            AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
+                        }
+                    }
+
+                    throw;
+                }
+            }
+
+            return created.ToArray();
+        }
+
+        private static void RestoreCreatedProjectAssets(ProjectSetupCreatedAsset[] createdAssets)
+        {
+            foreach (var asset in createdAssets ?? Array.Empty<ProjectSetupCreatedAsset>())
+            {
+                var fullPath = GetFullAssetPath(asset.Path);
+                if (!File.Exists(fullPath))
+                {
+                    continue;
+                }
+
+                var currentHash = ProjectSetupAssemblyDefinitionUtility.ComputeContentHash(File.ReadAllBytes(fullPath));
+                if (!string.Equals(currentHash, asset.ContentHash, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                if (!AssetDatabase.DeleteAsset(asset.Path))
+                {
+                    throw new InvalidOperationException($"Unity could not remove the unchanged Assembly Definition '{asset.Path}'.");
+                }
+            }
+        }
+
         private static void RestoreCreatedProjectFolders(string[] createdFolders)
         {
             CaptureProjectFolders(out var currentFolders, out var currentAssetPaths);
@@ -458,6 +547,33 @@ namespace ProjectSetup.Editor
 
             var fullPath = Path.GetFullPath(Path.Combine(projectRoot, assetPath.Replace('/', Path.DirectorySeparatorChar)));
             return Directory.Exists(fullPath) && !Directory.EnumerateFileSystemEntries(fullPath).Any();
+        }
+
+        private static string GetFullAssetPath(string assetPath)
+        {
+            var projectRoot = Path.GetFullPath(Path.GetDirectoryName(UnityEngine.Application.dataPath)
+                ?? throw new InvalidOperationException("The Unity project root is unavailable."));
+            var fullPath = Path.GetFullPath(Path.Combine(projectRoot, assetPath.Replace('/', Path.DirectorySeparatorChar)));
+            var prefix = projectRoot.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+                + Path.DirectorySeparatorChar;
+            if (!fullPath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException($"Asset path '{assetPath}' escapes the Unity project.");
+            }
+
+            var parent = Path.GetDirectoryName(fullPath);
+            while (!string.IsNullOrEmpty(parent) && parent.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            {
+                if (Directory.Exists(parent)
+                    && (File.GetAttributes(parent) & FileAttributes.ReparsePoint) != 0)
+                {
+                    throw new InvalidOperationException($"Asset path '{assetPath}' crosses a reparse point.");
+                }
+
+                parent = Path.GetDirectoryName(parent);
+            }
+
+            return fullPath;
         }
 
         private static string NormalizePath(string path)
