@@ -2,13 +2,13 @@
 
 Unityの新規Projectで毎回行う設定を、1つのprofileからまとめてPreview・適用・復元するEditor専用ツールです。
 
-`Assets`配下の基本フォルダー、Runtime／Editor／test asmdef、`.gitignore`、`.gitattributes`、`Project Settings`、build target別のApplication Identifier、C#のRoot Namespaceと改行方式、複製時の命名規則、Play Modeの開始Scene、条件付きコンパイル記号、Tag、Layer、Sorting Layer、Build Scenesを別々の画面やscriptで設定する手間を減らします。自動適用はせず、実際に変わる項目を確認してから実行できます。
+`Assets`配下の基本フォルダー、Runtime／Editor／test asmdef、`.gitignore`、`.gitattributes`、`Project Settings`、build target別のApplication IdentifierとScripting Backend、C#のRoot Namespaceと改行方式、複製時の命名規則、Play Modeの開始Scene、条件付きコンパイル記号、Tag、Layer、Sorting Layer、Build Scenesを別々の画面やscriptで設定する手間を減らします。自動適用はせず、実際に変わる項目を確認してから実行できます。
 
 ## まず知りたいこと
 
 | 質問 | 答え |
 |---|---|
-| 何が楽になる？ | 基本フォルダー、asmdef、Git用fileの作成と、Application Identifierを含むProject設定、C#生成時の既定値、複製名、Play Modeの開始Scene、条件付きコンパイル記号、Tag/Layer、Build Scenesを1つのprofileからまとめて設定できます。 |
+| 何が楽になる？ | 基本フォルダー、asmdef、Git用fileの作成と、Application Identifier・Scripting Backendを含むProject設定、C#生成時の既定値、複製名、Play Modeの開始Scene、条件付きコンパイル記号、Tag/Layer、Build Scenesを1つのprofileからまとめて設定できます。 |
 | 勝手に変更される？ | されません。import時やUnity起動時には何も適用しません。 |
 | 実行前に確認できる？ | `Preview changes`で変更前と変更後を一覧表示します。 |
 | 失敗したら？ | Apply前にbackupし、書込後の検証に失敗した場合は可能な範囲で自動復元します。 |
@@ -33,6 +33,7 @@ Unityの新規Projectで毎回行う設定を、1つのprofileからまとめて
 | どのSceneからでもBootstrap SceneでPlayする | `Play Mode Start Scene` |
 | Playerへ入れるSceneと順序をそろえる | `Build Scenes` |
 | build targetごとのapplication IDをそろえる | `Application Identifier` |
+| build targetごとにMono／IL2CPPをそろえる | `Scripting Backend` |
 | Tag、Layer、compile記号を手入力せず追加する | `Tags`、`Layers`、`Scripting Define Symbols` |
 | 直前の一括変更を戻す | `Restore last backup` |
 
@@ -50,6 +51,7 @@ Unityの新規Projectで毎回行う設定を、1つのprofileからまとめて
 - Product Name
 - Bundle Version
 - Application Identifier（選択中build target）
+- Scripting Backend（選択中build target）
 
 ### Application Identifier
 
@@ -61,6 +63,17 @@ Player Settingsを開かず、現在選択中のbuild targetへ`com.company.game
 4. Apply後に別targetへも設定する場合は、targetを切り替えて同じprofileを再適用します。
 
 Apply直前のtargetと値はbackupへ保存します。Restore時にbuild targetが変わっている場合は、別targetを書き換えないよう復元を停止します。この項目は初期profileでは無効です。
+
+### Scripting Backend
+
+現在選択中のbuild targetへ`Mono`または`IL2CPP`を設定できます。Player Settingsを開き、platformごとに同じ項目を探して切り替える作業を減らします。
+
+1. 先に設定したいbuild targetへ切り替えます。
+2. `Scripting Backend` cardで`Apply this setting`を有効にします。
+3. `Mono`または`IL2CPP`を選び、Previewのtarget名と変更前後を確認します。
+4. platformで選択したbackendが利用可能であることを確認してからApplyします。
+
+Apply直前のtargetとbackendはbackupへ保存します。Restore時にbuild targetが変わっている場合は復元を停止し、別targetを誤って書き換えません。platformが対応していないbackendを選んだ場合はUnityの設定APIが失敗し、Apply前のsnapshotから復元を試みます。この項目は初期profileでは無効です。
 
 ### 名前の一括登録
 
@@ -226,6 +239,7 @@ Apply後に複製したGameObjectとAssetだけへ反映されます。既に存
 - Enter Play ModeでDomain Reloadを無効にすると、利用側でstatic stateの初期化が必要です。
 - Play Mode Start Sceneを指定すると、現在開いているSceneの代わりにそのSceneを読み込んでPlayします。
 - Scripting Define Symbolsを変更すると、Unityがscriptを再コンパイルし、設定によってはDomain Reloadが発生します。
+- Scripting Backendは選択中build targetだけを変更します。platformが対応するbackendはUnityのBuild Settingsと必要なplatform moduleで確認してください。
 - Root Namespaceを変更すると、Unityが生成する`.csproj`のRoot Namespaceが変わります。asmdef固有のRoot Namespaceは変更しません。
 - New Script Line EndingsはApply後に作成するC# scriptだけへ影響し、既存scriptを一括変換しません。
 - Duplicate NamingはApply後の複製名だけへ影響し、既存GameObjectやAssetを一括改名しません。
@@ -245,7 +259,9 @@ Build Scenesを復元する場合は、backup作成時と同じBuild Profileを�
 
 Scripting Define Symbolsを復元する場合は、backup作成時と同じbuild targetを選択してください。別のtargetへ切り替わっている場合は、誤ったtargetを書き換えないよう復元を停止します。復元時はApply直前の記号一覧へ正確に戻すため、Apply後に手動追加した記号も取り除く場合があります。
 
-backupはUTF-8 BOMなしのJSONです。schema v11はProject設定、Application Identifierと対象build target、Applyが作成したフォルダー・asmdef・version control fileのpathと内容hash、Root Namespace、新規scriptの改行方式、複製時の命名規則、Play Mode Start Scene、Scripting Define Symbolsと対象build target、TagManager全体、Build SceneのGUID・順序・Enabled状態・保存先を保持します。schema v1からv10も読み取れますが、そのversionに存在しない項目は復元しません。
+Application IdentifierとScripting Backendを復元する場合も、backup作成時と同じbuild targetを選択してください。別targetへ切り替わっている場合は復元を停止します。
+
+backupはUTF-8 BOMなしのJSONです。schema v12はProject設定、Application Identifier・Scripting Backendと対象build target、Applyが作成したフォルダー・asmdef・version control fileのpathと内容hash、Root Namespace、新規scriptの改行方式、複製時の命名規則、Play Mode Start Scene、Scripting Define Symbolsと対象build target、TagManager全体、Build SceneのGUID・順序・Enabled状態・保存先を保持します。schema v1からv11も読み取れますが、そのversionに存在しない項目は復元しません。
 
 ## profileを別Projectで使う
 
@@ -285,7 +301,7 @@ Build Scenesをprofileで有効にすると、既存一覧をprofileの内容へ
 Package Managerの`Add package from git URL...`へ次を入力します。
 
 ```text
-https://github.com/mynameisGaku/UnityModules.git?path=/ProjectSetup#project-setup-v1.11.0
+https://github.com/mynameisGaku/UnityModules.git?path=/ProjectSetup#project-setup-v1.12.0
 ```
 
 ## 対応環境
