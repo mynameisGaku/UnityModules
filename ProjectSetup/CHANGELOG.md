@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.15.0] - 2026-08-23
+
+- Added profile-owned IL2CPP Code Generation selection for OptimizeSpeed or OptimizeSize on the active build target.
+- Added target-aware preview, backup schema v15, exact Restore, and target-switch protection.
+- Added deterministic planner, backup, service, window, and real PlayerSettings coverage.
+
 ## [1.14.0] - 2026-08-22
 
 - Added profile-owned Managed Stripping Level setup for the active build target.
