@@ -2,13 +2,13 @@
 
 Unityの新規Projectで毎回行う設定を、1つのprofileからまとめてPreview・適用・復元するEditor専用ツールです。
 
-`Project Settings`、C#のRoot Namespaceと改行方式、Play Modeの開始Scene、条件付きコンパイル記号、Tag、Layer、Sorting Layer、Build Scenesを別々の画面やscriptで設定する手間を減らします。自動適用はせず、実際に変わる項目を確認してから実行できます。
+`Project Settings`、C#のRoot Namespaceと改行方式、複製時の命名規則、Play Modeの開始Scene、条件付きコンパイル記号、Tag、Layer、Sorting Layer、Build Scenesを別々の画面やscriptで設定する手間を減らします。自動適用はせず、実際に変わる項目を確認してから実行できます。
 
 ## まず知りたいこと
 
 | 質問 | 答え |
 |---|---|
-| 何が楽になる？ | Project設定、C#生成時の既定値、Play Modeの開始Scene、条件付きコンパイル記号、Tag/Layer、Build Scenesを1つのprofileからまとめて設定できます。 |
+| 何が楽になる？ | Project設定、C#生成時の既定値、複製名、Play Modeの開始Scene、条件付きコンパイル記号、Tag/Layer、Build Scenesを1つのprofileからまとめて設定できます。 |
 | 勝手に変更される？ | されません。import時やUnity起動時には何も適用しません。 |
 | 実行前に確認できる？ | `Preview changes`で変更前と変更後を一覧表示します。 |
 | 失敗したら？ | Apply前にbackupし、書込後の検証に失敗した場合は可能な範囲で自動復元します。 |
@@ -62,6 +62,14 @@ Unityの新規Projectで毎回行う設定を、1つのprofileからまとめて
 
 asmdefに個別のRoot Namespaceが設定されているscriptではasmdef側が優先されます。この項目はProject全体の既定値をそろえる用途です。
 
+### 複製時の命名規則
+
+- GameObject複製時のsuffixを`Prefab (1)`、`Prefab.1`、`Prefab_1`から選ぶ。
+- 連番の最小桁数を1から9でそろえる。3なら`Prefab_001`のようになります。
+- Asset複製時に番号の前へspaceを入れるか選ぶ。
+
+3項目は`Duplicate Naming` cardの1つのtoggleでまとめて所有します。既存GameObjectやAssetは改名せず、Apply後の複製名だけが変わります。
+
 ### Build Scenes
 
 - Scene Assetを選択して順番を保存する。
@@ -110,6 +118,15 @@ Scene欄を空にしてApplyすると、固定開始Sceneを解除し、現在�
 
 Root Namespaceは`.`で区切ったC#識別子だけを受け付けます。空欄を適用するとRoot Namespaceを解除します。改行方式はApply後に新しく作成したC# scriptへ適用され、既存fileの改行は書き換えません。
 
+## 複製名をProject全体でそろえる
+
+1. `Duplicate Naming` cardで`Apply these settings`を有効にします。
+2. `GameObject suffix`で括弧、dot、underscoreから形式を選びます。
+3. `Minimum number digits`で連番の最小桁数を1から9で指定します。
+4. Asset copy番号の前へspaceを入れるか選び、PreviewしてApplyします。
+
+Apply後に複製したGameObjectとAssetだけへ反映されます。既に存在する名前は変更しません。
+
 ## Applyすると何が変わるか
 
 1. 現在の対象値をsnapshotとして取得します。
@@ -128,6 +145,7 @@ Root Namespaceは`.`で区切ったC#識別子だけを受け付けます。空�
 - Scripting Define Symbolsを変更すると、Unityがscriptを再コンパイルし、設定によってはDomain Reloadが発生します。
 - Root Namespaceを変更すると、Unityが生成する`.csproj`のRoot Namespaceが変わります。asmdef固有のRoot Namespaceは変更しません。
 - New Script Line EndingsはApply後に作成するC# scriptだけへ影響し、既存scriptを一括変換しません。
+- Duplicate NamingはApply後の複製名だけへ影響し、既存GameObjectやAssetを一括改名しません。
 - Build Scenesは不足分の追加ではなく、profileの一覧へ完全に置き換えます。
 - RestoreはApply直前へ戻すため、その後に追加したTag/Layer/Sceneを取り除く場合があります。
 
@@ -141,7 +159,7 @@ Build Scenesを復元する場合は、backup作成時と同じBuild Profileを�
 
 Scripting Define Symbolsを復元する場合は、backup作成時と同じbuild targetを選択してください。別のtargetへ切り替わっている場合は、誤ったtargetを書き換えないよう復元を停止します。復元時はApply直前の記号一覧へ正確に戻すため、Apply後に手動追加した記号も取り除く場合があります。
 
-backupはUTF-8 BOMなしのJSONです。schema v6はProject設定、Root Namespace、新規scriptの改行方式、Play Mode Start Scene、Scripting Define Symbolsと対象build target、TagManager全体、Build SceneのGUID・順序・Enabled状態・保存先を保持します。schema v1からv5も読み取れますが、そのversionに存在しない項目は復元しません。
+backupはUTF-8 BOMなしのJSONです。schema v7はProject設定、Root Namespace、新規scriptの改行方式、複製時の命名規則、Play Mode Start Scene、Scripting Define Symbolsと対象build target、TagManager全体、Build SceneのGUID・順序・Enabled状態・保存先を保持します。schema v1からv6も読み取れますが、そのversionに存在しない項目は復元しません。
 
 ## profileを別Projectで使う
 
@@ -182,7 +200,7 @@ Build Scenesをprofileで有効にすると、既存一覧をprofileの内容へ
 Package Managerの`Add package from git URL...`へ次を入力します。
 
 ```text
-https://github.com/mynameisGaku/UnityModules.git?path=/ProjectSetup#project-setup-v1.5.0
+https://github.com/mynameisGaku/UnityModules.git?path=/ProjectSetup#project-setup-v1.6.0
 ```
 
 ## 対応環境
