@@ -117,7 +117,10 @@ namespace ProjectSetup.Editor
             var plan = PreviewRestore(out var backup, out var error);
             if (!plan.IsValid)
             {
-                return new ProjectSetupApplyResult(false, error, plan);
+                var message = !string.IsNullOrEmpty(error)
+                    ? error
+                    : plan.Errors.FirstOrDefault() ?? "The backup cannot be restored.";
+                return new ProjectSetupApplyResult(false, message, plan);
             }
 
             if (!plan.HasChanges)
@@ -165,6 +168,7 @@ namespace ProjectSetup.Editor
                 profile.ConfigureSortingLayers = false;
                 profile.ConfigureBuildScenes = false;
                 profile.ConfigureScriptingDefineSymbols = false;
+                profile.ConfigureApplicationIdentifier = false;
                 profile.ConfigureProjectFolders = false;
                 profile.ConfigureAssemblyDefinitions = false;
                 var scalarPlan = ProjectSetupPlanner.Build(profile, current);
@@ -236,6 +240,23 @@ namespace ProjectSetup.Editor
                             $"Scripting Define Symbols ({desired.ScriptingDefineTargetLabel})",
                             ProjectSetupPlanner.FormatScriptingDefines(current.ScriptingDefineSymbols),
                             ProjectSetupPlanner.FormatScriptingDefines(desired.ScriptingDefineSymbols)));
+                    }
+                }
+
+                if (desired.HasApplicationIdentifierData)
+                {
+                    if (!current.HasApplicationIdentifierData
+                        || !string.Equals(desired.ApplicationIdentifierTargetId, current.ApplicationIdentifierTargetId, StringComparison.Ordinal))
+                    {
+                        errors.Add($"The active Application Identifier target must remain '{desired.ApplicationIdentifierTargetLabel}' before restoring this backup.");
+                    }
+                    else if (!string.Equals(desired.ApplicationIdentifier, current.ApplicationIdentifier, StringComparison.Ordinal))
+                    {
+                        changes.Add(new ProjectSetupChange(
+                            ProjectSetupSettingKey.ApplicationIdentifier,
+                            $"Application Identifier ({desired.ApplicationIdentifierTargetLabel})",
+                            current.ApplicationIdentifier,
+                            desired.ApplicationIdentifier));
                     }
                 }
 

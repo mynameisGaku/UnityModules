@@ -79,6 +79,77 @@ namespace ProjectSetup.Tests
         }
 
         [Test]
+        public void Build_PlansApplicationIdentifierForActiveTarget()
+        {
+            _profile.ConfigureAssetSerialization = false;
+            _profile.ConfigureVersionControl = false;
+            _profile.ConfigureApplicationIdentifier = true;
+            _profile.ApplicationIdentifier = "com.studiogaku.sample";
+            var current = new ProjectSetupSnapshot(
+                SerializationMode.ForceText,
+                "Visible Meta Files",
+                false,
+                EnterPlayModeOptions.None,
+                ColorSpace.Gamma,
+                false,
+                "DefaultCompany",
+                "New Unity Project",
+                "1.0.0",
+                hasApplicationIdentifierData: true,
+                applicationIdentifierTargetId: "Standalone",
+                applicationIdentifierTargetLabel: "Standalone",
+                applicationIdentifier: "com.company.product");
+
+            var plan = ProjectSetupPlanner.Build(_profile, current);
+
+            Assert.That(plan.IsValid, Is.True, string.Join("\n", plan.Errors));
+            Assert.That(plan.Changes, Has.Exactly(1).Property("Key").EqualTo(ProjectSetupSettingKey.ApplicationIdentifier));
+            Assert.That(plan.Changes.Single().DesiredValue, Is.EqualTo("com.studiogaku.sample"));
+        }
+
+        [TestCase("game")]
+        [TestCase("Com.company.game")]
+        [TestCase("com.1company.game")]
+        [TestCase("com.company.game-name")]
+        [TestCase("com..game")]
+        public void Build_RejectsInvalidApplicationIdentifier(string value)
+        {
+            _profile.ConfigureApplicationIdentifier = true;
+            _profile.ApplicationIdentifier = value;
+            var current = new ProjectSetupSnapshot(
+                SerializationMode.ForceText,
+                "Visible Meta Files",
+                false,
+                EnterPlayModeOptions.None,
+                ColorSpace.Gamma,
+                false,
+                "DefaultCompany",
+                "New Unity Project",
+                "1.0.0",
+                hasApplicationIdentifierData: true,
+                applicationIdentifierTargetId: "Standalone",
+                applicationIdentifierTargetLabel: "Standalone",
+                applicationIdentifier: "com.company.product");
+
+            var plan = ProjectSetupPlanner.Build(_profile, current);
+
+            Assert.That(plan.IsValid, Is.False);
+            Assert.That(plan.Errors, Has.Some.Contains("Application Identifier"));
+        }
+
+        [Test]
+        public void Build_RejectsApplicationIdentifierWhenActiveTargetIsUnavailable()
+        {
+            _profile.ConfigureApplicationIdentifier = true;
+            _profile.ApplicationIdentifier = "com.studiogaku.sample";
+
+            var plan = ProjectSetupPlanner.Build(_profile, Snapshot());
+
+            Assert.That(plan.IsValid, Is.False);
+            Assert.That(plan.Errors, Has.Some.Contains("unavailable"));
+        }
+
+        [Test]
         public void Build_RejectsUnknownEnterPlayModeFlags()
         {
             _profile.ConfigureEnterPlayMode = true;

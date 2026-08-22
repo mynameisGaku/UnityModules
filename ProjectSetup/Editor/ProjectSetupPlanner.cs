@@ -17,6 +17,7 @@ namespace ProjectSetup.Editor
         private const int MaximumBuildSceneCount = 64;
         private const int MaximumScriptingDefineLength = 64;
         private const int MaximumRootNamespaceLength = 128;
+        private const int MaximumApplicationIdentifierLength = 255;
         private const int MinimumGameObjectNamingDigits = 1;
         private const int MaximumGameObjectNamingDigits = 9;
         private const EnterPlayModeOptions KnownEnterPlayModeOptions = EnterPlayModeOptions.DisableDomainReload
@@ -108,6 +109,7 @@ namespace ProjectSetup.Editor
             AddTextChange(profile.ConfigureCompanyName, profile.CompanyName, current.CompanyName, ProjectSetupSettingKey.CompanyName, "Company Name", MaximumTextLength, changes, errors);
             AddTextChange(profile.ConfigureProductName, profile.ProductName, current.ProductName, ProjectSetupSettingKey.ProductName, "Product Name", MaximumTextLength, changes, errors);
             AddTextChange(profile.ConfigureBundleVersion, profile.BundleVersion, current.BundleVersion, ProjectSetupSettingKey.BundleVersion, "Bundle Version", MaximumVersionLength, changes, errors);
+            AddApplicationIdentifierChange(profile, current, changes, errors);
             AddPlayModeStartSceneChange(profile, current, changes, errors);
             AddBuildSceneChange(profile, current, changes, errors);
             AddScriptingDefineChange(profile, current, changes, errors);
@@ -772,6 +774,72 @@ namespace ProjectSetup.Editor
                 {
                     var character = segment[index];
                     if (!IsAsciiLetter(character) && !IsAsciiDigit(character) && character != '_')
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            return true;
+        }
+
+        private static void AddApplicationIdentifierChange(
+            ProjectSetupProfile profile,
+            ProjectSetupSnapshot current,
+            ICollection<ProjectSetupChange> changes,
+            ICollection<string> errors)
+        {
+            if (!profile.ConfigureApplicationIdentifier)
+            {
+                return;
+            }
+
+            if (!current.HasApplicationIdentifierData)
+            {
+                errors.Add("Application Identifier is unavailable for the active build target.");
+                return;
+            }
+
+            if (!IsValidApplicationIdentifier(profile.ApplicationIdentifier))
+            {
+                errors.Add("Application Identifier must use 2 or more lowercase dot-separated segments. Each segment must start with a letter and contain only letters, digits, or underscores.");
+                return;
+            }
+
+            if (!string.Equals(current.ApplicationIdentifier, profile.ApplicationIdentifier, StringComparison.Ordinal))
+            {
+                changes.Add(new ProjectSetupChange(
+                    ProjectSetupSettingKey.ApplicationIdentifier,
+                    $"Application Identifier ({current.ApplicationIdentifierTargetLabel})",
+                    current.ApplicationIdentifier,
+                    profile.ApplicationIdentifier));
+            }
+        }
+
+        internal static bool IsValidApplicationIdentifier(string value)
+        {
+            if (string.IsNullOrEmpty(value) || value.Length > MaximumApplicationIdentifierLength)
+            {
+                return false;
+            }
+
+            var segments = value.Split('.');
+            if (segments.Length < 2)
+            {
+                return false;
+            }
+
+            foreach (var segment in segments)
+            {
+                if (segment.Length == 0 || segment.Length > 63 || segment[0] < 'a' || segment[0] > 'z')
+                {
+                    return false;
+                }
+
+                for (var index = 1; index < segment.Length; index++)
+                {
+                    var character = segment[index];
+                    if ((character < 'a' || character > 'z') && !IsAsciiDigit(character) && character != '_')
                     {
                         return false;
                     }

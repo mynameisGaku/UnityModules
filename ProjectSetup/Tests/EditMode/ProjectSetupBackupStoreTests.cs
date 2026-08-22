@@ -62,7 +62,7 @@ namespace ProjectSetup.Tests
             Assert.That(actual.CreatedProjectFolders, Is.EqualTo(expected.CreatedProjectFolders));
             Assert.That(actual.CreatedProjectAssets, Is.EqualTo(expected.CreatedProjectAssets));
             Assert.That(actual.CreatedProjectRootFiles, Is.EqualTo(expected.CreatedProjectRootFiles));
-            Assert.That(File.ReadAllText(_path), Does.Contain("\"schemaVersion\": 10"));
+            Assert.That(File.ReadAllText(_path), Does.Contain("\"schemaVersion\": 11"));
         }
 
         [Test]
@@ -149,6 +149,7 @@ namespace ProjectSetup.Tests
             Assert.That(snapshot.CreatedProjectFolders, Is.Empty);
             Assert.That(snapshot.CreatedProjectAssets, Is.Empty);
             Assert.That(snapshot.CreatedProjectRootFiles, Is.Empty);
+            Assert.That(snapshot.HasApplicationIdentifierData, Is.False);
         }
 
         [Test]
@@ -221,7 +222,11 @@ namespace ProjectSetup.Tests
                 createdProjectRootFiles: new[]
                 {
                     new ProjectSetupCreatedRootFile(".gitignore", "def456")
-                });
+                },
+                hasApplicationIdentifierData: true,
+                applicationIdentifierTargetId: "Standalone",
+                applicationIdentifierTargetLabel: "Standalone",
+                applicationIdentifier: "com.studiogaku.product");
         }
     }
 }

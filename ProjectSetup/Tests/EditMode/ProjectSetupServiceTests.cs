@@ -301,6 +301,42 @@ namespace ProjectSetup.Tests
             Assert.That(plan.Changes[0].DesiredValue, Is.EqualTo("CURRENT_SYMBOL;BACKUP_SYMBOL"));
         }
 
+        [Test]
+        public void PreviewRestore_WhenApplicationIdentifierTargetChangedReturnsError()
+        {
+            var current = SnapshotWithApplicationIdentifier("Android", "com.studiogaku.current");
+            var desired = SnapshotWithApplicationIdentifier("Standalone", "com.studiogaku.backup");
+            var environment = new FakeEnvironment(current);
+            var backup = new FakeBackupStore { Snapshot = desired, HasSnapshot = true };
+            var service = new ProjectSetupService(environment, backup);
+
+            var plan = service.PreviewRestore(out _, out _);
+            var result = service.RestoreLast();
+
+            Assert.That(plan.IsValid, Is.False);
+            Assert.That(plan.Errors, Has.Some.Contains("Application Identifier target"));
+            Assert.That(result.Succeeded, Is.False);
+            Assert.That(result.Message, Does.Contain("Application Identifier target"));
+            Assert.That(environment.ApplySnapshotCount, Is.Zero);
+        }
+
+        [Test]
+        public void PreviewRestore_WhenApplicationIdentifierDiffersShowsExactBackupValue()
+        {
+            var current = SnapshotWithApplicationIdentifier("Standalone", "com.studiogaku.current");
+            var desired = SnapshotWithApplicationIdentifier("Standalone", "com.studiogaku.backup");
+            var environment = new FakeEnvironment(current);
+            var backup = new FakeBackupStore { Snapshot = desired, HasSnapshot = true };
+            var service = new ProjectSetupService(environment, backup);
+
+            var plan = service.PreviewRestore(out _, out var error);
+
+            Assert.That(plan.IsValid, Is.True, error);
+            Assert.That(plan.Changes, Has.Exactly(1).Property("Key").EqualTo(ProjectSetupSettingKey.ApplicationIdentifier));
+            Assert.That(plan.Changes[0].CurrentValue, Is.EqualTo("com.studiogaku.current"));
+            Assert.That(plan.Changes[0].DesiredValue, Is.EqualTo("com.studiogaku.backup"));
+        }
+
         private static ProjectSetupSnapshot Snapshot(SerializationMode serializationMode = SerializationMode.ForceText, string versionControl = "Visible Meta Files")
         {
             return new ProjectSetupSnapshot(
@@ -380,6 +416,24 @@ namespace ProjectSetup.Tests
                 scriptingDefineTargetId: targetId,
                 scriptingDefineTargetLabel: targetId,
                 scriptingDefineSymbols: symbols);
+        }
+
+        private static ProjectSetupSnapshot SnapshotWithApplicationIdentifier(string targetId, string applicationIdentifier)
+        {
+            return new ProjectSetupSnapshot(
+                SerializationMode.ForceText,
+                "Visible Meta Files",
+                false,
+                EnterPlayModeOptions.None,
+                ColorSpace.Gamma,
+                false,
+                "DefaultCompany",
+                "New Unity Project",
+                "1.0.0",
+                hasApplicationIdentifierData: true,
+                applicationIdentifierTargetId: targetId,
+                applicationIdentifierTargetLabel: targetId,
+                applicationIdentifier: applicationIdentifier);
         }
 
         private sealed class FakeEnvironment : IProjectSetupEnvironment

@@ -49,7 +49,11 @@ namespace ProjectSetup.Editor
             string[] createdProjectFolders = null,
             ProjectSetupCreatedAsset[] createdProjectAssets = null,
             string[] projectRootFilePaths = null,
-            ProjectSetupCreatedRootFile[] createdProjectRootFiles = null)
+            ProjectSetupCreatedRootFile[] createdProjectRootFiles = null,
+            bool hasApplicationIdentifierData = false,
+            string applicationIdentifierTargetId = null,
+            string applicationIdentifierTargetLabel = null,
+            string applicationIdentifier = null)
         {
             AssetSerialization = assetSerialization;
             VersionControlMode = versionControlMode ?? string.Empty;
@@ -90,6 +94,10 @@ namespace ProjectSetup.Editor
             CreatedProjectAssets = Clone(createdProjectAssets);
             ProjectRootFilePaths = Clone(projectRootFilePaths);
             CreatedProjectRootFiles = Clone(createdProjectRootFiles);
+            HasApplicationIdentifierData = hasApplicationIdentifierData;
+            ApplicationIdentifierTargetId = applicationIdentifierTargetId ?? string.Empty;
+            ApplicationIdentifierTargetLabel = applicationIdentifierTargetLabel ?? string.Empty;
+            ApplicationIdentifier = applicationIdentifier ?? string.Empty;
         }
 
         internal SerializationMode AssetSerialization { get; }
@@ -131,6 +139,10 @@ namespace ProjectSetup.Editor
         internal ProjectSetupCreatedAsset[] CreatedProjectAssets { get; }
         internal string[] ProjectRootFilePaths { get; }
         internal ProjectSetupCreatedRootFile[] CreatedProjectRootFiles { get; }
+        internal bool HasApplicationIdentifierData { get; }
+        internal string ApplicationIdentifierTargetId { get; }
+        internal string ApplicationIdentifierTargetLabel { get; }
+        internal string ApplicationIdentifier { get; }
 
         internal ProjectSetupSnapshot WithCreatedProjectFolders(string[] paths)
         {
@@ -206,7 +218,11 @@ namespace ProjectSetup.Editor
                 && AssetNamingUsesSpace == other.AssetNamingUsesSpace))
                 && SequenceEqual(CreatedProjectFolders, other.CreatedProjectFolders)
                 && SequenceEqual(CreatedProjectAssets, other.CreatedProjectAssets)
-                && SequenceEqual(CreatedProjectRootFiles, other.CreatedProjectRootFiles);
+                && SequenceEqual(CreatedProjectRootFiles, other.CreatedProjectRootFiles)
+                && HasApplicationIdentifierData == other.HasApplicationIdentifierData
+                && (!HasApplicationIdentifierData
+                    || (string.Equals(ApplicationIdentifierTargetId, other.ApplicationIdentifierTargetId, StringComparison.Ordinal)
+                        && string.Equals(ApplicationIdentifier, other.ApplicationIdentifier, StringComparison.Ordinal)));
         }
 
         internal bool Matches(ProjectSetupSnapshot actual)
@@ -242,7 +258,11 @@ namespace ProjectSetup.Editor
                     || (actual.HasNamingData
                         && GameObjectNamingScheme == actual.GameObjectNamingScheme
                         && GameObjectNamingDigits == actual.GameObjectNamingDigits
-                        && AssetNamingUsesSpace == actual.AssetNamingUsesSpace));
+                        && AssetNamingUsesSpace == actual.AssetNamingUsesSpace))
+                && (!HasApplicationIdentifierData
+                    || (actual.HasApplicationIdentifierData
+                        && string.Equals(ApplicationIdentifierTargetId, actual.ApplicationIdentifierTargetId, StringComparison.Ordinal)
+                        && string.Equals(ApplicationIdentifier, actual.ApplicationIdentifier, StringComparison.Ordinal)));
         }
 
         private bool ScalarEquals(ProjectSetupSnapshot other)
@@ -311,6 +331,12 @@ namespace ProjectSetup.Editor
                 hash = AddHash(hash, CreatedProjectFolders);
                 hash = AddHash(hash, CreatedProjectAssets);
                 hash = AddHash(hash, CreatedProjectRootFiles);
+                hash = (hash * 397) ^ HasApplicationIdentifierData.GetHashCode();
+                if (HasApplicationIdentifierData)
+                {
+                    hash = (hash * 397) ^ StringComparer.Ordinal.GetHashCode(ApplicationIdentifierTargetId ?? string.Empty);
+                    hash = (hash * 397) ^ StringComparer.Ordinal.GetHashCode(ApplicationIdentifier ?? string.Empty);
+                }
                 return hash;
             }
         }
@@ -362,7 +388,11 @@ namespace ProjectSetup.Editor
                 createdProjectFolders,
                 createdProjectAssets,
                 projectRootFilePaths,
-                createdProjectRootFiles);
+                createdProjectRootFiles,
+                HasApplicationIdentifierData,
+                ApplicationIdentifierTargetId,
+                ApplicationIdentifierTargetLabel,
+                ApplicationIdentifier);
         }
 
         private static string[] Clone(string[] values)

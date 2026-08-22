@@ -37,6 +37,7 @@ namespace ProjectSetup.Editor
             CaptureBuildScenes(out var buildSceneTargetId, out var buildSceneTargetLabel, out var buildScenes);
             CapturePlayModeStartScene(out var playModeStartSceneGuid, out var playModeStartScenePath);
             CaptureScriptingDefines(out var hasScriptingDefineData, out var scriptingDefineTargetId, out var scriptingDefineTargetLabel, out var scriptingDefineSymbols);
+            CaptureApplicationIdentifier(out var hasApplicationIdentifierData, out var applicationIdentifierTargetId, out var applicationIdentifierTargetLabel, out var applicationIdentifier);
             CaptureProjectFolders(out var projectFolders, out var projectAssetPaths);
             return new ProjectSetupSnapshot(
                 EditorSettings.serializationMode,
@@ -74,7 +75,11 @@ namespace ProjectSetup.Editor
                 EditorSettings.assetNamingUsesSpace,
                 projectFolders,
                 projectAssetPaths,
-                projectRootFilePaths: _versionControlFileStore.CapturePaths());
+                projectRootFilePaths: _versionControlFileStore.CapturePaths(),
+                hasApplicationIdentifierData: hasApplicationIdentifierData,
+                applicationIdentifierTargetId: applicationIdentifierTargetId,
+                applicationIdentifierTargetLabel: applicationIdentifierTargetLabel,
+                applicationIdentifier: applicationIdentifier);
         }
 
         public ProjectSetupEnvironmentApplyResult Apply(ProjectSetupProfile profile)
@@ -126,6 +131,11 @@ namespace ProjectSetup.Editor
             if (profile.ConfigureBundleVersion)
             {
                 PlayerSettings.bundleVersion = profile.BundleVersion;
+            }
+
+            if (profile.ConfigureApplicationIdentifier)
+            {
+                SetApplicationIdentifier(profile.ApplicationIdentifier);
             }
 
             if (profile.ConfigureBuildScenes)
@@ -201,6 +211,15 @@ namespace ProjectSetup.Editor
                 }
             }
 
+            if (snapshot.HasApplicationIdentifierData)
+            {
+                CaptureApplicationIdentifier(out var available, out var currentTargetId, out _, out _);
+                if (!available || !string.Equals(currentTargetId, snapshot.ApplicationIdentifierTargetId, StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException("The active Application Identifier target changed after the backup was created.");
+                }
+            }
+
             EditorSettings.serializationMode = snapshot.AssetSerialization;
             VersionControlSettings.mode = snapshot.VersionControlMode;
             EditorSettings.enterPlayModeOptionsEnabled = snapshot.EnterPlayModeOptionsEnabled;
@@ -214,6 +233,10 @@ namespace ProjectSetup.Editor
             PlayerSettings.companyName = snapshot.CompanyName;
             PlayerSettings.productName = snapshot.ProductName;
             PlayerSettings.bundleVersion = snapshot.BundleVersion;
+            if (snapshot.HasApplicationIdentifierData)
+            {
+                SetApplicationIdentifier(snapshot.ApplicationIdentifier);
+            }
             if (snapshot.HasBuildSceneData)
             {
                 ApplyBuildScenes(ToEditorBuildSettingsScenes(snapshot.BuildScenes));
@@ -339,6 +362,34 @@ namespace ProjectSetup.Editor
             PlayerSettings.SetScriptingDefineSymbols(
                 NamedBuildTarget.FromBuildTargetGroup(group),
                 string.Join(";", symbols ?? Array.Empty<string>()));
+        }
+
+        private static void CaptureApplicationIdentifier(
+            out bool available,
+            out string targetId,
+            out string targetLabel,
+            out string applicationIdentifier)
+        {
+            var group = BuildPipeline.GetBuildTargetGroup(EditorUserBuildSettings.activeBuildTarget);
+            available = group != BuildTargetGroup.Unknown;
+            targetId = available ? group.ToString() : string.Empty;
+            targetLabel = targetId;
+            applicationIdentifier = available
+                ? PlayerSettings.GetApplicationIdentifier(NamedBuildTarget.FromBuildTargetGroup(group))
+                : string.Empty;
+        }
+
+        private static void SetApplicationIdentifier(string applicationIdentifier)
+        {
+            var group = BuildPipeline.GetBuildTargetGroup(EditorUserBuildSettings.activeBuildTarget);
+            if (group == BuildTargetGroup.Unknown)
+            {
+                throw new InvalidOperationException("Application Identifier is unavailable for the active build target.");
+            }
+
+            PlayerSettings.SetApplicationIdentifier(
+                NamedBuildTarget.FromBuildTargetGroup(group),
+                applicationIdentifier ?? string.Empty);
         }
 
         private static string[] SplitScriptingDefines(string value)
