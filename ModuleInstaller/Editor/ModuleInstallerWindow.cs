@@ -15,6 +15,7 @@ namespace ModuleInstaller.Editor
         internal const string UpdateSummaryElementName = "module-installer-update-summary";
         internal const string UpdateButtonElementName = "module-installer-update-all";
         internal const string BundleListElementName = "module-installer-bundles";
+        internal const string SpecializedBundleListElementName = "module-installer-specialized-bundles";
         internal const string PackageListElementName = "module-installer-packages";
 
         private HelpBox _status;
@@ -40,13 +41,13 @@ namespace ModuleInstaller.Editor
             rootVisualElement.style.paddingTop = 12f;
             rootVisualElement.style.paddingBottom = 12f;
 
-            var title = new Label("Install and update modules by task");
+            var title = new Label("Choose a workflow, then install only what it needs");
             title.style.fontSize = 22f;
             title.style.unityFontStyleAndWeight = FontStyle.Bold;
             rootVisualElement.Add(title);
 
             var description = new Label(
-                "Choose a practical bundle instead of copying Git URLs one by one. Installed catalog modules can be updated to the pinned releases in one request.");
+                "Start with four practical workflows. Each card explains when to use it, the first action after installation, and what can change. Specialized libraries remain available below.");
             description.style.whiteSpace = WhiteSpace.Normal;
             description.style.marginTop = 4f;
             description.style.marginBottom = 8f;
@@ -87,14 +88,30 @@ namespace ModuleInstaller.Editor
 
             var bundles = new VisualElement { name = BundleListElementName };
             scrollView.Add(bundles);
+            var specialized = new Foldout
+            {
+                text = "Specialized collections: deterministic simulation and game-rule math",
+                value = false,
+                name = SpecializedBundleListElementName
+            };
+            specialized.style.marginTop = 8f;
+            scrollView.Add(specialized);
             for (var index = 0; index < ModuleCatalog.Bundles.Count; index++)
             {
-                bundles.Add(CreateBundleCard(ModuleCatalog.Bundles[index]));
+                var bundle = ModuleCatalog.Bundles[index];
+                if (bundle.Tier == ModuleBundleTier.Recommended)
+                {
+                    bundles.Add(CreateBundleCard(bundle));
+                }
+                else
+                {
+                    specialized.Add(CreateBundleCard(bundle));
+                }
             }
 
             var advanced = new Foldout
             {
-                text = "Advanced: install one module",
+                text = "Advanced: read about or install one module",
                 value = false,
                 name = PackageListElementName
             };
@@ -161,6 +178,18 @@ namespace ModuleInstaller.Editor
             summary.style.marginTop = 4f;
             card.Add(summary);
 
+            var guide = new Foldout
+            {
+                text = "Quick guide",
+                value = false,
+                name = $"guide-bundle-{bundle.Id}"
+            };
+            guide.style.marginTop = 5f;
+            guide.Add(CreateGuideLine("Use when", bundle.UseWhen));
+            guide.Add(CreateGuideLine("Start here", bundle.FirstStep));
+            guide.Add(CreateGuideLine("Change scope", bundle.ChangeScope));
+            card.Add(guide);
+
             var packageSummary = new Label(BuildPackageSummary(bundle.PackageNames));
             packageSummary.style.whiteSpace = WhiteSpace.Normal;
             packageSummary.style.fontSize = 10f;
@@ -184,6 +213,17 @@ namespace ModuleInstaller.Editor
             text.style.whiteSpace = WhiteSpace.Normal;
             row.Add(text);
 
+            var readmeButton = new Button(() => OpenReadme(entry))
+            {
+                text = "Read guide",
+                name = $"readme-package-{entry.PackageName}",
+                tooltip = entry.ReadmeUrl
+            };
+            readmeButton.style.width = 88f;
+            readmeButton.style.flexShrink = 0f;
+            readmeButton.style.marginLeft = 5f;
+            row.Add(readmeButton);
+
             var button = new Button(() => InstallPackage(entry))
             {
                 text = "Install",
@@ -191,9 +231,26 @@ namespace ModuleInstaller.Editor
             };
             button.style.width = 82f;
             button.style.flexShrink = 0f;
+            button.style.marginLeft = 4f;
             row.Add(button);
             _installButtons.Add(new InstallButtonBinding(button, new[] { entry.PackageName }, false));
             return row;
+        }
+
+        private static VisualElement CreateGuideLine(string heading, string description)
+        {
+            var line = new VisualElement();
+            line.style.marginBottom = 4f;
+
+            var title = new Label(heading);
+            title.style.unityFontStyleAndWeight = FontStyle.Bold;
+            line.Add(title);
+
+            var text = new Label(description);
+            text.style.whiteSpace = WhiteSpace.Normal;
+            text.style.opacity = 0.85f;
+            line.Add(text);
+            return line;
         }
 
         private static string BuildPackageSummary(IReadOnlyList<string> packageNames)
@@ -219,6 +276,11 @@ namespace ModuleInstaller.Editor
         {
             ModuleInstallDriver.TryInstallPackage(entry.PackageName, out var message);
             ShowMessage(message);
+        }
+
+        private static void OpenReadme(ModuleCatalogEntry entry)
+        {
+            Application.OpenURL(entry.ReadmeUrl);
         }
 
         private void UpdateInstalled()

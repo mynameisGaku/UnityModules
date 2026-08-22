@@ -53,17 +53,35 @@ namespace ModuleInstaller.Editor
 
         private static readonly ModuleBundle[] CatalogBundles =
         {
-            Bundle("project-maintenance", "Project Maintenance", "Project setup, Inspector helpers, debugging, broken-reference repair, and asset organization.",
+            Bundle("project-maintenance", "Project Maintenance", "Set up a new project and keep project assets maintainable.", ModuleBundleTier.Recommended,
+                "Use this when starting a project or cleaning up project-wide settings, missing references, and asset organization.",
+                "Open Tools > Project Setup > Open after installation, preview the profile, and apply only the sections you need.",
+                "Installation changes Packages only. The included Editor tools can change Project Settings and project assets after an explicit preview and apply action.",
                 "com.studiogaku.project-setup", "com.studiogaku.inspector", "com.studiogaku.drawing", "com.studiogaku.build-guard", "com.studiogaku.reference-finder"),
-            Bundle("scene-and-ui", "Scene and UI", "Scene switching, fades, safe areas, time control, and startup sequencing.",
+            Bundle("scene-and-ui", "Scene and UI", "Build a predictable scene, screen, pause, and startup flow.", ModuleBundleTier.Recommended,
+                "Use this when scene changes, fades, safe areas, pause behavior, or startup order are being implemented together.",
+                "Import one Basics sample from Package Manager and copy only the controller pattern needed by your first scene.",
+                "Installation changes Packages only. Runtime behavior starts only after components or services are added to scenes and configured.",
                 "com.studiogaku.scene-flow", "com.studiogaku.screen-transition", "com.studiogaku.adaptive-layout", "com.studiogaku.time-control", "com.studiogaku.startup-flow"),
-            Bundle("game-services", "Game Services", "Save data, audio playback, and manual issue reports.",
+            Bundle("game-services", "Game Services", "Add save data, controlled audio playback, and manual issue reports.", ModuleBundleTier.Recommended,
+                "Use this when the project needs reusable services for save slots, audio voices, or player-created diagnostic reports.",
+                "Import the sample for the first service you need, then create one explicit owner in the application or bootstrap scene.",
+                "Installation changes Packages only. Save and report files are written only when the corresponding service is created and called.",
                 "com.studiogaku.save-system", "com.studiogaku.audio-control", "com.studiogaku.diagnostics-context"),
-            Bundle("input-support", "Input Support", "Stick and button helpers plus temporary gameplay input blocking.",
+            Bundle("input-support", "Input Support", "Normalize stick and button input and temporarily block gameplay maps.", ModuleBundleTier.Recommended,
+                "Use this when Input System callbacks need consistent stick shaping, button gestures, or owner-scoped gameplay blocking.",
+                "Import Input Assist Basics first, verify the generated input values, then add Input Gate only where gameplay maps must pause.",
+                "Installation adds the packages and their declared Input System dependency. Runtime input maps change only while configured owners are active.",
                 "com.studiogaku.input-assist", "com.studiogaku.input-gate"),
-            Bundle("deterministic-simulation", "Deterministic Simulation", "Fixed steps, random state, replay data, fingerprints, canonical payloads, fixed point, and safe handles.",
+            Bundle("deterministic-simulation", "Deterministic Simulation", "Compose fixed steps, reproducible random state, replay data, and stable identity.", ModuleBundleTier.Specialized,
+                "Use this only when replay, lockstep, reproducible tests, or deterministic state comparison is a concrete requirement.",
+                "Start with Simulation Clock and add one supporting module at a time after its state contract is covered by a test.",
+                "Installation changes Packages only. These libraries do not create global runtime owners or modify Project Settings.",
                 "com.studiogaku.simulation-clock", "com.studiogaku.deterministic-random", "com.studiogaku.state-fingerprint", "com.studiogaku.replay-tape", "com.studiogaku.canonical-payload", "com.studiogaku.fixed-point", "com.studiogaku.generational-handle"),
-            Bundle("game-rules", "Game Rules and Math", "Resources, stats, conditions, selection, allocation, stacking, timing, damage, and threat calculations.",
+            Bundle("game-rules", "Game Rules and Math", "Choose focused calculation libraries for resources, stats, selection, timing, and damage.", ModuleBundleTier.Specialized,
+                "Use this when a named game rule needs a small deterministic value type instead of a project-specific service.",
+                "Open the individual module list, read the pinned README, and install only the calculation that matches the rule you are implementing.",
+                "Installation changes Packages only. The libraries are explicit calculations and do not update scenes or global Unity state.",
                 "com.studiogaku.resource-meter", "com.studiogaku.stat-modifier-stack", "com.studiogaku.weighted-choice-table", "com.studiogaku.piecewise-linear-curve", "com.studiogaku.rolling-sample-window", "com.studiogaku.threshold-tier-table", "com.studiogaku.linear-trend-estimator", "com.studiogaku.charge-cooldown", "com.studiogaku.sample-statistics", "com.studiogaku.resource-cost-evaluator", "com.studiogaku.numeric-requirement-evaluator", "com.studiogaku.utility-score-evaluator", "com.studiogaku.stable-score-selector", "com.studiogaku.weighted-integer-allocator", "com.studiogaku.stack-transfer-planner", "com.studiogaku.timed-stack-resolver", "com.studiogaku.periodic-tick-planner", "com.studiogaku.damage-mitigation-evaluator")
         };
 
@@ -105,9 +123,17 @@ namespace ModuleInstaller.Editor
             return new ModuleCatalogEntry(packageName, folderName, tag, displayName, summary);
         }
 
-        private static ModuleBundle Bundle(string id, string displayName, string summary, params string[] packageNames)
+        private static ModuleBundle Bundle(
+            string id,
+            string displayName,
+            string summary,
+            ModuleBundleTier tier,
+            string useWhen,
+            string firstStep,
+            string changeScope,
+            params string[] packageNames)
         {
-            return new ModuleBundle(id, displayName, summary, packageNames);
+            return new ModuleBundle(id, displayName, summary, tier, useWhen, firstStep, changeScope, packageNames);
         }
     }
 }
