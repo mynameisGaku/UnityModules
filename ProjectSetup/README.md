@@ -2,13 +2,13 @@
 
 Unityの新規Projectで毎回行う設定を、1つのprofileからまとめてPreview・適用・復元するEditor専用ツールです。
 
-`Project Settings`、C#のRoot Namespaceと改行方式、複製時の命名規則、Play Modeの開始Scene、条件付きコンパイル記号、Tag、Layer、Sorting Layer、Build Scenesを別々の画面やscriptで設定する手間を減らします。自動適用はせず、実際に変わる項目を確認してから実行できます。
+`Assets`配下の基本フォルダー、`Project Settings`、C#のRoot Namespaceと改行方式、複製時の命名規則、Play Modeの開始Scene、条件付きコンパイル記号、Tag、Layer、Sorting Layer、Build Scenesを別々の画面やscriptで設定する手間を減らします。自動適用はせず、実際に変わる項目を確認してから実行できます。
 
 ## まず知りたいこと
 
 | 質問 | 答え |
 |---|---|
-| 何が楽になる？ | Project設定、C#生成時の既定値、複製名、Play Modeの開始Scene、条件付きコンパイル記号、Tag/Layer、Build Scenesを1つのprofileからまとめて設定できます。 |
+| 何が楽になる？ | 基本フォルダー作成、Project設定、C#生成時の既定値、複製名、Play Modeの開始Scene、条件付きコンパイル記号、Tag/Layer、Build Scenesを1つのprofileからまとめて設定できます。 |
 | 勝手に変更される？ | されません。import時やUnity起動時には何も適用しません。 |
 | 実行前に確認できる？ | `Preview changes`で変更前と変更後を一覧表示します。 |
 | 失敗したら？ | Apply前にbackupし、書込後の検証に失敗した場合は可能な範囲で自動復元します。 |
@@ -69,6 +69,24 @@ asmdefに個別のRoot Namespaceが設定されているscriptではasmdef側が
 - Asset複製時に番号の前へspaceを入れるか選ぶ。
 
 3項目は`Duplicate Naming` cardの1つのtoggleでまとめて所有します。既存GameObjectやAssetは改名せず、Apply後の複製名だけが変わります。
+
+### Projectの基本フォルダー
+
+- `Assets/Art`、`Assets/Audio`、`Assets/Prefabs`、`Assets/Scenes`、`Assets/Scripts`、`Assets/Settings`を推奨候補として用意する。
+- Projectごとに必要な`Assets/...` pathへ変更できる。
+- 親フォルダーがない場合も、Previewへ表示して浅い階層から作成する。
+- 既にあるフォルダーやAssetには触れない。
+
+初期profileでは無効です。`Project Folders` cardの`Create missing folders`を有効にした時だけ、不足フォルダーを作成します。
+
+## 基本フォルダーをまとめて作る
+
+1. `Project Folders` cardで`Create missing folders`を有効にします。
+2. 1行に1つ、`Assets/Scripts/Runtime`のようなpathを入力します。
+3. Previewで作成対象を確認してApplyします。
+4. 不要になった場合は`Restore last backup`を実行します。
+
+Restoreが削除するのは、直前のApplyが作成し、復元時点でも空のフォルダーだけです。既存フォルダー、利用者がfileや子フォルダーを追加した場所、Applyより前から存在した場所は削除しません。
 
 ### Build Scenes
 
@@ -146,6 +164,7 @@ Apply後に複製したGameObjectとAssetだけへ反映されます。既に存
 - Root Namespaceを変更すると、Unityが生成する`.csproj`のRoot Namespaceが変わります。asmdef固有のRoot Namespaceは変更しません。
 - New Script Line EndingsはApply後に作成するC# scriptだけへ影響し、既存scriptを一括変換しません。
 - Duplicate NamingはApply後の複製名だけへ影響し、既存GameObjectやAssetを一括改名しません。
+- Project Foldersは不足フォルダーだけを作成します。既存file、既存フォルダー、既存Assetの名前や場所は変更しません。
 - Build Scenesは不足分の追加ではなく、profileの一覧へ完全に置き換えます。
 - RestoreはApply直前へ戻すため、その後に追加したTag/Layer/Sceneを取り除く場合があります。
 
@@ -159,7 +178,7 @@ Build Scenesを復元する場合は、backup作成時と同じBuild Profileを�
 
 Scripting Define Symbolsを復元する場合は、backup作成時と同じbuild targetを選択してください。別のtargetへ切り替わっている場合は、誤ったtargetを書き換えないよう復元を停止します。復元時はApply直前の記号一覧へ正確に戻すため、Apply後に手動追加した記号も取り除く場合があります。
 
-backupはUTF-8 BOMなしのJSONです。schema v7はProject設定、Root Namespace、新規scriptの改行方式、複製時の命名規則、Play Mode Start Scene、Scripting Define Symbolsと対象build target、TagManager全体、Build SceneのGUID・順序・Enabled状態・保存先を保持します。schema v1からv6も読み取れますが、そのversionに存在しない項目は復元しません。
+backupはUTF-8 BOMなしのJSONです。schema v8はProject設定、Applyが作成したフォルダー、Root Namespace、新規scriptの改行方式、複製時の命名規則、Play Mode Start Scene、Scripting Define Symbolsと対象build target、TagManager全体、Build SceneのGUID・順序・Enabled状態・保存先を保持します。schema v1からv7も読み取れますが、そのversionに存在しない項目は復元しません。
 
 ## profileを別Projectで使う
 
@@ -170,7 +189,6 @@ backupはUTF-8 BOMなしのJSONです。schema v7はProject設定、Root Namespa
 - PhysicsやLayer collision matrix
 - Scene Assetそのものの作成
 - packageの導入・更新
-- folder template
 - Play Modeやbuild時の自動適用
 
 packageの導入・更新には`Tools > Module Manager > Open`を使います。SceneのRuntime切替にはScene Flowを使います。
@@ -200,7 +218,7 @@ Build Scenesをprofileで有効にすると、既存一覧をprofileの内容へ
 Package Managerの`Add package from git URL...`へ次を入力します。
 
 ```text
-https://github.com/mynameisGaku/UnityModules.git?path=/ProjectSetup#project-setup-v1.6.0
+https://github.com/mynameisGaku/UnityModules.git?path=/ProjectSetup#project-setup-v1.7.0
 ```
 
 ## 対応環境
