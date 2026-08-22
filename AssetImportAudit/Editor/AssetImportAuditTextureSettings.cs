@@ -10,11 +10,6 @@ namespace AssetImportAudit.Editor
         /// <summary>Creates a validated texture import settings value.</summary>
         public AssetImportAuditTextureSettings(int maxTextureSize, TextureImporterCompression compression, bool mipmapEnabled, bool sRgbTexture, bool readable, FilterMode filterMode, int anisoLevel)
         {
-            if (maxTextureSize <= 0)
-                throw new ArgumentOutOfRangeException(nameof(maxTextureSize));
-            if (anisoLevel < 0 || anisoLevel > 16)
-                throw new ArgumentOutOfRangeException(nameof(anisoLevel));
-
             MaxTextureSize = maxTextureSize;
             Compression = compression;
             MipmapEnabled = mipmapEnabled;
@@ -22,6 +17,7 @@ namespace AssetImportAudit.Editor
             Readable = readable;
             FilterMode = filterMode;
             AnisoLevel = anisoLevel;
+            Validate();
         }
 
         /// <summary>Maximum imported texture dimension.</summary>
@@ -47,6 +43,17 @@ namespace AssetImportAudit.Editor
 
         /// <summary>Returns a practical default for general color textures.</summary>
         public static AssetImportAuditTextureSettings Default => new AssetImportAuditTextureSettings(2048, TextureImporterCompression.Compressed, false, true, false, FilterMode.Bilinear, 1);
+
+        internal void Validate()
+        {
+            AssetImportAuditTextureSize.Validate(MaxTextureSize, nameof(MaxTextureSize));
+            if (!Enum.IsDefined(typeof(TextureImporterCompression), Compression))
+                throw new ArgumentOutOfRangeException(nameof(Compression));
+            if (!Enum.IsDefined(typeof(FilterMode), FilterMode))
+                throw new ArgumentOutOfRangeException(nameof(FilterMode));
+            if (AnisoLevel < 0 || AnisoLevel > 16)
+                throw new ArgumentOutOfRangeException(nameof(AnisoLevel));
+        }
 
         /// <summary>Compares all import settings.</summary>
         public bool Equals(AssetImportAuditTextureSettings other) => MaxTextureSize == other.MaxTextureSize && Compression == other.Compression && MipmapEnabled == other.MipmapEnabled && SRgbTexture == other.SRgbTexture && Readable == other.Readable && FilterMode == other.FilterMode && AnisoLevel == other.AnisoLevel;
