@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.0] - 2026-08-22
+
+- Added ordered Build Scene profiles with per-Scene enabled state and GUID-based move tracking.
+- Added active Build Profile and global Build Scene target handling.
+- Extended preview, backup, verification, rollback, and restore flows to Build Scenes.
+- Added validation for missing, duplicate, empty, and disabled startup Scenes.
+- Reworked the README around outcomes, shortest usage, side effects, and restore steps.
+
 ## [1.1.0] - 2026-08-22
 
 - Added additive custom Tag, user Layer, and Sorting Layer setup from reusable profiles.

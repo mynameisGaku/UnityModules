@@ -1,96 +1,135 @@
-# プロジェクト初期設定（Project Setup）
+# プロジェクト一括設定（Project Setup）
 
-## 30秒で分かる説明
+Unityの新規Projectで毎回行う設定を、1つのprofileからまとめてPreview・適用・復元するEditor専用ツールです。
 
-新しいUnity Projectを作るたびに、`Project Settings`を開いて同じ値を設定し直す作業を減らすEditor専用ツールです。
+`Project Settings`、Tag、Layer、Sorting Layer、Build Scenesを別々の画面で設定する手間を減らします。自動適用はせず、実際に変わる項目を確認してから実行できます。
 
-Asset Serialization、Version Control、Enter Play Mode、Color Space、Player情報に加え、Tag、Layer、Sorting Layerを一つのprofileへ保存します。現在値との差分を一覧で確認してから適用し、直前の状態へ復元できます。
+## まず知りたいこと
+
+| 質問 | 答え |
+|---|---|
+| 何が楽になる？ | Project設定、Tag/Layer、Build Scenesの順序を1つのprofileからまとめて設定できます。 |
+| 勝手に変更される？ | されません。import時やUnity起動時には何も適用しません。 |
+| 実行前に確認できる？ | `Preview changes`で変更前と変更後を一覧表示します。 |
+| 失敗したら？ | Apply前にbackupし、書込後の検証に失敗した場合は可能な範囲で自動復元します。 |
+| 後から戻せる？ | `Restore last backup`で最後のApply直前へ戻せます。 |
+| Runtimeへ影響する？ | ありません。Player buildへRuntime assemblyを追加しません。 |
+
+## 最短3手順
+
+1. `Tools > Project Setup > Open`を開きます。
+2. `New recommended profile`でprofile assetを作り、必要な項目だけ有効にします。
+3. `Preview changes`で確認し、`Apply profile`を押します。
+
+初期profileは、version controlで扱いやすい`Force Text`と`Visible Meta Files`だけを対象にします。それ以外は利用者が有効にするまで変更しません。
 
 ## できること
 
-- 複数のProject Settingsを一つのprofile assetへ保存する。
-- 現在値とprofileの差分だけを設定名・変更前・変更後でPreviewする。
-- 変更前の全対象値を`ProjectSettings/ProjectSetupLastBackup.json`へ保存してから適用する。
-- 適用後の値を読み直し、profileと一致しない場合は失敗として扱う。
-- 最後のbackupをPreviewし、確認後にまとめて復元する。
-- profileごとに対象設定を有効・無効にし、不要な設定へ触れない。
-- よく使うTag、Layer、Sorting Layerを1行1名称でまとめて登録する。
-- TagManagerへ適用するときは不足する名称だけを追加し、既存の名称・順序・IDを維持する。
-- Layerの空きslot不足、重複名、不正な名称をProject Settingsへ書き込む前に検出する。
+### Project設定
 
-## 使わない方がよい場合
+- Asset Serialization
+- Version Control
+- Enter Play Mode Options
+- Color Space
+- Run In Background
+- Company Name
+- Product Name
+- Bundle Version
 
-- Physics matrixやLayer間の衝突設定を変更したい場合。このmoduleは名称の初期登録だけを扱います。
-- Build ProfileのScene一覧を管理したい場合。Scene切り替えとBuild対象の検査はSceneFlowとBuild Guardの責務です。
-- packageを導入したい場合。用途別のpackage追加にはModule Installerを使ってください。
-- 起動時に自動で設定を変更したい場合。このmoduleは利用者の明示操作なしにProject Settingsを書き換えません。
+### 名前の一括登録
 
-## 3分で試す
+- Tag
+- User Layer（slot 8から31）
+- Sorting Layer
 
-1. Package Managerの`Add package from git URL...`へ次を入力します。
+通常のApplyでは不足する名称だけを追加します。既存の名称、順序、Layer slot、Sorting Layer IDは変更しません。
 
-   ```text
-   https://github.com/mynameisGaku/UnityModules.git?path=/ProjectSetup#project-setup-v1.1.0
-   ```
+### Build Scenes
 
-2. `Tools > Project Setup > Open`を開きます。
-3. `New recommended profile`を押します。
-4. 保存先を選びます。初期状態ではForce TextとVisible Meta Filesだけが対象です。
-5. Tag、Layer、Sorting Layerを登録する場合は、対象cardを有効にして名称を1行ずつ入力します。
-6. 必要な項目だけを有効にし、`Preview changes`を押します。
-7. 変更内容を確認し、`Apply profile`を押します。
+- Scene Assetを選択して順番を保存する。
+- 各SceneのEnabled状態を保存する。
+- `Up`と`Down`で起動順を整理する。
+- Scene移動後もGUIDから参照を解決する。
+- 選択中のBuild Profileが独自Scene一覧を持つ場合はその一覧を、持たない場合はglobal一覧を設定する。
 
-## 最小コード
+Build Scenesを有効にしたprofileは、一覧全体を表示順どおりに置き換えます。先頭SceneはPlayerの起動Sceneになるため、Enabledでなければ適用できません。
 
-Runtime APIはありません。C#を書く必要はなく、Editor windowとprofile assetだけで完結します。
+## Build Scenesの使い方
 
-別Projectで同じ設定を使う場合は、作成した`ProjectSetupProfile.asset`をversion controlで共有し、同じwindowから選択します。
+1. `Build Scenes` cardで`Apply this scene list`を有効にします。
+2. `Add scene`で起動Sceneを追加します。
+3. 必要なSceneを追加し、`Up`と`Down`で順番を決めます。
+4. build対象外に残したいSceneだけ`Enabled`を無効にします。
+5. Previewで現在の順序と変更後の順序を確認します。
 
-## 実行するとどうなるか
+`Capture current`を押すと、現在のProject設定、Tag/Layer、選択中Build Profileの実効Scene一覧をprofileへ取り込めます。
 
-- Previewには、実際に変わる設定だけが固定順で表示されます。
-- Apply前に直前の全対象値がbackupされます。
-- Apply後はProject Settingsの現在値を再取得して一致を確認します。
-- `Restore last backup`を使うと、最後にApplyする直前の状態へ戻ります。
-- 差分がない場合はProject Settingsとbackup fileを変更しません。
-- 通常のApplyはTag、Layer、Sorting Layerを削除・改名・並べ替えません。不足分だけ追加します。
-- Restoreはbackup時点のTagManager配列とSorting Layer IDを正確に戻します。
+## Applyすると何が変わるか
+
+1. 現在の対象値をsnapshotとして取得します。
+2. `ProjectSettings/ProjectSetupLastBackup.json`へ保存します。
+3. profileで有効な項目だけを書き込みます。
+4. 現在値を再取得し、profileとの一致を検証します。
+5. 一致しなければ、Apply前のsnapshotから復元を試みます。
+
+差分がない場合はProject Settingsもbackup fileも変更しません。
+
+### 注意が必要な変更
+
+- Color SpaceはAssetの再importを発生させる場合があります。
+- Enter Play ModeでDomain Reloadを無効にすると、利用側でstatic stateの初期化が必要です。
+- Build Scenesは不足分の追加ではなく、profileの一覧へ完全に置き換えます。
+- RestoreはApply直前へ戻すため、その後に追加したTag/Layer/Sceneを取り除く場合があります。
+
+## 元に戻す
+
+1. `Tools > Project Setup > Open`を開きます。
+2. `Restore last backup`を押します。
+3. 復元差分を確認して`Restore`を押します。
+
+Build Scenesを復元する場合は、backup作成時と同じBuild Profileを選択してください。別のBuild Profileへ切り替わっている場合は、誤った一覧を書き換えないよう復元を停止します。
+
+backupはUTF-8 BOMなしのJSONです。schema v3はProject設定、TagManager全体、Build SceneのGUID・順序・Enabled状態・保存先を保持します。schema v1/v2も読み取れますが、そのversionに存在しない項目は復元しません。
+
+## profileを別Projectで使う
+
+作成した`ProjectSetupProfile.asset`をversion controlへ追加し、別Projectの同じwindowで選択します。Scene参照はGUIDを使うため、Scene Assetと`.meta` fileも同じGUIDで共有してください。
+
+## 対象外
+
+- PhysicsやLayer collision matrix
+- Scene Assetそのものの作成
+- packageの導入・更新
+- folder template
+- Play Modeやbuild時の自動適用
+
+packageの導入・更新には`Tools > Module Manager > Open`を使います。SceneのRuntime切替にはScene Flowを使います。
 
 ## よくある問題
 
 ### Applyが押せない
 
-profileが未選択、入力値が不正、Play Mode中、script compile中、またはPreview対象の差分がない場合はApplyできません。window上部のstatusを確認してください。
-
-### Color Space変更に時間がかかる
-
-UnityはColor Space変更時にAssetを再importする場合があります。変更内容をPreviewし、作業時間を確保してから実行してください。
-
-### Enter Play Modeを速くしたらstatic stateが残る
-
-Domain Reloadを無効にすると、static fieldやstatic eventを利用側が明示的に初期化する必要があります。profileでは既定でこの設定を対象外にしています。
-
-`Use custom reload options`を有効にする場合は、Domain ReloadまたはScene Reloadの少なくとも一方を無効化対象に選んでください。何も選ばない組合せはPreviewで不正として表示されます。
-
-### backupをversion controlへ入れるべきか
-
-`ProjectSettings/ProjectSetupLastBackup.json`は直前復元用のローカル作業fileです。Project固有の共有設定はprofile assetをversion controlへ追加してください。
+profile未選択、入力値不正、参照切れScene、重複Scene、無効な先頭Scene、Play Mode中、script compile中、または差分なしが主な原因です。window上部のstatusとPreviewのerrorを確認してください。
 
 ### 既存のTagやLayerが消えないか
 
-`Apply profile`では消えません。profileに書いた名称のうち、現在存在しないものだけを追加します。削除や順序変更が必要な場合はUnity標準のProject Settingsで明示的に行ってください。
+通常のApplyでは消えません。profileにあり、現在存在しない名称だけを追加します。削除や並べ替えはUnity標準のProject Settingsで明示的に行ってください。
 
-`Restore last backup`だけは、Apply直前の状態へ戻すため、直前backup以降に追加した名称を取り除く場合があります。復元内容は実行前にPreviewされます。
+### Build Scenesの既存項目が消えないか
 
-## 詳しい契約
+Build Scenesをprofileで有効にすると、既存一覧をprofileの内容へ置き換えます。Apply前にPreviewを確認してください。直前の一覧はbackupから復元できます。
 
-- Editor専用で、Player buildへRuntime assemblyを追加しません。
-- profileで無効な項目は読み取り比較には使えても、Applyでは変更しません。
-- Applyは現在値のsnapshot、backup保存、設定書込、再読取検証の順に実行します。
-- 書込または検証に失敗した場合は、取得済みsnapshotを使って可能な範囲で元へ戻します。
-- backup fileはUTF-8 BOMなしのJSONです。一時fileへflushしてから同じfolderの最終fileへ置き換えます。
-- backup schema v2はTag、Layer、Sorting Layerの名称・slot・順序・IDを保存します。v1 backupも読み取れますが、TagManagerは復元対象にしません。
-- profile asset、backup、Project Settingsの変更はmain threadのEdit Modeだけで実行します。
+### backupをversion controlへ入れるべきか
+
+`ProjectSettings/ProjectSetupLastBackup.json`は直前復元用のローカル作業fileです。共有するのはprofile assetです。
+
+## インストール
+
+Package Managerの`Add package from git URL...`へ次を入力します。
+
+```text
+https://github.com/mynameisGaku/UnityModules.git?path=/ProjectSetup#project-setup-v1.2.0
+```
 
 ## 対応環境
 
