@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0] - 2026-08-22
+
+- Renamed the visible tool to Module Manager while keeping the package ID and legacy menu path compatible.
+- Added an update preview and one-request update for installed catalog packages below the pinned version.
+- Prevented automatic downgrades and overwrites of newer or custom package versions.
+- Added update planning, domain reload recovery, and Editor window regression tests.
+
 ## [1.2.0] - 2026-08-22
 
 - Updated Project Setup to v1.1.0 for Tags, Layers, and Sorting Layers.

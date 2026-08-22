@@ -1,16 +1,18 @@
-# モジュール導入アシスタント（Module Installer）
+# モジュール管理アシスタント（Module Manager）
 
 ## 30秒で分かる説明
 
-Unity Package ManagerへGit URLを1件ずつ貼り、似た名前の小さなpackageから必要なものを選ぶ作業を減らすEditor専用ツールです。
+Unity Package ManagerへGit URLを1件ずつ貼り、導入済みmoduleの公開versionを手作業で調べて差し替える作業を減らすEditor専用ツールです。
 
-`Tools > Module Installer > Open`を開き、「プロジェクト整理」「Scene・UI」「ゲーム判定・計算」などの目的別セットを1回選ぶと、対応する公開tagをまとめて導入します。既存packageの型や名前空間は変更しないため、公開済みmoduleとの互換性も保てます。
+`Tools > Module Manager > Open`を開き、「プロジェクト整理」「Scene・UI」「ゲーム判定・計算」などの目的別セットを1回選ぶと、対応する公開tagをまとめて導入できます。導入済みmoduleに古いversionがあれば、一覧で確認して1回の操作で更新できます。
 
 ## できること
 
 - 用途別の6セットから、必要なmodule群をまとめて導入する。
 - 40個の公開moduleを詳細一覧から1件ずつ導入する。
 - 既に導入済みのpackageを自動で除外する。
+- 導入済みのcatalog moduleを調べ、古いversionだけを固定済み公開tagへまとめて更新する。
+- 最新version、catalogより新しいversion、独自versionは自動で上書きしない。
 - `Assets/Modules/<Folder>`に同じmoduleのcopyがある場合、assembly重複を避けるため導入前に停止する。
 - `main`や`dev`ではなく、一覧に固定した公開tagのGit URLだけをPackage Managerへ渡す。
 - package追加によるdomain reload後も、同じUnity session内で導入結果を確認する。
@@ -18,7 +20,7 @@ Unity Package ManagerへGit URLを1件ずつ貼り、似た名前の小さなpac
 
 ## 使わない方がよい場合
 
-- packageを更新・削除したい場合。このversionは新規導入だけを扱います。
+- packageを削除したい場合。意図しない依存関係の削除を避けるため、削除はPackage Managerで個別に行います。
 - 独自forkや別repositoryのpackageを管理したい場合。URLの任意入力は扱いません。
 - `Assets/Modules`へsource copyする運用を続けたい場合。その場合はこのツールから同じmoduleをUPM導入しないでください。
 
@@ -28,13 +30,14 @@ Unity Package ManagerへGit URLを1件ずつ貼り、似た名前の小さなpac
 2. `Add package from git URL...`へ次を入力します。
 
    ```text
-   https://github.com/mynameisGaku/UnityModules.git?path=/ModuleInstaller#module-installer-v1.2.0
+   https://github.com/mynameisGaku/UnityModules.git?path=/ModuleInstaller#module-installer-v1.3.0
    ```
 
-3. `Tools > Module Installer > Open`を開きます。
+3. `Tools > Module Manager > Open`を開きます。
 4. 最初は`Project Maintenance`を確認します。
 5. cardに並ぶmodule名と追加件数を確認し、`Install 5`のように表示されたbuttonを押します。
 6. Package Managerの解決とscript reloadが終わるまで待ちます。
+7. 導入済みmoduleの更新がある場合は、上部の`Update N`に対象名とversionが表示されます。内容を確認してbuttonを押します。
 
 ## 最小コード
 
@@ -47,6 +50,8 @@ Runtime APIはありません。C#を書く必要はなく、Editor windowの操
 - `Packages/manifest.json`へ、選択したmoduleのtag固定Git URLが追加されます。
 - `Packages/packages-lock.json`へ、解決したcommit SHAと依存関係が記録されます。
 - 導入済みpackageは再追加されません。
+- 更新時は、導入済みversionがcatalogの公開versionより古いpackageだけに固定tag URLを再指定します。
+- 同じversion、より新しいversion、数値として比較できない独自versionは変更しません。
 - `Assets/Modules`に同名folderがある場合はmanifestを変更せず、解消方法をwindowへ表示します。
 - Package Managerが失敗した場合は、最初の失敗内容を表示して処理を終了します。無限再試行はしません。
 
@@ -71,7 +76,7 @@ Project Maintenanceに含まれる「プロジェクト初期設定」は、Proj
 
 ### package追加後にwindowが閉じた
 
-Package Managerの解決でdomain reloadが起きる場合があります。`Tools > Module Installer > Open`から再度開いてください。導入済みpackageは自動で除外されます。
+Package Managerの解決でdomain reloadが起きる場合があります。`Tools > Module Manager > Open`から再度開いてください。導入・更新queueは同じUnity session内で復元されます。
 
 ### 一部だけ導入したい
 
@@ -85,7 +90,7 @@ Package Managerから対象packageを個別にRemoveしてください。このv
 
 - Editor専用で、Player buildへRuntime assemblyを追加しません。
 - module一覧・folder・tag・Git URLはpackage内の固定catalogです。
-- bundle導入は`Client.AddAndRemove`へ追加URLだけを一括で渡し、削除要求は渡しません。
+- bundle導入と一括更新は`Client.AddAndRemove`へ対象URLだけを一括で渡し、削除要求は渡しません。
 - unknown package、Assets copy競合、既存処理中はPackage Managerを呼びません。
 - 進行中の選択は`SessionState`に保持し、Unity再起動後まで永続化しません。
 - package追加の成否はPackage Managerが返す結果に従います。repositoryへのnetwork接続とGitが必要です。
