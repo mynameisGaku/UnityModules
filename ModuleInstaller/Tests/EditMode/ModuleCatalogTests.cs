@@ -25,7 +25,7 @@ namespace ModuleInstaller.Editor.Tests
                 Assert.That(entry.GitUrl, Does.Not.Contain("#dev"));
                 Assert.That(entry.Version, Is.Not.Empty);
                 Assert.That(entry.Tag, Does.EndWith($"-v{entry.Version}"));
-                Assert.That(entry.Tag, Does.EndWith("-v1.0.0").Or.EndWith("-v1.0.1").Or.EndWith("-v1.1.0").Or.EndWith("-v1.3.0").Or.EndWith("-v1.4.0"));
+                Assert.That(entry.Tag, Does.Match(@"-v\d+\.\d+\.\d+$"));
             }
         }
 
@@ -76,11 +76,11 @@ namespace ModuleInstaller.Editor.Tests
         }
 
         [Test]
-        public void ProjectSetup_UsesTagLayerCapableRelease()
+        public void ProjectSetup_UsesBuildSceneCapableRelease()
         {
             Assert.That(ModuleCatalog.TryFindEntry("com.studiogaku.project-setup", out var entry), Is.True);
-            Assert.That(entry.Tag, Is.EqualTo("project-setup-v1.1.0"));
-            Assert.That(entry.Summary, Does.Contain("Tags").And.Contain("Layers").And.Contain("Sorting Layers"));
+            Assert.That(entry.Tag, Is.EqualTo("project-setup-v1.2.0"));
+            Assert.That(entry.Summary, Does.Contain("Tags").And.Contain("Layers").And.Contain("Sorting Layers").And.Contain("Build Scenes"));
         }
     }
 }
