@@ -82,7 +82,7 @@ namespace ModuleInstaller.Editor.Tests
             Assert.That(plan.CanStart, Is.True);
             Assert.That(plan.Entries.Count, Is.EqualTo(1));
             Assert.That(plan.Entries[0].PackageName, Is.EqualTo("com.studiogaku.project-setup"));
-            Assert.That(plan.Entries[0].Version, Is.EqualTo("1.9.0"));
+            Assert.That(plan.Entries[0].Version, Is.EqualTo("1.10.0"));
             Assert.That(plan.InstalledCount, Is.EqualTo(1));
             Assert.That(plan.Issues, Is.Empty);
         }
