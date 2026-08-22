@@ -76,11 +76,11 @@ namespace ModuleInstaller.Editor.Tests
         }
 
         [Test]
-        public void ProjectSetup_UsesCodeGenerationDefaultsCapableRelease()
+        public void ProjectSetup_UsesCodeGenerationAndDuplicateNamingDefaultsCapableRelease()
         {
             Assert.That(ModuleCatalog.TryFindEntry("com.studiogaku.project-setup", out var entry), Is.True);
-            Assert.That(entry.Tag, Is.EqualTo("project-setup-v1.5.0"));
-            Assert.That(entry.Summary, Does.Contain("code generation defaults").And.Contain("scripting define symbols").And.Contain("Tags").And.Contain("Layers").And.Contain("Build Scenes").And.Contain("Play Mode Start Scene"));
+            Assert.That(entry.Tag, Is.EqualTo("project-setup-v1.6.0"));
+            Assert.That(entry.Summary, Does.Contain("code generation defaults").And.Contain("duplicate naming defaults").And.Contain("scripting define symbols").And.Contain("Tags").And.Contain("Layers").And.Contain("Build Scenes").And.Contain("Play Mode Start Scene"));
         }
     }
 }
