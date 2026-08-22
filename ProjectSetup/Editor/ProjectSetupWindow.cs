@@ -25,6 +25,8 @@ namespace ProjectSetup.Editor
         internal const string BuildScenesCardName = "build-scenes";
         internal const string BuildScenesListName = "build-scenes-list";
         internal const string AddBuildSceneButtonName = "add-build-scene-button";
+        internal const string PlayModeStartSceneCardName = "play-mode-start-scene";
+        internal const string PlayModeStartSceneFieldName = "play-mode-start-scene-field";
         internal const string ActionBarName = "action-bar";
         private const string MenuPath = "Tools/Project Setup/Open";
 
@@ -176,6 +178,7 @@ namespace ProjectSetup.Editor
                 value => _profile.ConfigureVersionControl = value,
                 value => _profile.VersionControlMode = value));
             content.Add(CreateEnterPlayModeCard());
+            content.Add(CreatePlayModeStartSceneCard());
             content.Add(CreateEnumCard(
                 "color-space",
                 "Color Space",
@@ -398,6 +401,26 @@ namespace ProjectSetup.Editor
             card.Add(enabled);
             card.Add(useOptions);
             card.Add(flags);
+            return card;
+        }
+
+        private VisualElement CreatePlayModeStartSceneCard()
+        {
+            var card = CreateCard(
+                PlayModeStartSceneCardName,
+                "Play Mode Start Scene",
+                "Start Play Mode from one bootstrap Scene even while another Scene is open. Leave the Scene empty to use the currently open Scenes.");
+            var enabled = new Toggle("Apply this setting") { value = _profile.ConfigurePlayModeStartScene };
+            var sceneField = new ObjectField("Start Scene (optional)")
+            {
+                name = PlayModeStartSceneFieldName,
+                objectType = typeof(SceneAsset),
+                value = _profile.PlayModeStartScene.SceneAsset
+            };
+            enabled.RegisterValueChangedCallback(change => ChangeProfile(() => _profile.ConfigurePlayModeStartScene = change.newValue));
+            sceneField.RegisterValueChangedCallback(change => ChangeProfile(() => _profile.PlayModeStartScene.SceneAsset = change.newValue as SceneAsset));
+            card.Add(enabled);
+            card.Add(sceneField);
             return card;
         }
 

@@ -34,6 +34,8 @@ namespace ProjectSetup.Tests
                 Assert.That(root.Q<VisualElement>("asset-serialization"), Is.Not.Null);
                 Assert.That(root.Q<VisualElement>("version-control"), Is.Not.Null);
                 Assert.That(root.Q<VisualElement>("enter-play-mode"), Is.Not.Null);
+                Assert.That(root.Q<VisualElement>(ProjectSetupWindow.PlayModeStartSceneCardName), Is.Not.Null);
+                Assert.That(root.Q<ObjectField>(ProjectSetupWindow.PlayModeStartSceneFieldName), Is.Not.Null);
                 Assert.That(root.Q<VisualElement>("color-space"), Is.Not.Null);
                 Assert.That(root.Q<VisualElement>("run-in-background"), Is.Not.Null);
                 Assert.That(root.Q<VisualElement>(ProjectSetupWindow.BuildScenesCardName), Is.Not.Null);
