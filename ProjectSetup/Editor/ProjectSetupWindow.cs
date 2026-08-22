@@ -31,6 +31,7 @@ namespace ProjectSetup.Editor
         internal const string ScriptingDefineFieldName = "scripting-define-symbols-field";
         internal const string RootNamespaceCardName = "root-namespace";
         internal const string NewScriptLineEndingsCardName = "new-script-line-endings";
+        internal const string NamingDefaultsCardName = "duplicate-naming";
         internal const string ActionBarName = "action-bar";
         private const string MenuPath = "Tools/Project Setup/Open";
 
@@ -219,6 +220,7 @@ namespace ProjectSetup.Editor
                 _profile.NewScriptLineEndings,
                 value => _profile.ConfigureNewScriptLineEndings = value,
                 value => _profile.NewScriptLineEndings = (LineEndingsMode)value));
+            content.Add(CreateNamingDefaultsCard());
             content.Add(CreateBuildScenesCard());
             content.Add(CreateNameListCard(
                 "tags",
@@ -256,6 +258,27 @@ namespace ProjectSetup.Editor
             _changeList.style.marginBottom = 10f;
             content.Add(_changeList);
             return content;
+        }
+
+        private VisualElement CreateNamingDefaultsCard()
+        {
+            var card = CreateCard(
+                NamingDefaultsCardName,
+                "Duplicate Naming",
+                "Keep duplicated GameObject and Asset names consistent across the project.");
+            var enabled = new Toggle("Apply these settings") { value = _profile.ConfigureNamingDefaults };
+            var scheme = new EnumField("GameObject suffix", _profile.GameObjectNamingScheme);
+            var digits = new IntegerField("Minimum number digits") { value = _profile.GameObjectNamingDigits };
+            var assetSpacing = new Toggle("Use a space before Asset copy numbers") { value = _profile.AssetNamingUsesSpace };
+            enabled.RegisterValueChangedCallback(change => ChangeProfile(() => _profile.ConfigureNamingDefaults = change.newValue));
+            scheme.RegisterValueChangedCallback(change => ChangeProfile(() => _profile.GameObjectNamingScheme = (EditorSettings.NamingScheme)change.newValue));
+            digits.RegisterValueChangedCallback(change => ChangeProfile(() => _profile.GameObjectNamingDigits = change.newValue));
+            assetSpacing.RegisterValueChangedCallback(change => ChangeProfile(() => _profile.AssetNamingUsesSpace = change.newValue));
+            card.Add(enabled);
+            card.Add(scheme);
+            card.Add(digits);
+            card.Add(assetSpacing);
+            return card;
         }
 
         private VisualElement CreateBuildScenesCard()
