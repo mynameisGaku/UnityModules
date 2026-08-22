@@ -9,7 +9,7 @@ namespace ModuleInstaller.Editor
     {
         private static readonly ModuleCatalogEntry[] CatalogEntries =
         {
-            Entry("com.studiogaku.project-setup", "ProjectSetup", "project-setup-v1.9.0", "Project Setup", "Creates recommended project folders, Runtime and Editor assembly definitions, and optional test assembly definitions for EditMode and PlayMode, then previews, backs up, applies, and restores Project Settings, code generation defaults, duplicate naming defaults, scripting define symbols, Tags, Layers, Build Scenes, and the Play Mode Start Scene."),
+            Entry("com.studiogaku.project-setup", "ProjectSetup", "project-setup-v1.10.0", "Project Setup", "Creates recommended project folders, Runtime and Editor assembly definitions, optional test assembly definitions, and Unity-ready version control files, then previews, backs up, applies, and restores Project Settings, code generation defaults, duplicate naming defaults, scripting define symbols, Tags, Layers, Build Scenes, and the Play Mode Start Scene."),
             Entry("com.studiogaku.inspector", "Inspector", "inspector-v1.0.0", "Inspector Helpers", "Organizes and validates Inspector input."),
             Entry("com.studiogaku.drawing", "Drawing", "drawing-v1.0.0", "Debug Drawing", "Draws runtime lines, shapes, paths, and labels."),
             Entry("com.studiogaku.build-guard", "BuildGuard", "build-guard-v1.4.0", "Project Issue Scanner", "Finds and repairs missing references in Scenes and Prefabs."),
