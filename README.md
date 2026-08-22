@@ -11,7 +11,7 @@ Unity で繰り返し発生する設定、実装、確認作業を減らすた�
 
 | 困りごと | 推奨モジュール | まずできること |
 |---|---|---|
-| Git URLを1件ずつ追加せず、用途別にモジュールをまとめて導入・更新したい | [モジュール管理（Module Manager）](ModuleInstaller/) | 6つの用途別セットか40件の個別一覧から追加し、導入済みmoduleは固定済み公開versionへまとめて更新する。 |
+| Git URLを1件ずつ追加せず、用途別にモジュールをまとめて導入・更新したい | [モジュール管理（Module Manager）](ModuleInstaller/) | 普段使う4workflowから選び、用途・最初の操作・変更範囲を確認して導入する。専門向けcollectionと個別moduleは折りたたみから選べる。 |
 | 新しいProjectごとに基本フォルダー、asmdef、Git設定、Project設定、開始Sceneを手作業したくない | [プロジェクト一括設定（Project Setup）](ProjectSetup/) | `Assets`配下の基本フォルダー、Runtime・Editor・test用asmdef、Unity向け`.gitignore`と`.gitattributes`、Project Settings、Root Namespace、Play Mode開始Scene、条件付きコンパイル記号、Tag・Layer、Build Scenesをbackup付きでまとめて適用する。 |
 | Scene の読込順、Additive、Unload を安全に扱いたい | [シーン切り替え（SceneFlow）](SceneFlow/) | 4 種類の Scene 操作を直列化し、失敗理由を結果で受け取る。 |
 | Scene 切り替え中に画面を隠したい | [画面フェード（ScreenTransition）](ScreenTransition/) | UI Toolkit の全画面 Cover・Reveal を実行する。 |
@@ -41,7 +41,7 @@ Unity で繰り返し発生する設定、実装、確認作業を減らすた�
 
 | モジュール | 内容 | 依存 |
 |---|---|---|
-| [モジュール管理（Module Manager）](ModuleInstaller/) | Project Maintenance、Scene and UI、Game Services、Input Support、Deterministic Simulation、Game Rules and Mathの6用途から必要な公開tagをまとめて追加する。導入済みcatalog moduleの更新対象とversionを表示して一括更新し、`Assets/Modules`との競合は追加前に知らせるEditor専用module。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
+| [モジュール管理（Module Manager）](ModuleInstaller/) | Project Maintenance、Scene and UI、Game Services、Input Supportの4workflowを先に示し、`Quick guide`で用途・導入後の最初の操作・変更範囲を確認してから固定公開tagをまとめて追加する。決定論・ゲーム計算は専門向けcollectionへ分離し、個別moduleは公開tagのREADMEを開いてから導入できる。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [プロジェクト一括設定（Project Setup）](ProjectSetup/) | `Assets`配下の基本フォルダー、Runtime・Editor・test用asmdef、Unity向け`.gitignore`と`.gitattributes`、Project Settings、Root Namespace、新規scriptの改行方式、複製時の命名規則、Play Mode Start Scene、条件付きコンパイル記号、Tag・Layer・Sorting Layer、Build Scenesをprofile化する。差分Preview、backup、適用、復元を一つのEditor画面で行い、既存fileは上書きしない。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [汎用データ構造（Containers）](Containers/) | コンテナ / データ構造 66 種。GC フリーのコレクション、Inspector に出せるシリアライズ対応型、空間分割、Unity のライフサイクルに耐えるコンテナ。 | なし |
 | [インスペクター入力補助（Inspector）](Inspector/) | Inspector 拡張の属性 43 種。条件による表示・非表示、グループ化とタブ、入力値の検証、メソッドのボタン化。**Unity 6000.5 以降**。 | なし |
@@ -93,7 +93,7 @@ Unity で繰り返し発生する設定、実装、確認作業を減らすた�
 
 ## 使い方
 
-新しいProjectでは、まず [モジュール管理（Module Manager）](ModuleInstaller/) をPackage Managerへ追加し、`Tools > Module Manager > Open`から用途別セットを選ぶ。未導入moduleは追加件数を、導入済みcatalog moduleは更新先versionを実行前に確認できる。更新は公開tagへ固定され、同じversion・より新しいversion・catalog外versionを上書きしない。
+新しいProjectでは、まず [モジュール管理（Module Manager）](ModuleInstaller/) をPackage Managerへ追加し、`Tools > Module Manager > Open`から4つの実用workflowを選ぶ。`Quick guide`で用途・最初の操作・変更範囲を確認し、未導入moduleの追加件数を確認してから実行する。専門向けcollectionと40件の個別一覧は初期状態で折りたたまれ、個別行の`Read guide`はcatalogと同じ公開tagのREADMEを開く。更新は公開tagへ固定され、同じversion・より新しいversion・catalog外versionを上書きしない。
 
 新規Projectの設定をそろえる場合は、[プロジェクト一括設定（Project Setup）](ProjectSetup/) を追加して `Tools > Project Setup > Open` を開く。`New recommended profile`で安全な推奨profileを作り、必要なら基本フォルダー、Runtime・Editor・test用asmdef、Unity向け`.gitignore`と`.gitattributes`、Root Namespace、新規scriptの改行方式、複製時の命名規則、Play Mode Start Scene、条件付きコンパイル記号、Tag・Layer・Sorting Layer、Build Scenesを追加する。`Preview changes`で差分を確認してから`Apply profile`を実行すると、適用直前の設定とツールが作成した項目が自動backupされる。復元時は、ツールが作成した後に内容が変わっていないfileだけを削除する。
 
