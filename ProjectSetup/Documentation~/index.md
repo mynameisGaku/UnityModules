@@ -1,6 +1,6 @@
-# プロジェクト一括設定（Project Setup）1.9.0
+# プロジェクト一括設定（Project Setup）1.10.0
 
-基本フォルダー、Runtime／Editor／test asmdef、Project設定、C#生成時のRoot Namespaceと改行方式、複製時の命名規則、Play Modeの開始Scene、条件付きコンパイル記号、Tag/Layer、Build Scenesをprofile化し、差分確認、backup、適用、復元を1つのEditor windowで行います。
+基本フォルダー、Runtime／Editor／test asmdef、`.gitignore`、`.gitattributes`、Project設定、C#生成時のRoot Namespaceと改行方式、複製時の命名規則、Play Modeの開始Scene、条件付きコンパイル記号、Tag/Layer、Build Scenesをprofile化し、差分確認、backup、適用、復元を1つのEditor windowで行います。
 
 ## 最短手順
 
@@ -24,6 +24,7 @@ import時やUnity起動時には適用しません。
 - Duplicate Naming（GameObject suffix、連番桁数、Asset copy spacing）
 - Project Folders（`Assets/...`配下の不足フォルダー）
 - Script Assemblies（Runtime／Editor asmdefと、任意のEditMode／PlayMode test asmdef）
+- Version Control Files（Unity向け`.gitignore`とLF規則を持つ`.gitattributes`）
 - Color Space
 - Run In Background
 - Company Name
@@ -48,6 +49,8 @@ Project Foldersは、profileに列挙した`Assets/...`配下の不足フォル�
 
 Script Assembliesは、指定したRuntime folderへRuntime asmdefを、その配下のEditor folderへEditor専用asmdefを作成します。任意でtest root folderを指定すると、`EditMode`と`PlayMode`のfolder、Runtime／Editor assemblyを参照するEditMode test asmdef、Runtime assemblyを参照するPlayMode test asmdefも作成します。両方へ`TestAssemblies`参照を設定し、EditMode側だけをEditor platformへ制限します。既存fileは上書きせず、同じfolderに別のasmdefがある場合はPreviewで停止します。Restoreは作成後に内容が変わっていないasmdefだけを削除し、編集済みfileを保持します。
 
+Version Control FilesはProject rootへUnity向け`.gitignore`と`.gitattributes`を作成します。`Library`、`Temp`、`Logs`、IDE生成file、ローカルbackupを除外し、主要なtext assetをLFへそろえます。既存fileや同名directoryは上書きしません。Restoreは作成後に内容が変わっていないfileだけを削除します。
+
 ## 安全性
 
 - 各項目はprofile側で個別に無効化できます。
@@ -58,7 +61,7 @@ Script Assembliesは、指定したRuntime folderへRuntime asmdefを、その�
 - Restoreも差分をPreviewしてから実行します。
 - Build Profileがbackup時から変わった場合、Build Scenesの復元を停止します。
 - build targetがbackup時から変わった場合、Scripting Define Symbolsの復元を停止します。
-- backup schema v9はProject Foldersとasmdefの作成履歴、Root Namespace、新規scriptの改行方式、Duplicate Naming、Play Mode Start Scene、Scripting Define Symbols、TagManager、Build Scenesを含みます。
+- backup schema v10はProject Folders、asmdef、Version Control Filesの作成履歴、Root Namespace、新規scriptの改行方式、Duplicate Naming、Play Mode Start Scene、Scripting Define Symbols、TagManager、Build Scenesを含みます。
 
 通常のApplyではTag、Layer、Sorting Layerの既存項目を削除・改名・並べ替えません。Build Scenesはprofileの一覧へ完全に置き換えるため、順序とEnabled状態をPreviewで確認してください。
 
