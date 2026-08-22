@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.4.0] - 2026-08-22
+
+- Added profile-owned scripting define symbols for the active build target.
+- Preserved existing symbols during Apply while recording the exact pre-Apply list for Restore.
+- Added validation, preview, backup schema v5, and Editor window regression coverage.
+
 ## [1.3.0] - 2026-08-22
 
 - Added a GUID-tracked Play Mode Start Scene to reusable project profiles.
