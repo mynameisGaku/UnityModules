@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.14.0] - 2026-08-22
+
+- Added profile-owned Managed Stripping Level setup for the active build target.
+- Added target-aware preview, backup schema v14, exact Restore, and target-switch protection.
+- Added deterministic planner, backup, service, window, and real PlayerSettings coverage.
+
 ## [1.13.0] - 2026-08-22
 
 - Added profile-owned .NET Standard and .NET Framework API Compatibility Level setup for the active build target.
