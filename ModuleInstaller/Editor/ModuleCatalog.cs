@@ -9,7 +9,7 @@ namespace ModuleInstaller.Editor
     {
         private static readonly ModuleCatalogEntry[] CatalogEntries =
         {
-            Entry("com.studiogaku.project-setup", "ProjectSetup", "project-setup-v1.2.0", "Project Setup", "Previews, backs up, applies, and restores Project Settings, Tags, Layers, Sorting Layers, and Build Scenes."),
+            Entry("com.studiogaku.project-setup", "ProjectSetup", "project-setup-v1.3.0", "Project Setup", "Previews, backs up, applies, and restores Project Settings, Tags, Layers, Sorting Layers, Build Scenes, and the Play Mode Start Scene."),
             Entry("com.studiogaku.inspector", "Inspector", "inspector-v1.0.0", "Inspector Helpers", "Organizes and validates Inspector input."),
             Entry("com.studiogaku.drawing", "Drawing", "drawing-v1.0.0", "Debug Drawing", "Draws runtime lines, shapes, paths, and labels."),
             Entry("com.studiogaku.build-guard", "BuildGuard", "build-guard-v1.4.0", "Project Issue Scanner", "Finds and repairs missing references in Scenes and Prefabs."),
