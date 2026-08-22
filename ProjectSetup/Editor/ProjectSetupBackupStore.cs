@@ -74,7 +74,7 @@ namespace ProjectSetup.Editor
             {
                 var json = File.ReadAllText(_path, new UTF8Encoding(false, true));
                 var data = JsonUtility.FromJson<ProjectSetupSnapshotData>(json);
-                if (data == null || (data.schemaVersion != 1 && data.schemaVersion != 2 && data.schemaVersion != 3 && data.schemaVersion != 4 && data.schemaVersion != 5 && data.schemaVersion != 6 && data.schemaVersion != 7))
+                if (data == null || data.schemaVersion < 1 || data.schemaVersion > 8)
                 {
                     error = "The Project Setup backup schema is unsupported.";
                     return false;
@@ -93,7 +93,7 @@ namespace ProjectSetup.Editor
         [Serializable]
         private sealed class ProjectSetupSnapshotData
         {
-            public int schemaVersion = 7;
+            public int schemaVersion = 8;
             public int assetSerialization;
             public string versionControlMode;
             public bool enterPlayModeOptionsEnabled;
@@ -126,6 +126,7 @@ namespace ProjectSetup.Editor
             public int gameObjectNamingScheme;
             public int gameObjectNamingDigits;
             public bool assetNamingUsesSpace;
+            public string[] createdProjectFolders;
 
             internal static ProjectSetupSnapshotData FromSnapshot(ProjectSetupSnapshot snapshot)
             {
@@ -176,7 +177,8 @@ namespace ProjectSetup.Editor
                     hasNamingData = snapshot.HasNamingData,
                     gameObjectNamingScheme = (int)snapshot.GameObjectNamingScheme,
                     gameObjectNamingDigits = snapshot.GameObjectNamingDigits,
-                    assetNamingUsesSpace = snapshot.AssetNamingUsesSpace
+                    assetNamingUsesSpace = snapshot.AssetNamingUsesSpace,
+                    createdProjectFolders = snapshot.CreatedProjectFolders
                 };
             }
 
@@ -223,7 +225,8 @@ namespace ProjectSetup.Editor
                     schemaVersion >= 7 && hasNamingData,
                     schemaVersion >= 7 ? (EditorSettings.NamingScheme)gameObjectNamingScheme : EditorSettings.NamingScheme.SpaceParenthesis,
                     schemaVersion >= 7 ? gameObjectNamingDigits : 1,
-                    schemaVersion >= 7 && assetNamingUsesSpace);
+                    schemaVersion >= 7 && assetNamingUsesSpace,
+                    createdProjectFolders: schemaVersion >= 8 ? createdProjectFolders : Array.Empty<string>());
             }
         }
 

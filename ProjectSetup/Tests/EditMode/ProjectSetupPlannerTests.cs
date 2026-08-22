@@ -456,6 +456,82 @@ namespace ProjectSetup.Tests
             Assert.That(plan.Errors, Has.Some.Contains("Naming Digits"));
         }
 
+        [Test]
+        public void Build_ProjectFoldersPlansMissingParentsInDepthOrder()
+        {
+            _profile.ConfigureAssetSerialization = false;
+            _profile.ConfigureVersionControl = false;
+            _profile.ConfigureProjectFolders = true;
+            _profile.ProjectFolders = new[] { "Assets/Game/Data" };
+            var current = Snapshot().WithProjectFolderState(new[] { "Assets" }, new[] { "Assets" });
+
+            var plan = ProjectSetupPlanner.Build(_profile, current);
+            var missing = ProjectSetupPlanner.GetMissingProjectFolders(_profile, current);
+
+            Assert.That(plan.IsValid, Is.True);
+            Assert.That(plan.Changes, Has.Exactly(1).Property("Key").EqualTo(ProjectSetupSettingKey.ProjectFolders));
+            Assert.That(missing, Is.EqualTo(new[] { "Assets/Game", "Assets/Game/Data" }));
+        }
+
+        [TestCase("Assets/../Secrets")]
+        [TestCase("Packages/Generated")]
+        [TestCase("Assets/CON")]
+        public void Build_ProjectFoldersRejectsUnsafePath(string path)
+        {
+            _profile.ConfigureProjectFolders = true;
+            _profile.ProjectFolders = new[] { path };
+
+            var plan = ProjectSetupPlanner.Build(_profile, Snapshot());
+
+            Assert.That(plan.IsValid, Is.False);
+            Assert.That(plan.Errors, Has.Some.Contains("Project Folders"));
+        }
+
+        [Test]
+        public void Build_ProjectFoldersRejectsNormalizedDuplicate()
+        {
+            _profile.ConfigureProjectFolders = true;
+            _profile.ProjectFolders = new[] { "Assets/Game/Data", "Assets\\Game\\Data" };
+
+            var plan = ProjectSetupPlanner.Build(_profile, Snapshot());
+
+            Assert.That(plan.IsValid, Is.False);
+            Assert.That(plan.Errors, Has.Some.Contains("duplicate"));
+        }
+
+        [Test]
+        public void Build_ProjectFoldersRejectsAssetCollisionInParentPath()
+        {
+            _profile.ConfigureProjectFolders = true;
+            _profile.ProjectFolders = new[] { "Assets/Game/Data" };
+            var current = Snapshot().WithProjectFolderState(
+                new[] { "Assets" },
+                new[] { "Assets", "Assets/Game" });
+
+            var plan = ProjectSetupPlanner.Build(_profile, current);
+
+            Assert.That(plan.IsValid, Is.False);
+            Assert.That(plan.Errors, Has.Some.Contains("Asset already uses"));
+        }
+
+        [Test]
+        public void FolderRestore_RemovesOnlyCreatedEmptyFolderTree()
+        {
+            var removable = ProjectSetupFolderUtility.GetRestorableFolders(
+                new[] { "Assets/Generated", "Assets/Generated/Empty", "Assets/Generated/Used" },
+                new[] { "Assets", "Assets/Generated", "Assets/Generated/Empty", "Assets/Generated/Used" },
+                new[]
+                {
+                    "Assets",
+                    "Assets/Generated",
+                    "Assets/Generated/Empty",
+                    "Assets/Generated/Used",
+                    "Assets/Generated/Used/Keep.asset"
+                });
+
+            Assert.That(removable, Is.EqualTo(new[] { "Assets/Generated/Empty" }));
+        }
+
         private static ProjectSetupSnapshot Snapshot(
             SerializationMode serializationMode = SerializationMode.ForceText,
             string versionControl = "Visible Meta Files",

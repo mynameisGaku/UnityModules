@@ -43,9 +43,11 @@ namespace ProjectSetup.Editor
             }
 
             var before = _environment.Capture();
+            var createdFolders = ProjectSetupPlanner.GetMissingProjectFolders(profile, before);
+            var backup = before.WithCreatedProjectFolders(createdFolders);
             try
             {
-                _backupStore.Save(before);
+                _backupStore.Save(backup);
             }
             catch (Exception exception)
             {
@@ -54,7 +56,12 @@ namespace ProjectSetup.Editor
 
             try
             {
-                _environment.Apply(profile);
+                var actualCreatedFolders = _environment.Apply(profile) ?? Array.Empty<string>();
+                if (!createdFolders.SequenceEqual(actualCreatedFolders, StringComparer.OrdinalIgnoreCase))
+                {
+                    backup = before.WithCreatedProjectFolders(actualCreatedFolders);
+                    _backupStore.Save(backup);
+                }
                 var verification = ProjectSetupPlanner.Build(profile, _environment.Capture());
                 if (!verification.IsValid || verification.HasChanges)
                 {
@@ -65,7 +72,7 @@ namespace ProjectSetup.Editor
             }
             catch (Exception exception)
             {
-                TryRestore(before);
+                TryRestore(backup);
                 return new ProjectSetupApplyResult(false, $"Apply failed and the previous values were restored where possible: {exception.Message}", plan);
             }
         }
@@ -141,6 +148,7 @@ namespace ProjectSetup.Editor
                 profile.ConfigureSortingLayers = false;
                 profile.ConfigureBuildScenes = false;
                 profile.ConfigureScriptingDefineSymbols = false;
+                profile.ConfigureProjectFolders = false;
                 var scalarPlan = ProjectSetupPlanner.Build(profile, current);
                 var changes = new List<ProjectSetupChange>(scalarPlan.Changes);
                 var errors = new List<string>(scalarPlan.Errors);
@@ -211,6 +219,19 @@ namespace ProjectSetup.Editor
                             ProjectSetupPlanner.FormatScriptingDefines(current.ScriptingDefineSymbols),
                             ProjectSetupPlanner.FormatScriptingDefines(desired.ScriptingDefineSymbols)));
                     }
+                }
+
+                var removableFolders = ProjectSetupFolderUtility.GetRestorableFolders(
+                    desired.CreatedProjectFolders,
+                    current.ProjectFolders,
+                    current.ProjectAssetPaths);
+                if (removableFolders.Length > 0)
+                {
+                    changes.Add(new ProjectSetupChange(
+                        ProjectSetupSettingKey.ProjectFolders,
+                        "Project Folders",
+                        $"{removableFolders.Length} empty created folder(s) remain",
+                        "Remove only empty folders created by the last apply"));
                 }
 
                 return new ProjectSetupPlan(changes, errors);

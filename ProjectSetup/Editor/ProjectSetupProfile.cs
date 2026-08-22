@@ -46,6 +46,16 @@ namespace ProjectSetup.Editor
         [SerializeField] private EditorSettings.NamingScheme gameObjectNamingScheme = EditorSettings.NamingScheme.SpaceParenthesis;
         [SerializeField] private int gameObjectNamingDigits = 1;
         [SerializeField] private bool assetNamingUsesSpace = true;
+        [SerializeField] private bool configureProjectFolders;
+        [SerializeField] private string[] projectFolders =
+        {
+            "Assets/Art",
+            "Assets/Audio",
+            "Assets/Prefabs",
+            "Assets/Scenes",
+            "Assets/Scripts",
+            "Assets/Settings"
+        };
 
         internal bool ConfigureAssetSerialization { get => configureAssetSerialization; set => configureAssetSerialization = value; }
         internal SerializationMode AssetSerialization { get => assetSerialization; set => assetSerialization = value; }
@@ -92,6 +102,8 @@ namespace ProjectSetup.Editor
         internal EditorSettings.NamingScheme GameObjectNamingScheme { get => gameObjectNamingScheme; set => gameObjectNamingScheme = value; }
         internal int GameObjectNamingDigits { get => gameObjectNamingDigits; set => gameObjectNamingDigits = value; }
         internal bool AssetNamingUsesSpace { get => assetNamingUsesSpace; set => assetNamingUsesSpace = value; }
+        internal bool ConfigureProjectFolders { get => configureProjectFolders; set => configureProjectFolders = value; }
+        internal string[] ProjectFolders { get => projectFolders ?? Array.Empty<string>(); set => projectFolders = value ?? Array.Empty<string>(); }
 
         internal void SetRecommendedDefaults()
         {
@@ -132,6 +144,16 @@ namespace ProjectSetup.Editor
             gameObjectNamingScheme = EditorSettings.NamingScheme.SpaceParenthesis;
             gameObjectNamingDigits = 1;
             assetNamingUsesSpace = true;
+            configureProjectFolders = false;
+            projectFolders = new[]
+            {
+                "Assets/Art",
+                "Assets/Audio",
+                "Assets/Prefabs",
+                "Assets/Scenes",
+                "Assets/Scripts",
+                "Assets/Settings"
+            };
         }
 
         internal void Capture(ProjectSetupSnapshot snapshot)
@@ -175,6 +197,16 @@ namespace ProjectSetup.Editor
             gameObjectNamingScheme = snapshot.GameObjectNamingScheme;
             gameObjectNamingDigits = snapshot.GameObjectNamingDigits;
             assetNamingUsesSpace = snapshot.AssetNamingUsesSpace;
+            configureProjectFolders = false;
+            projectFolders = new[]
+            {
+                "Assets/Art",
+                "Assets/Audio",
+                "Assets/Prefabs",
+                "Assets/Scenes",
+                "Assets/Scripts",
+                "Assets/Settings"
+            };
         }
 
         private static ProjectSetupBuildScene[] CloneBuildScenes(ProjectSetupBuildScene[] values)

@@ -59,7 +59,8 @@ namespace ProjectSetup.Tests
             Assert.That(actual.GameObjectNamingScheme, Is.EqualTo(expected.GameObjectNamingScheme));
             Assert.That(actual.GameObjectNamingDigits, Is.EqualTo(expected.GameObjectNamingDigits));
             Assert.That(actual.AssetNamingUsesSpace, Is.EqualTo(expected.AssetNamingUsesSpace));
-            Assert.That(File.ReadAllText(_path), Does.Contain("\"schemaVersion\": 7"));
+            Assert.That(actual.CreatedProjectFolders, Is.EqualTo(expected.CreatedProjectFolders));
+            Assert.That(File.ReadAllText(_path), Does.Contain("\"schemaVersion\": 8"));
         }
 
         [Test]
@@ -143,6 +144,7 @@ namespace ProjectSetup.Tests
             Assert.That(snapshot.HasPlayModeStartSceneData, Is.False);
             Assert.That(snapshot.HasCodeGenerationData, Is.False);
             Assert.That(snapshot.HasNamingData, Is.False);
+            Assert.That(snapshot.CreatedProjectFolders, Is.Empty);
         }
 
         private static ProjectSetupSnapshot Snapshot(string companyName)
@@ -190,7 +192,8 @@ namespace ProjectSetup.Tests
                 true,
                 EditorSettings.NamingScheme.Dot,
                 4,
-                false);
+                false,
+                createdProjectFolders: new[] { "Assets/Generated", "Assets/Generated/Data" });
         }
     }
 }
