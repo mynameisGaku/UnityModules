@@ -1,6 +1,6 @@
-# プロジェクト一括設定（Project Setup）1.6.0
+# プロジェクト一括設定（Project Setup）1.7.0
 
-Project設定、C#生成時のRoot Namespaceと改行方式、複製時の命名規則、Play Modeの開始Scene、条件付きコンパイル記号、Tag/Layer、Build Scenesをprofile化し、差分確認、backup、適用、復元を1つのEditor windowで行います。
+基本フォルダー、Project設定、C#生成時のRoot Namespaceと改行方式、複製時の命名規則、Play Modeの開始Scene、条件付きコンパイル記号、Tag/Layer、Build Scenesをprofile化し、差分確認、backup、適用、復元を1つのEditor windowで行います。
 
 ## 最短手順
 
@@ -22,6 +22,7 @@ import時やUnity起動時には適用しません。
 - Root Namespace
 - New Script Line Endings
 - Duplicate Naming（GameObject suffix、連番桁数、Asset copy spacing）
+- Project Folders（`Assets/...`配下の不足フォルダー）
 - Color Space
 - Run In Background
 - Company Name
@@ -42,6 +43,8 @@ Root NamespaceはUnityが生成するC# projectの既定namespaceを設定しま
 
 Duplicate Namingは、GameObject複製時のsuffix形式と連番の最小桁数、Asset複製番号のspaceを1つの設定として扱います。Apply後に複製した対象だけへ反映し、既存名は変更しません。
 
+Project Foldersは、profileに列挙した`Assets/...`配下の不足フォルダーと親フォルダーだけを作成します。初期profileでは無効です。Restoreは直前のApplyが作成したフォルダーを深い階層から確認し、空のものだけを削除します。既存フォルダーや内容が追加されたフォルダーは削除しません。
+
 ## 安全性
 
 - 各項目はprofile側で個別に無効化できます。
@@ -52,10 +55,10 @@ Duplicate Namingは、GameObject複製時のsuffix形式と連番の最小桁数
 - Restoreも差分をPreviewしてから実行します。
 - Build Profileがbackup時から変わった場合、Build Scenesの復元を停止します。
 - build targetがbackup時から変わった場合、Scripting Define Symbolsの復元を停止します。
-- backup schema v7はRoot Namespace、新規scriptの改行方式、Duplicate Naming、Play Mode Start Scene、Scripting Define Symbols、TagManager、Build Scenesを含みます。
+- backup schema v8はProject Foldersの作成履歴、Root Namespace、新規scriptの改行方式、Duplicate Naming、Play Mode Start Scene、Scripting Define Symbols、TagManager、Build Scenesを含みます。
 
 通常のApplyではTag、Layer、Sorting Layerの既存項目を削除・改名・並べ替えません。Build Scenesはprofileの一覧へ完全に置き換えるため、順序とEnabled状態をPreviewで確認してください。
 
 ## 対象外
 
-Physics matrix、Layer collision、Scene Asset作成、package導入、folder template、自動適用は扱いません。
+Physics matrix、Layer collision、Scene Asset作成、package導入、自動適用は扱いません。

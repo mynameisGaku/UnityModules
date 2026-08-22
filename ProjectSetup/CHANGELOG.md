@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.7.0] - 2026-08-22
+
+- Added profile-owned Project Folders with missing-parent preview and exact path validation.
+- Added backup schema v8 ownership records so Restore removes only empty folders created by the last Apply.
+- Added real AssetDatabase round-trip coverage for empty, used, and pre-existing folders.
+
 ## [1.6.0] - 2026-08-22
 
 - Added one profile-owned Duplicate Naming setting for GameObject suffix style, minimum number digits, and Asset copy spacing.
