@@ -74,7 +74,7 @@ namespace ProjectSetup.Editor
             {
                 var json = File.ReadAllText(_path, new UTF8Encoding(false, true));
                 var data = JsonUtility.FromJson<ProjectSetupSnapshotData>(json);
-                if (data == null || data.schemaVersion != 1)
+                if (data == null || (data.schemaVersion != 1 && data.schemaVersion != 2))
                 {
                     error = "The Project Setup backup schema is unsupported.";
                     return false;
@@ -93,7 +93,7 @@ namespace ProjectSetup.Editor
         [Serializable]
         private sealed class ProjectSetupSnapshotData
         {
-            public int schemaVersion = 1;
+            public int schemaVersion = 2;
             public int assetSerialization;
             public string versionControlMode;
             public bool enterPlayModeOptionsEnabled;
@@ -103,6 +103,11 @@ namespace ProjectSetup.Editor
             public string companyName;
             public string productName;
             public string bundleVersion;
+            public string[] tags;
+            public string[] customTags;
+            public string[] layers;
+            public SortingLayerData[] sortingLayers;
+            public string tagManagerFileText;
 
             internal static ProjectSetupSnapshotData FromSnapshot(ProjectSetupSnapshot snapshot)
             {
@@ -116,7 +121,19 @@ namespace ProjectSetup.Editor
                     runInBackground = snapshot.RunInBackground,
                     companyName = snapshot.CompanyName,
                     productName = snapshot.ProductName,
-                    bundleVersion = snapshot.BundleVersion
+                    bundleVersion = snapshot.BundleVersion,
+                    tags = snapshot.Tags,
+                    customTags = snapshot.CustomTags,
+                    layers = snapshot.Layers,
+                    sortingLayers = Array.ConvertAll(
+                        snapshot.SortingLayers,
+                        layer => new SortingLayerData
+                        {
+                            name = layer.Name,
+                            uniqueId = layer.UniqueId,
+                            locked = layer.Locked
+                        }),
+                    tagManagerFileText = snapshot.TagManagerFileText
                 };
             }
 
@@ -131,8 +148,26 @@ namespace ProjectSetup.Editor
                     runInBackground,
                     companyName,
                     productName,
-                    bundleVersion);
+                    bundleVersion,
+                    schemaVersion >= 2,
+                    schemaVersion >= 2 ? tags : Array.Empty<string>(),
+                    schemaVersion >= 2 ? customTags : Array.Empty<string>(),
+                    schemaVersion >= 2 ? layers : Array.Empty<string>(),
+                    schemaVersion >= 2 && sortingLayers != null
+                        ? Array.ConvertAll(
+                            sortingLayers,
+                            layer => new ProjectSetupSortingLayer(layer.name, layer.uniqueId, layer.locked))
+                        : Array.Empty<ProjectSetupSortingLayer>(),
+                    schemaVersion >= 2 ? tagManagerFileText : string.Empty);
             }
+        }
+
+        [Serializable]
+        private sealed class SortingLayerData
+        {
+            public string name;
+            public int uniqueId;
+            public bool locked;
         }
     }
 }

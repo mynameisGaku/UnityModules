@@ -27,6 +27,12 @@ namespace ProjectSetup.Tests
                 Assert.That(profile.ConfigureCompanyName, Is.False);
                 Assert.That(profile.ConfigureProductName, Is.False);
                 Assert.That(profile.ConfigureBundleVersion, Is.False);
+                Assert.That(profile.ConfigureTags, Is.False);
+                Assert.That(profile.Tags, Is.Empty);
+                Assert.That(profile.ConfigureLayers, Is.False);
+                Assert.That(profile.Layers, Is.Empty);
+                Assert.That(profile.ConfigureSortingLayers, Is.False);
+                Assert.That(profile.SortingLayers, Is.Empty);
             }
             finally
             {
@@ -40,6 +46,9 @@ namespace ProjectSetup.Tests
             var profile = ScriptableObject.CreateInstance<ProjectSetupProfile>();
             try
             {
+                var layers = new string[32];
+                layers[8] = "Gameplay";
+                layers[12] = "Interaction";
                 var snapshot = new ProjectSetupSnapshot(
                     SerializationMode.Mixed,
                     "Hidden Meta Files",
@@ -49,7 +58,16 @@ namespace ProjectSetup.Tests
                     true,
                     "Company",
                     "Product",
-                    "3.0.0");
+                    "3.0.0",
+                    true,
+                    new[] { "Untagged", "Player", "Collectible" },
+                    new[] { "Collectible" },
+                    layers,
+                    new[]
+                    {
+                        new ProjectSetupSortingLayer("Default", 0, false),
+                        new ProjectSetupSortingLayer("Foreground", 15, false)
+                    });
 
                 profile.Capture(snapshot);
 
@@ -69,6 +87,12 @@ namespace ProjectSetup.Tests
                 Assert.That(profile.ProductName, Is.EqualTo("Product"));
                 Assert.That(profile.ConfigureBundleVersion, Is.True);
                 Assert.That(profile.BundleVersion, Is.EqualTo("3.0.0"));
+                Assert.That(profile.ConfigureTags, Is.True);
+                Assert.That(profile.Tags, Is.EqualTo(new[] { "Collectible" }));
+                Assert.That(profile.ConfigureLayers, Is.True);
+                Assert.That(profile.Layers, Is.EqualTo(new[] { "Gameplay", "Interaction" }));
+                Assert.That(profile.ConfigureSortingLayers, Is.True);
+                Assert.That(profile.SortingLayers, Is.EqualTo(new[] { "Foreground" }));
             }
             finally
             {

@@ -42,11 +42,16 @@ namespace ProjectSetup.Tests
             var loaded = store.TryLoad(out var actual, out var error);
 
             Assert.That(loaded, Is.True, error);
+            Assert.That(actual.Tags, Is.EqualTo(expected.Tags), "Available Tags changed during backup serialization.");
+            Assert.That(actual.CustomTags, Is.EqualTo(expected.CustomTags), "Custom Tags changed during backup serialization.");
+            Assert.That(actual.Layers, Is.EqualTo(expected.Layers), "Layers changed during backup serialization.");
+            Assert.That(actual.SortingLayers, Is.EqualTo(expected.SortingLayers), "Sorting Layers changed during backup serialization.");
             Assert.That(actual, Is.EqualTo(expected));
             Assert.That(File.Exists(_path + ".tmp"), Is.False);
             var bytes = File.ReadAllBytes(_path);
             Assert.That(bytes, Has.Length.GreaterThan(0));
             Assert.That(bytes.Take(3).ToArray(), Is.Not.EqualTo(Encoding.UTF8.GetPreamble()));
+            Assert.That(File.ReadAllText(_path), Does.Contain("\"schemaVersion\": 2"));
         }
 
         [Test]
@@ -86,8 +91,28 @@ namespace ProjectSetup.Tests
             Assert.That(error, Does.Contain("schema"));
         }
 
+        [Test]
+        public void TryLoad_SchemaOneRemainsCompatibleWithoutTagManagerRestoreData()
+        {
+            Directory.CreateDirectory(_directory);
+            File.WriteAllText(
+                _path,
+                "{\"schemaVersion\":1,\"assetSerialization\":2,\"versionControlMode\":\"Visible Meta Files\",\"enterPlayModeOptionsEnabled\":false,\"enterPlayModeOptions\":0,\"colorSpace\":0,\"runInBackground\":false,\"companyName\":\"Legacy\",\"productName\":\"Product\",\"bundleVersion\":\"1.0.0\"}",
+                new UTF8Encoding(false));
+            var store = new ProjectSetupBackupStore(_path);
+
+            var loaded = store.TryLoad(out var snapshot, out var error);
+
+            Assert.That(loaded, Is.True, error);
+            Assert.That(snapshot.CompanyName, Is.EqualTo("Legacy"));
+            Assert.That(snapshot.HasTagManagerData, Is.False);
+            Assert.That(snapshot.CustomTags, Is.Empty);
+        }
+
         private static ProjectSetupSnapshot Snapshot(string companyName)
         {
+            var layers = Enumerable.Repeat(string.Empty, 32).ToArray();
+            layers[8] = "Gameplay";
             return new ProjectSetupSnapshot(
                 SerializationMode.ForceText,
                 "Visible Meta Files",
@@ -97,7 +122,16 @@ namespace ProjectSetup.Tests
                 true,
                 companyName,
                 "Product",
-                "2.5.0");
+                "2.5.0",
+                true,
+                new[] { "Untagged", "Checkpoint" },
+                new[] { "Checkpoint" },
+                layers,
+                new[]
+                {
+                    new ProjectSetupSortingLayer("Default", 0, false),
+                    new ProjectSetupSortingLayer("Foreground", 12, false)
+                });
         }
     }
 }

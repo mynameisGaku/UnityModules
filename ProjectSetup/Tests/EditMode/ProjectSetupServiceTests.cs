@@ -153,6 +153,26 @@ namespace ProjectSetup.Tests
             Assert.That(environment.ApplySnapshotCount, Is.Zero);
         }
 
+        [Test]
+        public void RestoreLast_RestoresTagManagerCollectionsExactly()
+        {
+            var before = SnapshotWithTagManager("CurrentTag", "CurrentLayer", "CurrentSorting", 20);
+            var desired = SnapshotWithTagManager("BackupTag", "BackupLayer", "BackupSorting", 30);
+            var environment = new FakeEnvironment(before);
+            var backup = new FakeBackupStore { Snapshot = desired, HasSnapshot = true };
+            var service = new ProjectSetupService(environment, backup);
+
+            var preview = service.PreviewRestore(out _, out var error);
+            var result = service.RestoreLast();
+
+            Assert.That(preview.IsValid, Is.True, error);
+            Assert.That(preview.Changes, Has.Some.Property("Key").EqualTo(ProjectSetupSettingKey.Tags));
+            Assert.That(preview.Changes, Has.Some.Property("Key").EqualTo(ProjectSetupSettingKey.Layers));
+            Assert.That(preview.Changes, Has.Some.Property("Key").EqualTo(ProjectSetupSettingKey.SortingLayers));
+            Assert.That(result.Succeeded, Is.True, result.Message);
+            Assert.That(environment.State, Is.EqualTo(desired));
+        }
+
         private static ProjectSetupSnapshot Snapshot(SerializationMode serializationMode = SerializationMode.ForceText, string versionControl = "Visible Meta Files")
         {
             return new ProjectSetupSnapshot(
@@ -165,6 +185,31 @@ namespace ProjectSetup.Tests
                 "DefaultCompany",
                 "New Unity Project",
                 "1.0.0");
+        }
+
+        private static ProjectSetupSnapshot SnapshotWithTagManager(string tag, string layer, string sortingLayer, int sortingLayerId)
+        {
+            var layers = new string[32];
+            layers[8] = layer;
+            return new ProjectSetupSnapshot(
+                SerializationMode.ForceText,
+                "Visible Meta Files",
+                false,
+                EnterPlayModeOptions.None,
+                ColorSpace.Gamma,
+                false,
+                "DefaultCompany",
+                "New Unity Project",
+                "1.0.0",
+                true,
+                new[] { "Untagged", tag },
+                new[] { tag },
+                layers,
+                new[]
+                {
+                    new ProjectSetupSortingLayer("Default", 0, false),
+                    new ProjectSetupSortingLayer(sortingLayer, sortingLayerId, false)
+                });
         }
 
         private sealed class FakeEnvironment : IProjectSetupEnvironment

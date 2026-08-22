@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: MIT
 
+using System;
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
@@ -24,6 +26,12 @@ namespace ProjectSetup.Editor
         [SerializeField] private string productName = "New Unity Project";
         [SerializeField] private bool configureBundleVersion;
         [SerializeField] private string bundleVersion = "1.0.0";
+        [SerializeField] private bool configureTags;
+        [SerializeField] private string[] tags = Array.Empty<string>();
+        [SerializeField] private bool configureLayers;
+        [SerializeField] private string[] layers = Array.Empty<string>();
+        [SerializeField] private bool configureSortingLayers;
+        [SerializeField] private string[] sortingLayers = Array.Empty<string>();
 
         internal bool ConfigureAssetSerialization { get => configureAssetSerialization; set => configureAssetSerialization = value; }
         internal SerializationMode AssetSerialization { get => assetSerialization; set => assetSerialization = value; }
@@ -42,6 +50,12 @@ namespace ProjectSetup.Editor
         internal string ProductName { get => productName; set => productName = value; }
         internal bool ConfigureBundleVersion { get => configureBundleVersion; set => configureBundleVersion = value; }
         internal string BundleVersion { get => bundleVersion; set => bundleVersion = value; }
+        internal bool ConfigureTags { get => configureTags; set => configureTags = value; }
+        internal string[] Tags { get => tags ?? Array.Empty<string>(); set => tags = value ?? Array.Empty<string>(); }
+        internal bool ConfigureLayers { get => configureLayers; set => configureLayers = value; }
+        internal string[] Layers { get => layers ?? Array.Empty<string>(); set => layers = value ?? Array.Empty<string>(); }
+        internal bool ConfigureSortingLayers { get => configureSortingLayers; set => configureSortingLayers = value; }
+        internal string[] SortingLayers { get => sortingLayers ?? Array.Empty<string>(); set => sortingLayers = value ?? Array.Empty<string>(); }
 
         internal void SetRecommendedDefaults()
         {
@@ -62,6 +76,12 @@ namespace ProjectSetup.Editor
             productName = "New Unity Project";
             configureBundleVersion = false;
             bundleVersion = "1.0.0";
+            configureTags = false;
+            tags = Array.Empty<string>();
+            configureLayers = false;
+            layers = Array.Empty<string>();
+            configureSortingLayers = false;
+            sortingLayers = Array.Empty<string>();
         }
 
         internal void Capture(ProjectSetupSnapshot snapshot)
@@ -83,6 +103,12 @@ namespace ProjectSetup.Editor
             productName = snapshot.ProductName;
             configureBundleVersion = true;
             bundleVersion = snapshot.BundleVersion;
+            configureTags = snapshot.HasTagManagerData;
+            tags = snapshot.CustomTags.ToArray();
+            configureLayers = snapshot.HasTagManagerData;
+            layers = snapshot.Layers.Skip(8).Where(value => !string.IsNullOrEmpty(value)).ToArray();
+            configureSortingLayers = snapshot.HasTagManagerData;
+            sortingLayers = snapshot.SortingLayers.Where(layer => layer.UniqueId != 0).Select(layer => layer.Name).ToArray();
         }
     }
 }

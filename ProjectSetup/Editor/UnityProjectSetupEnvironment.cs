@@ -12,6 +12,7 @@ namespace ProjectSetup.Editor
 
         public ProjectSetupSnapshot Capture()
         {
+            ProjectSetupTagManagerStore.Capture(out var tags, out var customTags, out var layers, out var sortingLayers, out var tagManagerFileText);
             return new ProjectSetupSnapshot(
                 EditorSettings.serializationMode,
                 VersionControlSettings.mode,
@@ -21,7 +22,13 @@ namespace ProjectSetup.Editor
                 PlayerSettings.runInBackground,
                 PlayerSettings.companyName,
                 PlayerSettings.productName,
-                PlayerSettings.bundleVersion);
+                PlayerSettings.bundleVersion,
+                true,
+                tags,
+                customTags,
+                layers,
+                sortingLayers,
+                tagManagerFileText);
         }
 
         public void Apply(ProjectSetupProfile profile)
@@ -67,6 +74,7 @@ namespace ProjectSetup.Editor
                 PlayerSettings.bundleVersion = profile.BundleVersion;
             }
 
+            ProjectSetupTagManagerStore.Apply(profile);
             AssetDatabase.SaveAssets();
         }
 
@@ -81,6 +89,7 @@ namespace ProjectSetup.Editor
             PlayerSettings.companyName = snapshot.CompanyName;
             PlayerSettings.productName = snapshot.ProductName;
             PlayerSettings.bundleVersion = snapshot.BundleVersion;
+            ProjectSetupTagManagerStore.Restore(snapshot);
             AssetDatabase.SaveAssets();
         }
     }

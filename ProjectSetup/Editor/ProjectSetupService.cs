@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace ProjectSetup.Editor
 {
@@ -103,7 +105,7 @@ namespace ProjectSetup.Editor
             try
             {
                 _environment.Apply(backup);
-                if (!_environment.Capture().Equals(backup))
+                if (!backup.Matches(_environment.Capture()))
                 {
                     throw new InvalidOperationException("Project Settings did not match the backup after restoring it.");
                 }
@@ -134,12 +136,67 @@ namespace ProjectSetup.Editor
             try
             {
                 profile.Capture(desired);
-                return ProjectSetupPlanner.Build(profile, current);
+                profile.ConfigureTags = false;
+                profile.ConfigureLayers = false;
+                profile.ConfigureSortingLayers = false;
+                var scalarPlan = ProjectSetupPlanner.Build(profile, current);
+                var changes = new List<ProjectSetupChange>(scalarPlan.Changes);
+                var errors = new List<string>(scalarPlan.Errors);
+                if (desired.HasTagManagerData)
+                {
+                    if (desired.Layers.Length != current.Layers.Length)
+                    {
+                        errors.Add("The backup Layer slot count does not match this Unity project.");
+                    }
+
+                    if (!desired.CustomTags.SequenceEqual(current.CustomTags, StringComparer.Ordinal))
+                    {
+                        changes.Add(new ProjectSetupChange(
+                            ProjectSetupSettingKey.Tags,
+                            "Tags",
+                            $"{current.CustomTags.Length} custom tag(s)",
+                            $"Restore {desired.CustomTags.Length} custom tag(s) exactly"));
+                    }
+
+                    if (!desired.Layers.SequenceEqual(current.Layers, StringComparer.Ordinal))
+                    {
+                        changes.Add(new ProjectSetupChange(
+                            ProjectSetupSettingKey.Layers,
+                            "Layers",
+                            $"{CountNamedUserLayers(current.Layers)} named user layer(s)",
+                            $"Restore {CountNamedUserLayers(desired.Layers)} named user layer(s) exactly"));
+                    }
+
+                    if (!desired.SortingLayers.SequenceEqual(current.SortingLayers))
+                    {
+                        changes.Add(new ProjectSetupChange(
+                            ProjectSetupSettingKey.SortingLayers,
+                            "Sorting Layers",
+                            $"{current.SortingLayers.Length} layer(s)",
+                            $"Restore {desired.SortingLayers.Length} layer(s) exactly"));
+                    }
+                }
+
+                return new ProjectSetupPlan(changes, errors);
             }
             finally
             {
                 UnityEngine.Object.DestroyImmediate(profile);
             }
+        }
+
+        private static int CountNamedUserLayers(IReadOnlyList<string> layers)
+        {
+            var count = 0;
+            for (var index = 8; index < layers.Count; index++)
+            {
+                if (!string.IsNullOrEmpty(layers[index]))
+                {
+                    count++;
+                }
+            }
+
+            return count;
         }
     }
 }
