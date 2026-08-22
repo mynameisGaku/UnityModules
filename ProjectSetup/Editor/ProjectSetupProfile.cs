@@ -56,6 +56,10 @@ namespace ProjectSetup.Editor
             "Assets/Scripts",
             "Assets/Settings"
         };
+        [SerializeField] private bool configureAssemblyDefinitions;
+        [SerializeField] private string assemblyName = "Game";
+        [SerializeField] private string runtimeAssemblyFolder = "Assets/Scripts";
+        [SerializeField] private string editorAssemblyFolder = "Assets/Scripts/Editor";
 
         internal bool ConfigureAssetSerialization { get => configureAssetSerialization; set => configureAssetSerialization = value; }
         internal SerializationMode AssetSerialization { get => assetSerialization; set => assetSerialization = value; }
@@ -104,6 +108,10 @@ namespace ProjectSetup.Editor
         internal bool AssetNamingUsesSpace { get => assetNamingUsesSpace; set => assetNamingUsesSpace = value; }
         internal bool ConfigureProjectFolders { get => configureProjectFolders; set => configureProjectFolders = value; }
         internal string[] ProjectFolders { get => projectFolders ?? Array.Empty<string>(); set => projectFolders = value ?? Array.Empty<string>(); }
+        internal bool ConfigureAssemblyDefinitions { get => configureAssemblyDefinitions; set => configureAssemblyDefinitions = value; }
+        internal string AssemblyName { get => assemblyName ?? string.Empty; set => assemblyName = value ?? string.Empty; }
+        internal string RuntimeAssemblyFolder { get => runtimeAssemblyFolder ?? string.Empty; set => runtimeAssemblyFolder = value ?? string.Empty; }
+        internal string EditorAssemblyFolder { get => editorAssemblyFolder ?? string.Empty; set => editorAssemblyFolder = value ?? string.Empty; }
 
         internal void SetRecommendedDefaults()
         {
@@ -154,6 +162,10 @@ namespace ProjectSetup.Editor
                 "Assets/Scripts",
                 "Assets/Settings"
             };
+            configureAssemblyDefinitions = false;
+            assemblyName = "Game";
+            runtimeAssemblyFolder = "Assets/Scripts";
+            editorAssemblyFolder = "Assets/Scripts/Editor";
         }
 
         internal void Capture(ProjectSetupSnapshot snapshot)
@@ -207,6 +219,10 @@ namespace ProjectSetup.Editor
                 "Assets/Scripts",
                 "Assets/Settings"
             };
+            configureAssemblyDefinitions = false;
+            assemblyName = "Game";
+            runtimeAssemblyFolder = "Assets/Scripts";
+            editorAssemblyFolder = "Assets/Scripts/Editor";
         }
 
         private static ProjectSetupBuildScene[] CloneBuildScenes(ProjectSetupBuildScene[] values)

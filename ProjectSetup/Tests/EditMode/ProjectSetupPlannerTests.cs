@@ -515,6 +515,101 @@ namespace ProjectSetup.Tests
         }
 
         [Test]
+        public void Build_AssemblyDefinitionsPlansFilesAndRequiredFolders()
+        {
+            _profile.ConfigureAssetSerialization = false;
+            _profile.ConfigureVersionControl = false;
+            _profile.ConfigureAssemblyDefinitions = true;
+            _profile.AssemblyName = "Studio.Game";
+            _profile.RuntimeAssemblyFolder = "Assets/Game/Scripts";
+            _profile.EditorAssemblyFolder = "Assets/Game/Scripts/Editor";
+            var current = Snapshot().WithProjectFolderState(new[] { "Assets" }, new[] { "Assets" });
+
+            var plan = ProjectSetupPlanner.Build(_profile, current);
+            var folders = ProjectSetupPlanner.GetMissingProjectFolders(_profile, current);
+            var definitions = ProjectSetupPlanner.GetMissingAssemblyDefinitions(_profile, current);
+
+            Assert.That(plan.IsValid, Is.True, string.Join("\n", plan.Errors));
+            Assert.That(plan.Changes, Has.Exactly(1).Property("Key").EqualTo(ProjectSetupSettingKey.AssemblyDefinitions));
+            Assert.That(folders, Is.EqualTo(new[]
+            {
+                "Assets/Game",
+                "Assets/Game/Scripts",
+                "Assets/Game/Scripts/Editor"
+            }));
+            Assert.That(definitions.Select(definition => definition.Path), Is.EqualTo(new[]
+            {
+                "Assets/Game/Scripts/Studio.Game.asmdef",
+                "Assets/Game/Scripts/Editor/Studio.Game.Editor.asmdef"
+            }));
+        }
+
+        [TestCase("Game-Invalid")]
+        [TestCase("class")]
+        [TestCase("Game..Runtime")]
+        [TestCase("Game\u00E9")]
+        public void Build_AssemblyDefinitionsRejectsInvalidAssemblyName(string assemblyName)
+        {
+            _profile.ConfigureAssemblyDefinitions = true;
+            _profile.AssemblyName = assemblyName;
+
+            var plan = ProjectSetupPlanner.Build(_profile, Snapshot());
+
+            Assert.That(plan.IsValid, Is.False);
+            Assert.That(plan.Errors, Has.Some.Contains("Assembly Name"));
+        }
+
+        [Test]
+        public void Build_AssemblyDefinitionsRejectsEditorFolderOutsideRuntimeFolder()
+        {
+            _profile.ConfigureAssemblyDefinitions = true;
+            _profile.RuntimeAssemblyFolder = "Assets/Runtime";
+            _profile.EditorAssemblyFolder = "Assets/Editor";
+
+            var plan = ProjectSetupPlanner.Build(_profile, Snapshot());
+
+            Assert.That(plan.IsValid, Is.False);
+            Assert.That(plan.Errors, Has.Some.Contains("child"));
+        }
+
+        [Test]
+        public void Build_AssemblyDefinitionsPreservesExistingTargets()
+        {
+            _profile.ConfigureAssetSerialization = false;
+            _profile.ConfigureVersionControl = false;
+            _profile.ConfigureAssemblyDefinitions = true;
+            var current = Snapshot().WithProjectFolderState(
+                new[] { "Assets", "Assets/Scripts", "Assets/Scripts/Editor" },
+                new[]
+                {
+                    "Assets",
+                    "Assets/Scripts",
+                    "Assets/Scripts/Game.asmdef",
+                    "Assets/Scripts/Editor",
+                    "Assets/Scripts/Editor/Game.Editor.asmdef"
+                });
+
+            var plan = ProjectSetupPlanner.Build(_profile, current);
+
+            Assert.That(plan.IsValid, Is.True, string.Join("\n", plan.Errors));
+            Assert.That(plan.HasChanges, Is.False);
+        }
+
+        [Test]
+        public void Build_AssemblyDefinitionsRejectsDifferentDefinitionInTargetFolder()
+        {
+            _profile.ConfigureAssemblyDefinitions = true;
+            var current = Snapshot().WithProjectFolderState(
+                new[] { "Assets", "Assets/Scripts", "Assets/Scripts/Editor" },
+                new[] { "Assets", "Assets/Scripts", "Assets/Scripts/Existing.asmdef" });
+
+            var plan = ProjectSetupPlanner.Build(_profile, current);
+
+            Assert.That(plan.IsValid, Is.False);
+            Assert.That(plan.Errors, Has.Some.Contains("different Assembly Definition"));
+        }
+
+        [Test]
         public void FolderRestore_RemovesOnlyCreatedEmptyFolderTree()
         {
             var removable = ProjectSetupFolderUtility.GetRestorableFolders(

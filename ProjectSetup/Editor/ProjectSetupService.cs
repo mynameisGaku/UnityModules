@@ -44,7 +44,10 @@ namespace ProjectSetup.Editor
 
             var before = _environment.Capture();
             var createdFolders = ProjectSetupPlanner.GetMissingProjectFolders(profile, before);
-            var backup = before.WithCreatedProjectFolders(createdFolders);
+            var createdAssets = ProjectSetupPlanner.GetMissingAssemblyDefinitions(profile, before)
+                .Select(definition => definition.ToCreatedAsset())
+                .ToArray();
+            var backup = before.WithCreatedProjectState(createdFolders, createdAssets);
             try
             {
                 _backupStore.Save(backup);
@@ -56,10 +59,11 @@ namespace ProjectSetup.Editor
 
             try
             {
-                var actualCreatedFolders = _environment.Apply(profile) ?? Array.Empty<string>();
-                if (!createdFolders.SequenceEqual(actualCreatedFolders, StringComparer.OrdinalIgnoreCase))
+                var actual = _environment.Apply(profile);
+                if (!createdFolders.SequenceEqual(actual.CreatedFolders, StringComparer.OrdinalIgnoreCase)
+                    || !createdAssets.SequenceEqual(actual.CreatedAssets))
                 {
-                    backup = before.WithCreatedProjectFolders(actualCreatedFolders);
+                    backup = before.WithCreatedProjectState(actual.CreatedFolders, actual.CreatedAssets);
                     _backupStore.Save(backup);
                 }
                 var verification = ProjectSetupPlanner.Build(profile, _environment.Capture());
@@ -149,6 +153,7 @@ namespace ProjectSetup.Editor
                 profile.ConfigureBuildScenes = false;
                 profile.ConfigureScriptingDefineSymbols = false;
                 profile.ConfigureProjectFolders = false;
+                profile.ConfigureAssemblyDefinitions = false;
                 var scalarPlan = ProjectSetupPlanner.Build(profile, current);
                 var changes = new List<ProjectSetupChange>(scalarPlan.Changes);
                 var errors = new List<string>(scalarPlan.Errors);
@@ -232,6 +237,17 @@ namespace ProjectSetup.Editor
                         "Project Folders",
                         $"{removableFolders.Length} empty created folder(s) remain",
                         "Remove only empty folders created by the last apply"));
+                }
+
+                var currentAssets = new HashSet<string>(current.ProjectAssetPaths, StringComparer.OrdinalIgnoreCase);
+                var restorableAssets = desired.CreatedProjectAssets.Count(asset => currentAssets.Contains(asset.Path));
+                if (restorableAssets > 0)
+                {
+                    changes.Add(new ProjectSetupChange(
+                        ProjectSetupSettingKey.AssemblyDefinitions,
+                        "Script Assemblies",
+                        $"{restorableAssets} created Assembly Definition asset(s) remain",
+                        "Remove only created Assembly Definitions whose contents are unchanged"));
                 }
 
                 return new ProjectSetupPlan(changes, errors);

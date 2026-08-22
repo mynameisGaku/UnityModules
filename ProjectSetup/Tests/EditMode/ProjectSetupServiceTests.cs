@@ -107,6 +107,30 @@ namespace ProjectSetup.Tests
         }
 
         [Test]
+        public void Apply_AssemblyDefinitionsRecordsOnlyCreatedFilesInBackup()
+        {
+            _profile.ConfigureAssetSerialization = false;
+            _profile.ConfigureVersionControl = false;
+            _profile.ConfigureAssemblyDefinitions = true;
+            var before = Snapshot().WithProjectFolderState(new[] { "Assets" }, new[] { "Assets" });
+            var environment = new FakeEnvironment(before);
+            var backup = new FakeBackupStore();
+            var service = new ProjectSetupService(environment, backup);
+
+            var result = service.Apply(_profile);
+
+            Assert.That(result.Succeeded, Is.True, result.Message);
+            Assert.That(backup.Snapshot.CreatedProjectFolders, Is.EqualTo(new[] { "Assets/Scripts", "Assets/Scripts/Editor" }));
+            Assert.That(backup.Snapshot.CreatedProjectAssets.Select(asset => asset.Path), Is.EqualTo(new[]
+            {
+                "Assets/Scripts/Game.asmdef",
+                "Assets/Scripts/Editor/Game.Editor.asmdef"
+            }));
+            Assert.That(environment.State.ProjectAssetPaths, Does.Contain("Assets/Scripts/Game.asmdef"));
+            Assert.That(environment.State.ProjectAssetPaths, Does.Contain("Assets/Scripts/Editor/Game.Editor.asmdef"));
+        }
+
+        [Test]
         public void RestoreLast_AppliesSavedSnapshot()
         {
             var desired = Snapshot(SerializationMode.Mixed, "Hidden Meta Files");
@@ -342,7 +366,7 @@ namespace ProjectSetup.Tests
                 return State;
             }
 
-            public string[] Apply(ProjectSetupProfile profile)
+            public ProjectSetupEnvironmentApplyResult Apply(ProjectSetupProfile profile)
             {
                 ApplyProfileCount++;
                 if (ThrowOnProfileApply)
@@ -362,16 +386,20 @@ namespace ProjectSetup.Tests
                     profile.ConfigureBundleVersion ? profile.BundleVersion : State.BundleVersion);
                 var folders = State.ProjectFolders;
                 var assets = State.ProjectAssetPaths;
+                var missingDefinitions = ProjectSetupPlanner.GetMissingAssemblyDefinitions(profile, State);
                 var missing = Array.Empty<string>();
-                if (profile.ConfigureProjectFolders)
+                if (profile.ConfigureProjectFolders || profile.ConfigureAssemblyDefinitions)
                 {
-                    missing = ProjectSetupFolderUtility.ExpandMissingFolders(profile.ProjectFolders, folders);
+                    missing = ProjectSetupPlanner.GetMissingProjectFolders(profile, State);
                     folders = folders.Concat(missing).ToArray();
                     assets = assets.Concat(missing).ToArray();
                 }
 
+                var createdAssets = missingDefinitions.Select(definition => definition.ToCreatedAsset()).ToArray();
+                assets = assets.Concat(createdAssets.Select(asset => asset.Path)).ToArray();
+
                 State = updated.WithProjectFolderState(folders, assets);
-                return missing;
+                return new ProjectSetupEnvironmentApplyResult(missing, createdAssets);
             }
 
             public void Apply(ProjectSetupSnapshot snapshot)

@@ -114,6 +114,7 @@ namespace ProjectSetup.Editor
             AddCodeGenerationChange(profile, current, changes, errors);
             AddNamingDefaultsChange(profile, current, changes, errors);
             AddProjectFolderChange(profile, current, changes, errors);
+            AddAssemblyDefinitionChange(profile, current, changes, errors);
             AddNameListChange(profile.ConfigureTags, profile.Tags, current.Tags, ProjectSetupSettingKey.Tags, "Tags", changes, errors);
             AddLayerChange(profile, current, changes, errors);
             AddNameListChange(
@@ -129,16 +130,46 @@ namespace ProjectSetup.Editor
 
         internal static string[] GetMissingProjectFolders(ProjectSetupProfile profile, ProjectSetupSnapshot current)
         {
-            if (profile == null || !profile.ConfigureProjectFolders)
+            if (profile == null)
             {
                 return Array.Empty<string>();
             }
 
-            var normalized = profile.ProjectFolders
+            var requested = new List<string>();
+            if (profile.ConfigureProjectFolders)
+            {
+                requested.AddRange(profile.ProjectFolders);
+            }
+
+            if (profile.ConfigureAssemblyDefinitions)
+            {
+                requested.AddRange(ProjectSetupAssemblyDefinitionUtility.GetRequiredFolders(
+                    profile.RuntimeAssemblyFolder,
+                    profile.EditorAssemblyFolder));
+            }
+
+            var normalized = requested
                 .Select(value => ProjectSetupFolderUtility.TryNormalize(value, out var path, out _) ? path : string.Empty)
                 .Where(value => value.Length > 0)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToArray();
             return ProjectSetupFolderUtility.ExpandMissingFolders(normalized, current.ProjectFolders);
+        }
+
+        internal static ProjectSetupAssemblyDefinitionPlan[] GetMissingAssemblyDefinitions(ProjectSetupProfile profile, ProjectSetupSnapshot current)
+        {
+            if (profile == null || !profile.ConfigureAssemblyDefinitions)
+            {
+                return Array.Empty<ProjectSetupAssemblyDefinitionPlan>();
+            }
+
+            return ProjectSetupAssemblyDefinitionUtility.BuildMissingDefinitions(
+                profile.AssemblyName,
+                profile.RuntimeAssemblyFolder,
+                profile.EditorAssemblyFolder,
+                current.ProjectFolders,
+                current.ProjectAssetPaths,
+                null);
         }
 
         private static void AddProjectFolderChange(
@@ -209,6 +240,55 @@ namespace ProjectSetup.Editor
             const int visibleCount = 5;
             var visible = string.Join(", ", paths.Take(visibleCount));
             return paths.Count <= visibleCount ? visible : visible + $", and {paths.Count - visibleCount} more";
+        }
+
+        private static void AddAssemblyDefinitionChange(
+            ProjectSetupProfile profile,
+            ProjectSetupSnapshot current,
+            ICollection<ProjectSetupChange> changes,
+            ICollection<string> errors)
+        {
+            if (!profile.ConfigureAssemblyDefinitions)
+            {
+                return;
+            }
+
+            var errorCount = errors.Count;
+            var definitions = ProjectSetupAssemblyDefinitionUtility.BuildMissingDefinitions(
+                profile.AssemblyName,
+                profile.RuntimeAssemblyFolder,
+                profile.EditorAssemblyFolder,
+                current.ProjectFolders,
+                current.ProjectAssetPaths,
+                errors);
+            if (errors.Count != errorCount)
+            {
+                return;
+            }
+
+            var requiredFolders = ProjectSetupAssemblyDefinitionUtility.GetRequiredFolders(
+                profile.RuntimeAssemblyFolder,
+                profile.EditorAssemblyFolder);
+            var missingFolders = ProjectSetupFolderUtility.ExpandMissingFolders(requiredFolders, current.ProjectFolders);
+            var currentFolders = new HashSet<string>(current.ProjectFolders, StringComparer.OrdinalIgnoreCase);
+            var currentAssets = new HashSet<string>(current.ProjectAssetPaths, StringComparer.OrdinalIgnoreCase);
+            var collision = missingFolders.FirstOrDefault(path => currentAssets.Contains(path) && !currentFolders.Contains(path));
+            if (!string.IsNullOrEmpty(collision))
+            {
+                errors.Add($"Assembly Definitions cannot create '{collision}' because an Asset already uses that path.");
+                return;
+            }
+
+            if (definitions.Length == 0 && missingFolders.Length == 0)
+            {
+                return;
+            }
+
+            changes.Add(new ProjectSetupChange(
+                ProjectSetupSettingKey.AssemblyDefinitions,
+                "Script Assemblies",
+                $"{definitions.Length} Assembly Definition(s) and {missingFolders.Length} parent folder(s) are missing",
+                $"Create {profile.AssemblyName} and {profile.AssemblyName}.Editor without overwriting existing files"));
         }
 
         private static void AddNamingDefaultsChange(

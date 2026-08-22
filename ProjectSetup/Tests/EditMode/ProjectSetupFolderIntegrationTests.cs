@@ -35,7 +35,8 @@ namespace ProjectSetup.Tests
                 var environment = new UnityProjectSetupEnvironment();
                 var before = environment.Capture();
 
-                var created = environment.Apply(profile);
+                var applyResult = environment.Apply(profile);
+                var created = applyResult.CreatedFolders;
 
                 Assert.That(created, Is.EquivalentTo(new[]
                 {

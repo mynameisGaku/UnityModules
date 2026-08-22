@@ -58,6 +58,10 @@ namespace ProjectSetup.Tests
                     "Assets/Scripts",
                     "Assets/Settings"
                 }));
+                Assert.That(profile.ConfigureAssemblyDefinitions, Is.False);
+                Assert.That(profile.AssemblyName, Is.EqualTo("Game"));
+                Assert.That(profile.RuntimeAssemblyFolder, Is.EqualTo("Assets/Scripts"));
+                Assert.That(profile.EditorAssemblyFolder, Is.EqualTo("Assets/Scripts/Editor"));
             }
             finally
             {
@@ -159,6 +163,10 @@ namespace ProjectSetup.Tests
                 Assert.That(profile.AssetNamingUsesSpace, Is.False);
                 Assert.That(profile.ConfigureProjectFolders, Is.False);
                 Assert.That(profile.ProjectFolders, Contains.Item("Assets/Scripts"));
+                Assert.That(profile.ConfigureAssemblyDefinitions, Is.False);
+                Assert.That(profile.AssemblyName, Is.EqualTo("Game"));
+                Assert.That(profile.RuntimeAssemblyFolder, Is.EqualTo("Assets/Scripts"));
+                Assert.That(profile.EditorAssemblyFolder, Is.EqualTo("Assets/Scripts/Editor"));
             }
             finally
             {

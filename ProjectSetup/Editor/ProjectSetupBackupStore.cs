@@ -74,7 +74,7 @@ namespace ProjectSetup.Editor
             {
                 var json = File.ReadAllText(_path, new UTF8Encoding(false, true));
                 var data = JsonUtility.FromJson<ProjectSetupSnapshotData>(json);
-                if (data == null || data.schemaVersion < 1 || data.schemaVersion > 8)
+                if (data == null || data.schemaVersion < 1 || data.schemaVersion > 9)
                 {
                     error = "The Project Setup backup schema is unsupported.";
                     return false;
@@ -93,7 +93,7 @@ namespace ProjectSetup.Editor
         [Serializable]
         private sealed class ProjectSetupSnapshotData
         {
-            public int schemaVersion = 8;
+            public int schemaVersion = 9;
             public int assetSerialization;
             public string versionControlMode;
             public bool enterPlayModeOptionsEnabled;
@@ -127,6 +127,7 @@ namespace ProjectSetup.Editor
             public int gameObjectNamingDigits;
             public bool assetNamingUsesSpace;
             public string[] createdProjectFolders;
+            public CreatedAssetData[] createdProjectAssets;
 
             internal static ProjectSetupSnapshotData FromSnapshot(ProjectSetupSnapshot snapshot)
             {
@@ -178,7 +179,14 @@ namespace ProjectSetup.Editor
                     gameObjectNamingScheme = (int)snapshot.GameObjectNamingScheme,
                     gameObjectNamingDigits = snapshot.GameObjectNamingDigits,
                     assetNamingUsesSpace = snapshot.AssetNamingUsesSpace,
-                    createdProjectFolders = snapshot.CreatedProjectFolders
+                    createdProjectFolders = snapshot.CreatedProjectFolders,
+                    createdProjectAssets = Array.ConvertAll(
+                        snapshot.CreatedProjectAssets,
+                        asset => new CreatedAssetData
+                        {
+                            path = asset.Path,
+                            contentHash = asset.ContentHash
+                        })
                 };
             }
 
@@ -226,7 +234,12 @@ namespace ProjectSetup.Editor
                     schemaVersion >= 7 ? (EditorSettings.NamingScheme)gameObjectNamingScheme : EditorSettings.NamingScheme.SpaceParenthesis,
                     schemaVersion >= 7 ? gameObjectNamingDigits : 1,
                     schemaVersion >= 7 && assetNamingUsesSpace,
-                    createdProjectFolders: schemaVersion >= 8 ? createdProjectFolders : Array.Empty<string>());
+                    createdProjectFolders: schemaVersion >= 8 ? createdProjectFolders : Array.Empty<string>(),
+                    createdProjectAssets: schemaVersion >= 9 && createdProjectAssets != null
+                        ? Array.ConvertAll(
+                            createdProjectAssets,
+                            asset => new ProjectSetupCreatedAsset(asset.path, asset.contentHash))
+                        : Array.Empty<ProjectSetupCreatedAsset>());
             }
         }
 
@@ -244,6 +257,13 @@ namespace ProjectSetup.Editor
             public string sceneGuid;
             public string path;
             public bool enabled;
+        }
+
+        [Serializable]
+        private sealed class CreatedAssetData
+        {
+            public string path;
+            public string contentHash;
         }
     }
 }
