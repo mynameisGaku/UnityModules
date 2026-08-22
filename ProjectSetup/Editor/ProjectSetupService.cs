@@ -139,6 +139,7 @@ namespace ProjectSetup.Editor
                 profile.ConfigureTags = false;
                 profile.ConfigureLayers = false;
                 profile.ConfigureSortingLayers = false;
+                profile.ConfigureBuildScenes = false;
                 var scalarPlan = ProjectSetupPlanner.Build(profile, current);
                 var changes = new List<ProjectSetupChange>(scalarPlan.Changes);
                 var errors = new List<string>(scalarPlan.Errors);
@@ -174,6 +175,23 @@ namespace ProjectSetup.Editor
                             "Sorting Layers",
                             $"{current.SortingLayers.Length} layer(s)",
                             $"Restore {desired.SortingLayers.Length} layer(s) exactly"));
+                    }
+                }
+
+                if (desired.HasBuildSceneData)
+                {
+                    if (!current.HasBuildSceneData
+                        || !string.Equals(desired.BuildSceneTargetId, current.BuildSceneTargetId, StringComparison.Ordinal))
+                    {
+                        errors.Add($"The active Build Scene target must remain '{desired.BuildSceneTargetLabel}' before restoring this backup.");
+                    }
+                    else if (!desired.BuildScenes.SequenceEqual(current.BuildScenes))
+                    {
+                        changes.Add(new ProjectSetupChange(
+                            ProjectSetupSettingKey.BuildScenes,
+                            "Build Scenes",
+                            ProjectSetupPlanner.FormatBuildScenes(current.BuildScenes),
+                            ProjectSetupPlanner.FormatBuildScenes(desired.BuildScenes)));
                     }
                 }
 

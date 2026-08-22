@@ -173,6 +173,22 @@ namespace ProjectSetup.Tests
             Assert.That(environment.State, Is.EqualTo(desired));
         }
 
+        [Test]
+        public void PreviewRestore_WhenBuildSceneTargetChangedReturnsError()
+        {
+            var current = SnapshotWithBuildScenes("profile:new", "Assets/New.unity");
+            var desired = SnapshotWithBuildScenes("profile:backup", "Assets/Backup.unity");
+            var environment = new FakeEnvironment(current);
+            var backup = new FakeBackupStore { Snapshot = desired, HasSnapshot = true };
+            var service = new ProjectSetupService(environment, backup);
+
+            var plan = service.PreviewRestore(out _, out _);
+
+            Assert.That(plan.IsValid, Is.False);
+            Assert.That(plan.Errors, Has.Some.Contains("Build Scene target"));
+            Assert.That(environment.ApplySnapshotCount, Is.Zero);
+        }
+
         private static ProjectSetupSnapshot Snapshot(SerializationMode serializationMode = SerializationMode.ForceText, string versionControl = "Visible Meta Files")
         {
             return new ProjectSetupSnapshot(
@@ -210,6 +226,30 @@ namespace ProjectSetup.Tests
                     new ProjectSetupSortingLayer("Default", 0, false),
                     new ProjectSetupSortingLayer(sortingLayer, sortingLayerId, false)
                 });
+        }
+
+        private static ProjectSetupSnapshot SnapshotWithBuildScenes(string targetId, string path)
+        {
+            return new ProjectSetupSnapshot(
+                SerializationMode.ForceText,
+                "Visible Meta Files",
+                false,
+                EnterPlayModeOptions.None,
+                ColorSpace.Gamma,
+                false,
+                "DefaultCompany",
+                "New Unity Project",
+                "1.0.0",
+                false,
+                null,
+                null,
+                null,
+                null,
+                null,
+                true,
+                targetId,
+                targetId,
+                new[] { new ProjectSetupBuildSceneState(string.Empty, path, true) });
         }
 
         private sealed class FakeEnvironment : IProjectSetupEnvironment

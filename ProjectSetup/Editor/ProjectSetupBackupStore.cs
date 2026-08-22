@@ -74,7 +74,7 @@ namespace ProjectSetup.Editor
             {
                 var json = File.ReadAllText(_path, new UTF8Encoding(false, true));
                 var data = JsonUtility.FromJson<ProjectSetupSnapshotData>(json);
-                if (data == null || (data.schemaVersion != 1 && data.schemaVersion != 2))
+                if (data == null || (data.schemaVersion != 1 && data.schemaVersion != 2 && data.schemaVersion != 3))
                 {
                     error = "The Project Setup backup schema is unsupported.";
                     return false;
@@ -93,7 +93,7 @@ namespace ProjectSetup.Editor
         [Serializable]
         private sealed class ProjectSetupSnapshotData
         {
-            public int schemaVersion = 2;
+            public int schemaVersion = 3;
             public int assetSerialization;
             public string versionControlMode;
             public bool enterPlayModeOptionsEnabled;
@@ -108,6 +108,10 @@ namespace ProjectSetup.Editor
             public string[] layers;
             public SortingLayerData[] sortingLayers;
             public string tagManagerFileText;
+            public bool hasBuildSceneData;
+            public string buildSceneTargetId;
+            public string buildSceneTargetLabel;
+            public BuildSceneData[] buildScenes;
 
             internal static ProjectSetupSnapshotData FromSnapshot(ProjectSetupSnapshot snapshot)
             {
@@ -133,7 +137,18 @@ namespace ProjectSetup.Editor
                             uniqueId = layer.UniqueId,
                             locked = layer.Locked
                         }),
-                    tagManagerFileText = snapshot.TagManagerFileText
+                    tagManagerFileText = snapshot.TagManagerFileText,
+                    hasBuildSceneData = snapshot.HasBuildSceneData,
+                    buildSceneTargetId = snapshot.BuildSceneTargetId,
+                    buildSceneTargetLabel = snapshot.BuildSceneTargetLabel,
+                    buildScenes = Array.ConvertAll(
+                        snapshot.BuildScenes,
+                        scene => new BuildSceneData
+                        {
+                            sceneGuid = scene.SceneGuid,
+                            path = scene.Path,
+                            enabled = scene.Enabled
+                        })
                 };
             }
 
@@ -158,7 +173,15 @@ namespace ProjectSetup.Editor
                             sortingLayers,
                             layer => new ProjectSetupSortingLayer(layer.name, layer.uniqueId, layer.locked))
                         : Array.Empty<ProjectSetupSortingLayer>(),
-                    schemaVersion >= 2 ? tagManagerFileText : string.Empty);
+                    schemaVersion >= 2 ? tagManagerFileText : string.Empty,
+                    schemaVersion >= 3 && hasBuildSceneData,
+                    schemaVersion >= 3 ? buildSceneTargetId : string.Empty,
+                    schemaVersion >= 3 ? buildSceneTargetLabel : string.Empty,
+                    schemaVersion >= 3 && buildScenes != null
+                        ? Array.ConvertAll(
+                            buildScenes,
+                            scene => new ProjectSetupBuildSceneState(scene.sceneGuid, scene.path, scene.enabled))
+                        : Array.Empty<ProjectSetupBuildSceneState>());
             }
         }
 
@@ -168,6 +191,14 @@ namespace ProjectSetup.Editor
             public string name;
             public int uniqueId;
             public bool locked;
+        }
+
+        [Serializable]
+        private sealed class BuildSceneData
+        {
+            public string sceneGuid;
+            public string path;
+            public bool enabled;
         }
     }
 }

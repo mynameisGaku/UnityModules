@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 
+using System.Linq;
 using NUnit.Framework;
 using ProjectSetup.Editor;
 using UnityEditor;
@@ -27,6 +28,8 @@ namespace ProjectSetup.Tests
                 Assert.That(profile.ConfigureCompanyName, Is.False);
                 Assert.That(profile.ConfigureProductName, Is.False);
                 Assert.That(profile.ConfigureBundleVersion, Is.False);
+                Assert.That(profile.ConfigureBuildScenes, Is.False);
+                Assert.That(profile.BuildScenes, Is.Empty);
                 Assert.That(profile.ConfigureTags, Is.False);
                 Assert.That(profile.Tags, Is.Empty);
                 Assert.That(profile.ConfigureLayers, Is.False);
@@ -67,6 +70,15 @@ namespace ProjectSetup.Tests
                     {
                         new ProjectSetupSortingLayer("Default", 0, false),
                         new ProjectSetupSortingLayer("Foreground", 15, false)
+                    },
+                    string.Empty,
+                    true,
+                    "global",
+                    "Global Build Scenes",
+                    new[]
+                    {
+                        new ProjectSetupBuildSceneState("guid-a", "Assets/Bootstrap.unity", true),
+                        new ProjectSetupBuildSceneState("guid-b", "Assets/Gameplay.unity", false)
                     });
 
                 profile.Capture(snapshot);
@@ -87,6 +99,9 @@ namespace ProjectSetup.Tests
                 Assert.That(profile.ProductName, Is.EqualTo("Product"));
                 Assert.That(profile.ConfigureBundleVersion, Is.True);
                 Assert.That(profile.BundleVersion, Is.EqualTo("3.0.0"));
+                Assert.That(profile.ConfigureBuildScenes, Is.True);
+                Assert.That(profile.BuildScenes.Select(scene => scene.SceneGuid), Is.EqualTo(new[] { "guid-a", "guid-b" }));
+                Assert.That(profile.BuildScenes.Select(scene => scene.Enabled), Is.EqualTo(new[] { true, false }));
                 Assert.That(profile.ConfigureTags, Is.True);
                 Assert.That(profile.Tags, Is.EqualTo(new[] { "Collectible" }));
                 Assert.That(profile.ConfigureLayers, Is.True);

@@ -14,6 +14,7 @@ namespace ProjectSetup.Editor
         BundleVersion = 7,
         Tags = 8,
         Layers = 9,
-        SortingLayers = 10
+        SortingLayers = 10,
+        BuildScenes = 11
     }
 }

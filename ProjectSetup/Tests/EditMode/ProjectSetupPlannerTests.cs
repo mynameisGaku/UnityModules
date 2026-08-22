@@ -179,6 +179,39 @@ namespace ProjectSetup.Tests
             Assert.That(plan.Errors, Has.Some.Contains("free user slots"));
         }
 
+        [Test]
+        public void Build_RejectsEmptyBuildSceneList()
+        {
+            _profile.ConfigureBuildScenes = true;
+
+            var plan = ProjectSetupPlanner.Build(_profile, Snapshot());
+
+            Assert.That(plan.IsValid, Is.False);
+            Assert.That(plan.Errors, Has.Some.Contains("at least one Scene"));
+        }
+
+        [Test]
+        public void Build_RejectsDisabledStartupScene()
+        {
+            _profile.ConfigureBuildScenes = true;
+            _profile.BuildScenes = new[] { new ProjectSetupBuildScene(string.Empty, string.Empty, false) };
+
+            var plan = ProjectSetupPlanner.Build(_profile, Snapshot());
+
+            Assert.That(plan.IsValid, Is.False);
+            Assert.That(plan.Errors, Has.Some.Contains("startup Scene"));
+        }
+
+        [Test]
+        public void BuildSceneState_UsesGuidIdentityAfterSceneMove()
+        {
+            var beforeMove = new ProjectSetupBuildSceneState("scene-guid", "Assets/Old/Bootstrap.unity", true);
+            var afterMove = new ProjectSetupBuildSceneState("scene-guid", "Assets/New/Bootstrap.unity", true);
+
+            Assert.That(afterMove, Is.EqualTo(beforeMove));
+            Assert.That(afterMove.GetHashCode(), Is.EqualTo(beforeMove.GetHashCode()));
+        }
+
         private static ProjectSetupSnapshot Snapshot(
             SerializationMode serializationMode = SerializationMode.ForceText,
             string versionControl = "Visible Meta Files",
