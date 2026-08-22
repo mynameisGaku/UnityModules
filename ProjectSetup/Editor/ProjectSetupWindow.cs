@@ -34,6 +34,8 @@ namespace ProjectSetup.Editor
         internal const string NamingDefaultsCardName = "duplicate-naming";
         internal const string ProjectFoldersCardName = "project-folders";
         internal const string ProjectFoldersFieldName = "project-folders-field";
+        internal const string VersionControlFilesCardName = "version-control-files";
+        internal const string VersionControlFilesToggleName = "version-control-files-toggle";
         internal const string AssemblyDefinitionsCardName = "script-assemblies";
         internal const string AssemblyNameFieldName = "assembly-name-field";
         internal const string RuntimeAssemblyFolderFieldName = "runtime-assembly-folder-field";
@@ -190,6 +192,7 @@ namespace ProjectSetup.Editor
                 _profile.VersionControlMode,
                 value => _profile.ConfigureVersionControl = value,
                 value => _profile.VersionControlMode = value));
+            content.Add(CreateVersionControlFilesCard());
             content.Add(CreateEnterPlayModeCard());
             content.Add(CreatePlayModeStartSceneCard());
             content.Add(CreateEnumCard(
@@ -359,6 +362,23 @@ namespace ProjectSetup.Editor
             card.Add(editorFolder);
             card.Add(includeTests);
             card.Add(testRootFolder);
+            return card;
+        }
+
+        private VisualElement CreateVersionControlFilesCard()
+        {
+            var card = CreateCard(
+                VersionControlFilesCardName,
+                "Version Control Files",
+                "Create Unity-ready .gitignore and .gitattributes files. Existing files are never overwritten, and restore removes only unchanged files created by this tool.");
+            var enabled = new Toggle("Create missing .gitignore and .gitattributes")
+            {
+                name = VersionControlFilesToggleName,
+                value = _profile.ConfigureVersionControlFiles
+            };
+            enabled.RegisterValueChangedCallback(change => ChangeProfile(
+                () => _profile.ConfigureVersionControlFiles = change.newValue));
+            card.Add(enabled);
             return card;
         }
 
