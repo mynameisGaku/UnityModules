@@ -2,13 +2,13 @@
 
 Unityの新規Projectで毎回行う設定を、1つのprofileからまとめてPreview・適用・復元するEditor専用ツールです。
 
-`Project Settings`、Play Modeの開始Scene、条件付きコンパイル記号、Tag、Layer、Sorting Layer、Build Scenesを別々の画面やscriptで設定する手間を減らします。自動適用はせず、実際に変わる項目を確認してから実行できます。
+`Project Settings`、C#のRoot Namespaceと改行方式、Play Modeの開始Scene、条件付きコンパイル記号、Tag、Layer、Sorting Layer、Build Scenesを別々の画面やscriptで設定する手間を減らします。自動適用はせず、実際に変わる項目を確認してから実行できます。
 
 ## まず知りたいこと
 
 | 質問 | 答え |
 |---|---|
-| 何が楽になる？ | Project設定、Play Modeの開始Scene、条件付きコンパイル記号、Tag/Layer、Build Scenesの順序を1つのprofileからまとめて設定できます。 |
+| 何が楽になる？ | Project設定、C#生成時の既定値、Play Modeの開始Scene、条件付きコンパイル記号、Tag/Layer、Build Scenesを1つのprofileからまとめて設定できます。 |
 | 勝手に変更される？ | されません。import時やUnity起動時には何も適用しません。 |
 | 実行前に確認できる？ | `Preview changes`で変更前と変更後を一覧表示します。 |
 | 失敗したら？ | Apply前にbackupし、書込後の検証に失敗した場合は可能な範囲で自動復元します。 |
@@ -54,6 +54,14 @@ Unityの新規Projectで毎回行う設定を、1つのprofileからまとめて
 
 `DEVELOPMENT_TOOLS`や`USE_STEAMWORKS`のような機能切替を、`Player Settings`を開いてProjectごとに手入力する作業を減らせます。
 
+### C#生成時の既定値
+
+- Root NamespaceをProjectごとに統一する。
+- Unityから新規作成するC# scriptの改行方式を`OS Native`、`Unix`、`Windows`から選ぶ。
+- 空のRoot Namespaceも明示的に適用し、Unity標準のnamespaceなしへ戻す。
+
+asmdefに個別のRoot Namespaceが設定されているscriptではasmdef側が優先されます。この項目はProject全体の既定値をそろえる用途です。
+
 ### Build Scenes
 
 - Scene Assetを選択して順番を保存する。
@@ -94,6 +102,14 @@ Scene欄を空にしてApplyすると、固定開始Sceneを解除し、現在�
 
 使用できる文字は英字、数字、underscoreです。先頭に数字は使えません。最大64個、1記号64文字までです。
 
+## C#生成時の既定値をそろえる
+
+1. `Root Namespace` cardで適用を有効にし、`Studio.Game`のようなnamespaceを入力します。
+2. `New Script Line Endings` cardで適用を有効にし、チームの改行方式を選びます。
+3. Previewで現在値と変更後を確認してApplyします。
+
+Root Namespaceは`.`で区切ったC#識別子だけを受け付けます。空欄を適用するとRoot Namespaceを解除します。改行方式はApply後に新しく作成したC# scriptへ適用され、既存fileの改行は書き換えません。
+
 ## Applyすると何が変わるか
 
 1. 現在の対象値をsnapshotとして取得します。
@@ -110,6 +126,8 @@ Scene欄を空にしてApplyすると、固定開始Sceneを解除し、現在�
 - Enter Play ModeでDomain Reloadを無効にすると、利用側でstatic stateの初期化が必要です。
 - Play Mode Start Sceneを指定すると、現在開いているSceneの代わりにそのSceneを読み込んでPlayします。
 - Scripting Define Symbolsを変更すると、Unityがscriptを再コンパイルし、設定によってはDomain Reloadが発生します。
+- Root Namespaceを変更すると、Unityが生成する`.csproj`のRoot Namespaceが変わります。asmdef固有のRoot Namespaceは変更しません。
+- New Script Line EndingsはApply後に作成するC# scriptだけへ影響し、既存scriptを一括変換しません。
 - Build Scenesは不足分の追加ではなく、profileの一覧へ完全に置き換えます。
 - RestoreはApply直前へ戻すため、その後に追加したTag/Layer/Sceneを取り除く場合があります。
 
@@ -123,7 +141,7 @@ Build Scenesを復元する場合は、backup作成時と同じBuild Profileを�
 
 Scripting Define Symbolsを復元する場合は、backup作成時と同じbuild targetを選択してください。別のtargetへ切り替わっている場合は、誤ったtargetを書き換えないよう復元を停止します。復元時はApply直前の記号一覧へ正確に戻すため、Apply後に手動追加した記号も取り除く場合があります。
 
-backupはUTF-8 BOMなしのJSONです。schema v5はProject設定、Play Mode Start Scene、Scripting Define Symbolsと対象build target、TagManager全体、Build SceneのGUID・順序・Enabled状態・保存先を保持します。schema v1からv4も読み取れますが、そのversionに存在しない項目は復元しません。
+backupはUTF-8 BOMなしのJSONです。schema v6はProject設定、Root Namespace、新規scriptの改行方式、Play Mode Start Scene、Scripting Define Symbolsと対象build target、TagManager全体、Build SceneのGUID・順序・Enabled状態・保存先を保持します。schema v1からv5も読み取れますが、そのversionに存在しない項目は復元しません。
 
 ## profileを別Projectで使う
 
@@ -164,7 +182,7 @@ Build Scenesをprofileで有効にすると、既存一覧をprofileの内容へ
 Package Managerの`Add package from git URL...`へ次を入力します。
 
 ```text
-https://github.com/mynameisGaku/UnityModules.git?path=/ProjectSetup#project-setup-v1.4.0
+https://github.com/mynameisGaku/UnityModules.git?path=/ProjectSetup#project-setup-v1.5.0
 ```
 
 ## 対応環境
