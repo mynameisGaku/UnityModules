@@ -1,4 +1,4 @@
-# Module Manager 1.3.1
+# Module Manager 1.3.2
 
 ## 目的
 
@@ -17,7 +17,7 @@
 
 最初に40件の個別一覧を読む必要はありません。新規Projectの設定と整理は`Project Maintenance`、Scene切り替えやUIは`Scene and UI`、save・音声・reportは`Game Services`、入力補助は`Input Support`から確認します。個別一覧は必要なmoduleが明確な場合や既存projectとの互換用です。
 
-Project Maintenanceの「プロジェクト一括設定」はv1.2.0へ固定され、Project Settings、Tag・Layer・Sorting Layer、Build Scenesの順序とEnabled状態を同じprofileから適用・復元できます。
+Project Maintenanceの「プロジェクト一括設定」はv1.3.0へ固定されています。Project Settings、Tag・Layer・Sorting Layerに加え、Player buildへ含めるSceneの順序・Enabled状態と、EditorでPlayを押したときだけ使う開始Sceneを、独立した項目として同じprofileから適用・復元できます。
 
 ## 安全条件
 

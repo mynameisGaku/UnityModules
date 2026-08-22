@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.3.2] - 2026-08-22
+
+- Updated Project Setup to v1.3.0 for a profile-owned Play Mode Start Scene in addition to ordered Player Build Scenes.
+- Clarified that the two Scene settings serve different workflows and remain independently optional.
+
 ## [1.3.1] - 2026-08-22
 
 - Updated Project Setup to v1.2.0 for ordered Build Scenes with enabled-state restoration.
