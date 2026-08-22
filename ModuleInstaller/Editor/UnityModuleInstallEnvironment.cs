@@ -21,6 +21,18 @@ namespace ModuleInstaller.Editor
             return names;
         }
 
+        public IReadOnlyDictionary<string, string> GetInstalledPackageVersions()
+        {
+            var versions = new Dictionary<string, string>(StringComparer.Ordinal);
+            var packages = UnityEditor.PackageManager.PackageInfo.GetAllRegisteredPackages();
+            for (var index = 0; index < packages.Length; index++)
+            {
+                versions[packages[index].name] = packages[index].version ?? string.Empty;
+            }
+
+            return versions;
+        }
+
         public ISet<string> GetAssetModuleFolders()
         {
             var folders = new HashSet<string>(StringComparer.OrdinalIgnoreCase);

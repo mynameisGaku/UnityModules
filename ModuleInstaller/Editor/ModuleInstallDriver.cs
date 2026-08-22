@@ -34,6 +34,19 @@ namespace ModuleInstaller.Editor
                 Environment.GetAssetModuleFolders());
         }
 
+        internal static ModuleInstallPlan BuildUpdatePlan()
+        {
+            var packageNames = new string[ModuleCatalog.Entries.Count];
+            for (var index = 0; index < ModuleCatalog.Entries.Count; index++)
+            {
+                packageNames[index] = ModuleCatalog.Entries[index].PackageName;
+            }
+
+            return ModuleInstallPlanner.BuildUpdates(
+                packageNames,
+                Environment.GetInstalledPackageVersions());
+        }
+
         internal static bool TryInstallBundle(string bundleId, out string message)
         {
             if (!ModuleCatalog.TryFindBundle(bundleId, out var bundle))
@@ -48,6 +61,13 @@ namespace ModuleInstaller.Editor
         internal static bool TryInstallPackage(string packageName, out string message)
         {
             return TryInstall(new[] { packageName }, out message);
+        }
+
+        internal static bool TryUpdateInstalled(out string message)
+        {
+            var result = Coordinator.TryStartUpdates(BuildUpdatePlan(), out message);
+            Changed?.Invoke();
+            return result;
         }
 
         private static bool TryInstall(IEnumerable<string> packageNames, out string message)

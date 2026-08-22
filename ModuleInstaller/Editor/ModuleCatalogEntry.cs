@@ -25,6 +25,14 @@ namespace ModuleInstaller.Editor
         internal string Tag { get; }
         internal string DisplayName { get; }
         internal string Summary { get; }
+        internal string Version
+        {
+            get
+            {
+                var markerIndex = Tag.LastIndexOf("-v", StringComparison.Ordinal);
+                return markerIndex >= 0 ? Tag.Substring(markerIndex + 2) : string.Empty;
+            }
+        }
 
         internal string GitUrl =>
             $"https://github.com/mynameisGaku/UnityModules.git?path=/{FolderName}#{Tag}";

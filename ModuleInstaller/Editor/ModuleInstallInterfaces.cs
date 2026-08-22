@@ -19,6 +19,7 @@ namespace ModuleInstaller.Editor
     internal interface IModuleInstallEnvironment
     {
         ISet<string> GetInstalledPackageNames();
+        IReadOnlyDictionary<string, string> GetInstalledPackageVersions();
         ISet<string> GetAssetModuleFolders();
     }
 

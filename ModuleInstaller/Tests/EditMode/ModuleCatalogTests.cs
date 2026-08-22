@@ -23,6 +23,8 @@ namespace ModuleInstaller.Editor.Tests
                 Assert.That(entry.GitUrl, Does.Contain($"?path=/{entry.FolderName}#{entry.Tag}"));
                 Assert.That(entry.GitUrl, Does.Not.Contain("#main"));
                 Assert.That(entry.GitUrl, Does.Not.Contain("#dev"));
+                Assert.That(entry.Version, Is.Not.Empty);
+                Assert.That(entry.Tag, Does.EndWith($"-v{entry.Version}"));
                 Assert.That(entry.Tag, Does.EndWith("-v1.0.0").Or.EndWith("-v1.0.1").Or.EndWith("-v1.1.0").Or.EndWith("-v1.3.0").Or.EndWith("-v1.4.0"));
             }
         }

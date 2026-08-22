@@ -83,6 +83,51 @@ namespace ModuleInstaller.Editor.Tests
             Assert.That(resumed.LastMessage, Does.Contain("already installed").Or.Contain("Every selected"));
         }
 
+        [Test]
+        public void TryStartUpdates_ReplacesAnInstalledOlderPackage()
+        {
+            var client = new FakeClient();
+            var environment = new FakeEnvironment();
+            environment.Installed.Add("com.studiogaku.project-setup");
+            environment.InstalledVersions["com.studiogaku.project-setup"] = "1.0.0";
+            var coordinator = CreateCoordinator(client, environment, new FakeStore());
+            var plan = ModuleInstallPlanner.BuildUpdates(
+                new[] { "com.studiogaku.project-setup" },
+                environment.InstalledVersions);
+
+            Assert.That(coordinator.TryStartUpdates(plan, out _), Is.True);
+            Assert.That(client.CallCount, Is.EqualTo(1));
+            Assert.That(client.LastUrls[0], Does.EndWith("#project-setup-v1.1.0"));
+
+            client.Request.IsCompletedValue = true;
+            client.Request.SucceededValue = true;
+            coordinator.Tick();
+            Assert.That(coordinator.LastMessage, Does.StartWith("Updated 1"));
+        }
+
+        [Test]
+        public void Tick_UpdateAfterReloadSkipsPackageThatReachedPinnedVersion()
+        {
+            var environment = new FakeEnvironment();
+            environment.Installed.Add("com.studiogaku.project-setup");
+            environment.InstalledVersions["com.studiogaku.project-setup"] = "1.0.0";
+            var store = new FakeStore();
+            var first = CreateCoordinator(new FakeClient(), environment, store);
+            var plan = ModuleInstallPlanner.BuildUpdates(
+                new[] { "com.studiogaku.project-setup" },
+                environment.InstalledVersions);
+            Assert.That(first.TryStartUpdates(plan, out _), Is.True);
+
+            environment.InstalledVersions["com.studiogaku.project-setup"] = "1.1.0";
+            var resumedClient = new FakeClient();
+            var resumed = CreateCoordinator(resumedClient, environment, store);
+            resumed.Tick();
+
+            Assert.That(resumed.IsBusy, Is.False);
+            Assert.That(resumedClient.CallCount, Is.Zero);
+            Assert.That(resumed.LastMessage, Does.Contain("up to date"));
+        }
+
         private static ModuleInstallCoordinator CreateCoordinator(
             FakeClient client,
             FakeEnvironment environment,
@@ -126,8 +171,10 @@ namespace ModuleInstaller.Editor.Tests
         private sealed class FakeEnvironment : IModuleInstallEnvironment
         {
             internal ISet<string> Installed { get; } = new HashSet<string>(StringComparer.Ordinal);
+            internal Dictionary<string, string> InstalledVersions { get; } = new Dictionary<string, string>(StringComparer.Ordinal);
             internal ISet<string> AssetFolders { get; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             public ISet<string> GetInstalledPackageNames() => Installed;
+            public IReadOnlyDictionary<string, string> GetInstalledPackageVersions() => InstalledVersions;
             public ISet<string> GetAssetModuleFolders() => AssetFolders;
         }
 
