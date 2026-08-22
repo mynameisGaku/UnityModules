@@ -32,6 +32,8 @@ namespace ProjectSetup.Editor
         [SerializeField] private string applicationIdentifier = "com.company.product";
         [SerializeField] private bool configureScriptingBackend;
         [SerializeField] private ScriptingImplementation scriptingBackend = ScriptingImplementation.IL2CPP;
+        [SerializeField] private bool configureApiCompatibilityLevel;
+        [SerializeField] private ApiCompatibilityLevel apiCompatibilityLevel = ApiCompatibilityLevel.NET_Standard;
         [SerializeField] private bool configureBuildScenes;
         [SerializeField] private ProjectSetupBuildScene[] buildScenes = Array.Empty<ProjectSetupBuildScene>();
         [SerializeField] private bool configureTags;
@@ -95,6 +97,8 @@ namespace ProjectSetup.Editor
         internal string ApplicationIdentifier { get => applicationIdentifier ?? string.Empty; set => applicationIdentifier = value ?? string.Empty; }
         internal bool ConfigureScriptingBackend { get => configureScriptingBackend; set => configureScriptingBackend = value; }
         internal ScriptingImplementation ScriptingBackend { get => scriptingBackend; set => scriptingBackend = value; }
+        internal bool ConfigureApiCompatibilityLevel { get => configureApiCompatibilityLevel; set => configureApiCompatibilityLevel = value; }
+        internal ApiCompatibilityLevel ApiCompatibilityLevel { get => apiCompatibilityLevel; set => apiCompatibilityLevel = value; }
         internal bool ConfigureBuildScenes { get => configureBuildScenes; set => configureBuildScenes = value; }
         internal ProjectSetupBuildScene[] BuildScenes
         {
@@ -152,6 +156,8 @@ namespace ProjectSetup.Editor
             applicationIdentifier = "com.company.product";
             configureScriptingBackend = false;
             scriptingBackend = ScriptingImplementation.IL2CPP;
+            configureApiCompatibilityLevel = false;
+            apiCompatibilityLevel = ApiCompatibilityLevel.NET_Standard;
             configureBuildScenes = false;
             buildScenes = Array.Empty<ProjectSetupBuildScene>();
             configureTags = false;
@@ -214,6 +220,8 @@ namespace ProjectSetup.Editor
             applicationIdentifier = snapshot.ApplicationIdentifier;
             configureScriptingBackend = snapshot.HasScriptingBackendData;
             scriptingBackend = snapshot.ScriptingBackend;
+            configureApiCompatibilityLevel = snapshot.HasApiCompatibilityLevelData;
+            apiCompatibilityLevel = snapshot.ApiCompatibilityLevel;
             configureBuildScenes = snapshot.HasBuildSceneData;
             buildScenes = snapshot.BuildScenes
                 .Select(scene => new ProjectSetupBuildScene(scene.SceneGuid, scene.Path, scene.Enabled))

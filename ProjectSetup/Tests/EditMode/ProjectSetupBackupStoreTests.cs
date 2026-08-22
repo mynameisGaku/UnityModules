@@ -64,7 +64,9 @@ namespace ProjectSetup.Tests
             Assert.That(actual.CreatedProjectRootFiles, Is.EqualTo(expected.CreatedProjectRootFiles));
             Assert.That(actual.ScriptingBackendTargetId, Is.EqualTo(expected.ScriptingBackendTargetId));
             Assert.That(actual.ScriptingBackend, Is.EqualTo(expected.ScriptingBackend));
-            Assert.That(File.ReadAllText(_path), Does.Contain("\"schemaVersion\": 12"));
+            Assert.That(actual.ApiCompatibilityLevelTargetId, Is.EqualTo(expected.ApiCompatibilityLevelTargetId));
+            Assert.That(actual.ApiCompatibilityLevel, Is.EqualTo(expected.ApiCompatibilityLevel));
+            Assert.That(File.ReadAllText(_path), Does.Contain("\"schemaVersion\": 13"));
         }
 
         [Test]
@@ -153,6 +155,7 @@ namespace ProjectSetup.Tests
             Assert.That(snapshot.CreatedProjectRootFiles, Is.Empty);
             Assert.That(snapshot.HasApplicationIdentifierData, Is.False);
             Assert.That(snapshot.HasScriptingBackendData, Is.False);
+            Assert.That(snapshot.HasApiCompatibilityLevelData, Is.False);
         }
 
         [Test]
@@ -233,7 +236,11 @@ namespace ProjectSetup.Tests
                 hasScriptingBackendData: true,
                 scriptingBackendTargetId: "Standalone",
                 scriptingBackendTargetLabel: "Windows",
-                scriptingBackend: ScriptingImplementation.IL2CPP);
+                scriptingBackend: ScriptingImplementation.IL2CPP,
+                hasApiCompatibilityLevelData: true,
+                apiCompatibilityLevelTargetId: "Standalone",
+                apiCompatibilityLevelTargetLabel: "Windows",
+                apiCompatibilityLevel: ApiCompatibilityLevel.NET_Unity_4_8);
         }
     }
 }

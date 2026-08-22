@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
 using UnityEditor.UIElements;
@@ -39,6 +40,8 @@ namespace ProjectSetup.Editor
         internal const string AssemblyDefinitionsCardName = "script-assemblies";
         internal const string ApplicationIdentifierCardName = "application-identifier";
         internal const string ScriptingBackendCardName = "scripting-backend";
+        internal const string ApiCompatibilityLevelCardName = "api-compatibility-level";
+        internal const string ApiCompatibilityLevelFieldName = "api-compatibility-level-field";
         internal const string AssemblyNameFieldName = "assembly-name-field";
         internal const string RuntimeAssemblyFolderFieldName = "runtime-assembly-folder-field";
         internal const string EditorAssemblyFolderFieldName = "editor-assembly-folder-field";
@@ -232,6 +235,7 @@ namespace ProjectSetup.Editor
                 _profile.ScriptingBackend,
                 value => _profile.ConfigureScriptingBackend = value,
                 value => _profile.ScriptingBackend = (ScriptingImplementation)value));
+            content.Add(CreateApiCompatibilityLevelCard());
             content.Add(CreateScriptingDefineCard());
             content.Add(CreateTextCard(
                 RootNamespaceCardName,
@@ -615,6 +619,35 @@ namespace ProjectSetup.Editor
             var field = new EnumField("Desired value", value);
             enabled.RegisterValueChangedCallback(change => ChangeProfile(() => setConfigured(change.newValue)));
             field.RegisterValueChangedCallback(change => ChangeProfile(() => setValue(change.newValue)));
+            card.Add(enabled);
+            card.Add(field);
+            return card;
+        }
+
+        private VisualElement CreateApiCompatibilityLevelCard()
+        {
+            const string netStandard = ".NET Standard";
+            const string netFramework = ".NET Framework";
+            var card = CreateCard(
+                ApiCompatibilityLevelCardName,
+                "API Compatibility Level",
+                "Choose .NET Standard or .NET Framework for the active build target. Confirm plug-in requirements before applying.");
+            var enabled = new Toggle("Apply this setting") { value = _profile.ConfigureApiCompatibilityLevel };
+            var choices = new List<string> { netStandard, netFramework };
+            var selected = _profile.ApiCompatibilityLevel == ApiCompatibilityLevel.NET_Unity_4_8
+                ? netFramework
+                : netStandard;
+            var field = new DropdownField("Desired value", choices, selected)
+            {
+                name = ApiCompatibilityLevelFieldName
+            };
+            enabled.RegisterValueChangedCallback(change => ChangeProfile(() => _profile.ConfigureApiCompatibilityLevel = change.newValue));
+            field.RegisterValueChangedCallback(change => ChangeProfile(() =>
+            {
+                _profile.ApiCompatibilityLevel = change.newValue == netFramework
+                    ? ApiCompatibilityLevel.NET_Unity_4_8
+                    : ApiCompatibilityLevel.NET_Standard;
+            }));
             card.Add(enabled);
             card.Add(field);
             return card;

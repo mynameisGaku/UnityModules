@@ -170,6 +170,7 @@ namespace ProjectSetup.Editor
                 profile.ConfigureScriptingDefineSymbols = false;
                 profile.ConfigureApplicationIdentifier = false;
                 profile.ConfigureScriptingBackend = false;
+                profile.ConfigureApiCompatibilityLevel = false;
                 profile.ConfigureProjectFolders = false;
                 profile.ConfigureAssemblyDefinitions = false;
                 var scalarPlan = ProjectSetupPlanner.Build(profile, current);
@@ -275,6 +276,23 @@ namespace ProjectSetup.Editor
                             $"Scripting Backend ({desired.ScriptingBackendTargetLabel})",
                             current.ScriptingBackend.ToString(),
                             desired.ScriptingBackend.ToString()));
+                    }
+                }
+
+                if (desired.HasApiCompatibilityLevelData)
+                {
+                    if (!current.HasApiCompatibilityLevelData
+                        || !string.Equals(desired.ApiCompatibilityLevelTargetId, current.ApiCompatibilityLevelTargetId, StringComparison.Ordinal))
+                    {
+                        errors.Add($"The active API Compatibility Level target must remain '{desired.ApiCompatibilityLevelTargetLabel}' before restoring this backup.");
+                    }
+                    else if (desired.ApiCompatibilityLevel != current.ApiCompatibilityLevel)
+                    {
+                        changes.Add(new ProjectSetupChange(
+                            ProjectSetupSettingKey.ApiCompatibilityLevel,
+                            $"API Compatibility Level ({desired.ApiCompatibilityLevelTargetLabel})",
+                            ProjectSetupPlanner.FormatApiCompatibilityLevel(current.ApiCompatibilityLevel),
+                            ProjectSetupPlanner.FormatApiCompatibilityLevel(desired.ApiCompatibilityLevel)));
                     }
                 }
 

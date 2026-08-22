@@ -27,6 +27,7 @@ namespace ProjectSetup.Editor
         AssemblyDefinitions = 20,
         VersionControlFiles = 21,
         ApplicationIdentifier = 22,
-        ScriptingBackend = 23
+        ScriptingBackend = 23,
+        ApiCompatibilityLevel = 24
     }
 }

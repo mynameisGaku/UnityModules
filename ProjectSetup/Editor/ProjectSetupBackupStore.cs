@@ -74,7 +74,7 @@ namespace ProjectSetup.Editor
             {
                 var json = File.ReadAllText(_path, new UTF8Encoding(false, true));
                 var data = JsonUtility.FromJson<ProjectSetupSnapshotData>(json);
-                if (data == null || data.schemaVersion < 1 || data.schemaVersion > 12)
+                if (data == null || data.schemaVersion < 1 || data.schemaVersion > 13)
                 {
                     error = "The Project Setup backup schema is unsupported.";
                     return false;
@@ -93,7 +93,7 @@ namespace ProjectSetup.Editor
         [Serializable]
         private sealed class ProjectSetupSnapshotData
         {
-            public int schemaVersion = 12;
+            public int schemaVersion = 13;
             public int assetSerialization;
             public string versionControlMode;
             public bool enterPlayModeOptionsEnabled;
@@ -137,6 +137,10 @@ namespace ProjectSetup.Editor
             public string scriptingBackendTargetId;
             public string scriptingBackendTargetLabel;
             public int scriptingBackend;
+            public bool hasApiCompatibilityLevelData;
+            public string apiCompatibilityLevelTargetId;
+            public string apiCompatibilityLevelTargetLabel;
+            public int apiCompatibilityLevel;
 
             internal static ProjectSetupSnapshotData FromSnapshot(ProjectSetupSnapshot snapshot)
             {
@@ -210,7 +214,11 @@ namespace ProjectSetup.Editor
                     hasScriptingBackendData = snapshot.HasScriptingBackendData,
                     scriptingBackendTargetId = snapshot.ScriptingBackendTargetId,
                     scriptingBackendTargetLabel = snapshot.ScriptingBackendTargetLabel,
-                    scriptingBackend = (int)snapshot.ScriptingBackend
+                    scriptingBackend = (int)snapshot.ScriptingBackend,
+                    hasApiCompatibilityLevelData = snapshot.HasApiCompatibilityLevelData,
+                    apiCompatibilityLevelTargetId = snapshot.ApiCompatibilityLevelTargetId,
+                    apiCompatibilityLevelTargetLabel = snapshot.ApiCompatibilityLevelTargetLabel,
+                    apiCompatibilityLevel = (int)snapshot.ApiCompatibilityLevel
                 };
             }
 
@@ -278,7 +286,13 @@ namespace ProjectSetup.Editor
                     scriptingBackendTargetLabel: schemaVersion >= 12 ? scriptingBackendTargetLabel : string.Empty,
                     scriptingBackend: schemaVersion >= 12
                         ? (ScriptingImplementation)scriptingBackend
-                        : ScriptingImplementation.Mono2x);
+                        : ScriptingImplementation.Mono2x,
+                    hasApiCompatibilityLevelData: schemaVersion >= 13 && hasApiCompatibilityLevelData,
+                    apiCompatibilityLevelTargetId: schemaVersion >= 13 ? apiCompatibilityLevelTargetId : string.Empty,
+                    apiCompatibilityLevelTargetLabel: schemaVersion >= 13 ? apiCompatibilityLevelTargetLabel : string.Empty,
+                    apiCompatibilityLevel: schemaVersion >= 13
+                        ? (ApiCompatibilityLevel)apiCompatibilityLevel
+                        : ApiCompatibilityLevel.NET_Standard);
             }
         }
 

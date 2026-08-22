@@ -111,6 +111,7 @@ namespace ProjectSetup.Editor
             AddTextChange(profile.ConfigureBundleVersion, profile.BundleVersion, current.BundleVersion, ProjectSetupSettingKey.BundleVersion, "Bundle Version", MaximumVersionLength, changes, errors);
             AddApplicationIdentifierChange(profile, current, changes, errors);
             AddScriptingBackendChange(profile, current, changes, errors);
+            AddApiCompatibilityLevelChange(profile, current, changes, errors);
             AddPlayModeStartSceneChange(profile, current, changes, errors);
             AddBuildSceneChange(profile, current, changes, errors);
             AddScriptingDefineChange(profile, current, changes, errors);
@@ -850,6 +851,50 @@ namespace ProjectSetup.Editor
                     current.ScriptingBackend,
                     profile.ScriptingBackend);
             }
+        }
+
+        private static void AddApiCompatibilityLevelChange(
+            ProjectSetupProfile profile,
+            ProjectSetupSnapshot current,
+            ICollection<ProjectSetupChange> changes,
+            ICollection<string> errors)
+        {
+            if (!profile.ConfigureApiCompatibilityLevel)
+            {
+                return;
+            }
+
+            if (!current.HasApiCompatibilityLevelData)
+            {
+                errors.Add("API Compatibility Level is unavailable for the active build target.");
+                return;
+            }
+
+            if (profile.ApiCompatibilityLevel != ApiCompatibilityLevel.NET_Standard
+                && profile.ApiCompatibilityLevel != ApiCompatibilityLevel.NET_Unity_4_8)
+            {
+                errors.Add("API Compatibility Level must be .NET Standard or .NET Framework.");
+                return;
+            }
+
+            if (current.ApiCompatibilityLevel != profile.ApiCompatibilityLevel)
+            {
+                Add(
+                    changes,
+                    ProjectSetupSettingKey.ApiCompatibilityLevel,
+                    $"API Compatibility Level ({current.ApiCompatibilityLevelTargetLabel})",
+                    FormatApiCompatibilityLevel(current.ApiCompatibilityLevel),
+                    FormatApiCompatibilityLevel(profile.ApiCompatibilityLevel));
+            }
+        }
+
+        internal static string FormatApiCompatibilityLevel(ApiCompatibilityLevel value)
+        {
+            return value == ApiCompatibilityLevel.NET_Unity_4_8
+                ? ".NET Framework"
+                : value == ApiCompatibilityLevel.NET_Standard
+                    ? ".NET Standard"
+                    : value.ToString();
         }
 
         internal static bool IsValidApplicationIdentifier(string value)

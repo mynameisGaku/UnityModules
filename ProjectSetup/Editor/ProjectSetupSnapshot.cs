@@ -57,7 +57,11 @@ namespace ProjectSetup.Editor
             bool hasScriptingBackendData = false,
             string scriptingBackendTargetId = null,
             string scriptingBackendTargetLabel = null,
-            ScriptingImplementation scriptingBackend = ScriptingImplementation.Mono2x)
+            ScriptingImplementation scriptingBackend = ScriptingImplementation.Mono2x,
+            bool hasApiCompatibilityLevelData = false,
+            string apiCompatibilityLevelTargetId = null,
+            string apiCompatibilityLevelTargetLabel = null,
+            ApiCompatibilityLevel apiCompatibilityLevel = ApiCompatibilityLevel.NET_Standard)
         {
             AssetSerialization = assetSerialization;
             VersionControlMode = versionControlMode ?? string.Empty;
@@ -106,6 +110,10 @@ namespace ProjectSetup.Editor
             ScriptingBackendTargetId = scriptingBackendTargetId ?? string.Empty;
             ScriptingBackendTargetLabel = scriptingBackendTargetLabel ?? string.Empty;
             ScriptingBackend = scriptingBackend;
+            HasApiCompatibilityLevelData = hasApiCompatibilityLevelData;
+            ApiCompatibilityLevelTargetId = apiCompatibilityLevelTargetId ?? string.Empty;
+            ApiCompatibilityLevelTargetLabel = apiCompatibilityLevelTargetLabel ?? string.Empty;
+            ApiCompatibilityLevel = apiCompatibilityLevel;
         }
 
         internal SerializationMode AssetSerialization { get; }
@@ -155,6 +163,10 @@ namespace ProjectSetup.Editor
         internal string ScriptingBackendTargetId { get; }
         internal string ScriptingBackendTargetLabel { get; }
         internal ScriptingImplementation ScriptingBackend { get; }
+        internal bool HasApiCompatibilityLevelData { get; }
+        internal string ApiCompatibilityLevelTargetId { get; }
+        internal string ApiCompatibilityLevelTargetLabel { get; }
+        internal ApiCompatibilityLevel ApiCompatibilityLevel { get; }
 
         internal ProjectSetupSnapshot WithCreatedProjectFolders(string[] paths)
         {
@@ -238,7 +250,11 @@ namespace ProjectSetup.Editor
                 && HasScriptingBackendData == other.HasScriptingBackendData
                 && (!HasScriptingBackendData
                     || (string.Equals(ScriptingBackendTargetId, other.ScriptingBackendTargetId, StringComparison.Ordinal)
-                        && ScriptingBackend == other.ScriptingBackend));
+                        && ScriptingBackend == other.ScriptingBackend))
+                && HasApiCompatibilityLevelData == other.HasApiCompatibilityLevelData
+                && (!HasApiCompatibilityLevelData
+                    || (string.Equals(ApiCompatibilityLevelTargetId, other.ApiCompatibilityLevelTargetId, StringComparison.Ordinal)
+                        && ApiCompatibilityLevel == other.ApiCompatibilityLevel));
         }
 
         internal bool Matches(ProjectSetupSnapshot actual)
@@ -282,7 +298,11 @@ namespace ProjectSetup.Editor
                 && (!HasScriptingBackendData
                     || (actual.HasScriptingBackendData
                         && string.Equals(ScriptingBackendTargetId, actual.ScriptingBackendTargetId, StringComparison.Ordinal)
-                        && ScriptingBackend == actual.ScriptingBackend));
+                        && ScriptingBackend == actual.ScriptingBackend))
+                && (!HasApiCompatibilityLevelData
+                    || (actual.HasApiCompatibilityLevelData
+                        && string.Equals(ApiCompatibilityLevelTargetId, actual.ApiCompatibilityLevelTargetId, StringComparison.Ordinal)
+                        && ApiCompatibilityLevel == actual.ApiCompatibilityLevel));
         }
 
         private bool ScalarEquals(ProjectSetupSnapshot other)
@@ -363,6 +383,12 @@ namespace ProjectSetup.Editor
                     hash = (hash * 397) ^ StringComparer.Ordinal.GetHashCode(ScriptingBackendTargetId ?? string.Empty);
                     hash = (hash * 397) ^ (int)ScriptingBackend;
                 }
+                hash = (hash * 397) ^ HasApiCompatibilityLevelData.GetHashCode();
+                if (HasApiCompatibilityLevelData)
+                {
+                    hash = (hash * 397) ^ StringComparer.Ordinal.GetHashCode(ApiCompatibilityLevelTargetId ?? string.Empty);
+                    hash = (hash * 397) ^ (int)ApiCompatibilityLevel;
+                }
                 return hash;
             }
         }
@@ -422,7 +448,11 @@ namespace ProjectSetup.Editor
                 HasScriptingBackendData,
                 ScriptingBackendTargetId,
                 ScriptingBackendTargetLabel,
-                ScriptingBackend);
+                ScriptingBackend,
+                HasApiCompatibilityLevelData,
+                ApiCompatibilityLevelTargetId,
+                ApiCompatibilityLevelTargetLabel,
+                ApiCompatibilityLevel);
         }
 
         private static string[] Clone(string[] values)
