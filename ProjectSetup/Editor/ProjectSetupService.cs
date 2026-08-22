@@ -171,6 +171,7 @@ namespace ProjectSetup.Editor
                 profile.ConfigureApplicationIdentifier = false;
                 profile.ConfigureScriptingBackend = false;
                 profile.ConfigureApiCompatibilityLevel = false;
+                profile.ConfigureManagedStrippingLevel = false;
                 profile.ConfigureProjectFolders = false;
                 profile.ConfigureAssemblyDefinitions = false;
                 var scalarPlan = ProjectSetupPlanner.Build(profile, current);
@@ -293,6 +294,23 @@ namespace ProjectSetup.Editor
                             $"API Compatibility Level ({desired.ApiCompatibilityLevelTargetLabel})",
                             ProjectSetupPlanner.FormatApiCompatibilityLevel(current.ApiCompatibilityLevel),
                             ProjectSetupPlanner.FormatApiCompatibilityLevel(desired.ApiCompatibilityLevel)));
+                    }
+                }
+
+                if (desired.HasManagedStrippingLevelData)
+                {
+                    if (!current.HasManagedStrippingLevelData
+                        || !string.Equals(desired.ManagedStrippingLevelTargetId, current.ManagedStrippingLevelTargetId, StringComparison.Ordinal))
+                    {
+                        errors.Add($"The active Managed Stripping Level target must remain '{desired.ManagedStrippingLevelTargetLabel}' before restoring this backup.");
+                    }
+                    else if (desired.ManagedStrippingLevel != current.ManagedStrippingLevel)
+                    {
+                        changes.Add(new ProjectSetupChange(
+                            ProjectSetupSettingKey.ManagedStrippingLevel,
+                            $"Managed Stripping Level ({desired.ManagedStrippingLevelTargetLabel})",
+                            current.ManagedStrippingLevel.ToString(),
+                            desired.ManagedStrippingLevel.ToString()));
                     }
                 }
 

@@ -66,7 +66,9 @@ namespace ProjectSetup.Tests
             Assert.That(actual.ScriptingBackend, Is.EqualTo(expected.ScriptingBackend));
             Assert.That(actual.ApiCompatibilityLevelTargetId, Is.EqualTo(expected.ApiCompatibilityLevelTargetId));
             Assert.That(actual.ApiCompatibilityLevel, Is.EqualTo(expected.ApiCompatibilityLevel));
-            Assert.That(File.ReadAllText(_path), Does.Contain("\"schemaVersion\": 13"));
+            Assert.That(actual.ManagedStrippingLevelTargetId, Is.EqualTo(expected.ManagedStrippingLevelTargetId));
+            Assert.That(actual.ManagedStrippingLevel, Is.EqualTo(expected.ManagedStrippingLevel));
+            Assert.That(File.ReadAllText(_path), Does.Contain("\"schemaVersion\": 14"));
         }
 
         [Test]
@@ -156,6 +158,23 @@ namespace ProjectSetup.Tests
             Assert.That(snapshot.HasApplicationIdentifierData, Is.False);
             Assert.That(snapshot.HasScriptingBackendData, Is.False);
             Assert.That(snapshot.HasApiCompatibilityLevelData, Is.False);
+            Assert.That(snapshot.HasManagedStrippingLevelData, Is.False);
+        }
+
+        [Test]
+        public void TryLoad_SchemaThirteenIgnoresManagedStrippingLevelData()
+        {
+            Directory.CreateDirectory(_directory);
+            File.WriteAllText(
+                _path,
+                "{\"schemaVersion\":13,\"hasManagedStrippingLevelData\":true,\"managedStrippingLevelTargetId\":\"Standalone\",\"managedStrippingLevel\":3}",
+                new UTF8Encoding(false));
+            var store = new ProjectSetupBackupStore(_path);
+
+            var loaded = store.TryLoad(out var snapshot, out var error);
+
+            Assert.That(loaded, Is.True, error);
+            Assert.That(snapshot.HasManagedStrippingLevelData, Is.False);
         }
 
         [Test]
@@ -240,7 +259,11 @@ namespace ProjectSetup.Tests
                 hasApiCompatibilityLevelData: true,
                 apiCompatibilityLevelTargetId: "Standalone",
                 apiCompatibilityLevelTargetLabel: "Windows",
-                apiCompatibilityLevel: ApiCompatibilityLevel.NET_Unity_4_8);
+                apiCompatibilityLevel: ApiCompatibilityLevel.NET_Unity_4_8,
+                hasManagedStrippingLevelData: true,
+                managedStrippingLevelTargetId: "Standalone",
+                managedStrippingLevelTargetLabel: "Windows",
+                managedStrippingLevel: ManagedStrippingLevel.High);
         }
     }
 }

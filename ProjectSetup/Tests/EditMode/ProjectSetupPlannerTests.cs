@@ -241,6 +241,73 @@ namespace ProjectSetup.Tests
             Assert.That(plan.Errors, Has.Some.Contains("API Compatibility Level is unavailable"));
         }
 
+        [Test]
+        public void Build_PlansManagedStrippingLevelForActiveTarget()
+        {
+            _profile.ConfigureAssetSerialization = false;
+            _profile.ConfigureVersionControl = false;
+            _profile.ConfigureManagedStrippingLevel = true;
+            _profile.ManagedStrippingLevel = ManagedStrippingLevel.High;
+            var current = new ProjectSetupSnapshot(
+                SerializationMode.ForceText,
+                "Visible Meta Files",
+                false,
+                EnterPlayModeOptions.None,
+                ColorSpace.Linear,
+                false,
+                "Company",
+                "Product",
+                "1.0.0",
+                hasManagedStrippingLevelData: true,
+                managedStrippingLevelTargetId: "Standalone",
+                managedStrippingLevelTargetLabel: "Windows",
+                managedStrippingLevel: ManagedStrippingLevel.Minimal);
+
+            var plan = ProjectSetupPlanner.Build(_profile, current);
+
+            Assert.That(plan.Errors, Is.Empty);
+            Assert.That(plan.Changes, Has.Exactly(1).Property("Key").EqualTo(ProjectSetupSettingKey.ManagedStrippingLevel));
+            Assert.That(plan.Changes[0].Label, Does.Contain("Windows"));
+        }
+
+        [Test]
+        public void Build_RejectsUnsupportedManagedStrippingLevel()
+        {
+            _profile.ConfigureManagedStrippingLevel = true;
+            _profile.ManagedStrippingLevel = (ManagedStrippingLevel)99;
+            var current = new ProjectSetupSnapshot(
+                SerializationMode.ForceText,
+                "Visible Meta Files",
+                false,
+                EnterPlayModeOptions.None,
+                ColorSpace.Linear,
+                false,
+                "Company",
+                "Product",
+                "1.0.0",
+                hasManagedStrippingLevelData: true,
+                managedStrippingLevelTargetId: "Standalone",
+                managedStrippingLevelTargetLabel: "Windows",
+                managedStrippingLevel: ManagedStrippingLevel.Minimal);
+
+            var plan = ProjectSetupPlanner.Build(_profile, current);
+
+            Assert.That(plan.IsValid, Is.False);
+            Assert.That(plan.Errors, Has.Some.Contains("Disabled, Minimal, Low, Medium, or High"));
+        }
+
+        [Test]
+        public void Build_RejectsManagedStrippingLevelWhenActiveTargetIsUnavailable()
+        {
+            _profile.ConfigureManagedStrippingLevel = true;
+            _profile.ManagedStrippingLevel = ManagedStrippingLevel.High;
+
+            var plan = ProjectSetupPlanner.Build(_profile, Snapshot());
+
+            Assert.That(plan.IsValid, Is.False);
+            Assert.That(plan.Errors, Has.Some.Contains("Managed Stripping Level is unavailable"));
+        }
+
         [TestCase("game")]
         [TestCase("Com.company.game")]
         [TestCase("com.1company.game")]

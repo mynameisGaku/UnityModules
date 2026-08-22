@@ -61,7 +61,11 @@ namespace ProjectSetup.Editor
             bool hasApiCompatibilityLevelData = false,
             string apiCompatibilityLevelTargetId = null,
             string apiCompatibilityLevelTargetLabel = null,
-            ApiCompatibilityLevel apiCompatibilityLevel = ApiCompatibilityLevel.NET_Standard)
+            ApiCompatibilityLevel apiCompatibilityLevel = ApiCompatibilityLevel.NET_Standard,
+            bool hasManagedStrippingLevelData = false,
+            string managedStrippingLevelTargetId = null,
+            string managedStrippingLevelTargetLabel = null,
+            ManagedStrippingLevel managedStrippingLevel = ManagedStrippingLevel.Minimal)
         {
             AssetSerialization = assetSerialization;
             VersionControlMode = versionControlMode ?? string.Empty;
@@ -114,6 +118,10 @@ namespace ProjectSetup.Editor
             ApiCompatibilityLevelTargetId = apiCompatibilityLevelTargetId ?? string.Empty;
             ApiCompatibilityLevelTargetLabel = apiCompatibilityLevelTargetLabel ?? string.Empty;
             ApiCompatibilityLevel = apiCompatibilityLevel;
+            HasManagedStrippingLevelData = hasManagedStrippingLevelData;
+            ManagedStrippingLevelTargetId = managedStrippingLevelTargetId ?? string.Empty;
+            ManagedStrippingLevelTargetLabel = managedStrippingLevelTargetLabel ?? string.Empty;
+            ManagedStrippingLevel = managedStrippingLevel;
         }
 
         internal SerializationMode AssetSerialization { get; }
@@ -167,6 +175,10 @@ namespace ProjectSetup.Editor
         internal string ApiCompatibilityLevelTargetId { get; }
         internal string ApiCompatibilityLevelTargetLabel { get; }
         internal ApiCompatibilityLevel ApiCompatibilityLevel { get; }
+        internal bool HasManagedStrippingLevelData { get; }
+        internal string ManagedStrippingLevelTargetId { get; }
+        internal string ManagedStrippingLevelTargetLabel { get; }
+        internal ManagedStrippingLevel ManagedStrippingLevel { get; }
 
         internal ProjectSetupSnapshot WithCreatedProjectFolders(string[] paths)
         {
@@ -254,7 +266,11 @@ namespace ProjectSetup.Editor
                 && HasApiCompatibilityLevelData == other.HasApiCompatibilityLevelData
                 && (!HasApiCompatibilityLevelData
                     || (string.Equals(ApiCompatibilityLevelTargetId, other.ApiCompatibilityLevelTargetId, StringComparison.Ordinal)
-                        && ApiCompatibilityLevel == other.ApiCompatibilityLevel));
+                        && ApiCompatibilityLevel == other.ApiCompatibilityLevel))
+                && HasManagedStrippingLevelData == other.HasManagedStrippingLevelData
+                && (!HasManagedStrippingLevelData
+                    || (string.Equals(ManagedStrippingLevelTargetId, other.ManagedStrippingLevelTargetId, StringComparison.Ordinal)
+                        && ManagedStrippingLevel == other.ManagedStrippingLevel));
         }
 
         internal bool Matches(ProjectSetupSnapshot actual)
@@ -302,7 +318,11 @@ namespace ProjectSetup.Editor
                 && (!HasApiCompatibilityLevelData
                     || (actual.HasApiCompatibilityLevelData
                         && string.Equals(ApiCompatibilityLevelTargetId, actual.ApiCompatibilityLevelTargetId, StringComparison.Ordinal)
-                        && ApiCompatibilityLevel == actual.ApiCompatibilityLevel));
+                        && ApiCompatibilityLevel == actual.ApiCompatibilityLevel))
+                && (!HasManagedStrippingLevelData
+                    || (actual.HasManagedStrippingLevelData
+                        && string.Equals(ManagedStrippingLevelTargetId, actual.ManagedStrippingLevelTargetId, StringComparison.Ordinal)
+                        && ManagedStrippingLevel == actual.ManagedStrippingLevel));
         }
 
         private bool ScalarEquals(ProjectSetupSnapshot other)
@@ -389,6 +409,12 @@ namespace ProjectSetup.Editor
                     hash = (hash * 397) ^ StringComparer.Ordinal.GetHashCode(ApiCompatibilityLevelTargetId ?? string.Empty);
                     hash = (hash * 397) ^ (int)ApiCompatibilityLevel;
                 }
+                hash = (hash * 397) ^ HasManagedStrippingLevelData.GetHashCode();
+                if (HasManagedStrippingLevelData)
+                {
+                    hash = (hash * 397) ^ StringComparer.Ordinal.GetHashCode(ManagedStrippingLevelTargetId ?? string.Empty);
+                    hash = (hash * 397) ^ (int)ManagedStrippingLevel;
+                }
                 return hash;
             }
         }
@@ -452,7 +478,11 @@ namespace ProjectSetup.Editor
                 HasApiCompatibilityLevelData,
                 ApiCompatibilityLevelTargetId,
                 ApiCompatibilityLevelTargetLabel,
-                ApiCompatibilityLevel);
+                ApiCompatibilityLevel,
+                HasManagedStrippingLevelData,
+                ManagedStrippingLevelTargetId,
+                ManagedStrippingLevelTargetLabel,
+                ManagedStrippingLevel);
         }
 
         private static string[] Clone(string[] values)

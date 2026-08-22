@@ -74,7 +74,7 @@ namespace ProjectSetup.Editor
             {
                 var json = File.ReadAllText(_path, new UTF8Encoding(false, true));
                 var data = JsonUtility.FromJson<ProjectSetupSnapshotData>(json);
-                if (data == null || data.schemaVersion < 1 || data.schemaVersion > 13)
+                if (data == null || data.schemaVersion < 1 || data.schemaVersion > 14)
                 {
                     error = "The Project Setup backup schema is unsupported.";
                     return false;
@@ -93,7 +93,7 @@ namespace ProjectSetup.Editor
         [Serializable]
         private sealed class ProjectSetupSnapshotData
         {
-            public int schemaVersion = 13;
+            public int schemaVersion = 14;
             public int assetSerialization;
             public string versionControlMode;
             public bool enterPlayModeOptionsEnabled;
@@ -141,6 +141,10 @@ namespace ProjectSetup.Editor
             public string apiCompatibilityLevelTargetId;
             public string apiCompatibilityLevelTargetLabel;
             public int apiCompatibilityLevel;
+            public bool hasManagedStrippingLevelData;
+            public string managedStrippingLevelTargetId;
+            public string managedStrippingLevelTargetLabel;
+            public int managedStrippingLevel;
 
             internal static ProjectSetupSnapshotData FromSnapshot(ProjectSetupSnapshot snapshot)
             {
@@ -218,7 +222,11 @@ namespace ProjectSetup.Editor
                     hasApiCompatibilityLevelData = snapshot.HasApiCompatibilityLevelData,
                     apiCompatibilityLevelTargetId = snapshot.ApiCompatibilityLevelTargetId,
                     apiCompatibilityLevelTargetLabel = snapshot.ApiCompatibilityLevelTargetLabel,
-                    apiCompatibilityLevel = (int)snapshot.ApiCompatibilityLevel
+                    apiCompatibilityLevel = (int)snapshot.ApiCompatibilityLevel,
+                    hasManagedStrippingLevelData = snapshot.HasManagedStrippingLevelData,
+                    managedStrippingLevelTargetId = snapshot.ManagedStrippingLevelTargetId,
+                    managedStrippingLevelTargetLabel = snapshot.ManagedStrippingLevelTargetLabel,
+                    managedStrippingLevel = (int)snapshot.ManagedStrippingLevel
                 };
             }
 
@@ -292,7 +300,13 @@ namespace ProjectSetup.Editor
                     apiCompatibilityLevelTargetLabel: schemaVersion >= 13 ? apiCompatibilityLevelTargetLabel : string.Empty,
                     apiCompatibilityLevel: schemaVersion >= 13
                         ? (ApiCompatibilityLevel)apiCompatibilityLevel
-                        : ApiCompatibilityLevel.NET_Standard);
+                        : ApiCompatibilityLevel.NET_Standard,
+                    hasManagedStrippingLevelData: schemaVersion >= 14 && hasManagedStrippingLevelData,
+                    managedStrippingLevelTargetId: schemaVersion >= 14 ? managedStrippingLevelTargetId : string.Empty,
+                    managedStrippingLevelTargetLabel: schemaVersion >= 14 ? managedStrippingLevelTargetLabel : string.Empty,
+                    managedStrippingLevel: schemaVersion >= 14
+                        ? (ManagedStrippingLevel)managedStrippingLevel
+                        : ManagedStrippingLevel.Minimal);
             }
         }
 

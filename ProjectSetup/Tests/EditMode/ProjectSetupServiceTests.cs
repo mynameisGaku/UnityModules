@@ -408,6 +408,41 @@ namespace ProjectSetup.Tests
             Assert.That(plan.Changes[0].DesiredValue, Is.EqualTo(".NET Framework"));
         }
 
+        [Test]
+        public void PreviewRestore_WhenManagedStrippingLevelTargetChangedReturnsError()
+        {
+            var current = SnapshotWithManagedStrippingLevel("Android", ManagedStrippingLevel.High);
+            var desired = SnapshotWithManagedStrippingLevel("Standalone", ManagedStrippingLevel.Minimal);
+            var environment = new FakeEnvironment(current);
+            var backup = new FakeBackupStore { Snapshot = desired, HasSnapshot = true };
+            var service = new ProjectSetupService(environment, backup);
+
+            var plan = service.PreviewRestore(out _, out _);
+            var result = service.RestoreLast();
+
+            Assert.That(plan.IsValid, Is.False);
+            Assert.That(plan.Errors, Has.Some.Contains("Managed Stripping Level target"));
+            Assert.That(result.Succeeded, Is.False);
+            Assert.That(environment.ApplySnapshotCount, Is.Zero);
+        }
+
+        [Test]
+        public void PreviewRestore_WhenManagedStrippingLevelDiffersShowsExactBackupValue()
+        {
+            var current = SnapshotWithManagedStrippingLevel("Standalone", ManagedStrippingLevel.Minimal);
+            var desired = SnapshotWithManagedStrippingLevel("Standalone", ManagedStrippingLevel.High);
+            var environment = new FakeEnvironment(current);
+            var backup = new FakeBackupStore { Snapshot = desired, HasSnapshot = true };
+            var service = new ProjectSetupService(environment, backup);
+
+            var plan = service.PreviewRestore(out _, out var error);
+
+            Assert.That(plan.IsValid, Is.True, error);
+            Assert.That(plan.Changes, Has.Exactly(1).Property("Key").EqualTo(ProjectSetupSettingKey.ManagedStrippingLevel));
+            Assert.That(plan.Changes[0].CurrentValue, Is.EqualTo("Minimal"));
+            Assert.That(plan.Changes[0].DesiredValue, Is.EqualTo("High"));
+        }
+
         private static ProjectSetupSnapshot Snapshot(SerializationMode serializationMode = SerializationMode.ForceText, string versionControl = "Visible Meta Files")
         {
             return new ProjectSetupSnapshot(
@@ -541,6 +576,24 @@ namespace ProjectSetup.Tests
                 apiCompatibilityLevelTargetId: targetId,
                 apiCompatibilityLevelTargetLabel: targetId,
                 apiCompatibilityLevel: apiCompatibilityLevel);
+        }
+
+        private static ProjectSetupSnapshot SnapshotWithManagedStrippingLevel(string targetId, ManagedStrippingLevel managedStrippingLevel)
+        {
+            return new ProjectSetupSnapshot(
+                SerializationMode.ForceText,
+                "Visible Meta Files",
+                false,
+                EnterPlayModeOptions.None,
+                ColorSpace.Gamma,
+                false,
+                "DefaultCompany",
+                "New Unity Project",
+                "1.0.0",
+                hasManagedStrippingLevelData: true,
+                managedStrippingLevelTargetId: targetId,
+                managedStrippingLevelTargetLabel: targetId,
+                managedStrippingLevel: managedStrippingLevel);
         }
 
         private sealed class FakeEnvironment : IProjectSetupEnvironment
