@@ -11,7 +11,7 @@ Unity で繰り返し発生する設定、実装、確認作業を減らすた�
 
 | 困りごと | 推奨モジュール | まずできること |
 |---|---|---|
-| Git URLを1件ずつ追加せず、用途別にモジュールをまとめて導入したい | [モジュール導入アシスタント（Module Installer）](ModuleInstaller/) | 6つの用途別セットか39件の個別一覧から、公開tagを固定してまとめて追加する。 |
+| Git URLを1件ずつ追加せず、用途別にモジュールをまとめて導入したい | [モジュール導入アシスタント（Module Installer）](ModuleInstaller/) | 6つの用途別セットか40件の個別一覧から、公開tagを固定してまとめて追加する。 |
 | 新しいProjectごとに同じProject Settingsを手作業したくない | [プロジェクト初期設定（Project Setup）](ProjectSetup/) | 設定profileを作り、変更差分を確認してからbackup付きでまとめて適用する。 |
 | Scene の読込順、Additive、Unload を安全に扱いたい | [シーン切り替え（SceneFlow）](SceneFlow/) | 4 種類の Scene 操作を直列化し、失敗理由を結果で受け取る。 |
 | Scene 切り替え中に画面を隠したい | [画面フェード（ScreenTransition）](ScreenTransition/) | UI Toolkit の全画面 Cover・Reveal を実行する。 |
