@@ -1,6 +1,6 @@
-# プロジェクト一括設定（Project Setup）1.4.0
+# プロジェクト一括設定（Project Setup）1.5.0
 
-Project設定、Play Modeの開始Scene、条件付きコンパイル記号、Tag/Layer、Build Scenesをprofile化し、差分確認、backup、適用、復元を1つのEditor windowで行います。
+Project設定、C#生成時のRoot Namespaceと改行方式、Play Modeの開始Scene、条件付きコンパイル記号、Tag/Layer、Build Scenesをprofile化し、差分確認、backup、適用、復元を1つのEditor windowで行います。
 
 ## 最短手順
 
@@ -19,6 +19,8 @@ import時やUnity起動時には適用しません。
 - Enter Play Mode Options
 - Play Mode Start Scene
 - Scripting Define Symbols
+- Root Namespace
+- New Script Line Endings
 - Color Space
 - Run In Background
 - Company Name
@@ -35,6 +37,8 @@ Play Mode Start Sceneは、どのSceneを編集中でもPlay時に読み込むEd
 
 Scripting Define Symbolsは、現在選択中のbuild targetに不足する記号だけを追加します。既存の記号は維持します。変更時はscriptの再コンパイルが発生します。
 
+Root NamespaceはUnityが生成するC# projectの既定namespaceを設定します。asmdefに個別のRoot Namespaceがある場合はasmdef側が優先されます。New Script Line EndingsはApply後に新しく作成するC# scriptだけへ反映し、既存fileは変更しません。
+
 ## 安全性
 
 - 各項目はprofile側で個別に無効化できます。
@@ -45,7 +49,7 @@ Scripting Define Symbolsは、現在選択中のbuild targetに不足する記�
 - Restoreも差分をPreviewしてから実行します。
 - Build Profileがbackup時から変わった場合、Build Scenesの復元を停止します。
 - build targetがbackup時から変わった場合、Scripting Define Symbolsの復元を停止します。
-- backup schema v5はPlay Mode Start Scene、Scripting Define Symbols、TagManager、Build Scenesを含みます。
+- backup schema v6はRoot Namespace、新規scriptの改行方式、Play Mode Start Scene、Scripting Define Symbols、TagManager、Build Scenesを含みます。
 
 通常のApplyではTag、Layer、Sorting Layerの既存項目を削除・改名・並べ替えません。Build Scenesはprofileの一覧へ完全に置き換えるため、順序とEnabled状態をPreviewで確認してください。
 

@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.5.0] - 2026-08-22
+
+- Added profile-owned Root Namespace and new C# script line endings.
+- Extended preview, backup schema v6, Apply verification, and Restore to code generation defaults.
+- Added a real EditorSettings round-trip test and namespace validation coverage.
+
 ## [1.4.0] - 2026-08-22
 
 - Added profile-owned scripting define symbols for the active build target.
