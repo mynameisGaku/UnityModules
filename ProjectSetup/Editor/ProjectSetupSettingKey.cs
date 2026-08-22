@@ -11,6 +11,9 @@ namespace ProjectSetup.Editor
         RunInBackground = 4,
         CompanyName = 5,
         ProductName = 6,
-        BundleVersion = 7
+        BundleVersion = 7,
+        Tags = 8,
+        Layers = 9,
+        SortingLayers = 10
     }
 }

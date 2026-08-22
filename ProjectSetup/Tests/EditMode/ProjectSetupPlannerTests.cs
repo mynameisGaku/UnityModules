@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 
+using System.Linq;
 using NUnit.Framework;
 using ProjectSetup.Editor;
 using UnityEditor;
@@ -125,6 +126,59 @@ namespace ProjectSetup.Tests
             Assert.That(plan.Changes, Has.None.Property("Key").EqualTo(ProjectSetupSettingKey.EnterPlayMode));
         }
 
+        [Test]
+        public void Build_AddsOnlyMissingTagManagerNamesInStableCategoryOrder()
+        {
+            _profile.ConfigureTags = true;
+            _profile.Tags = new[] { "ExistingTag", "NewTag" };
+            _profile.ConfigureLayers = true;
+            _profile.Layers = new[] { "ExistingLayer", "NewLayer" };
+            _profile.ConfigureSortingLayers = true;
+            _profile.SortingLayers = new[] { "ExistingSorting", "NewSorting" };
+            var current = SnapshotWithTagManager();
+
+            var plan = ProjectSetupPlanner.Build(_profile, current);
+
+            Assert.That(plan.IsValid, Is.True);
+            Assert.That(plan.Changes.Select(change => change.Key), Is.EqualTo(new[]
+            {
+                ProjectSetupSettingKey.Tags,
+                ProjectSetupSettingKey.Layers,
+                ProjectSetupSettingKey.SortingLayers
+            }));
+            Assert.That(plan.Changes[0].DesiredValue, Does.Contain("NewTag").And.Not.Contain("ExistingTag"));
+            Assert.That(plan.Changes[1].DesiredValue, Does.Contain("NewLayer").And.Not.Contain("ExistingLayer"));
+            Assert.That(plan.Changes[2].DesiredValue, Does.Contain("NewSorting").And.Not.Contain("ExistingSorting"));
+        }
+
+        [Test]
+        public void Build_RejectsDuplicateOrUntrimmedTagManagerNames()
+        {
+            _profile.ConfigureTags = true;
+            _profile.Tags = new[] { "Duplicate", "Duplicate" };
+            _profile.ConfigureSortingLayers = true;
+            _profile.SortingLayers = new[] { " Untrimmed" };
+
+            var plan = ProjectSetupPlanner.Build(_profile, SnapshotWithTagManager());
+
+            Assert.That(plan.IsValid, Is.False);
+            Assert.That(plan.Errors, Has.Some.Contains("duplicate"));
+            Assert.That(plan.Errors, Has.Some.Contains("trimmed"));
+        }
+
+        [Test]
+        public void Build_RejectsLayersWhenFreeUserSlotsAreInsufficient()
+        {
+            _profile.ConfigureLayers = true;
+            _profile.Layers = new[] { "OverflowLayer" };
+            var current = SnapshotWithTagManager(fillUserLayers: true);
+
+            var plan = ProjectSetupPlanner.Build(_profile, current);
+
+            Assert.That(plan.IsValid, Is.False);
+            Assert.That(plan.Errors, Has.Some.Contains("free user slots"));
+        }
+
         private static ProjectSetupSnapshot Snapshot(
             SerializationMode serializationMode = SerializationMode.ForceText,
             string versionControl = "Visible Meta Files",
@@ -141,6 +195,39 @@ namespace ProjectSetup.Tests
                 "DefaultCompany",
                 "New Unity Project",
                 "1.0.0");
+        }
+
+        private static ProjectSetupSnapshot SnapshotWithTagManager(bool fillUserLayers = false)
+        {
+            var layers = new string[32];
+            layers[8] = "ExistingLayer";
+            if (fillUserLayers)
+            {
+                for (var index = 8; index < layers.Length; index++)
+                {
+                    layers[index] = $"Layer{index}";
+                }
+            }
+
+            return new ProjectSetupSnapshot(
+                SerializationMode.ForceText,
+                "Visible Meta Files",
+                false,
+                EnterPlayModeOptions.None,
+                ColorSpace.Gamma,
+                false,
+                "DefaultCompany",
+                "New Unity Project",
+                "1.0.0",
+                true,
+                new[] { "Untagged", "ExistingTag" },
+                new[] { "ExistingTag" },
+                layers,
+                new[]
+                {
+                    new ProjectSetupSortingLayer("Default", 0, false),
+                    new ProjectSetupSortingLayer("ExistingSorting", 10, false)
+                });
         }
     }
 }

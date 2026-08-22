@@ -12,7 +12,12 @@ namespace ProjectSetup.Editor
     internal sealed class ProjectSetupWindow : EditorWindow
     {
         internal const string RootElementName = "project-setup-root";
+        internal const string ProfileToolbarName = "profile-toolbar";
         internal const string ProfileFieldName = "profile-field";
+        internal const string ProfileActionsName = "profile-actions";
+        internal const string NewProfileButtonName = "new-profile-button";
+        internal const string CaptureProfileButtonName = "capture-profile-button";
+        internal const string SaveProfileButtonName = "save-profile-button";
         internal const string ChangeListName = "change-list";
         internal const string PreviewButtonName = "preview-button";
         internal const string ApplyButtonName = "apply-button";
@@ -94,10 +99,9 @@ namespace ProjectSetup.Editor
 
         private VisualElement CreateProfileToolbar()
         {
-            var toolbar = new VisualElement();
-            toolbar.style.flexDirection = FlexDirection.Row;
-            toolbar.style.alignItems = Align.Center;
-            toolbar.style.marginBottom = 2f;
+            var toolbar = new VisualElement { name = ProfileToolbarName };
+            toolbar.style.flexDirection = FlexDirection.Column;
+            toolbar.style.marginBottom = 4f;
 
             _profileField = new ObjectField("Profile")
             {
@@ -109,17 +113,35 @@ namespace ProjectSetup.Editor
             _profileField.RegisterValueChangedCallback(change => SetProfile(change.newValue as ProjectSetupProfile));
             toolbar.Add(_profileField);
 
-            var newButton = new Button(CreateRecommendedProfile) { text = "New recommended profile" };
-            newButton.style.marginLeft = 8f;
-            toolbar.Add(newButton);
+            var actions = new VisualElement { name = ProfileActionsName };
+            actions.style.flexDirection = FlexDirection.Row;
+            actions.style.justifyContent = Justify.FlexEnd;
+            actions.style.marginTop = 5f;
+            actions.style.marginBottom = 7f;
 
-            var captureButton = new Button(CaptureCurrent) { text = "Capture current" };
+            var newButton = new Button(CreateRecommendedProfile)
+            {
+                name = NewProfileButtonName,
+                text = "New recommended profile"
+            };
+            actions.Add(newButton);
+
+            var captureButton = new Button(CaptureCurrent)
+            {
+                name = CaptureProfileButtonName,
+                text = "Capture current"
+            };
             captureButton.style.marginLeft = 4f;
-            toolbar.Add(captureButton);
+            actions.Add(captureButton);
 
-            var saveButton = new Button(SaveProfileAs) { text = "Save profile as" };
+            var saveButton = new Button(SaveProfileAs)
+            {
+                name = SaveProfileButtonName,
+                text = "Save profile as"
+            };
             saveButton.style.marginLeft = 4f;
-            toolbar.Add(saveButton);
+            actions.Add(saveButton);
+            toolbar.Add(actions);
             return toolbar;
         }
 
@@ -162,6 +184,30 @@ namespace ProjectSetup.Editor
             content.Add(CreateTextCard("company-name", "Company Name", "Shared Player identity value.", _profile.ConfigureCompanyName, _profile.CompanyName, value => _profile.ConfigureCompanyName = value, value => _profile.CompanyName = value));
             content.Add(CreateTextCard("product-name", "Product Name", "Shared Player product name.", _profile.ConfigureProductName, _profile.ProductName, value => _profile.ConfigureProductName = value, value => _profile.ProductName = value));
             content.Add(CreateTextCard("bundle-version", "Bundle Version", "Shared application version string.", _profile.ConfigureBundleVersion, _profile.BundleVersion, value => _profile.ConfigureBundleVersion = value, value => _profile.BundleVersion = value));
+            content.Add(CreateNameListCard(
+                "tags",
+                "Tags",
+                "Add missing custom Tags without deleting or reordering existing Tags. Enter one name per line.",
+                _profile.ConfigureTags,
+                _profile.Tags,
+                value => _profile.ConfigureTags = value,
+                value => _profile.Tags = value));
+            content.Add(CreateNameListCard(
+                "layers",
+                "Layers",
+                "Add missing names to free user Layer slots 8 through 31. Enter one name per line.",
+                _profile.ConfigureLayers,
+                _profile.Layers,
+                value => _profile.ConfigureLayers = value,
+                value => _profile.Layers = value));
+            content.Add(CreateNameListCard(
+                "sorting-layers",
+                "Sorting Layers",
+                "Append missing Sorting Layers while preserving existing names, order, and identifiers. Enter one name per line.",
+                _profile.ConfigureSortingLayers,
+                _profile.SortingLayers,
+                value => _profile.ConfigureSortingLayers = value,
+                value => _profile.SortingLayers = value));
 
             var heading = new Label("Preview");
             heading.style.unityFontStyleAndWeight = FontStyle.Bold;
@@ -225,6 +271,40 @@ namespace ProjectSetup.Editor
             card.Add(enabled);
             card.Add(field);
             return card;
+        }
+
+        private VisualElement CreateNameListCard(
+            string name,
+            string title,
+            string description,
+            bool configured,
+            string[] values,
+            Action<bool> setConfigured,
+            Action<string[]> setValues)
+        {
+            var card = CreateCard(name, title, description);
+            var enabled = new Toggle("Add missing names") { value = configured };
+            var field = new TextField("Desired names")
+            {
+                multiline = true,
+                value = string.Join("\n", values ?? Array.Empty<string>())
+            };
+            field.style.minHeight = 58f;
+            enabled.RegisterValueChangedCallback(change => ChangeProfile(() => setConfigured(change.newValue)));
+            field.RegisterValueChangedCallback(change => ChangeProfile(() => setValues(ParseNameList(change.newValue))));
+            card.Add(enabled);
+            card.Add(field);
+            return card;
+        }
+
+        private static string[] ParseNameList(string value)
+        {
+            return (value ?? string.Empty)
+                .Replace("\r", string.Empty)
+                .Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(item => item.Trim())
+                .Where(item => item.Length > 0)
+                .ToArray();
         }
 
         private static VisualElement CreateCard(string name, string title, string description)
