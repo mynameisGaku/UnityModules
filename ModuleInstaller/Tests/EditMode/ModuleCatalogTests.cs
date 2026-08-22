@@ -23,6 +23,7 @@ namespace ModuleInstaller.Editor.Tests
                 Assert.That(entry.GitUrl, Does.Contain($"?path=/{entry.FolderName}#{entry.Tag}"));
                 Assert.That(entry.GitUrl, Does.Not.Contain("#main"));
                 Assert.That(entry.GitUrl, Does.Not.Contain("#dev"));
+                Assert.That(entry.ReadmeUrl, Is.EqualTo($"https://github.com/mynameisGaku/UnityModules/blob/{entry.Tag}/{entry.FolderName}/README.md"));
                 Assert.That(entry.Version, Is.Not.Empty);
                 Assert.That(entry.Tag, Does.EndWith($"-v{entry.Version}"));
                 Assert.That(entry.Tag, Does.Match(@"-v\d+\.\d+\.\d+$"));
@@ -34,11 +35,25 @@ namespace ModuleInstaller.Editor.Tests
         {
             Assert.That(ModuleCatalog.Bundles.Count, Is.EqualTo(6));
             var bundleIds = new HashSet<string>(StringComparer.Ordinal);
+            var recommendedCount = 0;
+            var specializedCount = 0;
 
             for (var bundleIndex = 0; bundleIndex < ModuleCatalog.Bundles.Count; bundleIndex++)
             {
                 var bundle = ModuleCatalog.Bundles[bundleIndex];
                 Assert.That(bundleIds.Add(bundle.Id), Is.True, bundle.Id);
+                Assert.That(bundle.UseWhen, Is.Not.Empty, bundle.Id);
+                Assert.That(bundle.FirstStep, Is.Not.Empty, bundle.Id);
+                Assert.That(bundle.ChangeScope, Does.Contain("Installation"), bundle.Id);
+                if (bundle.Tier == ModuleBundleTier.Recommended)
+                {
+                    recommendedCount++;
+                }
+                else
+                {
+                    specializedCount++;
+                }
+
                 Assert.That(bundle.PackageNames.Count, Is.GreaterThan(0));
                 var packageNames = new HashSet<string>(StringComparer.Ordinal);
                 for (var packageIndex = 0; packageIndex < bundle.PackageNames.Count; packageIndex++)
@@ -48,6 +63,9 @@ namespace ModuleInstaller.Editor.Tests
                     Assert.That(ModuleCatalog.TryFindEntry(packageName, out _), Is.True, packageName);
                 }
             }
+
+            Assert.That(recommendedCount, Is.EqualTo(4));
+            Assert.That(specializedCount, Is.EqualTo(2));
         }
 
         [Test]

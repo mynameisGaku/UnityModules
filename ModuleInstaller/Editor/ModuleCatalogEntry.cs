@@ -36,5 +36,8 @@ namespace ModuleInstaller.Editor
 
         internal string GitUrl =>
             $"https://github.com/mynameisGaku/UnityModules.git?path=/{FolderName}#{Tag}";
+
+        internal string ReadmeUrl =>
+            $"https://github.com/mynameisGaku/UnityModules/blob/{Tag}/{FolderName}/README.md";
     }
 }
