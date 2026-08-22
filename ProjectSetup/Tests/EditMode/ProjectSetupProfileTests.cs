@@ -30,6 +30,10 @@ namespace ProjectSetup.Tests
                 Assert.That(profile.ConfigureCompanyName, Is.False);
                 Assert.That(profile.ConfigureProductName, Is.False);
                 Assert.That(profile.ConfigureBundleVersion, Is.False);
+                Assert.That(profile.ConfigureApplicationIdentifier, Is.False);
+                Assert.That(profile.ConfigureScriptingBackend, Is.False);
+                Assert.That(profile.ConfigureApiCompatibilityLevel, Is.False);
+                Assert.That(profile.ConfigureManagedStrippingLevel, Is.False);
                 Assert.That(profile.ConfigureBuildScenes, Is.False);
                 Assert.That(profile.BuildScenes, Is.Empty);
                 Assert.That(profile.ConfigureTags, Is.False);
@@ -122,7 +126,23 @@ namespace ProjectSetup.Tests
                     true,
                     EditorSettings.NamingScheme.Underscore,
                     3,
-                    false);
+                    false,
+                    hasApplicationIdentifierData: true,
+                    applicationIdentifierTargetId: "Standalone",
+                    applicationIdentifierTargetLabel: "Windows",
+                    applicationIdentifier: "com.studiogaku.game",
+                    hasScriptingBackendData: true,
+                    scriptingBackendTargetId: "Standalone",
+                    scriptingBackendTargetLabel: "Windows",
+                    scriptingBackend: ScriptingImplementation.IL2CPP,
+                    hasApiCompatibilityLevelData: true,
+                    apiCompatibilityLevelTargetId: "Standalone",
+                    apiCompatibilityLevelTargetLabel: "Windows",
+                    apiCompatibilityLevel: ApiCompatibilityLevel.NET_Unity_4_8,
+                    hasManagedStrippingLevelData: true,
+                    managedStrippingLevelTargetId: "Standalone",
+                    managedStrippingLevelTargetLabel: "Windows",
+                    managedStrippingLevel: ManagedStrippingLevel.High);
 
                 profile.Capture(snapshot);
 
@@ -145,6 +165,14 @@ namespace ProjectSetup.Tests
                 Assert.That(profile.ProductName, Is.EqualTo("Product"));
                 Assert.That(profile.ConfigureBundleVersion, Is.True);
                 Assert.That(profile.BundleVersion, Is.EqualTo("3.0.0"));
+                Assert.That(profile.ConfigureApplicationIdentifier, Is.True);
+                Assert.That(profile.ApplicationIdentifier, Is.EqualTo("com.studiogaku.game"));
+                Assert.That(profile.ConfigureScriptingBackend, Is.True);
+                Assert.That(profile.ScriptingBackend, Is.EqualTo(ScriptingImplementation.IL2CPP));
+                Assert.That(profile.ConfigureApiCompatibilityLevel, Is.True);
+                Assert.That(profile.ApiCompatibilityLevel, Is.EqualTo(ApiCompatibilityLevel.NET_Unity_4_8));
+                Assert.That(profile.ConfigureManagedStrippingLevel, Is.True);
+                Assert.That(profile.ManagedStrippingLevel, Is.EqualTo(ManagedStrippingLevel.High));
                 Assert.That(profile.ConfigureBuildScenes, Is.True);
                 Assert.That(profile.BuildScenes.Select(scene => scene.SceneGuid), Is.EqualTo(new[] { "guid-a", "guid-b" }));
                 Assert.That(profile.BuildScenes.Select(scene => scene.Enabled), Is.EqualTo(new[] { true, false }));

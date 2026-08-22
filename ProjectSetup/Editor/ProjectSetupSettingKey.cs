@@ -28,6 +28,7 @@ namespace ProjectSetup.Editor
         VersionControlFiles = 21,
         ApplicationIdentifier = 22,
         ScriptingBackend = 23,
-        ApiCompatibilityLevel = 24
+        ApiCompatibilityLevel = 24,
+        ManagedStrippingLevel = 25
     }
 }

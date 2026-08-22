@@ -34,6 +34,8 @@ namespace ProjectSetup.Editor
         [SerializeField] private ScriptingImplementation scriptingBackend = ScriptingImplementation.IL2CPP;
         [SerializeField] private bool configureApiCompatibilityLevel;
         [SerializeField] private ApiCompatibilityLevel apiCompatibilityLevel = ApiCompatibilityLevel.NET_Standard;
+        [SerializeField] private bool configureManagedStrippingLevel;
+        [SerializeField] private ManagedStrippingLevel managedStrippingLevel = ManagedStrippingLevel.Minimal;
         [SerializeField] private bool configureBuildScenes;
         [SerializeField] private ProjectSetupBuildScene[] buildScenes = Array.Empty<ProjectSetupBuildScene>();
         [SerializeField] private bool configureTags;
@@ -99,6 +101,8 @@ namespace ProjectSetup.Editor
         internal ScriptingImplementation ScriptingBackend { get => scriptingBackend; set => scriptingBackend = value; }
         internal bool ConfigureApiCompatibilityLevel { get => configureApiCompatibilityLevel; set => configureApiCompatibilityLevel = value; }
         internal ApiCompatibilityLevel ApiCompatibilityLevel { get => apiCompatibilityLevel; set => apiCompatibilityLevel = value; }
+        internal bool ConfigureManagedStrippingLevel { get => configureManagedStrippingLevel; set => configureManagedStrippingLevel = value; }
+        internal ManagedStrippingLevel ManagedStrippingLevel { get => managedStrippingLevel; set => managedStrippingLevel = value; }
         internal bool ConfigureBuildScenes { get => configureBuildScenes; set => configureBuildScenes = value; }
         internal ProjectSetupBuildScene[] BuildScenes
         {
@@ -158,6 +162,8 @@ namespace ProjectSetup.Editor
             scriptingBackend = ScriptingImplementation.IL2CPP;
             configureApiCompatibilityLevel = false;
             apiCompatibilityLevel = ApiCompatibilityLevel.NET_Standard;
+            configureManagedStrippingLevel = false;
+            managedStrippingLevel = ManagedStrippingLevel.Minimal;
             configureBuildScenes = false;
             buildScenes = Array.Empty<ProjectSetupBuildScene>();
             configureTags = false;
@@ -222,6 +228,8 @@ namespace ProjectSetup.Editor
             scriptingBackend = snapshot.ScriptingBackend;
             configureApiCompatibilityLevel = snapshot.HasApiCompatibilityLevelData;
             apiCompatibilityLevel = snapshot.ApiCompatibilityLevel;
+            configureManagedStrippingLevel = snapshot.HasManagedStrippingLevelData;
+            managedStrippingLevel = snapshot.ManagedStrippingLevel;
             configureBuildScenes = snapshot.HasBuildSceneData;
             buildScenes = snapshot.BuildScenes
                 .Select(scene => new ProjectSetupBuildScene(scene.SceneGuid, scene.Path, scene.Enabled))

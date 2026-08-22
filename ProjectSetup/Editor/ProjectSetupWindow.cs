@@ -42,6 +42,8 @@ namespace ProjectSetup.Editor
         internal const string ScriptingBackendCardName = "scripting-backend";
         internal const string ApiCompatibilityLevelCardName = "api-compatibility-level";
         internal const string ApiCompatibilityLevelFieldName = "api-compatibility-level-field";
+        internal const string ManagedStrippingLevelCardName = "managed-stripping-level";
+        internal const string ManagedStrippingLevelFieldName = "managed-stripping-level-field";
         internal const string AssemblyNameFieldName = "assembly-name-field";
         internal const string RuntimeAssemblyFolderFieldName = "runtime-assembly-folder-field";
         internal const string EditorAssemblyFolderFieldName = "editor-assembly-folder-field";
@@ -236,6 +238,7 @@ namespace ProjectSetup.Editor
                 value => _profile.ConfigureScriptingBackend = value,
                 value => _profile.ScriptingBackend = (ScriptingImplementation)value));
             content.Add(CreateApiCompatibilityLevelCard());
+            content.Add(CreateManagedStrippingLevelCard());
             content.Add(CreateScriptingDefineCard());
             content.Add(CreateTextCard(
                 RootNamespaceCardName,
@@ -647,6 +650,31 @@ namespace ProjectSetup.Editor
                 _profile.ApiCompatibilityLevel = change.newValue == netFramework
                     ? ApiCompatibilityLevel.NET_Unity_4_8
                     : ApiCompatibilityLevel.NET_Standard;
+            }));
+            card.Add(enabled);
+            card.Add(field);
+            return card;
+        }
+
+        private VisualElement CreateManagedStrippingLevelCard()
+        {
+            var choices = new List<string> { "Disabled", "Minimal", "Low", "Medium", "High" };
+            var card = CreateCard(
+                ManagedStrippingLevelCardName,
+                "Managed Stripping Level",
+                "Choose how aggressively unused managed code is removed for the active build target. Confirm reflection and serialization requirements before applying.");
+            var enabled = new Toggle("Apply this setting") { value = _profile.ConfigureManagedStrippingLevel };
+            var selected = ProjectSetupPlanner.IsSupportedManagedStrippingLevel(_profile.ManagedStrippingLevel)
+                ? _profile.ManagedStrippingLevel.ToString()
+                : ManagedStrippingLevel.Minimal.ToString();
+            var field = new DropdownField("Desired value", choices, selected)
+            {
+                name = ManagedStrippingLevelFieldName
+            };
+            enabled.RegisterValueChangedCallback(change => ChangeProfile(() => _profile.ConfigureManagedStrippingLevel = change.newValue));
+            field.RegisterValueChangedCallback(change => ChangeProfile(() =>
+            {
+                _profile.ManagedStrippingLevel = (ManagedStrippingLevel)Enum.Parse(typeof(ManagedStrippingLevel), change.newValue);
             }));
             card.Add(enabled);
             card.Add(field);

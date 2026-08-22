@@ -40,6 +40,7 @@ namespace ProjectSetup.Editor
             CaptureApplicationIdentifier(out var hasApplicationIdentifierData, out var applicationIdentifierTargetId, out var applicationIdentifierTargetLabel, out var applicationIdentifier);
             CaptureScriptingBackend(out var hasScriptingBackendData, out var scriptingBackendTargetId, out var scriptingBackendTargetLabel, out var scriptingBackend);
             CaptureApiCompatibilityLevel(out var hasApiCompatibilityLevelData, out var apiCompatibilityLevelTargetId, out var apiCompatibilityLevelTargetLabel, out var apiCompatibilityLevel);
+            CaptureManagedStrippingLevel(out var hasManagedStrippingLevelData, out var managedStrippingLevelTargetId, out var managedStrippingLevelTargetLabel, out var managedStrippingLevel);
             CaptureProjectFolders(out var projectFolders, out var projectAssetPaths);
             return new ProjectSetupSnapshot(
                 EditorSettings.serializationMode,
@@ -89,7 +90,11 @@ namespace ProjectSetup.Editor
                 hasApiCompatibilityLevelData: hasApiCompatibilityLevelData,
                 apiCompatibilityLevelTargetId: apiCompatibilityLevelTargetId,
                 apiCompatibilityLevelTargetLabel: apiCompatibilityLevelTargetLabel,
-                apiCompatibilityLevel: apiCompatibilityLevel);
+                apiCompatibilityLevel: apiCompatibilityLevel,
+                hasManagedStrippingLevelData: hasManagedStrippingLevelData,
+                managedStrippingLevelTargetId: managedStrippingLevelTargetId,
+                managedStrippingLevelTargetLabel: managedStrippingLevelTargetLabel,
+                managedStrippingLevel: managedStrippingLevel);
         }
 
         public ProjectSetupEnvironmentApplyResult Apply(ProjectSetupProfile profile)
@@ -156,6 +161,11 @@ namespace ProjectSetup.Editor
             if (profile.ConfigureApiCompatibilityLevel)
             {
                 SetApiCompatibilityLevel(profile.ApiCompatibilityLevel);
+            }
+
+            if (profile.ConfigureManagedStrippingLevel)
+            {
+                SetManagedStrippingLevel(profile.ManagedStrippingLevel);
             }
 
             if (profile.ConfigureBuildScenes)
@@ -258,6 +268,15 @@ namespace ProjectSetup.Editor
                 }
             }
 
+            if (snapshot.HasManagedStrippingLevelData)
+            {
+                CaptureManagedStrippingLevel(out var available, out var currentTargetId, out _, out _);
+                if (!available || !string.Equals(currentTargetId, snapshot.ManagedStrippingLevelTargetId, StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException("The active Managed Stripping Level target changed after the backup was created.");
+                }
+            }
+
             EditorSettings.serializationMode = snapshot.AssetSerialization;
             VersionControlSettings.mode = snapshot.VersionControlMode;
             EditorSettings.enterPlayModeOptionsEnabled = snapshot.EnterPlayModeOptionsEnabled;
@@ -282,6 +301,10 @@ namespace ProjectSetup.Editor
             if (snapshot.HasApiCompatibilityLevelData)
             {
                 SetApiCompatibilityLevel(snapshot.ApiCompatibilityLevel);
+            }
+            if (snapshot.HasManagedStrippingLevelData)
+            {
+                SetManagedStrippingLevel(snapshot.ManagedStrippingLevel);
             }
             if (snapshot.HasBuildSceneData)
             {
@@ -494,6 +517,35 @@ namespace ProjectSetup.Editor
             PlayerSettings.SetApiCompatibilityLevel(
                 NamedBuildTarget.FromBuildTargetGroup(group),
                 apiCompatibilityLevel);
+        }
+
+        private static void CaptureManagedStrippingLevel(
+            out bool available,
+            out string targetId,
+            out string targetLabel,
+            out ManagedStrippingLevel managedStrippingLevel)
+        {
+            var activeTarget = EditorUserBuildSettings.activeBuildTarget;
+            var group = BuildPipeline.GetBuildTargetGroup(activeTarget);
+            available = group != BuildTargetGroup.Unknown;
+            targetId = available ? group.ToString() : string.Empty;
+            targetLabel = available ? activeTarget.ToString() : string.Empty;
+            managedStrippingLevel = available
+                ? PlayerSettings.GetManagedStrippingLevel(NamedBuildTarget.FromBuildTargetGroup(group))
+                : ManagedStrippingLevel.Minimal;
+        }
+
+        private static void SetManagedStrippingLevel(ManagedStrippingLevel managedStrippingLevel)
+        {
+            var group = BuildPipeline.GetBuildTargetGroup(EditorUserBuildSettings.activeBuildTarget);
+            if (group == BuildTargetGroup.Unknown)
+            {
+                throw new InvalidOperationException("Managed Stripping Level is unavailable for the active build target.");
+            }
+
+            PlayerSettings.SetManagedStrippingLevel(
+                NamedBuildTarget.FromBuildTargetGroup(group),
+                managedStrippingLevel);
         }
 
         private static string[] SplitScriptingDefines(string value)

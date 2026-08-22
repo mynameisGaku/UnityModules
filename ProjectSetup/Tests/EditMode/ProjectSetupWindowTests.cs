@@ -50,6 +50,10 @@ namespace ProjectSetup.Tests
                 Assert.That(root.Q<VisualElement>(ProjectSetupWindow.ScriptingBackendCardName), Is.Not.Null);
                 Assert.That(root.Q<VisualElement>(ProjectSetupWindow.ApiCompatibilityLevelCardName), Is.Not.Null);
                 Assert.That(root.Q<DropdownField>(ProjectSetupWindow.ApiCompatibilityLevelFieldName), Is.Not.Null);
+                Assert.That(root.Q<VisualElement>(ProjectSetupWindow.ManagedStrippingLevelCardName), Is.Not.Null);
+                var managedStrippingLevel = root.Q<DropdownField>(ProjectSetupWindow.ManagedStrippingLevelFieldName);
+                Assert.That(managedStrippingLevel, Is.Not.Null);
+                Assert.That(managedStrippingLevel.choices, Is.EqualTo(new[] { "Disabled", "Minimal", "Low", "Medium", "High" }));
                 Assert.That(root.Q<TextField>(ProjectSetupWindow.AssemblyNameFieldName), Is.Not.Null);
                 Assert.That(root.Q<TextField>(ProjectSetupWindow.RuntimeAssemblyFolderFieldName), Is.Not.Null);
                 Assert.That(root.Q<TextField>(ProjectSetupWindow.EditorAssemblyFolderFieldName), Is.Not.Null);

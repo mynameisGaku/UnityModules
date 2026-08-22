@@ -112,6 +112,7 @@ namespace ProjectSetup.Editor
             AddApplicationIdentifierChange(profile, current, changes, errors);
             AddScriptingBackendChange(profile, current, changes, errors);
             AddApiCompatibilityLevelChange(profile, current, changes, errors);
+            AddManagedStrippingLevelChange(profile, current, changes, errors);
             AddPlayModeStartSceneChange(profile, current, changes, errors);
             AddBuildSceneChange(profile, current, changes, errors);
             AddScriptingDefineChange(profile, current, changes, errors);
@@ -895,6 +896,49 @@ namespace ProjectSetup.Editor
                 : value == ApiCompatibilityLevel.NET_Standard
                     ? ".NET Standard"
                     : value.ToString();
+        }
+
+        private static void AddManagedStrippingLevelChange(
+            ProjectSetupProfile profile,
+            ProjectSetupSnapshot current,
+            ICollection<ProjectSetupChange> changes,
+            ICollection<string> errors)
+        {
+            if (!profile.ConfigureManagedStrippingLevel)
+            {
+                return;
+            }
+
+            if (!current.HasManagedStrippingLevelData)
+            {
+                errors.Add("Managed Stripping Level is unavailable for the active build target.");
+                return;
+            }
+
+            if (!IsSupportedManagedStrippingLevel(profile.ManagedStrippingLevel))
+            {
+                errors.Add("Managed Stripping Level must be Disabled, Minimal, Low, Medium, or High.");
+                return;
+            }
+
+            if (current.ManagedStrippingLevel != profile.ManagedStrippingLevel)
+            {
+                Add(
+                    changes,
+                    ProjectSetupSettingKey.ManagedStrippingLevel,
+                    $"Managed Stripping Level ({current.ManagedStrippingLevelTargetLabel})",
+                    current.ManagedStrippingLevel,
+                    profile.ManagedStrippingLevel);
+            }
+        }
+
+        internal static bool IsSupportedManagedStrippingLevel(ManagedStrippingLevel value)
+        {
+            return value == ManagedStrippingLevel.Disabled
+                || value == ManagedStrippingLevel.Minimal
+                || value == ManagedStrippingLevel.Low
+                || value == ManagedStrippingLevel.Medium
+                || value == ManagedStrippingLevel.High;
         }
 
         internal static bool IsValidApplicationIdentifier(string value)
