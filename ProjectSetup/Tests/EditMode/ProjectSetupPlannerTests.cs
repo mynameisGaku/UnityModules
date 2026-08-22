@@ -285,6 +285,64 @@ namespace ProjectSetup.Tests
             Assert.That(afterMove.GetHashCode(), Is.EqualTo(beforeMove.GetHashCode()));
         }
 
+        [Test]
+        public void Build_AddsOnlyMissingScriptingDefineSymbolsForActiveTarget()
+        {
+            _profile.ConfigureAssetSerialization = false;
+            _profile.ConfigureVersionControl = false;
+            _profile.ConfigureScriptingDefineSymbols = true;
+            _profile.ScriptingDefineSymbols = new[] { "EXISTING_FEATURE", "NEW_FEATURE" };
+            var current = new ProjectSetupSnapshot(
+                SerializationMode.ForceText,
+                "Visible Meta Files",
+                false,
+                EnterPlayModeOptions.None,
+                ColorSpace.Gamma,
+                false,
+                "DefaultCompany",
+                "New Unity Project",
+                "1.0.0",
+                hasScriptingDefineData: true,
+                scriptingDefineTargetId: "Standalone",
+                scriptingDefineTargetLabel: "Standalone",
+                scriptingDefineSymbols: new[] { "EXISTING_FEATURE", "USER_SYMBOL" });
+
+            var plan = ProjectSetupPlanner.Build(_profile, current);
+
+            Assert.That(plan.IsValid, Is.True);
+            Assert.That(plan.Changes, Has.Exactly(1).Property("Key").EqualTo(ProjectSetupSettingKey.ScriptingDefineSymbols));
+            Assert.That(plan.Changes[0].CurrentValue, Is.EqualTo("EXISTING_FEATURE;USER_SYMBOL"));
+            Assert.That(plan.Changes[0].DesiredValue, Is.EqualTo("EXISTING_FEATURE;USER_SYMBOL;NEW_FEATURE"));
+        }
+
+        [TestCase("1INVALID")]
+        [TestCase("INVALID-SYMBOL")]
+        [TestCase("NON_ASCII_\u30B7\u30F3\u30DC\u30EB")]
+        public void Build_RejectsInvalidScriptingDefineSymbol(string symbol)
+        {
+            _profile.ConfigureScriptingDefineSymbols = true;
+            _profile.ScriptingDefineSymbols = new[] { symbol };
+            var current = new ProjectSetupSnapshot(
+                SerializationMode.ForceText,
+                "Visible Meta Files",
+                false,
+                EnterPlayModeOptions.None,
+                ColorSpace.Gamma,
+                false,
+                "DefaultCompany",
+                "New Unity Project",
+                "1.0.0",
+                hasScriptingDefineData: true,
+                scriptingDefineTargetId: "Standalone",
+                scriptingDefineTargetLabel: "Standalone",
+                scriptingDefineSymbols: new string[0]);
+
+            var plan = ProjectSetupPlanner.Build(_profile, current);
+
+            Assert.That(plan.IsValid, Is.False);
+            Assert.That(plan.Errors, Has.Some.Contains("Scripting Define Symbols"));
+        }
+
         private static ProjectSetupSnapshot Snapshot(
             SerializationMode serializationMode = SerializationMode.ForceText,
             string versionControl = "Visible Meta Files",

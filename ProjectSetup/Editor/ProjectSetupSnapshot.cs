@@ -32,7 +32,11 @@ namespace ProjectSetup.Editor
             ProjectSetupBuildSceneState[] buildScenes = null,
             bool hasPlayModeStartSceneData = false,
             string playModeStartSceneGuid = null,
-            string playModeStartScenePath = null)
+            string playModeStartScenePath = null,
+            bool hasScriptingDefineData = false,
+            string scriptingDefineTargetId = null,
+            string scriptingDefineTargetLabel = null,
+            string[] scriptingDefineSymbols = null)
         {
             AssetSerialization = assetSerialization;
             VersionControlMode = versionControlMode ?? string.Empty;
@@ -56,6 +60,10 @@ namespace ProjectSetup.Editor
             HasPlayModeStartSceneData = hasPlayModeStartSceneData;
             PlayModeStartSceneGuid = playModeStartSceneGuid ?? string.Empty;
             PlayModeStartScenePath = NormalizePath(playModeStartScenePath);
+            HasScriptingDefineData = hasScriptingDefineData;
+            ScriptingDefineTargetId = scriptingDefineTargetId ?? string.Empty;
+            ScriptingDefineTargetLabel = scriptingDefineTargetLabel ?? string.Empty;
+            ScriptingDefineSymbols = Clone(scriptingDefineSymbols);
         }
 
         internal SerializationMode AssetSerialization { get; }
@@ -80,6 +88,10 @@ namespace ProjectSetup.Editor
         internal bool HasPlayModeStartSceneData { get; }
         internal string PlayModeStartSceneGuid { get; }
         internal string PlayModeStartScenePath { get; }
+        internal bool HasScriptingDefineData { get; }
+        internal string ScriptingDefineTargetId { get; }
+        internal string ScriptingDefineTargetLabel { get; }
+        internal string[] ScriptingDefineSymbols { get; }
 
         public bool Equals(ProjectSetupSnapshot other)
         {
@@ -99,7 +111,10 @@ namespace ProjectSetup.Editor
                         PlayModeStartSceneGuid,
                         PlayModeStartScenePath,
                         other.PlayModeStartSceneGuid,
-                        other.PlayModeStartScenePath));
+                        other.PlayModeStartScenePath))
+                && HasScriptingDefineData == other.HasScriptingDefineData
+                && string.Equals(ScriptingDefineTargetId, other.ScriptingDefineTargetId, StringComparison.Ordinal)
+                && SequenceEqual(ScriptingDefineSymbols, other.ScriptingDefineSymbols);
         }
 
         internal bool Matches(ProjectSetupSnapshot actual)
@@ -122,7 +137,11 @@ namespace ProjectSetup.Editor
                             PlayModeStartSceneGuid,
                             PlayModeStartScenePath,
                             actual.PlayModeStartSceneGuid,
-                            actual.PlayModeStartScenePath)));
+                            actual.PlayModeStartScenePath)))
+                && (!HasScriptingDefineData
+                    || (actual.HasScriptingDefineData
+                        && string.Equals(ScriptingDefineTargetId, actual.ScriptingDefineTargetId, StringComparison.Ordinal)
+                        && SequenceEqual(ScriptingDefineSymbols, actual.ScriptingDefineSymbols)));
         }
 
         private bool ScalarEquals(ProjectSetupSnapshot other)
@@ -172,6 +191,9 @@ namespace ProjectSetup.Editor
                         ? StringComparer.Ordinal.GetHashCode(PlayModeStartSceneGuid)
                         : StringComparer.OrdinalIgnoreCase.GetHashCode(PlayModeStartScenePath ?? string.Empty));
                 }
+                hash = (hash * 397) ^ HasScriptingDefineData.GetHashCode();
+                hash = (hash * 397) ^ StringComparer.Ordinal.GetHashCode(ScriptingDefineTargetId ?? string.Empty);
+                hash = AddHash(hash, ScriptingDefineSymbols);
                 return hash;
             }
         }

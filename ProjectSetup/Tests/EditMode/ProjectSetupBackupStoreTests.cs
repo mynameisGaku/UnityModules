@@ -53,7 +53,8 @@ namespace ProjectSetup.Tests
             Assert.That(bytes.Take(3).ToArray(), Is.Not.EqualTo(Encoding.UTF8.GetPreamble()));
             Assert.That(actual.BuildScenes, Is.EqualTo(expected.BuildScenes));
             Assert.That(actual.PlayModeStartSceneGuid, Is.EqualTo(expected.PlayModeStartSceneGuid));
-            Assert.That(File.ReadAllText(_path), Does.Contain("\"schemaVersion\": 4"));
+            Assert.That(actual.ScriptingDefineSymbols, Is.EqualTo(expected.ScriptingDefineSymbols));
+            Assert.That(File.ReadAllText(_path), Does.Contain("\"schemaVersion\": 5"));
         }
 
         [Test]
@@ -171,7 +172,11 @@ namespace ProjectSetup.Tests
                 },
                 true,
                 "guid-bootstrap",
-                "Assets/Bootstrap.unity");
+                "Assets/Bootstrap.unity",
+                true,
+                "Standalone",
+                "Standalone",
+                new[] { "PROJECT_FEATURE", "DEBUG_MENU" });
         }
     }
 }

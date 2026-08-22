@@ -140,6 +140,7 @@ namespace ProjectSetup.Editor
                 profile.ConfigureLayers = false;
                 profile.ConfigureSortingLayers = false;
                 profile.ConfigureBuildScenes = false;
+                profile.ConfigureScriptingDefineSymbols = false;
                 var scalarPlan = ProjectSetupPlanner.Build(profile, current);
                 var changes = new List<ProjectSetupChange>(scalarPlan.Changes);
                 var errors = new List<string>(scalarPlan.Errors);
@@ -192,6 +193,23 @@ namespace ProjectSetup.Editor
                             "Build Scenes",
                             ProjectSetupPlanner.FormatBuildScenes(current.BuildScenes),
                             ProjectSetupPlanner.FormatBuildScenes(desired.BuildScenes)));
+                    }
+                }
+
+                if (desired.HasScriptingDefineData)
+                {
+                    if (!current.HasScriptingDefineData
+                        || !string.Equals(desired.ScriptingDefineTargetId, current.ScriptingDefineTargetId, StringComparison.Ordinal))
+                    {
+                        errors.Add($"The active scripting define target must remain '{desired.ScriptingDefineTargetLabel}' before restoring this backup.");
+                    }
+                    else if (!desired.ScriptingDefineSymbols.SequenceEqual(current.ScriptingDefineSymbols, StringComparer.Ordinal))
+                    {
+                        changes.Add(new ProjectSetupChange(
+                            ProjectSetupSettingKey.ScriptingDefineSymbols,
+                            $"Scripting Define Symbols ({desired.ScriptingDefineTargetLabel})",
+                            ProjectSetupPlanner.FormatScriptingDefines(current.ScriptingDefineSymbols),
+                            ProjectSetupPlanner.FormatScriptingDefines(desired.ScriptingDefineSymbols)));
                     }
                 }
 
