@@ -1,4 +1,4 @@
-# Module Manager 1.3.6
+# Module Manager 1.3.9
 
 ## 目的
 
@@ -17,7 +17,7 @@
 
 最初に40件の個別一覧を読む必要はありません。新規Projectの基本フォルダー、C#生成既定値、条件付きコンパイル記号、Asset整理は`Project Maintenance`、Scene切り替えやUIは`Scene and UI`、save・音声・reportは`Game Services`、入力補助は`Input Support`から確認します。個別一覧は必要なmoduleが明確な場合や既存projectとの互換用です。
 
-Project Maintenanceの「プロジェクト一括設定」はv1.9.0へ固定されています。`Assets/Art`、`Audio`、`Prefabs`、`Scenes`、`Scripts`、`Settings`の基本フォルダーと、Runtime・Editor用asmdefをまとめて作成できます。`Create test assemblies`を有効にすると、EditMode用`Game.Tests.asmdef`とPlayMode用`Game.PlayMode.Tests.asmdef`も追加できます。既存asmdefは上書きせず、復元ではこのツールが作成して内容が変わっていないasmdefだけを削除します。利用者が編集したasmdef、既存フォルダー、Assetを追加したフォルダーは維持します。C# Root Namespace、新規scriptの改行方式、複製時のGameObject・Asset命名規則、条件付きコンパイル記号、Tag・Layer・Sorting Layer、Player Build Scenes、Play Mode開始Sceneも同じprofileから適用・復元できます。
+Project Maintenanceの「プロジェクト一括設定」はv1.10.0へ固定されています。基本フォルダー、Runtime・Editor・test用asmdef、Unity向け`.gitignore`と`.gitattributes`をまとめて作成できます。既存fileは上書きせず、復元ではこのツールが作成して内容が変わっていないfileだけを削除します。利用者が編集したfile、既存フォルダー、Assetを追加したフォルダーは維持します。C# Root Namespace、新規scriptの改行方式、複製時のGameObject・Asset命名規則、条件付きコンパイル記号、Tag・Layer・Sorting Layer、Player Build Scenes、Play Mode開始Sceneも同じprofileから適用・復元できます。
 
 ## 安全条件
 
