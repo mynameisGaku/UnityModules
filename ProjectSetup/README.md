@@ -2,13 +2,13 @@
 
 Unityの新規Projectで毎回行う設定を、1つのprofileからまとめてPreview・適用・復元するEditor専用ツールです。
 
-`Project Settings`、Tag、Layer、Sorting Layer、Build Scenesを別々の画面で設定する手間を減らします。自動適用はせず、実際に変わる項目を確認してから実行できます。
+`Project Settings`、Play Modeの開始Scene、Tag、Layer、Sorting Layer、Build Scenesを別々の画面やscriptで設定する手間を減らします。自動適用はせず、実際に変わる項目を確認してから実行できます。
 
 ## まず知りたいこと
 
 | 質問 | 答え |
 |---|---|
-| 何が楽になる？ | Project設定、Tag/Layer、Build Scenesの順序を1つのprofileからまとめて設定できます。 |
+| 何が楽になる？ | Project設定、Play Modeの開始Scene、Tag/Layer、Build Scenesの順序を1つのprofileからまとめて設定できます。 |
 | 勝手に変更される？ | されません。import時やUnity起動時には何も適用しません。 |
 | 実行前に確認できる？ | `Preview changes`で変更前と変更後を一覧表示します。 |
 | 失敗したら？ | Apply前にbackupし、書込後の検証に失敗した場合は可能な範囲で自動復元します。 |
@@ -30,6 +30,7 @@ Unityの新規Projectで毎回行う設定を、1つのprofileからまとめて
 - Asset Serialization
 - Version Control
 - Enter Play Mode Options
+- Play Mode Start Scene
 - Color Space
 - Run In Background
 - Company Name
@@ -64,6 +65,17 @@ Build Scenesを有効にしたprofileは、一覧全体を表示順どおりに�
 
 `Capture current`を押すと、現在のProject設定、Tag/Layer、選択中Build Profileの実効Scene一覧をprofileへ取り込めます。
 
+## どのSceneを開いていてもBootstrapからPlayする
+
+1. `Play Mode Start Scene` cardで`Apply this setting`を有効にします。
+2. `Start Scene`へBootstrapやEntry Sceneを指定します。
+3. Previewで`Currently open Scenes -> Assets/...`の差分を確認します。
+4. Apply後は、別のSceneを編集中でもPlayすると指定Sceneから開始します。
+
+Scene欄を空にしてApplyすると、固定開始Sceneを解除し、現在開いているSceneからPlayする通常動作へ戻ります。Scene参照はGUIDで保存するため、version control上で同じ`.meta`を保ったまま移動しても追従します。
+
+`Play Mode Start Scene`はEditorでPlayを押した時だけ使います。Playerの起動Sceneとbuild対象は`Build Scenes`で別に設定します。
+
 ## Applyすると何が変わるか
 
 1. 現在の対象値をsnapshotとして取得します。
@@ -78,6 +90,7 @@ Build Scenesを有効にしたprofileは、一覧全体を表示順どおりに�
 
 - Color SpaceはAssetの再importを発生させる場合があります。
 - Enter Play ModeでDomain Reloadを無効にすると、利用側でstatic stateの初期化が必要です。
+- Play Mode Start Sceneを指定すると、現在開いているSceneの代わりにそのSceneを読み込んでPlayします。
 - Build Scenesは不足分の追加ではなく、profileの一覧へ完全に置き換えます。
 - RestoreはApply直前へ戻すため、その後に追加したTag/Layer/Sceneを取り除く場合があります。
 
@@ -89,7 +102,7 @@ Build Scenesを有効にしたprofileは、一覧全体を表示順どおりに�
 
 Build Scenesを復元する場合は、backup作成時と同じBuild Profileを選択してください。別のBuild Profileへ切り替わっている場合は、誤った一覧を書き換えないよう復元を停止します。
 
-backupはUTF-8 BOMなしのJSONです。schema v3はProject設定、TagManager全体、Build SceneのGUID・順序・Enabled状態・保存先を保持します。schema v1/v2も読み取れますが、そのversionに存在しない項目は復元しません。
+backupはUTF-8 BOMなしのJSONです。schema v4はProject設定、Play Mode Start Scene、TagManager全体、Build SceneのGUID・順序・Enabled状態・保存先を保持します。schema v1/v2/v3も読み取れますが、そのversionに存在しない項目は復元しません。
 
 ## profileを別Projectで使う
 
@@ -128,7 +141,7 @@ Build Scenesをprofileで有効にすると、既存一覧をprofileの内容へ
 Package Managerの`Add package from git URL...`へ次を入力します。
 
 ```text
-https://github.com/mynameisGaku/UnityModules.git?path=/ProjectSetup#project-setup-v1.2.0
+https://github.com/mynameisGaku/UnityModules.git?path=/ProjectSetup#project-setup-v1.3.0
 ```
 
 ## 対応環境

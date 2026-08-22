@@ -1,6 +1,6 @@
 # プロジェクト一括設定（Project Setup）
 
-Project設定、Tag/Layer、Build Scenesをprofile化し、差分確認、backup、適用、復元を1つのEditor windowで行います。
+Project設定、Play Modeの開始Scene、Tag/Layer、Build Scenesをprofile化し、差分確認、backup、適用、復元を1つのEditor windowで行います。
 
 ## 最短手順
 
@@ -17,6 +17,7 @@ import時やUnity起動時には適用しません。
 - Asset Serialization
 - Version Control
 - Enter Play Mode Options
+- Play Mode Start Scene
 - Color Space
 - Run In Background
 - Company Name
@@ -29,6 +30,8 @@ import時やUnity起動時には適用しません。
 
 Build Scenesは選択中Build Profileの実効一覧を扱います。独自一覧を使うBuild Profileではそのprofile assetを、global一覧を継承するprofileではglobal一覧を更新します。
 
+Play Mode Start Sceneは、どのSceneを編集中でもPlay時に読み込むEditor専用の開始Sceneです。空欄は現在開いているSceneを使う通常動作を表します。Playerの起動Sceneとbuild対象はBuild Scenesで別に管理します。
+
 ## 安全性
 
 - 各項目はprofile側で個別に無効化できます。
@@ -38,7 +41,7 @@ Build Scenesは選択中Build Profileの実効一覧を扱います。独自一�
 - 失敗時はApply前のsnapshotから復元を試みます。
 - Restoreも差分をPreviewしてから実行します。
 - Build Profileがbackup時から変わった場合、Build Scenesの復元を停止します。
-- backup schema v3はTagManagerとBuild Scenesを含みます。
+- backup schema v4はPlay Mode Start Scene、TagManager、Build Scenesを含みます。
 
 通常のApplyではTag、Layer、Sorting Layerの既存項目を削除・改名・並べ替えません。Build Scenesはprofileの一覧へ完全に置き換えるため、順序とEnabled状態をPreviewで確認してください。
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0] - 2026-08-22
+
+- Added a GUID-tracked Play Mode Start Scene to reusable project profiles.
+- Extended preview, backup schema, verification, rollback, and restore to the Editor start Scene.
+- Added real Scene integration tests for applying and restoring the Play Mode Start Scene.
+- Clarified the difference between the Editor-only start Scene and Player Build Scenes.
+
 ## [1.2.0] - 2026-08-22
 
 - Added ordered Build Scene profiles with per-Scene enabled state and GUID-based move tracking.
