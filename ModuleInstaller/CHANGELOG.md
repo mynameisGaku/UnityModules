@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.4.5] - 2026-08-23
+
+- Updated Project Setup to v1.15.0 for build-target IL2CPP Code Generation preview, backup, apply, and restore.
+- Added speed-versus-size guidance to the Project Maintenance workflow.
+
 ## [1.4.4] - 2026-08-22
 
 - Updated Project Setup to v1.14.0 for build-target Managed Stripping Level preview, backup, apply, and restore.
