@@ -74,6 +74,23 @@ namespace ProjectSetup.Tests
         }
 
         [Test]
+        public void Apply_WhenEnvironmentThrowsDoesNotClaimUnconfirmedRootFiles()
+        {
+            _profile.ConfigureAssetSerialization = false;
+            _profile.ConfigureVersionControl = false;
+            _profile.ConfigureVersionControlFiles = true;
+            var before = Snapshot().WithProjectRootFileState(Array.Empty<string>());
+            var environment = new FakeEnvironment(before) { ThrowOnProfileApply = true };
+            var service = new ProjectSetupService(environment, new FakeBackupStore());
+
+            var result = service.Apply(_profile);
+
+            Assert.That(result.Succeeded, Is.False);
+            Assert.That(environment.LastAppliedSnapshot.CreatedProjectRootFiles, Is.Empty);
+            Assert.That(environment.State.ProjectRootFilePaths, Is.Empty);
+        }
+
+        [Test]
         public void Apply_WhenBackupFailsDoesNotWriteProjectSettings()
         {
             var before = Snapshot(SerializationMode.Mixed, "Hidden Meta Files");
@@ -128,6 +145,26 @@ namespace ProjectSetup.Tests
             }));
             Assert.That(environment.State.ProjectAssetPaths, Does.Contain("Assets/Scripts/Game.asmdef"));
             Assert.That(environment.State.ProjectAssetPaths, Does.Contain("Assets/Scripts/Editor/Game.Editor.asmdef"));
+        }
+
+        [Test]
+        public void Apply_VersionControlFilesRecordsOnlyCreatedRootFilesInBackup()
+        {
+            _profile.ConfigureAssetSerialization = false;
+            _profile.ConfigureVersionControl = false;
+            _profile.ConfigureVersionControlFiles = true;
+            var before = Snapshot().WithProjectRootFileState(new[] { ".gitignore" });
+            var environment = new FakeEnvironment(before);
+            var backup = new FakeBackupStore();
+            var service = new ProjectSetupService(environment, backup);
+
+            var result = service.Apply(_profile);
+
+            Assert.That(result.Succeeded, Is.True, result.Message);
+            Assert.That(
+                backup.Snapshot.CreatedProjectRootFiles.Select(file => file.Path),
+                Is.EqualTo(new[] { ".gitattributes" }));
+            Assert.That(environment.State.ProjectRootFilePaths, Is.EqualTo(new[] { ".gitignore", ".gitattributes" }));
         }
 
         [Test]
@@ -357,6 +394,7 @@ namespace ProjectSetup.Tests
             internal int CaptureCount { get; private set; }
             internal int ApplyProfileCount { get; private set; }
             internal int ApplySnapshotCount { get; private set; }
+            internal ProjectSetupSnapshot LastAppliedSnapshot { get; private set; }
             internal bool ThrowOnProfileApply { get; set; }
             internal bool IgnoreFirstSnapshotApply { get; set; }
 
@@ -397,14 +435,22 @@ namespace ProjectSetup.Tests
 
                 var createdAssets = missingDefinitions.Select(definition => definition.ToCreatedAsset()).ToArray();
                 assets = assets.Concat(createdAssets.Select(asset => asset.Path)).ToArray();
+                var missingRootFiles = ProjectSetupPlanner.GetMissingVersionControlFiles(profile, State);
+                var createdRootFiles = missingRootFiles.Select(file => file.ToCreatedRootFile()).ToArray();
+                var rootFilePaths = State.ProjectRootFilePaths
+                    .Concat(createdRootFiles.Select(file => file.Path))
+                    .ToArray();
 
-                State = updated.WithProjectFolderState(folders, assets);
-                return new ProjectSetupEnvironmentApplyResult(missing, createdAssets);
+                State = updated
+                    .WithProjectFolderState(folders, assets)
+                    .WithProjectRootFileState(rootFilePaths);
+                return new ProjectSetupEnvironmentApplyResult(missing, createdAssets, createdRootFiles);
             }
 
             public void Apply(ProjectSetupSnapshot snapshot)
             {
                 ApplySnapshotCount++;
+                LastAppliedSnapshot = snapshot;
                 if (IgnoreFirstSnapshotApply && ApplySnapshotCount == 1)
                 {
                     return;

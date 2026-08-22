@@ -64,6 +64,7 @@ namespace ProjectSetup.Tests
                 Assert.That(profile.EditorAssemblyFolder, Is.EqualTo("Assets/Scripts/Editor"));
                 Assert.That(profile.IncludeTestAssemblies, Is.False);
                 Assert.That(profile.TestAssemblyRootFolder, Is.EqualTo("Assets/Tests"));
+                Assert.That(profile.ConfigureVersionControlFiles, Is.False);
             }
             finally
             {
@@ -171,6 +172,7 @@ namespace ProjectSetup.Tests
                 Assert.That(profile.EditorAssemblyFolder, Is.EqualTo("Assets/Scripts/Editor"));
                 Assert.That(profile.IncludeTestAssemblies, Is.False);
                 Assert.That(profile.TestAssemblyRootFolder, Is.EqualTo("Assets/Tests"));
+                Assert.That(profile.ConfigureVersionControlFiles, Is.False);
             }
             finally
             {

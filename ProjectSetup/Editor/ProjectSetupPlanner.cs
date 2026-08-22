@@ -115,6 +115,7 @@ namespace ProjectSetup.Editor
             AddNamingDefaultsChange(profile, current, changes, errors);
             AddProjectFolderChange(profile, current, changes, errors);
             AddAssemblyDefinitionChange(profile, current, changes, errors);
+            AddVersionControlFileChange(profile, current, changes);
             AddNameListChange(profile.ConfigureTags, profile.Tags, current.Tags, ProjectSetupSettingKey.Tags, "Tags", changes, errors);
             AddLayerChange(profile, current, changes, errors);
             AddNameListChange(
@@ -174,6 +175,18 @@ namespace ProjectSetup.Editor
                 current.ProjectFolders,
                 current.ProjectAssetPaths,
                 null);
+        }
+
+        internal static ProjectSetupVersionControlFilePlan[] GetMissingVersionControlFiles(
+            ProjectSetupProfile profile,
+            ProjectSetupSnapshot current)
+        {
+            if (profile == null || !profile.ConfigureVersionControlFiles)
+            {
+                return Array.Empty<ProjectSetupVersionControlFilePlan>();
+            }
+
+            return ProjectSetupVersionControlFileUtility.BuildMissingFiles(current.ProjectRootFilePaths);
         }
 
         private static void AddProjectFolderChange(
@@ -299,6 +312,29 @@ namespace ProjectSetup.Editor
                 profile.IncludeTestAssemblies
                     ? $"Create {profile.AssemblyName}, {profile.AssemblyName}.Editor, and matching EditMode and PlayMode test assemblies without overwriting existing files"
                     : $"Create {profile.AssemblyName} and {profile.AssemblyName}.Editor without overwriting existing files"));
+        }
+
+        private static void AddVersionControlFileChange(
+            ProjectSetupProfile profile,
+            ProjectSetupSnapshot current,
+            ICollection<ProjectSetupChange> changes)
+        {
+            if (!profile.ConfigureVersionControlFiles)
+            {
+                return;
+            }
+
+            var files = GetMissingVersionControlFiles(profile, current);
+            if (files.Length == 0)
+            {
+                return;
+            }
+
+            changes.Add(new ProjectSetupChange(
+                ProjectSetupSettingKey.VersionControlFiles,
+                "Version Control Files",
+                $"{files.Length} recommended file(s) are missing",
+                $"Create {string.Join(" and ", files.Select(file => file.Path))} without overwriting existing files"));
         }
 
         private static void AddNamingDefaultsChange(

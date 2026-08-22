@@ -24,6 +24,7 @@ namespace ProjectSetup.Editor
         GameObjectNamingDigits = 17,
         AssetNamingUsesSpace = 18,
         ProjectFolders = 19,
-        AssemblyDefinitions = 20
+        AssemblyDefinitions = 20,
+        VersionControlFiles = 21
     }
 }

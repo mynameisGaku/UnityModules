@@ -14,6 +14,19 @@ namespace ProjectSetup.Editor
 {
     internal sealed class UnityProjectSetupEnvironment : IProjectSetupEnvironment
     {
+        private readonly ProjectSetupVersionControlFileStore _versionControlFileStore;
+
+        internal UnityProjectSetupEnvironment()
+            : this(new ProjectSetupVersionControlFileStore(GetProjectRoot()))
+        {
+        }
+
+        internal UnityProjectSetupEnvironment(ProjectSetupVersionControlFileStore versionControlFileStore)
+        {
+            _versionControlFileStore = versionControlFileStore
+                ?? throw new ArgumentNullException(nameof(versionControlFileStore));
+        }
+
         public bool IsAvailable => !EditorApplication.isPlayingOrWillChangePlaymode
             && !EditorApplication.isCompiling
             && !EditorApplication.isUpdating;
@@ -60,13 +73,15 @@ namespace ProjectSetup.Editor
                 EditorSettings.gameObjectNamingDigits,
                 EditorSettings.assetNamingUsesSpace,
                 projectFolders,
-                projectAssetPaths);
+                projectAssetPaths,
+                projectRootFilePaths: _versionControlFileStore.CapturePaths());
         }
 
         public ProjectSetupEnvironmentApplyResult Apply(ProjectSetupProfile profile)
         {
             var createdProjectFolders = Array.Empty<string>();
             var createdProjectAssets = Array.Empty<ProjectSetupCreatedAsset>();
+            var createdProjectRootFiles = Array.Empty<ProjectSetupCreatedRootFile>();
             if (profile.ConfigureAssetSerialization)
             {
                 EditorSettings.serializationMode = profile.AssetSerialization;
@@ -154,7 +169,16 @@ namespace ProjectSetup.Editor
 
             ProjectSetupTagManagerStore.Apply(profile);
             AssetDatabase.SaveAssets();
-            return new ProjectSetupEnvironmentApplyResult(createdProjectFolders, createdProjectAssets);
+            if (profile.ConfigureVersionControlFiles)
+            {
+                createdProjectRootFiles = _versionControlFileStore.Create(
+                    ProjectSetupPlanner.GetMissingVersionControlFiles(profile, Capture()));
+            }
+
+            return new ProjectSetupEnvironmentApplyResult(
+                createdProjectFolders,
+                createdProjectAssets,
+                createdProjectRootFiles);
         }
 
         public void Apply(ProjectSetupSnapshot snapshot)
@@ -219,6 +243,7 @@ namespace ProjectSetup.Editor
                 .ToArray());
             RestoreCreatedProjectAssets(snapshot.CreatedProjectAssets);
             RestoreCreatedProjectFolders(snapshot.CreatedProjectFolders);
+            _versionControlFileStore.Restore(snapshot.CreatedProjectRootFiles);
 
             ProjectSetupTagManagerStore.Restore(snapshot);
             AssetDatabase.SaveAssets();
@@ -551,8 +576,7 @@ namespace ProjectSetup.Editor
 
         private static string GetFullAssetPath(string assetPath)
         {
-            var projectRoot = Path.GetFullPath(Path.GetDirectoryName(UnityEngine.Application.dataPath)
-                ?? throw new InvalidOperationException("The Unity project root is unavailable."));
+            var projectRoot = GetProjectRoot();
             var fullPath = Path.GetFullPath(Path.Combine(projectRoot, assetPath.Replace('/', Path.DirectorySeparatorChar)));
             var prefix = projectRoot.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
                 + Path.DirectorySeparatorChar;
@@ -574,6 +598,12 @@ namespace ProjectSetup.Editor
             }
 
             return fullPath;
+        }
+
+        private static string GetProjectRoot()
+        {
+            return Path.GetFullPath(Path.GetDirectoryName(UnityEngine.Application.dataPath)
+                ?? throw new InvalidOperationException("The Unity project root is unavailable."));
         }
 
         private static string NormalizePath(string path)
