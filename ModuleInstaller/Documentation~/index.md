@@ -1,4 +1,4 @@
-# Module Manager 1.3.5
+# Module Manager 1.3.6
 
 ## 目的
 
@@ -15,9 +15,9 @@
 
 導入済みmoduleに更新がある場合は、上部に`Module Name -> target version`が表示されます。対象を確認して`Update N`を押すと、古いversionだけを1回のPackage Manager要求で更新します。
 
-最初に40件の個別一覧を読む必要はありません。新規ProjectのC#生成既定値、条件付きコンパイル記号、Asset整理は`Project Maintenance`、Scene切り替えやUIは`Scene and UI`、save・音声・reportは`Game Services`、入力補助は`Input Support`から確認します。個別一覧は必要なmoduleが明確な場合や既存projectとの互換用です。
+最初に40件の個別一覧を読む必要はありません。新規Projectの基本フォルダー、C#生成既定値、条件付きコンパイル記号、Asset整理は`Project Maintenance`、Scene切り替えやUIは`Scene and UI`、save・音声・reportは`Game Services`、入力補助は`Input Support`から確認します。個別一覧は必要なmoduleが明確な場合や既存projectとの互換用です。
 
-Project Maintenanceの「プロジェクト一括設定」はv1.6.0へ固定されています。C# Root Namespace、新規scriptの改行方式、複製時のGameObject・Asset命名規則、条件付きコンパイル記号、Tag・Layer・Sorting Layerに加え、Player buildへ含めるSceneとEditorでPlayを押したときだけ使う開始Sceneを、独立した項目として同じprofileから適用・復元できます。Root Namespaceと改行方式は今後生成するC# fileへ、複製命名は今後の複製操作へ適用され、既存source・既存GameObject・既存Assetは変更しません。条件付きコンパイル記号は既存一覧を維持して不足分だけを追加します。
+Project Maintenanceの「プロジェクト一括設定」はv1.7.0へ固定されています。`Assets/Art`、`Audio`、`Prefabs`、`Scenes`、`Scripts`、`Settings`の基本フォルダーをまとめて作成でき、C# Root Namespace、新規scriptの改行方式、複製時のGameObject・Asset命名規則、条件付きコンパイル記号、Tag・Layer・Sorting Layer、Player Build Scenes、Play Mode開始Sceneも同じprofileから適用・復元できます。復元では、このツールが作成して空のまま残っているフォルダーだけを削除します。既存フォルダーやAssetを追加したフォルダーは維持します。
 
 ## 安全条件
 

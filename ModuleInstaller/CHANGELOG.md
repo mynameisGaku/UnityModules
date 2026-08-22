@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.3.6] - 2026-08-22
+
+- Updated Project Setup to v1.7.0 for profile-owned recommended project folders.
+- Clarified that restore removes only empty folders created by Project Setup and preserves existing or used folders.
+
 ## [1.3.5] - 2026-08-22
 
 - Updated Project Setup to v1.6.0 for profile-owned duplicate GameObject and Asset naming defaults.
