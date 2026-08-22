@@ -9,7 +9,25 @@ namespace AssetImportAudit.Editor
     /// <summary>Provides the ordered Preview, selection, and Apply workflow for texture import settings.</summary>
     public sealed class AssetImportAuditWindow : EditorWindow
     {
+        private static readonly string[] PlatformLabels = { "Standalone", "Android", "iOS" };
+        private static readonly string[] TextureSizeLabels = AssetImportAuditTextureSize.CreateLabels();
+        private static readonly int[] TextureSizeValues = AssetImportAuditTextureSize.CreateValues();
+        private static readonly AssetImportAuditTexturePlatform[] Platforms =
+        {
+            AssetImportAuditTexturePlatform.Standalone,
+            AssetImportAuditTexturePlatform.Android,
+            AssetImportAuditTexturePlatform.iOS
+        };
+
+        private enum AuditScope
+        {
+            SharedSettings = 0,
+            PlatformOverride = 1,
+            SharedAndPlatform = 2
+        }
+
         private string _rootFolder = "Assets";
+        private AuditScope _auditScope = AuditScope.SharedSettings;
         private int _maxTextureSize = 2048;
         private TextureImporterCompression _compression = TextureImporterCompression.Compressed;
         private bool _mipmapEnabled;
@@ -17,14 +35,20 @@ namespace AssetImportAudit.Editor
         private bool _readable;
         private FilterMode _filterMode = FilterMode.Bilinear;
         private int _anisoLevel = 1;
+        private AssetImportAuditTexturePlatform _platform = AssetImportAuditTexturePlatform.Standalone;
+        private bool _platformOverrideEnabled = true;
+        private int _platformMaxTextureSize = 2048;
+        private TextureImporterCompression _platformCompression = TextureImporterCompression.Compressed;
         private AssetImportAuditPlan _plan;
         private readonly HashSet<string> _selectedPaths = new HashSet<string>(StringComparer.Ordinal);
         private Vector2 _scrollPosition;
         private string _message;
+        private GUIStyle _assetPathStyle;
+        private GUIStyle _issueStyle;
 
         private void OnEnable()
         {
-            minSize = new Vector2(520f, 520f);
+            minSize = new Vector2(560f, 620f);
         }
 
         /// <summary>Opens the audit window.</summary>
@@ -36,61 +60,114 @@ namespace AssetImportAudit.Editor
 
         private void OnGUI()
         {
-            EditorGUILayout.HelpBox("Choose a folder, set expected values, Preview differences, then Apply selected or all assets.", MessageType.Info);
+            EnsureStyles();
+            EditorGUILayout.HelpBox("Work from top to bottom: choose assets, set expected values, Preview differences, then Apply selected or all assets.", MessageType.Info);
+
+            EditorGUILayout.LabelField("1. Target Folder", EditorStyles.boldLabel);
+            EditorGUI.BeginChangeCheck();
             _rootFolder = EditorGUILayout.TextField("Root Folder", _rootFolder);
+            if (EditorGUI.EndChangeCheck())
+                ClearPreview();
             if (GUILayout.Button("Use Selection", GUILayout.Width(110f)))
                 UseSelection();
 
-            EditorGUILayout.Space(4f);
-            _maxTextureSize = EditorGUILayout.IntField("Max Texture Size", _maxTextureSize);
-            _compression = (TextureImporterCompression)EditorGUILayout.EnumPopup("Compression", _compression);
-            _mipmapEnabled = EditorGUILayout.Toggle("Mipmaps", _mipmapEnabled);
-            _sRgbTexture = EditorGUILayout.Toggle("sRGB", _sRgbTexture);
-            _readable = EditorGUILayout.Toggle("Read/Write", _readable);
-            _filterMode = (FilterMode)EditorGUILayout.EnumPopup("Filter Mode", _filterMode);
-            _anisoLevel = EditorGUILayout.IntSlider("Aniso Level", _anisoLevel, 0, 16);
+            EditorGUILayout.Space(8f);
+            EditorGUILayout.LabelField("2. Expected Settings", EditorStyles.boldLabel);
+            EditorGUI.BeginChangeCheck();
+            _auditScope = (AuditScope)EditorGUILayout.EnumPopup("Settings Scope", _auditScope);
+            if (_auditScope == AuditScope.SharedSettings || _auditScope == AuditScope.SharedAndPlatform)
+                DrawSharedSettings();
+            if (_auditScope == AuditScope.PlatformOverride || _auditScope == AuditScope.SharedAndPlatform)
+                DrawPlatformSettings();
+            if (EditorGUI.EndChangeCheck())
+                ClearPreview();
 
-            EditorGUILayout.Space(6f);
+            EditorGUILayout.Space(8f);
+            EditorGUILayout.LabelField("3. Preview", EditorStyles.boldLabel);
             if (GUILayout.Button("Preview", GUILayout.Height(24f)))
                 Preview();
 
             if (!string.IsNullOrEmpty(_message))
                 EditorGUILayout.HelpBox(_message, MessageType.Warning);
-            if (_plan == null)
-                return;
 
-            EditorGUILayout.LabelField($"{_plan.Issues.Count} mismatches in {_plan.Entries.Count} assets", EditorStyles.boldLabel);
-            using (var scroll = new EditorGUILayout.ScrollViewScope(_scrollPosition))
+            EditorGUILayout.Space(8f);
+            EditorGUILayout.LabelField("4. Review Differences", EditorStyles.boldLabel);
+            if (_plan == null)
             {
-                _scrollPosition = scroll.scrollPosition;
-                foreach (var group in _plan.Issues.GroupBy(issue => issue.AssetPath, StringComparer.Ordinal).OrderBy(group => group.Key, StringComparer.Ordinal))
+                EditorGUILayout.HelpBox("Preview results appear here.", MessageType.None);
+            }
+            else
+            {
+                EditorGUILayout.LabelField($"{_plan.Issues.Count} mismatches in {_plan.Entries.Count} assets", EditorStyles.boldLabel);
+                using (var scroll = new EditorGUILayout.ScrollViewScope(_scrollPosition))
                 {
-                    var selected = _selectedPaths.Contains(group.Key);
-                    var next = EditorGUILayout.ToggleLeft(group.Key, selected);
-                    if (next)
-                        _selectedPaths.Add(group.Key);
-                    else
-                        _selectedPaths.Remove(group.Key);
-                    foreach (var issue in group)
-                        EditorGUILayout.LabelField($"    {issue.SettingName}: {issue.CurrentValue} -> {issue.ExpectedValue}", EditorStyles.miniLabel);
+                    _scrollPosition = scroll.scrollPosition;
+                    foreach (var group in _plan.Issues.GroupBy(issue => issue.AssetPath, StringComparer.Ordinal).OrderBy(group => group.Key, StringComparer.Ordinal))
+                    {
+                        var selected = _selectedPaths.Contains(group.Key);
+                        bool next;
+                        using (new EditorGUILayout.HorizontalScope())
+                        {
+                            next = EditorGUILayout.Toggle(selected, GUILayout.Width(18f));
+                            EditorGUILayout.LabelField(group.Key, _assetPathStyle);
+                        }
+                        if (next)
+                            _selectedPaths.Add(group.Key);
+                        else
+                            _selectedPaths.Remove(group.Key);
+                        foreach (var issue in group)
+                        {
+                            var prefix = issue.IsPlatformSetting ? $"[{issue.Platform}] " : string.Empty;
+                            EditorGUILayout.LabelField($"    {prefix}{issue.SettingName}: {issue.CurrentValue} -> {issue.ExpectedValue}", _issueStyle);
+                        }
+                        EditorGUILayout.Space(2f);
+                    }
                 }
             }
 
+            EditorGUILayout.Space(8f);
+            EditorGUILayout.LabelField("5. Apply", EditorStyles.boldLabel);
             using (new EditorGUILayout.HorizontalScope())
             {
-                using (new EditorGUI.DisabledScope(_plan.IsEmpty))
+                using (new EditorGUI.DisabledScope(_plan == null || _plan.IsEmpty))
                 {
                     if (GUILayout.Button("Apply Selected"))
                         ApplySelected();
                     if (GUILayout.Button("Apply All"))
                         ApplyAll();
                 }
-                if (GUILayout.Button("Clear"))
+                using (new EditorGUI.DisabledScope(_plan == null && string.IsNullOrEmpty(_message)))
                 {
-                    _plan = null;
-                    _selectedPaths.Clear();
-                    _message = null;
+                    if (GUILayout.Button("Clear"))
+                        ClearPreview();
                 }
+            }
+        }
+
+        private void DrawSharedSettings()
+        {
+            EditorGUILayout.LabelField("Shared Settings", EditorStyles.miniBoldLabel);
+            _maxTextureSize = EditorGUILayout.IntPopup("Max Texture Size", _maxTextureSize, TextureSizeLabels, TextureSizeValues);
+            _compression = (TextureImporterCompression)EditorGUILayout.EnumPopup("Compression", _compression);
+            _mipmapEnabled = EditorGUILayout.Toggle("Mipmaps", _mipmapEnabled);
+            _sRgbTexture = EditorGUILayout.Toggle("sRGB", _sRgbTexture);
+            _readable = EditorGUILayout.Toggle("Read/Write", _readable);
+            _filterMode = (FilterMode)EditorGUILayout.EnumPopup("Filter Mode", _filterMode);
+            _anisoLevel = EditorGUILayout.IntSlider("Aniso Level", _anisoLevel, 0, 16);
+        }
+
+        private void DrawPlatformSettings()
+        {
+            EditorGUILayout.Space(4f);
+            EditorGUILayout.LabelField("Platform Override", EditorStyles.miniBoldLabel);
+            var platformIndex = Array.IndexOf(Platforms, _platform);
+            platformIndex = EditorGUILayout.Popup("Target Platform", Mathf.Max(platformIndex, 0), PlatformLabels);
+            _platform = Platforms[platformIndex];
+            _platformOverrideEnabled = EditorGUILayout.Toggle("Override", _platformOverrideEnabled);
+            using (new EditorGUI.DisabledScope(!_platformOverrideEnabled))
+            {
+                _platformMaxTextureSize = EditorGUILayout.IntPopup("Platform Max Size", _platformMaxTextureSize, TextureSizeLabels, TextureSizeValues);
+                _platformCompression = (TextureImporterCompression)EditorGUILayout.EnumPopup("Platform Compression", _platformCompression);
             }
         }
 
@@ -98,15 +175,30 @@ namespace AssetImportAudit.Editor
         {
             var selectedPath = Selection.activeObject == null ? string.Empty : AssetDatabase.GetAssetPath(Selection.activeObject);
             if (AssetDatabase.IsValidFolder(selectedPath))
+            {
                 _rootFolder = selectedPath;
+                ClearPreview();
+            }
         }
 
         private void Preview()
         {
             try
             {
-                var settings = new AssetImportAuditTextureSettings(_maxTextureSize, _compression, _mipmapEnabled, _sRgbTexture, _readable, _filterMode, _anisoLevel);
-                _plan = AssetImportAuditService.Preview(_rootFolder, settings);
+                switch (_auditScope)
+                {
+                    case AuditScope.SharedSettings:
+                        _plan = AssetImportAuditService.Preview(_rootFolder, AssetImportAuditTextureAuditSettings.ForShared(CreateSharedSettings()));
+                        break;
+                    case AuditScope.PlatformOverride:
+                        _plan = AssetImportAuditService.Preview(_rootFolder, AssetImportAuditTextureAuditSettings.ForPlatform(_platform, CreatePlatformSettings()));
+                        break;
+                    case AuditScope.SharedAndPlatform:
+                        _plan = AssetImportAuditService.Preview(_rootFolder, AssetImportAuditTextureAuditSettings.ForSharedAndPlatform(CreateSharedSettings(), _platform, CreatePlatformSettings()));
+                        break;
+                    default:
+                        throw new InvalidOperationException("Unsupported audit scope.");
+                }
                 _selectedPaths.Clear();
                 foreach (var issue in _plan.Issues)
                     _selectedPaths.Add(issue.AssetPath);
@@ -117,6 +209,16 @@ namespace AssetImportAudit.Editor
                 _plan = null;
                 _message = exception.Message;
             }
+        }
+
+        private AssetImportAuditTextureSettings CreateSharedSettings()
+        {
+            return new AssetImportAuditTextureSettings(_maxTextureSize, _compression, _mipmapEnabled, _sRgbTexture, _readable, _filterMode, _anisoLevel);
+        }
+
+        private AssetImportAuditTexturePlatformSettings CreatePlatformSettings()
+        {
+            return new AssetImportAuditTexturePlatformSettings(_platformOverrideEnabled, _platformMaxTextureSize, _platformCompression);
         }
 
         private void ApplySelected()
@@ -131,9 +233,28 @@ namespace AssetImportAudit.Editor
 
         private void Apply(AssetImportAuditApplyResult result)
         {
-            _message = result.Succeeded ? $"Applied {result.AppliedAssetCount} assets." : $"Apply failed: {result.Error}. Preview again before retrying.";
+            _message = result.Succeeded
+                ? $"Applied {result.AppliedAssetCount} assets."
+                : result.AppliedAssetCount > 0
+                    ? $"Apply failed after {result.AppliedAssetCount} assets: {result.Error}. Preview again before retrying."
+                    : $"Apply failed: {result.Error}. Preview again before retrying.";
             if (result.Succeeded)
                 Preview();
+        }
+
+        private void ClearPreview()
+        {
+            _plan = null;
+            _selectedPaths.Clear();
+            _message = null;
+        }
+
+        private void EnsureStyles()
+        {
+            if (_assetPathStyle == null)
+                _assetPathStyle = new GUIStyle(EditorStyles.label) { wordWrap = true };
+            if (_issueStyle == null)
+                _issueStyle = new GUIStyle(EditorStyles.miniLabel) { wordWrap = true };
         }
     }
 }
