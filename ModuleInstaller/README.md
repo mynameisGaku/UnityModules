@@ -79,7 +79,7 @@ Runtime APIはありません。C#を書く必要はなく、Editor windowの操
 | Deterministic Simulation | 固定step、再現乱数、state照合、replay、canonical data、固定小数点、handle |
 | Game Rules and Math | resource、能力値、条件、選択、配分、stack、定期処理、damage、threat |
 
-Project Maintenanceに含まれる「プロジェクト一括設定」はv1.7.0へ固定しています。新規Projectでよく使う`Assets/Art`、`Audio`、`Prefabs`、`Scenes`、`Scripts`、`Settings`をまとめて作成し、C# Root Namespace、新規scriptの改行方式、複製時のGameObject・Asset命名規則、条件付きコンパイル記号、Player Build Scenes、EditorのPlay Mode開始Sceneも同じprofileから適用・復元できます。復元で削除するのは、このツールが作成し、まだ空のフォルダーだけです。既存フォルダーや、適用後にAssetを追加したフォルダーは残します。Root Namespaceと改行方式は今後生成するC# fileへ、複製命名は今後の複製操作へだけ適用され、既存source・既存GameObject・既存Assetは書き換えません。
+Project Maintenanceに含まれる「プロジェクト一括設定」はv1.8.0へ固定しています。新規Projectでよく使う`Assets/Art`、`Audio`、`Prefabs`、`Scenes`、`Scripts`、`Settings`に加えて、`Game.asmdef`と`Game.Editor.asmdef`をまとめて作成できます。既存asmdefは上書きせず、復元時もこのツールが作成して内容が変わっていないasmdefだけを削除します。利用者が編集したasmdefや、Assetを追加したフォルダーは残します。Project Settings、C# Root Namespace、新規scriptの改行方式、複製時のGameObject・Asset命名規則、条件付きコンパイル記号、Player Build Scenes、EditorのPlay Mode開始Sceneも同じprofileから適用・復元できます。
 
 ## よくある問題
 

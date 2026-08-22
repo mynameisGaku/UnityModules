@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.3.7] - 2026-08-22
+
+- Updated Project Setup to v1.8.0 for safe Runtime and Editor assembly definition setup.
+- Clarified that Project Setup never overwrites existing assembly definitions and restores only unchanged files it created.
+
 ## [1.3.6] - 2026-08-22
 
 - Updated Project Setup to v1.7.0 for profile-owned recommended project folders.
