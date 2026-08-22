@@ -1,13 +1,13 @@
 {
   "name": "com.studiogaku.asset-import-audit",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "displayName": "Asset Import Audit",
-  "description": "Previews and safely applies bounded Texture Import Settings changes under Assets.",
+  "description": "Previews and safely applies shared and platform-specific Texture Import Settings under Assets.",
   "unity": "6000.5",
   "unityRelease": "7f1",
-  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/blob/asset-import-audit-v1.0.0/AssetImportAudit/Documentation~/index.md",
-  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/asset-import-audit-v1.0.0/AssetImportAudit/CHANGELOG.md",
-  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/asset-import-audit-v1.0.0/AssetImportAudit/LICENSE.md",
+  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/blob/asset-import-audit-v1.1.0/AssetImportAudit/Documentation~/index.md",
+  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/asset-import-audit-v1.1.0/AssetImportAudit/CHANGELOG.md",
+  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/asset-import-audit-v1.1.0/AssetImportAudit/LICENSE.md",
   "license": "Refer to LICENSE.md file",
   "keywords": ["asset-import", "texture", "editor", "undo", "preview"],
   "author": {
