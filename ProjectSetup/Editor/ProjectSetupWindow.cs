@@ -32,6 +32,8 @@ namespace ProjectSetup.Editor
         internal const string RootNamespaceCardName = "root-namespace";
         internal const string NewScriptLineEndingsCardName = "new-script-line-endings";
         internal const string NamingDefaultsCardName = "duplicate-naming";
+        internal const string ProjectFoldersCardName = "project-folders";
+        internal const string ProjectFoldersFieldName = "project-folders-field";
         internal const string ActionBarName = "action-bar";
         private const string MenuPath = "Tools/Project Setup/Open";
 
@@ -221,6 +223,7 @@ namespace ProjectSetup.Editor
                 value => _profile.ConfigureNewScriptLineEndings = value,
                 value => _profile.NewScriptLineEndings = (LineEndingsMode)value));
             content.Add(CreateNamingDefaultsCard());
+            content.Add(CreateProjectFoldersCard());
             content.Add(CreateBuildScenesCard());
             content.Add(CreateNameListCard(
                 "tags",
@@ -278,6 +281,27 @@ namespace ProjectSetup.Editor
             card.Add(scheme);
             card.Add(digits);
             card.Add(assetSpacing);
+            return card;
+        }
+
+        private VisualElement CreateProjectFoldersCard()
+        {
+            var card = CreateCard(
+                ProjectFoldersCardName,
+                "Project Folders",
+                "Create missing folders under Assets. Restore removes only folders created by this tool that are still empty.");
+            var enabled = new Toggle("Create missing folders") { value = _profile.ConfigureProjectFolders };
+            var field = new TextField("Folder paths")
+            {
+                name = ProjectFoldersFieldName,
+                multiline = true,
+                value = string.Join("\n", _profile.ProjectFolders)
+            };
+            field.style.minHeight = 84f;
+            enabled.RegisterValueChangedCallback(change => ChangeProfile(() => _profile.ConfigureProjectFolders = change.newValue));
+            field.RegisterValueChangedCallback(change => ChangeProfile(() => _profile.ProjectFolders = ParseNameList(change.newValue)));
+            card.Add(enabled);
+            card.Add(field);
             return card;
         }
 
