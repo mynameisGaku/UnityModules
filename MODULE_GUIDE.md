@@ -24,7 +24,7 @@ READMEとモジュール一覧では、日本語で目的を先に示す。Packa
 | 利用者向け表示名 | 技術名 | 名前から分かること |
 |---|---|---|
 | モジュール導入アシスタント | Module Installer | 用途別セットから必要なモジュールをまとめて導入する。 |
-| プロジェクト初期設定 | Project Setup | 新規Projectで繰り返す設定をprofileからまとめて適用する。 |
+| プロジェクト初期設定 | Project Setup | 新規Projectで繰り返す設定とTag・Layer・Sorting Layerをprofileからまとめて適用する。 |
 | シーン切り替え | SceneFlow | Scene の読込・追加・切替・解放を扱う。 |
 | 画面フェード | ScreenTransition | 画面を覆う・戻す演出を扱う。 |
 | ゲーム時間制御 | TimeControl | 一時停止・スロー・倍速を扱う。 |
@@ -81,4 +81,4 @@ READMEとモジュール一覧では、日本語で目的を先に示す。Packa
 - 毎回同じ MonoBehaviour や Editor script を書く作業。
 - 実機や Player build まで進まないと発見しにくい問題。
 
-Project Settingsの反復作業は「プロジェクト初期設定」へまとめる。Build Guardの検査・修復やModule Installerのpackage導入とは責務を分け、設定の差分Preview・backup・適用・復元を一つの作業単位として提供する。
+Project SettingsとTag・Layer・Sorting Layerの反復作業は「プロジェクト初期設定」へまとめる。Build Guardの検査・修復やModule Installerのpackage導入とは責務を分け、設定の差分Preview・backup・適用・復元を一つの作業単位として提供する。
