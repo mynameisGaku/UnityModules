@@ -47,6 +47,8 @@ namespace ProjectSetup.Tests
                 Assert.That(root.Q<TextField>(ProjectSetupWindow.AssemblyNameFieldName), Is.Not.Null);
                 Assert.That(root.Q<TextField>(ProjectSetupWindow.RuntimeAssemblyFolderFieldName), Is.Not.Null);
                 Assert.That(root.Q<TextField>(ProjectSetupWindow.EditorAssemblyFolderFieldName), Is.Not.Null);
+                Assert.That(root.Q<Toggle>(ProjectSetupWindow.IncludeTestAssembliesToggleName), Is.Not.Null);
+                Assert.That(root.Q<TextField>(ProjectSetupWindow.TestAssemblyRootFolderFieldName), Is.Not.Null);
                 Assert.That(root.Q<VisualElement>("color-space"), Is.Not.Null);
                 Assert.That(root.Q<VisualElement>("run-in-background"), Is.Not.Null);
                 Assert.That(root.Q<VisualElement>(ProjectSetupWindow.BuildScenesCardName), Is.Not.Null);
