@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.4.1] - 2026-08-22
+
+- Updated Project Setup to v1.11.0 for build-target application identifier preview, backup, apply, and restore.
+- Added application identifier guidance to the Project Maintenance workflow.
+
 ## [1.4.0] - 2026-08-22
 
 - Grouped the default window around four practical workflows and moved deterministic and game-rule libraries into a collapsed specialized section.

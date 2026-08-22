@@ -34,7 +34,7 @@ Unity Package ManagerへGit URLを1件ずつ貼り、導入済みmoduleの公開
 2. `Add package from git URL...`へ次を入力します。
 
    ```text
-   https://github.com/mynameisGaku/UnityModules.git?path=/ModuleInstaller#module-installer-v1.4.0
+   https://github.com/mynameisGaku/UnityModules.git?path=/ModuleInstaller#module-installer-v1.4.1
    ```
 
 3. `Tools > Module Manager > Open`を開きます。
@@ -56,7 +56,7 @@ Runtime APIはありません。C#を書く必要はなく、Editor windowの操
 
 | やりたいこと | 最初に見るworkflow | 導入後の最初の操作 |
 |---|---|---|
-| 新しいProjectの基本フォルダー、C#生成規則、Build Scenes、壊れた参照、Asset整理をまとめて扱う | `Project Maintenance` | `Tools > Project Setup > Open`でpreviewする |
+| 新しいProjectの基本フォルダー、Player識別子、C#生成規則、Build Scenes、壊れた参照、Asset整理をまとめて扱う | `Project Maintenance` | `Tools > Project Setup > Open`でpreviewする |
 | Scene切り替え、画面fade、safe area、pause、起動順を整える | `Scene and UI` | Package Managerから必要なBasics sampleを1つimportする |
 | save、音声、不具合reportを用意する | `Game Services` | 最初に使うserviceのsampleをimportし、明示的なownerを1つ作る |
 | 入力の補助やGameplay入力の一時停止を追加する | `Input Support` | Input Assist Basicsで入力値を確認してから必要なmapだけ設定する |
@@ -77,7 +77,7 @@ Runtime APIはありません。C#を書く必要はなく、Editor windowの操
 
 | 普段使うworkflow | 含まれる用途 |
 |---|---|
-| Project Maintenance | 基本フォルダー、asmdef、`.gitignore`、`.gitattributes`、Project Settings、C# Root Namespace、新規script改行方式、複製時の命名規則、条件付きコンパイル記号、Tag・Layer、Build Scenes、Play Mode開始Scene、Inspector整理、debug描画、Scene・Prefab不備修復、Asset参照・名前整理 |
+| Project Maintenance | 基本フォルダー、asmdef、`.gitignore`、`.gitattributes`、Project Settings、build target別Application Identifier、C# Root Namespace、新規script改行方式、複製時の命名規則、条件付きコンパイル記号、Tag・Layer、Build Scenes、Play Mode開始Scene、Inspector整理、debug描画、Scene・Prefab不備修復、Asset参照・名前整理 |
 | Scene and UI | Scene切り替え、画面fade、safe area、ゲーム時間、起動手順 |
 | Game Services | save data、音声再生、不具合report |
 | Input Support | stick・button補助、Gameplay入力の一時停止 |
