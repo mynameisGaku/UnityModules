@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.8.0] - 2026-08-22
+
+- Added one Script Assemblies workflow that creates a Runtime Assembly Definition and a matching Editor Assembly Definition with the correct reference.
+- Added strict assembly-name and folder validation while preserving every pre-existing Assembly Definition.
+- Added backup schema v9 ownership records so Restore removes only tool-created Assembly Definitions whose contents are unchanged.
+- Added deterministic planner, serializer, service, and UI regression coverage plus an isolated real AssetDatabase round trip.
+
 ## [1.7.0] - 2026-08-22
 
 - Added profile-owned Project Folders with missing-parent preview and exact path validation.
