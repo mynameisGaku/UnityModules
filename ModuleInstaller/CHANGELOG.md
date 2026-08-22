@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.4.0] - 2026-08-22
+
+- Grouped the default window around four practical workflows and moved deterministic and game-rule libraries into a collapsed specialized section.
+- Added a quick guide to every workflow with use cases, the first action after installation, and the possible change scope.
+- Added pinned README links to every individual module row.
+
 ## [1.3.9] - 2026-08-22
 
 - Updated Project Setup to v1.10.0 for Unity-ready .gitignore and .gitattributes setup.

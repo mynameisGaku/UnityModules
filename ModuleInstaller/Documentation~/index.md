@@ -1,21 +1,21 @@
-# Module Manager 1.3.9
+# Module Manager 1.4.0
 
 ## 目的
 
-公開済みUnityModulesを、固定tagのGit URLとして個別または用途別bundleで追加し、導入済みの古いversionをまとめて更新するEditor toolです。利用者がpackage名、URL、最新公開versionを暗記する必要をなくします。
+公開済みUnityModulesを4つの実用workflowへまとめ、固定tagのGit URLとして追加し、導入済みの古いversionをまとめて更新するEditor toolです。利用者が似たmodule名、URL、最新公開versionを暗記する必要をなくします。
 
 ## 操作
 
 1. `Tools > Module Manager > Open`を開きます。
-2. bundle cardに表示されるmodule名を確認します。
-3. module名と追加件数を確認し、`Install N`と表示されたbuttonを押します。
-4. Package Managerの解決とdomain reloadを待ちます。
+2. workflow cardの`Quick guide`を開き、用途、最初の操作、変更範囲を確認します。
+3. cardに表示されるmodule名と追加件数を確認します。
+4. `Install N`と表示されたbuttonを押し、Package Managerの解決とdomain reloadを待ちます。
 
-個別導入は`Advanced: install one module`から実行します。
+個別導入は`Advanced: read about or install one module`から実行します。`Read guide`はcatalogに固定した公開tagのREADMEを開きます。
 
 導入済みmoduleに更新がある場合は、上部に`Module Name -> target version`が表示されます。対象を確認して`Update N`を押すと、古いversionだけを1回のPackage Manager要求で更新します。
 
-最初に40件の個別一覧を読む必要はありません。新規Projectの基本フォルダー、C#生成既定値、条件付きコンパイル記号、Asset整理は`Project Maintenance`、Scene切り替えやUIは`Scene and UI`、save・音声・reportは`Game Services`、入力補助は`Input Support`から確認します。個別一覧は必要なmoduleが明確な場合や既存projectとの互換用です。
+最初に40件の個別一覧を読む必要はありません。新規Projectの基本フォルダー、C#生成既定値、条件付きコンパイル記号、Asset整理は`Project Maintenance`、Scene切り替えやUIは`Scene and UI`、save・音声・reportは`Game Services`、入力補助は`Input Support`から確認します。決定論と細かなゲーム計算は`Specialized collections`へ分離しています。個別一覧は必要なmoduleが明確な場合や既存projectとの互換用です。
 
 Project Maintenanceの「プロジェクト一括設定」はv1.10.0へ固定されています。基本フォルダー、Runtime・Editor・test用asmdef、Unity向け`.gitignore`と`.gitattributes`をまとめて作成できます。既存fileは上書きせず、復元ではこのツールが作成して内容が変わっていないfileだけを削除します。利用者が編集したfile、既存フォルダー、Assetを追加したフォルダーは維持します。C# Root Namespace、新規scriptの改行方式、複製時のGameObject・Asset命名規則、条件付きコンパイル記号、Tag・Layer・Sorting Layer、Player Build Scenes、Play Mode開始Sceneも同じprofileから適用・復元できます。
 
@@ -28,7 +28,9 @@ Project Maintenanceの「プロジェクト一括設定」はv1.10.0へ固定さ
 - `Assets/Modules/<Folder>`が存在するmoduleは、assembly重複を避けるため導入を停止します。
 - 1回の操作は1つの`Client.AddAndRemove`要求として実行し、package削除は要求しません。
 - 失敗時はqueueを終了し、同じ要求を無限に再試行しません。
-- bundleと個別packageのbuttonは未導入件数、導入済み、Assets copy競合を表示します。
+- workflowと個別packageのbuttonは未導入件数、導入済み、Assets copy競合を表示します。
+- workflow guideはPackage導入自体と、導入後のtool操作が変更する範囲を分けて表示します。
+- 個別README URLはcatalogと同じ公開tagへ固定します。
 
 ## 状態復元
 
@@ -52,4 +54,4 @@ Unity Editor自体を終了すると`SessionState`は保証されません。再
 - 複数URLを1要求へまとめること
 - 古いversionだけを更新し、新しいversionや独自versionを変更しないこと
 - 成功・失敗・domain reload相当のqueue復元
-- Editor windowの更新一覧、6 bundle card、40個の個別導入行
+- Editor windowの更新一覧、4 workflow card、折りたたみ済みの2専門collection、40個の個別導入行とREADME導線

@@ -4,12 +4,16 @@
 
 Unity Package ManagerへGit URLを1件ずつ貼り、導入済みmoduleの公開versionを手作業で調べて差し替える作業を減らすEditor専用ツールです。
 
-`Tools > Module Manager > Open`を開き、「プロジェクト整理」「Scene・UI」「ゲーム判定・計算」などの目的別セットを1回選ぶと、対応する公開tagをまとめて導入できます。導入済みmoduleに古いversionがあれば、一覧で確認して1回の操作で更新できます。
+`Tools > Module Manager > Open`を開くと、普段使う機能を「Project Maintenance」「Scene and UI」「Game Services」「Input Support」の4つにまとめて表示します。各cardの`Quick guide`で、向いている状況、導入後の最初の操作、変更される範囲を確認してから公開tagをまとめて導入できます。
+
+決定論的simulationと細かなゲーム計算は、通常の4用途と混同しないよう`Specialized collections`へ折りたたんでいます。個別moduleは互換用の詳細一覧に残し、固定公開版のREADMEを`Read guide`から開けます。
 
 ## できること
 
-- 用途別の6セットから、必要なmodule群をまとめて導入する。
-- 40個の公開moduleを詳細一覧から1件ずつ導入する。
+- 普段使う4つのworkflowから、必要なmodule群をまとめて導入する。
+- 2つの専門向けcollectionは折りたたみ表示に分離する。
+- 各workflowの用途、最初の操作、変更範囲をwindow内で確認する。
+- 40個の公開moduleを詳細一覧から1件ずつ導入し、固定tagのREADMEを開く。
 - 既に導入済みのpackageを自動で除外する。
 - 導入済みのcatalog moduleを調べ、古いversionだけを固定済み公開tagへまとめて更新する。
 - 最新version、catalogより新しいversion、独自versionは自動で上書きしない。
@@ -30,31 +34,32 @@ Unity Package ManagerへGit URLを1件ずつ貼り、導入済みmoduleの公開
 2. `Add package from git URL...`へ次を入力します。
 
    ```text
-   https://github.com/mynameisGaku/UnityModules.git?path=/ModuleInstaller#module-installer-v1.3.9
+   https://github.com/mynameisGaku/UnityModules.git?path=/ModuleInstaller#module-installer-v1.4.0
    ```
 
 3. `Tools > Module Manager > Open`を開きます。
 4. 最初は`Project Maintenance`を確認します。
-5. cardに並ぶmodule名と追加件数を確認し、`Install 5`のように表示されたbuttonを押します。
-6. Package Managerの解決とscript reloadが終わるまで待ちます。
-7. 導入済みmoduleの更新がある場合は、上部の`Update N`に対象名とversionが表示されます。内容を確認してbuttonを押します。
+5. `Quick guide`を開き、`Use when`、`Start here`、`Change scope`を確認します。
+6. cardに並ぶmodule名と追加件数を確認し、`Install 5`のように表示されたbuttonを押します。
+7. Package Managerの解決とscript reloadが終わるまで待ちます。
+8. 導入済みmoduleの更新がある場合は、上部の`Update N`に対象名とversionが表示されます。内容を確認してbuttonを押します。
 
 ## 最小コード
 
 Runtime APIはありません。C#を書く必要はなく、Editor windowの操作だけで完結します。
 
-1件だけ導入したい場合は、window下部の`Advanced: install one module`を開き、対象行の`Install`を押します。
+1件だけ導入したい場合は、window下部の`Advanced: read about or install one module`を開きます。先に`Read guide`で固定公開版のREADMEを確認し、必要な場合だけ`Install`を押します。
 
 ## まずどれを選ぶか
 
-普段は40件の個別一覧を先に読む必要はありません。やりたい作業に最も近いセットを1つ選び、cardに表示されたmodule名と件数を確認してください。
+普段は40件の個別一覧を先に読む必要はありません。やりたい作業に最も近いworkflowを1つ選び、`Quick guide`とcardに表示されたmodule名を確認してください。
 
-| やりたいこと | 最初に見るセット |
-|---|---|
-| 新しいProjectの基本フォルダー、C# namespace・改行方式、条件付きコンパイル記号、Build Scenes、Play Mode開始Scene、壊れた参照、Asset整理をまとめて扱う | `Project Maintenance` |
-| Scene切り替え、画面fade、safe area、pause、起動順を整える | `Scene and UI` |
-| save、音声、不具合reportを用意する | `Game Services` |
-| 入力の補助やGameplay入力の一時停止を追加する | `Input Support` |
+| やりたいこと | 最初に見るworkflow | 導入後の最初の操作 |
+|---|---|---|
+| 新しいProjectの基本フォルダー、C#生成規則、Build Scenes、壊れた参照、Asset整理をまとめて扱う | `Project Maintenance` | `Tools > Project Setup > Open`でpreviewする |
+| Scene切り替え、画面fade、safe area、pause、起動順を整える | `Scene and UI` | Package Managerから必要なBasics sampleを1つimportする |
+| save、音声、不具合reportを用意する | `Game Services` | 最初に使うserviceのsampleをimportし、明示的なownerを1つ作る |
+| 入力の補助やGameplay入力の一時停止を追加する | `Input Support` | Input Assist Basicsで入力値を確認してから必要なmapだけ設定する |
 
 `Deterministic Simulation`と`Game Rules and Math`は、決定論的simulationや細かな計算部品が本当に必要な場合にだけ選びます。`Advanced: install one module`は既存projectとの互換や、必要なmoduleが明確な場合の入口です。
 
@@ -68,14 +73,19 @@ Runtime APIはありません。C#を書く必要はなく、Editor windowの操
 - `Assets/Modules`に同名folderがある場合はmanifestを変更せず、解消方法をwindowへ表示します。
 - Package Managerが失敗した場合は、最初の失敗内容を表示して処理を終了します。無限再試行はしません。
 
-## 用途別セット
+## 用途別workflow
 
-| セット | 含まれる用途 |
+| 普段使うworkflow | 含まれる用途 |
 |---|---|
 | Project Maintenance | 基本フォルダー、asmdef、`.gitignore`、`.gitattributes`、Project Settings、C# Root Namespace、新規script改行方式、複製時の命名規則、条件付きコンパイル記号、Tag・Layer、Build Scenes、Play Mode開始Scene、Inspector整理、debug描画、Scene・Prefab不備修復、Asset参照・名前整理 |
 | Scene and UI | Scene切り替え、画面fade、safe area、ゲーム時間、起動手順 |
 | Game Services | save data、音声再生、不具合report |
 | Input Support | stick・button補助、Gameplay入力の一時停止 |
+
+次の2つは`Specialized collections`内にあります。要件が明確な場合だけ開いてください。
+
+| 専門向けcollection | 含まれる用途 |
+|---|---|
 | Deterministic Simulation | 固定step、再現乱数、state照合、replay、canonical data、固定小数点、handle |
 | Game Rules and Math | resource、能力値、条件、選択、配分、stack、定期処理、damage、threat |
 
@@ -93,7 +103,7 @@ Package Managerの解決でdomain reloadが起きる場合があります。`Too
 
 ### 一部だけ導入したい
 
-`Advanced: install one module`から個別に選んでください。既存の細分化packageは互換入口として残っていますが、新規導入では目的別セットを推奨します。
+`Advanced: read about or install one module`から個別に選んでください。`Read guide`はcatalogと同じ公開tagのREADMEを開きます。既存の細分化packageは互換入口として残っていますが、新規導入では4つのworkflowを推奨します。
 
 ### packageを削除したい
 
