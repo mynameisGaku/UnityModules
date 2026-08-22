@@ -74,7 +74,7 @@ namespace ProjectSetup.Editor
             {
                 var json = File.ReadAllText(_path, new UTF8Encoding(false, true));
                 var data = JsonUtility.FromJson<ProjectSetupSnapshotData>(json);
-                if (data == null || (data.schemaVersion != 1 && data.schemaVersion != 2 && data.schemaVersion != 3 && data.schemaVersion != 4 && data.schemaVersion != 5 && data.schemaVersion != 6))
+                if (data == null || (data.schemaVersion != 1 && data.schemaVersion != 2 && data.schemaVersion != 3 && data.schemaVersion != 4 && data.schemaVersion != 5 && data.schemaVersion != 6 && data.schemaVersion != 7))
                 {
                     error = "The Project Setup backup schema is unsupported.";
                     return false;
@@ -93,7 +93,7 @@ namespace ProjectSetup.Editor
         [Serializable]
         private sealed class ProjectSetupSnapshotData
         {
-            public int schemaVersion = 6;
+            public int schemaVersion = 7;
             public int assetSerialization;
             public string versionControlMode;
             public bool enterPlayModeOptionsEnabled;
@@ -122,6 +122,10 @@ namespace ProjectSetup.Editor
             public bool hasCodeGenerationData;
             public string rootNamespace;
             public int newScriptLineEndings;
+            public bool hasNamingData;
+            public int gameObjectNamingScheme;
+            public int gameObjectNamingDigits;
+            public bool assetNamingUsesSpace;
 
             internal static ProjectSetupSnapshotData FromSnapshot(ProjectSetupSnapshot snapshot)
             {
@@ -168,7 +172,11 @@ namespace ProjectSetup.Editor
                     scriptingDefineSymbols = snapshot.ScriptingDefineSymbols,
                     hasCodeGenerationData = snapshot.HasCodeGenerationData,
                     rootNamespace = snapshot.RootNamespace,
-                    newScriptLineEndings = (int)snapshot.NewScriptLineEndings
+                    newScriptLineEndings = (int)snapshot.NewScriptLineEndings,
+                    hasNamingData = snapshot.HasNamingData,
+                    gameObjectNamingScheme = (int)snapshot.GameObjectNamingScheme,
+                    gameObjectNamingDigits = snapshot.GameObjectNamingDigits,
+                    assetNamingUsesSpace = snapshot.AssetNamingUsesSpace
                 };
             }
 
@@ -211,7 +219,11 @@ namespace ProjectSetup.Editor
                     schemaVersion >= 5 ? scriptingDefineSymbols : Array.Empty<string>(),
                     schemaVersion >= 6 && hasCodeGenerationData,
                     schemaVersion >= 6 ? rootNamespace : string.Empty,
-                    schemaVersion >= 6 ? (LineEndingsMode)newScriptLineEndings : LineEndingsMode.OSNative);
+                    schemaVersion >= 6 ? (LineEndingsMode)newScriptLineEndings : LineEndingsMode.OSNative,
+                    schemaVersion >= 7 && hasNamingData,
+                    schemaVersion >= 7 ? (EditorSettings.NamingScheme)gameObjectNamingScheme : EditorSettings.NamingScheme.SpaceParenthesis,
+                    schemaVersion >= 7 ? gameObjectNamingDigits : 1,
+                    schemaVersion >= 7 && assetNamingUsesSpace);
             }
         }
 

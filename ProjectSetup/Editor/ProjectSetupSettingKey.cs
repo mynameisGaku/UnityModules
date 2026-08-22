@@ -19,6 +19,9 @@ namespace ProjectSetup.Editor
         PlayModeStartScene = 12,
         ScriptingDefineSymbols = 13,
         RootNamespace = 14,
-        NewScriptLineEndings = 15
+        NewScriptLineEndings = 15,
+        GameObjectNamingScheme = 16,
+        GameObjectNamingDigits = 17,
+        AssetNamingUsesSpace = 18
     }
 }

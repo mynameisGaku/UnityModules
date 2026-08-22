@@ -400,6 +400,62 @@ namespace ProjectSetup.Tests
             Assert.That(plan.Errors, Has.Some.Contains("Root Namespace"));
         }
 
+        [Test]
+        public void Build_PlansDuplicateNamingSettingsTogether()
+        {
+            _profile.ConfigureAssetSerialization = false;
+            _profile.ConfigureVersionControl = false;
+            _profile.ConfigureNamingDefaults = true;
+            _profile.GameObjectNamingScheme = EditorSettings.NamingScheme.Underscore;
+            _profile.GameObjectNamingDigits = 3;
+            _profile.AssetNamingUsesSpace = false;
+            var current = new ProjectSetupSnapshot(
+                SerializationMode.ForceText,
+                "Visible Meta Files",
+                false,
+                EnterPlayModeOptions.None,
+                ColorSpace.Gamma,
+                false,
+                "DefaultCompany",
+                "New Unity Project",
+                "1.0.0",
+                hasNamingData: true,
+                gameObjectNamingScheme: EditorSettings.NamingScheme.SpaceParenthesis,
+                gameObjectNamingDigits: 1,
+                assetNamingUsesSpace: true);
+
+            var plan = ProjectSetupPlanner.Build(_profile, current);
+
+            Assert.That(plan.IsValid, Is.True);
+            Assert.That(plan.Changes, Has.Some.Property("Key").EqualTo(ProjectSetupSettingKey.GameObjectNamingScheme));
+            Assert.That(plan.Changes, Has.Some.Property("Key").EqualTo(ProjectSetupSettingKey.GameObjectNamingDigits));
+            Assert.That(plan.Changes, Has.Some.Property("Key").EqualTo(ProjectSetupSettingKey.AssetNamingUsesSpace));
+        }
+
+        [TestCase(0)]
+        [TestCase(10)]
+        public void Build_RejectsUnsupportedGameObjectNamingDigits(int digits)
+        {
+            _profile.ConfigureNamingDefaults = true;
+            _profile.GameObjectNamingDigits = digits;
+            var current = new ProjectSetupSnapshot(
+                SerializationMode.ForceText,
+                "Visible Meta Files",
+                false,
+                EnterPlayModeOptions.None,
+                ColorSpace.Gamma,
+                false,
+                "DefaultCompany",
+                "New Unity Project",
+                "1.0.0",
+                hasNamingData: true);
+
+            var plan = ProjectSetupPlanner.Build(_profile, current);
+
+            Assert.That(plan.IsValid, Is.False);
+            Assert.That(plan.Errors, Has.Some.Contains("Naming Digits"));
+        }
+
         private static ProjectSetupSnapshot Snapshot(
             SerializationMode serializationMode = SerializationMode.ForceText,
             string versionControl = "Visible Meta Files",

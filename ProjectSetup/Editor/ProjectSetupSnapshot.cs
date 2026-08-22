@@ -39,7 +39,11 @@ namespace ProjectSetup.Editor
             string[] scriptingDefineSymbols = null,
             bool hasCodeGenerationData = false,
             string rootNamespace = null,
-            LineEndingsMode newScriptLineEndings = LineEndingsMode.OSNative)
+            LineEndingsMode newScriptLineEndings = LineEndingsMode.OSNative,
+            bool hasNamingData = false,
+            EditorSettings.NamingScheme gameObjectNamingScheme = EditorSettings.NamingScheme.SpaceParenthesis,
+            int gameObjectNamingDigits = 1,
+            bool assetNamingUsesSpace = true)
         {
             AssetSerialization = assetSerialization;
             VersionControlMode = versionControlMode ?? string.Empty;
@@ -70,6 +74,10 @@ namespace ProjectSetup.Editor
             HasCodeGenerationData = hasCodeGenerationData;
             RootNamespace = rootNamespace ?? string.Empty;
             NewScriptLineEndings = newScriptLineEndings;
+            HasNamingData = hasNamingData;
+            GameObjectNamingScheme = gameObjectNamingScheme;
+            GameObjectNamingDigits = gameObjectNamingDigits;
+            AssetNamingUsesSpace = assetNamingUsesSpace;
         }
 
         internal SerializationMode AssetSerialization { get; }
@@ -101,6 +109,10 @@ namespace ProjectSetup.Editor
         internal bool HasCodeGenerationData { get; }
         internal string RootNamespace { get; }
         internal LineEndingsMode NewScriptLineEndings { get; }
+        internal bool HasNamingData { get; }
+        internal EditorSettings.NamingScheme GameObjectNamingScheme { get; }
+        internal int GameObjectNamingDigits { get; }
+        internal bool AssetNamingUsesSpace { get; }
 
         public bool Equals(ProjectSetupSnapshot other)
         {
@@ -127,7 +139,12 @@ namespace ProjectSetup.Editor
                 && HasCodeGenerationData == other.HasCodeGenerationData
                 && (!HasCodeGenerationData
                     || (string.Equals(RootNamespace, other.RootNamespace, StringComparison.Ordinal)
-                        && NewScriptLineEndings == other.NewScriptLineEndings));
+                        && NewScriptLineEndings == other.NewScriptLineEndings))
+                && HasNamingData == other.HasNamingData
+                && (!HasNamingData
+                    || (GameObjectNamingScheme == other.GameObjectNamingScheme
+                        && GameObjectNamingDigits == other.GameObjectNamingDigits
+                        && AssetNamingUsesSpace == other.AssetNamingUsesSpace));
         }
 
         internal bool Matches(ProjectSetupSnapshot actual)
@@ -158,7 +175,12 @@ namespace ProjectSetup.Editor
                 && (!HasCodeGenerationData
                     || (actual.HasCodeGenerationData
                         && string.Equals(RootNamespace, actual.RootNamespace, StringComparison.Ordinal)
-                        && NewScriptLineEndings == actual.NewScriptLineEndings));
+                        && NewScriptLineEndings == actual.NewScriptLineEndings))
+                && (!HasNamingData
+                    || (actual.HasNamingData
+                        && GameObjectNamingScheme == actual.GameObjectNamingScheme
+                        && GameObjectNamingDigits == actual.GameObjectNamingDigits
+                        && AssetNamingUsesSpace == actual.AssetNamingUsesSpace));
         }
 
         private bool ScalarEquals(ProjectSetupSnapshot other)
@@ -216,6 +238,13 @@ namespace ProjectSetup.Editor
                 {
                     hash = (hash * 397) ^ StringComparer.Ordinal.GetHashCode(RootNamespace ?? string.Empty);
                     hash = (hash * 397) ^ (int)NewScriptLineEndings;
+                }
+                hash = (hash * 397) ^ HasNamingData.GetHashCode();
+                if (HasNamingData)
+                {
+                    hash = (hash * 397) ^ (int)GameObjectNamingScheme;
+                    hash = (hash * 397) ^ GameObjectNamingDigits;
+                    hash = (hash * 397) ^ AssetNamingUsesSpace.GetHashCode();
                 }
                 return hash;
             }

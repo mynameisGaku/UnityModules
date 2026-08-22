@@ -42,6 +42,10 @@ namespace ProjectSetup.Editor
         [SerializeField] private string rootNamespace = string.Empty;
         [SerializeField] private bool configureNewScriptLineEndings;
         [SerializeField] private LineEndingsMode newScriptLineEndings = LineEndingsMode.OSNative;
+        [SerializeField] private bool configureNamingDefaults;
+        [SerializeField] private EditorSettings.NamingScheme gameObjectNamingScheme = EditorSettings.NamingScheme.SpaceParenthesis;
+        [SerializeField] private int gameObjectNamingDigits = 1;
+        [SerializeField] private bool assetNamingUsesSpace = true;
 
         internal bool ConfigureAssetSerialization { get => configureAssetSerialization; set => configureAssetSerialization = value; }
         internal SerializationMode AssetSerialization { get => assetSerialization; set => assetSerialization = value; }
@@ -84,6 +88,10 @@ namespace ProjectSetup.Editor
         internal string RootNamespace { get => rootNamespace ?? string.Empty; set => rootNamespace = value ?? string.Empty; }
         internal bool ConfigureNewScriptLineEndings { get => configureNewScriptLineEndings; set => configureNewScriptLineEndings = value; }
         internal LineEndingsMode NewScriptLineEndings { get => newScriptLineEndings; set => newScriptLineEndings = value; }
+        internal bool ConfigureNamingDefaults { get => configureNamingDefaults; set => configureNamingDefaults = value; }
+        internal EditorSettings.NamingScheme GameObjectNamingScheme { get => gameObjectNamingScheme; set => gameObjectNamingScheme = value; }
+        internal int GameObjectNamingDigits { get => gameObjectNamingDigits; set => gameObjectNamingDigits = value; }
+        internal bool AssetNamingUsesSpace { get => assetNamingUsesSpace; set => assetNamingUsesSpace = value; }
 
         internal void SetRecommendedDefaults()
         {
@@ -120,6 +128,10 @@ namespace ProjectSetup.Editor
             rootNamespace = string.Empty;
             configureNewScriptLineEndings = false;
             newScriptLineEndings = LineEndingsMode.OSNative;
+            configureNamingDefaults = false;
+            gameObjectNamingScheme = EditorSettings.NamingScheme.SpaceParenthesis;
+            gameObjectNamingDigits = 1;
+            assetNamingUsesSpace = true;
         }
 
         internal void Capture(ProjectSetupSnapshot snapshot)
@@ -159,6 +171,10 @@ namespace ProjectSetup.Editor
             rootNamespace = snapshot.RootNamespace;
             configureNewScriptLineEndings = snapshot.HasCodeGenerationData;
             newScriptLineEndings = snapshot.NewScriptLineEndings;
+            configureNamingDefaults = snapshot.HasNamingData;
+            gameObjectNamingScheme = snapshot.GameObjectNamingScheme;
+            gameObjectNamingDigits = snapshot.GameObjectNamingDigits;
+            assetNamingUsesSpace = snapshot.AssetNamingUsesSpace;
         }
 
         private static ProjectSetupBuildScene[] CloneBuildScenes(ProjectSetupBuildScene[] values)

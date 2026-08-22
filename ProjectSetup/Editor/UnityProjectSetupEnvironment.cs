@@ -49,7 +49,11 @@ namespace ProjectSetup.Editor
                 scriptingDefineSymbols,
                 true,
                 EditorSettings.projectGenerationRootNamespace,
-                EditorSettings.lineEndingsForNewScripts);
+                EditorSettings.lineEndingsForNewScripts,
+                true,
+                EditorSettings.gameObjectNamingScheme,
+                EditorSettings.gameObjectNamingDigits,
+                EditorSettings.assetNamingUsesSpace);
         }
 
         public void Apply(ProjectSetupProfile profile)
@@ -120,6 +124,13 @@ namespace ProjectSetup.Editor
                 EditorSettings.lineEndingsForNewScripts = profile.NewScriptLineEndings;
             }
 
+            if (profile.ConfigureNamingDefaults)
+            {
+                EditorSettings.gameObjectNamingScheme = profile.GameObjectNamingScheme;
+                EditorSettings.gameObjectNamingDigits = profile.GameObjectNamingDigits;
+                EditorSettings.assetNamingUsesSpace = profile.AssetNamingUsesSpace;
+            }
+
             ProjectSetupTagManagerStore.Apply(profile);
             AssetDatabase.SaveAssets();
         }
@@ -171,6 +182,13 @@ namespace ProjectSetup.Editor
             {
                 EditorSettings.projectGenerationRootNamespace = snapshot.RootNamespace;
                 EditorSettings.lineEndingsForNewScripts = snapshot.NewScriptLineEndings;
+            }
+
+            if (snapshot.HasNamingData)
+            {
+                EditorSettings.gameObjectNamingScheme = snapshot.GameObjectNamingScheme;
+                EditorSettings.gameObjectNamingDigits = snapshot.GameObjectNamingDigits;
+                EditorSettings.assetNamingUsesSpace = snapshot.AssetNamingUsesSpace;
             }
 
             ProjectSetupTagManagerStore.Restore(snapshot);
