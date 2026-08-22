@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.4.6] - 2026-08-23
+
+- Corrected the documentation heading and pinned package URLs for the v1.4.6 release.
+
 ## [1.4.5] - 2026-08-23
 
 - Updated Project Setup to v1.15.0 for build-target IL2CPP Code Generation preview, backup, apply, and restore.

@@ -1,5 +1,7 @@
 # モジュール管理アシスタント（Module Manager）
 
+> Package version: 1.4.6
+
 ## 30秒で分かる説明
 
 Unity Package ManagerへGit URLを1件ずつ貼り、導入済みmoduleの公開versionを手作業で調べて差し替える作業を減らすEditor専用ツールです。
