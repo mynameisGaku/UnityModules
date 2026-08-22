@@ -62,6 +62,8 @@ namespace ProjectSetup.Tests
                 Assert.That(profile.AssemblyName, Is.EqualTo("Game"));
                 Assert.That(profile.RuntimeAssemblyFolder, Is.EqualTo("Assets/Scripts"));
                 Assert.That(profile.EditorAssemblyFolder, Is.EqualTo("Assets/Scripts/Editor"));
+                Assert.That(profile.IncludeTestAssemblies, Is.False);
+                Assert.That(profile.TestAssemblyRootFolder, Is.EqualTo("Assets/Tests"));
             }
             finally
             {
@@ -167,6 +169,8 @@ namespace ProjectSetup.Tests
                 Assert.That(profile.AssemblyName, Is.EqualTo("Game"));
                 Assert.That(profile.RuntimeAssemblyFolder, Is.EqualTo("Assets/Scripts"));
                 Assert.That(profile.EditorAssemblyFolder, Is.EqualTo("Assets/Scripts/Editor"));
+                Assert.That(profile.IncludeTestAssemblies, Is.False);
+                Assert.That(profile.TestAssemblyRootFolder, Is.EqualTo("Assets/Tests"));
             }
             finally
             {

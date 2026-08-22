@@ -544,6 +544,27 @@ namespace ProjectSetup.Tests
             }));
         }
 
+        [Test]
+        public void Build_AssemblyDefinitionsIncludesTestAssemblyFoldersAndFiles()
+        {
+            _profile.ConfigureAssetSerialization = false;
+            _profile.ConfigureVersionControl = false;
+            _profile.ConfigureAssemblyDefinitions = true;
+            _profile.IncludeTestAssemblies = true;
+            _profile.TestAssemblyRootFolder = "Assets/Tests";
+            var current = Snapshot().WithProjectFolderState(new[] { "Assets" }, new[] { "Assets" });
+
+            var plan = ProjectSetupPlanner.Build(_profile, current);
+            var folders = ProjectSetupPlanner.GetMissingProjectFolders(_profile, current);
+            var definitions = ProjectSetupPlanner.GetMissingAssemblyDefinitions(_profile, current);
+
+            Assert.That(plan.IsValid, Is.True, string.Join("\n", plan.Errors));
+            Assert.That(folders, Does.Contain("Assets/Tests/EditMode").And.Contain("Assets/Tests/PlayMode"));
+            Assert.That(definitions.Select(definition => definition.Path), Does.Contain("Assets/Tests/EditMode/Game.Tests.asmdef"));
+            Assert.That(definitions.Select(definition => definition.Path), Does.Contain("Assets/Tests/PlayMode/Game.PlayMode.Tests.asmdef"));
+            Assert.That(plan.Changes.Single(change => change.Key == ProjectSetupSettingKey.AssemblyDefinitions).DesiredValue, Does.Contain("EditMode").And.Contain("PlayMode"));
+        }
+
         [TestCase("Game-Invalid")]
         [TestCase("class")]
         [TestCase("Game..Runtime")]
