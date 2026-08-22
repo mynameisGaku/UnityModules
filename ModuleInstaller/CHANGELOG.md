@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.4.3] - 2026-08-22
+
+- Updated Project Setup to v1.13.0 for build-target API Compatibility Level preview, backup, apply, and restore.
+- Added .NET Standard and .NET Framework guidance to the Project Maintenance workflow.
+
 ## [1.4.2] - 2026-08-22
 
 - Updated Project Setup to v1.12.0 for build-target Scripting Backend preview, backup, apply, and restore.
