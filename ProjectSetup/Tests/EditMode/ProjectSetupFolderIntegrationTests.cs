@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 
 using System;
-using System.IO;
 using NUnit.Framework;
 using ProjectSetup.Editor;
 using UnityEditor;
@@ -17,7 +16,6 @@ namespace ProjectSetup.Tests
         {
             var rootName = "ProjectSetupFolderTests_" + Guid.NewGuid().ToString("N");
             var rootPath = "Assets/" + rootName;
-            var backupPath = Path.Combine(Path.GetTempPath(), rootName + ".json");
             var profile = ScriptableObject.CreateInstance<ProjectSetupProfile>();
             try
             {
@@ -34,22 +32,26 @@ namespace ProjectSetup.Tests
                     rootPath + "/Used",
                     rootPath + "/Nested/Leaf"
                 };
-                var service = new ProjectSetupService(
-                    new UnityProjectSetupEnvironment(),
-                    new ProjectSetupBackupStore(backupPath));
+                var environment = new UnityProjectSetupEnvironment();
+                var before = environment.Capture();
 
-                var apply = service.Apply(profile);
+                var created = environment.Apply(profile);
 
-                Assert.That(apply.Succeeded, Is.True, apply.Message);
+                Assert.That(created, Is.EquivalentTo(new[]
+                {
+                    rootPath + "/Empty",
+                    rootPath + "/Used",
+                    rootPath + "/Nested",
+                    rootPath + "/Nested/Leaf"
+                }));
                 Assert.That(AssetDatabase.IsValidFolder(rootPath + "/Empty"), Is.True);
                 Assert.That(AssetDatabase.IsValidFolder(rootPath + "/Nested/Leaf"), Is.True);
                 var retainedAsset = ScriptableObject.CreateInstance<ProjectSetupProfile>();
                 AssetDatabase.CreateAsset(retainedAsset, rootPath + "/Used/Keep.asset");
                 AssetDatabase.SaveAssets();
 
-                var restore = service.RestoreLast();
+                environment.Apply(before.WithCreatedProjectFolders(created));
 
-                Assert.That(restore.Succeeded, Is.True, restore.Message);
                 Assert.That(AssetDatabase.IsValidFolder(rootPath + "/Empty"), Is.False);
                 Assert.That(AssetDatabase.IsValidFolder(rootPath + "/Nested"), Is.False);
                 Assert.That(AssetDatabase.IsValidFolder(rootPath + "/Used"), Is.True);
@@ -63,16 +65,6 @@ namespace ProjectSetup.Tests
                 if (AssetDatabase.IsValidFolder(rootPath))
                 {
                     AssetDatabase.DeleteAsset(rootPath);
-                }
-
-                if (File.Exists(backupPath))
-                {
-                    File.Delete(backupPath);
-                }
-
-                if (File.Exists(backupPath + ".tmp"))
-                {
-                    File.Delete(backupPath + ".tmp");
                 }
 
                 AssetDatabase.Refresh();
