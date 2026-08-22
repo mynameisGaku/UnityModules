@@ -94,7 +94,7 @@ Unity で繰り返し発生する設定、実装、確認作業を減らすた�
 
 ## 使い方
 
-新しいProjectでは、まず [モジュール管理（Module Manager）](ModuleInstaller/) をPackage Managerへ追加し、`Tools > Module Manager > Open`から4つの実用workflowを選ぶ。`Quick guide`で用途・最初の操作・変更範囲を確認し、未導入moduleの追加件数を確認してから実行する。専門向けcollectionと40件の個別一覧は初期状態で折りたたまれ、個別行の`Read guide`はcatalogと同じ公開tagのREADMEを開く。更新は公開tagへ固定され、同じversion・より新しいversion・catalog外versionを上書きしない。
+新しいProjectでは、まず [モジュール管理（Module Manager）](ModuleInstaller/) をPackage Managerへ追加し、`Tools > Module Manager > Open`から4つの実用workflowを選ぶ。`Quick guide`で用途・最初の操作・変更範囲を確認し、未導入moduleの追加件数を確認してから実行する。専門向けcollectionと41件の個別一覧は初期状態で折りたたまれ、個別行の`Read guide`はcatalogと同じ公開tagのREADMEを開く。更新は公開tagへ固定され、同じversion・より新しいversion・catalog外versionを上書きしない。
 
 新規Projectの設定をそろえる場合は、[プロジェクト一括設定（Project Setup）](ProjectSetup/) を追加して `Tools > Project Setup > Open` を開く。`New recommended profile`で安全な推奨profileを作り、必要なら基本フォルダー、Runtime・Editor・test用asmdef、Unity向け`.gitignore`と`.gitattributes`、build target別Application Identifier・Scripting Backend・API Compatibility Level・Managed Stripping Level・IL2CPP Code Generation、Root Namespace、新規scriptの改行方式、複製時の命名規則、Play Mode Start Scene、条件付きコンパイル記号、Tag・Layer・Sorting Layer、Build Scenesを追加する。`Preview changes`で差分を確認してから`Apply profile`を実行すると、適用直前の設定とツールが自動backupされる。復元時は、ツールが作成した後に内容が変わっていないfileだけを削除する。
 
