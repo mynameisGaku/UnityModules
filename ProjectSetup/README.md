@@ -2,13 +2,13 @@
 
 Unityの新規Projectで毎回行う設定を、1つのprofileからまとめてPreview・適用・復元するEditor専用ツールです。
 
-`Assets`配下の基本フォルダー、Runtime／Editor／test asmdef、`Project Settings`、C#のRoot Namespaceと改行方式、複製時の命名規則、Play Modeの開始Scene、条件付きコンパイル記号、Tag、Layer、Sorting Layer、Build Scenesを別々の画面やscriptで設定する手間を減らします。自動適用はせず、実際に変わる項目を確認してから実行できます。
+`Assets`配下の基本フォルダー、Runtime／Editor／test asmdef、`.gitignore`、`.gitattributes`、`Project Settings`、C#のRoot Namespaceと改行方式、複製時の命名規則、Play Modeの開始Scene、条件付きコンパイル記号、Tag、Layer、Sorting Layer、Build Scenesを別々の画面やscriptで設定する手間を減らします。自動適用はせず、実際に変わる項目を確認してから実行できます。
 
 ## まず知りたいこと
 
 | 質問 | 答え |
 |---|---|
-| 何が楽になる？ | 基本フォルダーとasmdefの作成、Project設定、C#生成時の既定値、複製名、Play Modeの開始Scene、条件付きコンパイル記号、Tag/Layer、Build Scenesを1つのprofileからまとめて設定できます。 |
+| 何が楽になる？ | 基本フォルダー、asmdef、`.gitignore`、`.gitattributes`の作成と、Project設定、C#生成時の既定値、複製名、Play Modeの開始Scene、条件付きコンパイル記号、Tag/Layer、Build Scenesを1つのprofileからまとめて設定できます。 |
 | 勝手に変更される？ | されません。import時やUnity起動時には何も適用しません。 |
 | 実行前に確認できる？ | `Preview changes`で変更前と変更後を一覧表示します。 |
 | 失敗したら？ | Apply前にbackupし、書込後の検証に失敗した場合は可能な範囲で自動復元します。 |
@@ -29,6 +29,7 @@ Unityの新規Projectで毎回行う設定を、1つのprofileからまとめて
 |---|---|
 | 新規Projectの基本フォルダーを作る | `Project Folders` |
 | Runtime、Editor、EditMode test、PlayMode testをasmdefで分離する | `Script Assemblies` |
+| Unity向けのGit除外設定と改行規則を用意する | `Version Control Files` |
 | どのSceneからでもBootstrap SceneでPlayする | `Play Mode Start Scene` |
 | Playerへ入れるSceneと順序をそろえる | `Build Scenes` |
 | Tag、Layer、compile記号を手入力せず追加する | `Tags`、`Layers`、`Scripting Define Symbols` |
@@ -100,6 +101,23 @@ asmdefに個別のRoot Namespaceが設定されているscriptではasmdef側が
 - 同じfolderに別のasmdefがある場合は、実行前のPreviewで停止する。
 
 初期profileでは無効です。asmdefを使わないProjectには何も作成しません。
+
+### Version Control Files
+
+- Unityが生成する`Library`、`Temp`、`Logs`、`UserSettings`、IDE project fileなどを除外する`.gitignore`を作る。
+- Unity YAML、C#、shader、asmdef、JSONなどをLFへそろえる`.gitattributes`を作る。
+- `ProjectSettings/ProjectSetupLastBackup.json`を共有対象から除外する。
+- 既存の`.gitignore`、`.gitattributes`、同名directoryを上書きしない。
+
+初期profileでは無効です。既存の運用規則を置き換えず、新規Projectで両fileが不足している場合に使う機能です。
+
+## .gitignoreと.gitattributesをまとめて作る
+
+1. `Version Control Files` cardで`Create missing .gitignore and .gitattributes`を有効にします。
+2. Previewで不足しているfileだけが表示されることを確認します。
+3. Applyし、Project rootに作成された内容をversion controlへ追加します。
+
+Restoreが削除するのは、直前のApplyが作成し、内容が作成時から変わっていないfileだけです。Apply前からあったfileと利用者が編集したfileは削除しません。
 
 ## Runtime／Editor／test asmdefをまとめて作る
 
@@ -199,6 +217,7 @@ Apply後に複製したGameObjectとAssetだけへ反映されます。既に存
 - New Script Line EndingsはApply後に作成するC# scriptだけへ影響し、既存scriptを一括変換しません。
 - Duplicate NamingはApply後の複製名だけへ影響し、既存GameObjectやAssetを一括改名しません。
 - Project Foldersは不足フォルダーだけを作成します。既存file、既存フォルダー、既存Assetの名前や場所は変更しません。
+- Version Control FilesはProject rootへ不足fileだけを作成します。既存fileと同名directoryは上書きしません。
 - Script Assembliesは新しいasmdefをimportするため、Unityがscriptを再コンパイルします。既存asmdefや同名fileは上書きしません。
 - Build Scenesは不足分の追加ではなく、profileの一覧へ完全に置き換えます。
 - RestoreはApply直前へ戻すため、その後に追加したTag/Layer/Sceneを取り除く場合があります。
@@ -213,7 +232,7 @@ Build Scenesを復元する場合は、backup作成時と同じBuild Profileを�
 
 Scripting Define Symbolsを復元する場合は、backup作成時と同じbuild targetを選択してください。別のtargetへ切り替わっている場合は、誤ったtargetを書き換えないよう復元を停止します。復元時はApply直前の記号一覧へ正確に戻すため、Apply後に手動追加した記号も取り除く場合があります。
 
-backupはUTF-8 BOMなしのJSONです。schema v9はProject設定、Applyが作成したフォルダーとasmdefのpath・内容hash、Root Namespace、新規scriptの改行方式、複製時の命名規則、Play Mode Start Scene、Scripting Define Symbolsと対象build target、TagManager全体、Build SceneのGUID・順序・Enabled状態・保存先を保持します。schema v1からv8も読み取れますが、そのversionに存在しない項目は復元しません。
+backupはUTF-8 BOMなしのJSONです。schema v10はProject設定、Applyが作成したフォルダー・asmdef・version control fileのpathと内容hash、Root Namespace、新規scriptの改行方式、複製時の命名規則、Play Mode Start Scene、Scripting Define Symbolsと対象build target、TagManager全体、Build SceneのGUID・順序・Enabled状態・保存先を保持します。schema v1からv9も読み取れますが、そのversionに存在しない項目は復元しません。
 
 ## profileを別Projectで使う
 
@@ -253,7 +272,7 @@ Build Scenesをprofileで有効にすると、既存一覧をprofileの内容へ
 Package Managerの`Add package from git URL...`へ次を入力します。
 
 ```text
-https://github.com/mynameisGaku/UnityModules.git?path=/ProjectSetup#project-setup-v1.9.0
+https://github.com/mynameisGaku/UnityModules.git?path=/ProjectSetup#project-setup-v1.10.0
 ```
 
 ## 対応環境

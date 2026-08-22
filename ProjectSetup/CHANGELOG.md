@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.10.0] - 2026-08-22
+
+- Added one Version Control Files workflow that creates Unity-ready .gitignore and .gitattributes files.
+- Preserved every existing root file and recorded content hashes for unchanged-only Restore behavior.
+- Excluded unconfirmed files created by another process from rollback ownership.
+- Added deterministic template, file-system safety, backup schema v10, planner, service, and UI coverage.
+
 ## [1.9.0] - 2026-08-22
 
 - Extended Script Assemblies with optional EditMode and PlayMode test Assembly Definitions.
