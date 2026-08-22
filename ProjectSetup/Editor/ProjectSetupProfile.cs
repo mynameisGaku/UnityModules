@@ -38,6 +38,10 @@ namespace ProjectSetup.Editor
         [SerializeField] private string[] sortingLayers = Array.Empty<string>();
         [SerializeField] private bool configureScriptingDefineSymbols;
         [SerializeField] private string[] scriptingDefineSymbols = Array.Empty<string>();
+        [SerializeField] private bool configureRootNamespace;
+        [SerializeField] private string rootNamespace = string.Empty;
+        [SerializeField] private bool configureNewScriptLineEndings;
+        [SerializeField] private LineEndingsMode newScriptLineEndings = LineEndingsMode.OSNative;
 
         internal bool ConfigureAssetSerialization { get => configureAssetSerialization; set => configureAssetSerialization = value; }
         internal SerializationMode AssetSerialization { get => assetSerialization; set => assetSerialization = value; }
@@ -76,6 +80,10 @@ namespace ProjectSetup.Editor
         internal string[] SortingLayers { get => sortingLayers ?? Array.Empty<string>(); set => sortingLayers = value ?? Array.Empty<string>(); }
         internal bool ConfigureScriptingDefineSymbols { get => configureScriptingDefineSymbols; set => configureScriptingDefineSymbols = value; }
         internal string[] ScriptingDefineSymbols { get => scriptingDefineSymbols ?? Array.Empty<string>(); set => scriptingDefineSymbols = value ?? Array.Empty<string>(); }
+        internal bool ConfigureRootNamespace { get => configureRootNamespace; set => configureRootNamespace = value; }
+        internal string RootNamespace { get => rootNamespace ?? string.Empty; set => rootNamespace = value ?? string.Empty; }
+        internal bool ConfigureNewScriptLineEndings { get => configureNewScriptLineEndings; set => configureNewScriptLineEndings = value; }
+        internal LineEndingsMode NewScriptLineEndings { get => newScriptLineEndings; set => newScriptLineEndings = value; }
 
         internal void SetRecommendedDefaults()
         {
@@ -108,6 +116,10 @@ namespace ProjectSetup.Editor
             sortingLayers = Array.Empty<string>();
             configureScriptingDefineSymbols = false;
             scriptingDefineSymbols = Array.Empty<string>();
+            configureRootNamespace = false;
+            rootNamespace = string.Empty;
+            configureNewScriptLineEndings = false;
+            newScriptLineEndings = LineEndingsMode.OSNative;
         }
 
         internal void Capture(ProjectSetupSnapshot snapshot)
@@ -143,6 +155,10 @@ namespace ProjectSetup.Editor
             sortingLayers = snapshot.SortingLayers.Where(layer => layer.UniqueId != 0).Select(layer => layer.Name).ToArray();
             configureScriptingDefineSymbols = snapshot.HasScriptingDefineData;
             scriptingDefineSymbols = snapshot.ScriptingDefineSymbols.ToArray();
+            configureRootNamespace = snapshot.HasCodeGenerationData;
+            rootNamespace = snapshot.RootNamespace;
+            configureNewScriptLineEndings = snapshot.HasCodeGenerationData;
+            newScriptLineEndings = snapshot.NewScriptLineEndings;
         }
 
         private static ProjectSetupBuildScene[] CloneBuildScenes(ProjectSetupBuildScene[] values)

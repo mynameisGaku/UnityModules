@@ -16,8 +16,20 @@ namespace ProjectSetup.Editor
         private const int MaximumRequestedNameCount = 64;
         private const int MaximumBuildSceneCount = 64;
         private const int MaximumScriptingDefineLength = 64;
+        private const int MaximumRootNamespaceLength = 128;
         private const EnterPlayModeOptions KnownEnterPlayModeOptions = EnterPlayModeOptions.DisableDomainReload
             | EnterPlayModeOptions.DisableSceneReload;
+        private static readonly HashSet<string> CSharpKeywords = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "abstract", "as", "base", "bool", "break", "byte", "case", "catch", "char", "checked",
+            "class", "const", "continue", "decimal", "default", "delegate", "do", "double", "else", "enum",
+            "event", "explicit", "extern", "false", "finally", "fixed", "float", "for", "foreach", "goto",
+            "if", "implicit", "in", "int", "interface", "internal", "is", "lock", "long", "namespace", "new",
+            "null", "object", "operator", "out", "override", "params", "private", "protected", "public", "readonly",
+            "ref", "return", "sbyte", "sealed", "short", "sizeof", "stackalloc", "static", "string", "struct",
+            "switch", "this", "throw", "true", "try", "typeof", "uint", "ulong", "unchecked", "unsafe", "ushort",
+            "using", "virtual", "void", "volatile", "while"
+        };
 
         internal static ProjectSetupPlan Build(ProjectSetupProfile profile, ProjectSetupSnapshot current)
         {
@@ -97,6 +109,7 @@ namespace ProjectSetup.Editor
             AddPlayModeStartSceneChange(profile, current, changes, errors);
             AddBuildSceneChange(profile, current, changes, errors);
             AddScriptingDefineChange(profile, current, changes, errors);
+            AddCodeGenerationChange(profile, current, changes, errors);
             AddNameListChange(profile.ConfigureTags, profile.Tags, current.Tags, ProjectSetupSettingKey.Tags, "Tags", changes, errors);
             AddLayerChange(profile, current, changes, errors);
             AddNameListChange(
@@ -108,6 +121,58 @@ namespace ProjectSetup.Editor
                 changes,
                 errors);
             return new ProjectSetupPlan(changes, errors);
+        }
+
+        private static void AddCodeGenerationChange(
+            ProjectSetupProfile profile,
+            ProjectSetupSnapshot current,
+            ICollection<ProjectSetupChange> changes,
+            ICollection<string> errors)
+        {
+            if (!profile.ConfigureRootNamespace && !profile.ConfigureNewScriptLineEndings)
+            {
+                return;
+            }
+
+            if (!current.HasCodeGenerationData)
+            {
+                errors.Add("Code Generation settings are unavailable in this Unity version.");
+                return;
+            }
+
+            if (profile.ConfigureRootNamespace)
+            {
+                if (!IsValidRootNamespace(profile.RootNamespace))
+                {
+                    errors.Add($"Root Namespace must be empty or a valid C# namespace up to {MaximumRootNamespaceLength} characters.");
+                }
+                else if (!string.Equals(current.RootNamespace, profile.RootNamespace, StringComparison.Ordinal))
+                {
+                    Add(
+                        changes,
+                        ProjectSetupSettingKey.RootNamespace,
+                        "Root Namespace",
+                        FormatRootNamespace(current.RootNamespace),
+                        FormatRootNamespace(profile.RootNamespace));
+                }
+            }
+
+            if (profile.ConfigureNewScriptLineEndings)
+            {
+                if (!Enum.IsDefined(typeof(LineEndingsMode), profile.NewScriptLineEndings))
+                {
+                    errors.Add("New Script Line Endings contains an unsupported value.");
+                }
+                else if (current.NewScriptLineEndings != profile.NewScriptLineEndings)
+                {
+                    Add(
+                        changes,
+                        ProjectSetupSettingKey.NewScriptLineEndings,
+                        "New Script Line Endings",
+                        current.NewScriptLineEndings,
+                        profile.NewScriptLineEndings);
+                }
+            }
         }
 
         private static void AddScriptingDefineChange(
@@ -388,7 +453,7 @@ namespace ProjectSetup.Editor
             for (var index = 1; index < value.Length; index++)
             {
                 var character = value[index];
-                if (!IsAsciiLetter(character) && !char.IsDigit(character) && character != '_')
+                if (!IsAsciiLetter(character) && !IsAsciiDigit(character) && character != '_')
                 {
                     return false;
                 }
@@ -400,6 +465,49 @@ namespace ProjectSetup.Editor
         private static bool IsAsciiLetter(char value)
         {
             return (value >= 'A' && value <= 'Z') || (value >= 'a' && value <= 'z');
+        }
+
+        private static bool IsAsciiDigit(char value)
+        {
+            return value >= '0' && value <= '9';
+        }
+
+        private static bool IsValidRootNamespace(string value)
+        {
+            if (value == null || value.Length > MaximumRootNamespaceLength)
+            {
+                return false;
+            }
+
+            if (value.Length == 0)
+            {
+                return true;
+            }
+
+            var segments = value.Split('.');
+            foreach (var segment in segments)
+            {
+                if (segment.Length == 0 || CSharpKeywords.Contains(segment))
+                {
+                    return false;
+                }
+
+                if (!IsAsciiLetter(segment[0]) && segment[0] != '_')
+                {
+                    return false;
+                }
+
+                for (var index = 1; index < segment.Length; index++)
+                {
+                    var character = segment[index];
+                    if (!IsAsciiLetter(character) && !IsAsciiDigit(character) && character != '_')
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            return true;
         }
 
         private static void AddMissingNames(
@@ -449,6 +557,11 @@ namespace ProjectSetup.Editor
         private static string FormatEnterPlayMode(bool enabled, EnterPlayModeOptions options)
         {
             return enabled ? options.ToString() : "Default reloads";
+        }
+
+        private static string FormatRootNamespace(string value)
+        {
+            return string.IsNullOrEmpty(value) ? "No root namespace" : value;
         }
 
         private static void Add<T>(ICollection<ProjectSetupChange> changes, ProjectSetupSettingKey key, string label, T current, T desired)

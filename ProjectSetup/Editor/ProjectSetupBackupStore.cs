@@ -74,7 +74,7 @@ namespace ProjectSetup.Editor
             {
                 var json = File.ReadAllText(_path, new UTF8Encoding(false, true));
                 var data = JsonUtility.FromJson<ProjectSetupSnapshotData>(json);
-                if (data == null || (data.schemaVersion != 1 && data.schemaVersion != 2 && data.schemaVersion != 3 && data.schemaVersion != 4 && data.schemaVersion != 5))
+                if (data == null || (data.schemaVersion != 1 && data.schemaVersion != 2 && data.schemaVersion != 3 && data.schemaVersion != 4 && data.schemaVersion != 5 && data.schemaVersion != 6))
                 {
                     error = "The Project Setup backup schema is unsupported.";
                     return false;
@@ -93,7 +93,7 @@ namespace ProjectSetup.Editor
         [Serializable]
         private sealed class ProjectSetupSnapshotData
         {
-            public int schemaVersion = 5;
+            public int schemaVersion = 6;
             public int assetSerialization;
             public string versionControlMode;
             public bool enterPlayModeOptionsEnabled;
@@ -119,6 +119,9 @@ namespace ProjectSetup.Editor
             public string scriptingDefineTargetId;
             public string scriptingDefineTargetLabel;
             public string[] scriptingDefineSymbols;
+            public bool hasCodeGenerationData;
+            public string rootNamespace;
+            public int newScriptLineEndings;
 
             internal static ProjectSetupSnapshotData FromSnapshot(ProjectSetupSnapshot snapshot)
             {
@@ -162,7 +165,10 @@ namespace ProjectSetup.Editor
                     hasScriptingDefineData = snapshot.HasScriptingDefineData,
                     scriptingDefineTargetId = snapshot.ScriptingDefineTargetId,
                     scriptingDefineTargetLabel = snapshot.ScriptingDefineTargetLabel,
-                    scriptingDefineSymbols = snapshot.ScriptingDefineSymbols
+                    scriptingDefineSymbols = snapshot.ScriptingDefineSymbols,
+                    hasCodeGenerationData = snapshot.HasCodeGenerationData,
+                    rootNamespace = snapshot.RootNamespace,
+                    newScriptLineEndings = (int)snapshot.NewScriptLineEndings
                 };
             }
 
@@ -202,7 +208,10 @@ namespace ProjectSetup.Editor
                     schemaVersion >= 5 && hasScriptingDefineData,
                     schemaVersion >= 5 ? scriptingDefineTargetId : string.Empty,
                     schemaVersion >= 5 ? scriptingDefineTargetLabel : string.Empty,
-                    schemaVersion >= 5 ? scriptingDefineSymbols : Array.Empty<string>());
+                    schemaVersion >= 5 ? scriptingDefineSymbols : Array.Empty<string>(),
+                    schemaVersion >= 6 && hasCodeGenerationData,
+                    schemaVersion >= 6 ? rootNamespace : string.Empty,
+                    schemaVersion >= 6 ? (LineEndingsMode)newScriptLineEndings : LineEndingsMode.OSNative);
             }
         }
 

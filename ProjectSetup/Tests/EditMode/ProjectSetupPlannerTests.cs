@@ -343,6 +343,63 @@ namespace ProjectSetup.Tests
             Assert.That(plan.Errors, Has.Some.Contains("Scripting Define Symbols"));
         }
 
+        [Test]
+        public void Build_PlansRootNamespaceAndNewScriptLineEndingsTogether()
+        {
+            _profile.ConfigureAssetSerialization = false;
+            _profile.ConfigureVersionControl = false;
+            _profile.ConfigureRootNamespace = true;
+            _profile.RootNamespace = "Studio.Game";
+            _profile.ConfigureNewScriptLineEndings = true;
+            _profile.NewScriptLineEndings = LineEndingsMode.Unix;
+            var current = new ProjectSetupSnapshot(
+                SerializationMode.ForceText,
+                "Visible Meta Files",
+                false,
+                EnterPlayModeOptions.None,
+                ColorSpace.Gamma,
+                false,
+                "DefaultCompany",
+                "New Unity Project",
+                "1.0.0",
+                hasCodeGenerationData: true,
+                rootNamespace: "",
+                newScriptLineEndings: LineEndingsMode.Windows);
+
+            var plan = ProjectSetupPlanner.Build(_profile, current);
+
+            Assert.That(plan.IsValid, Is.True);
+            Assert.That(plan.Changes, Has.Some.Property("Key").EqualTo(ProjectSetupSettingKey.RootNamespace));
+            Assert.That(plan.Changes, Has.Some.Property("Key").EqualTo(ProjectSetupSettingKey.NewScriptLineEndings));
+        }
+
+        [TestCase("1Studio")]
+        [TestCase("Studio..Game")]
+        [TestCase("class.Game")]
+        [TestCase("Studio.Game-Tools")]
+        [TestCase("Studio.\u30B2\u30FC\u30E0")]
+        public void Build_RejectsInvalidRootNamespace(string value)
+        {
+            _profile.ConfigureRootNamespace = true;
+            _profile.RootNamespace = value;
+            var current = new ProjectSetupSnapshot(
+                SerializationMode.ForceText,
+                "Visible Meta Files",
+                false,
+                EnterPlayModeOptions.None,
+                ColorSpace.Gamma,
+                false,
+                "DefaultCompany",
+                "New Unity Project",
+                "1.0.0",
+                hasCodeGenerationData: true);
+
+            var plan = ProjectSetupPlanner.Build(_profile, current);
+
+            Assert.That(plan.IsValid, Is.False);
+            Assert.That(plan.Errors, Has.Some.Contains("Root Namespace"));
+        }
+
         private static ProjectSetupSnapshot Snapshot(
             SerializationMode serializationMode = SerializationMode.ForceText,
             string versionControl = "Visible Meta Files",

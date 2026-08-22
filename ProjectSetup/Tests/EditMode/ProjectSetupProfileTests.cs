@@ -40,6 +40,10 @@ namespace ProjectSetup.Tests
                 Assert.That(profile.SortingLayers, Is.Empty);
                 Assert.That(profile.ConfigureScriptingDefineSymbols, Is.False);
                 Assert.That(profile.ScriptingDefineSymbols, Is.Empty);
+                Assert.That(profile.ConfigureRootNamespace, Is.False);
+                Assert.That(profile.RootNamespace, Is.Empty);
+                Assert.That(profile.ConfigureNewScriptLineEndings, Is.False);
+                Assert.That(profile.NewScriptLineEndings, Is.EqualTo(LineEndingsMode.OSNative));
             }
             finally
             {
@@ -90,7 +94,10 @@ namespace ProjectSetup.Tests
                     true,
                     "Standalone",
                     "Standalone",
-                    new[] { "PROJECT_FEATURE", "DEBUG_MENU" });
+                    new[] { "PROJECT_FEATURE", "DEBUG_MENU" },
+                    true,
+                    "Studio.Game",
+                    LineEndingsMode.Unix);
 
                 profile.Capture(snapshot);
 
@@ -124,6 +131,10 @@ namespace ProjectSetup.Tests
                 Assert.That(profile.SortingLayers, Is.EqualTo(new[] { "Foreground" }));
                 Assert.That(profile.ConfigureScriptingDefineSymbols, Is.True);
                 Assert.That(profile.ScriptingDefineSymbols, Is.EqualTo(new[] { "PROJECT_FEATURE", "DEBUG_MENU" }));
+                Assert.That(profile.ConfigureRootNamespace, Is.True);
+                Assert.That(profile.RootNamespace, Is.EqualTo("Studio.Game"));
+                Assert.That(profile.ConfigureNewScriptLineEndings, Is.True);
+                Assert.That(profile.NewScriptLineEndings, Is.EqualTo(LineEndingsMode.Unix));
             }
             finally
             {
