@@ -152,6 +152,8 @@ namespace ModuleInstaller.Editor
 
             var text = new Label($"{entry.DisplayName}  —  {entry.Summary}");
             text.style.flexGrow = 1f;
+            text.style.flexShrink = 1f;
+            text.style.minWidth = 0f;
             text.style.whiteSpace = WhiteSpace.Normal;
             row.Add(text);
 
@@ -161,6 +163,7 @@ namespace ModuleInstaller.Editor
                 name = $"install-package-{entry.PackageName}"
             };
             button.style.width = 82f;
+            button.style.flexShrink = 0f;
             row.Add(button);
             _installButtons.Add(new InstallButtonBinding(button, new[] { entry.PackageName }, false));
             return row;
