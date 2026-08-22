@@ -145,7 +145,9 @@ namespace ProjectSetup.Editor
             {
                 requested.AddRange(ProjectSetupAssemblyDefinitionUtility.GetRequiredFolders(
                     profile.RuntimeAssemblyFolder,
-                    profile.EditorAssemblyFolder));
+                    profile.EditorAssemblyFolder,
+                    profile.IncludeTestAssemblies,
+                    profile.TestAssemblyRootFolder));
             }
 
             var normalized = requested
@@ -167,6 +169,8 @@ namespace ProjectSetup.Editor
                 profile.AssemblyName,
                 profile.RuntimeAssemblyFolder,
                 profile.EditorAssemblyFolder,
+                profile.IncludeTestAssemblies,
+                profile.TestAssemblyRootFolder,
                 current.ProjectFolders,
                 current.ProjectAssetPaths,
                 null);
@@ -258,6 +262,8 @@ namespace ProjectSetup.Editor
                 profile.AssemblyName,
                 profile.RuntimeAssemblyFolder,
                 profile.EditorAssemblyFolder,
+                profile.IncludeTestAssemblies,
+                profile.TestAssemblyRootFolder,
                 current.ProjectFolders,
                 current.ProjectAssetPaths,
                 errors);
@@ -268,7 +274,9 @@ namespace ProjectSetup.Editor
 
             var requiredFolders = ProjectSetupAssemblyDefinitionUtility.GetRequiredFolders(
                 profile.RuntimeAssemblyFolder,
-                profile.EditorAssemblyFolder);
+                profile.EditorAssemblyFolder,
+                profile.IncludeTestAssemblies,
+                profile.TestAssemblyRootFolder);
             var missingFolders = ProjectSetupFolderUtility.ExpandMissingFolders(requiredFolders, current.ProjectFolders);
             var currentFolders = new HashSet<string>(current.ProjectFolders, StringComparer.OrdinalIgnoreCase);
             var currentAssets = new HashSet<string>(current.ProjectAssetPaths, StringComparer.OrdinalIgnoreCase);
@@ -288,7 +296,9 @@ namespace ProjectSetup.Editor
                 ProjectSetupSettingKey.AssemblyDefinitions,
                 "Script Assemblies",
                 $"{definitions.Length} Assembly Definition(s) and {missingFolders.Length} parent folder(s) are missing",
-                $"Create {profile.AssemblyName} and {profile.AssemblyName}.Editor without overwriting existing files"));
+                profile.IncludeTestAssemblies
+                    ? $"Create {profile.AssemblyName}, {profile.AssemblyName}.Editor, and matching EditMode and PlayMode test assemblies without overwriting existing files"
+                    : $"Create {profile.AssemblyName} and {profile.AssemblyName}.Editor without overwriting existing files"));
         }
 
         private static void AddNamingDefaultsChange(

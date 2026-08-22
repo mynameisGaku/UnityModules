@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using NUnit.Framework;
 using ProjectSetup.Editor;
 
@@ -55,6 +56,33 @@ namespace ProjectSetup.Tests
 
             Assert.That(errors, Is.Empty);
             Assert.That(plans, Is.Empty);
+        }
+
+        [Test]
+        public void BuildMissingDefinitions_IncludesDeterministicEditModeAndPlayModeTests()
+        {
+            var errors = new List<string>();
+
+            var plans = ProjectSetupAssemblyDefinitionUtility.BuildMissingDefinitions(
+                "Studio.Game",
+                "Assets/Game/Scripts",
+                "Assets/Game/Scripts/Editor",
+                true,
+                "Assets/Game/Tests",
+                Array.Empty<string>(),
+                Array.Empty<string>(),
+                errors);
+
+            Assert.That(errors, Is.Empty);
+            Assert.That(plans.Select(plan => plan.Path), Is.EqualTo(new[]
+            {
+                "Assets/Game/Scripts/Studio.Game.asmdef",
+                "Assets/Game/Scripts/Editor/Studio.Game.Editor.asmdef",
+                "Assets/Game/Tests/EditMode/Studio.Game.Tests.asmdef",
+                "Assets/Game/Tests/PlayMode/Studio.Game.PlayMode.Tests.asmdef"
+            }));
+            Assert.That(plans[2].Content, Does.Contain("\"Studio.Game.Editor\"").And.Contain("\"TestAssemblies\"").And.Contain("\"Editor\""));
+            Assert.That(plans[3].Content, Does.Contain("\"Studio.Game\"").And.Contain("\"TestAssemblies\"").And.Not.Contain("includePlatforms"));
         }
 
         [Test]

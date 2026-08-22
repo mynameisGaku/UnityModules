@@ -31,6 +31,27 @@ namespace ProjectSetup.Editor
             IEnumerable<string> currentAssetPaths,
             ICollection<string> errors)
         {
+            return BuildMissingDefinitions(
+                assemblyName,
+                runtimeFolder,
+                editorFolder,
+                false,
+                string.Empty,
+                currentFolders,
+                currentAssetPaths,
+                errors);
+        }
+
+        internal static ProjectSetupAssemblyDefinitionPlan[] BuildMissingDefinitions(
+            string assemblyName,
+            string runtimeFolder,
+            string editorFolder,
+            bool includeTestAssemblies,
+            string testRootFolder,
+            IEnumerable<string> currentFolders,
+            IEnumerable<string> currentAssetPaths,
+            ICollection<string> errors)
+        {
             if (!IsValidDottedIdentifier(assemblyName))
             {
                 errors?.Add("Assembly Name must be a dotted ASCII C# identifier with 1 to 128 characters.");
@@ -56,24 +77,41 @@ namespace ProjectSetup.Editor
                 return Array.Empty<ProjectSetupAssemblyDefinitionPlan>();
             }
 
+            var normalizedTestRootFolder = string.Empty;
+            if (includeTestAssemblies
+                && !ProjectSetupFolderUtility.TryNormalize(testRootFolder, out normalizedTestRootFolder, out var testRootError))
+            {
+                errors?.Add($"Test Root Folder: {testRootError}");
+                return Array.Empty<ProjectSetupAssemblyDefinitionPlan>();
+            }
+
             var existingFolders = new HashSet<string>(currentFolders ?? Array.Empty<string>(), StringComparer.OrdinalIgnoreCase);
             var existingAssets = new HashSet<string>(currentAssetPaths ?? Array.Empty<string>(), StringComparer.OrdinalIgnoreCase);
             var runtimePath = $"{normalizedRuntimeFolder}/{assemblyName}.asmdef";
             var editorPath = $"{normalizedEditorFolder}/{assemblyName}.Editor.asmdef";
-            if (existingFolders.Contains(runtimePath) || existingFolders.Contains(editorPath))
+            var editModeFolder = includeTestAssemblies ? $"{normalizedTestRootFolder}/EditMode" : string.Empty;
+            var playModeFolder = includeTestAssemblies ? $"{normalizedTestRootFolder}/PlayMode" : string.Empty;
+            var editModePath = includeTestAssemblies ? $"{editModeFolder}/{assemblyName}.Tests.asmdef" : string.Empty;
+            var playModePath = includeTestAssemblies ? $"{playModeFolder}/{assemblyName}.PlayMode.Tests.asmdef" : string.Empty;
+            var targetPaths = includeTestAssemblies
+                ? new[] { runtimePath, editorPath, editModePath, playModePath }
+                : new[] { runtimePath, editorPath };
+            if (targetPaths.Any(existingFolders.Contains))
             {
                 errors?.Add("An Assembly Definition target path is already used by a folder.");
                 return Array.Empty<ProjectSetupAssemblyDefinitionPlan>();
             }
 
             if (ContainsDifferentAssemblyDefinition(normalizedRuntimeFolder, runtimePath, existingAssets)
-                || ContainsDifferentAssemblyDefinition(normalizedEditorFolder, editorPath, existingAssets))
+                || ContainsDifferentAssemblyDefinition(normalizedEditorFolder, editorPath, existingAssets)
+                || (includeTestAssemblies && ContainsDifferentAssemblyDefinition(editModeFolder, editModePath, existingAssets))
+                || (includeTestAssemblies && ContainsDifferentAssemblyDefinition(playModeFolder, playModePath, existingAssets)))
             {
                 errors?.Add("A target folder already contains a different Assembly Definition. Existing Assembly Definitions are never overwritten.");
                 return Array.Empty<ProjectSetupAssemblyDefinitionPlan>();
             }
 
-            var plans = new List<ProjectSetupAssemblyDefinitionPlan>(2);
+            var plans = new List<ProjectSetupAssemblyDefinitionPlan>(includeTestAssemblies ? 4 : 2);
             if (!existingAssets.Contains(runtimePath))
             {
                 plans.Add(new ProjectSetupAssemblyDefinitionPlan(runtimePath, CreateRuntimeContent(assemblyName)));
@@ -84,12 +122,31 @@ namespace ProjectSetup.Editor
                 plans.Add(new ProjectSetupAssemblyDefinitionPlan(editorPath, CreateEditorContent(assemblyName)));
             }
 
+            if (includeTestAssemblies && !existingAssets.Contains(editModePath))
+            {
+                plans.Add(new ProjectSetupAssemblyDefinitionPlan(editModePath, CreateEditModeTestContent(assemblyName)));
+            }
+
+            if (includeTestAssemblies && !existingAssets.Contains(playModePath))
+            {
+                plans.Add(new ProjectSetupAssemblyDefinitionPlan(playModePath, CreatePlayModeTestContent(assemblyName)));
+            }
+
             return plans.ToArray();
         }
 
         internal static string[] GetRequiredFolders(string runtimeFolder, string editorFolder)
         {
-            var result = new List<string>(2);
+            return GetRequiredFolders(runtimeFolder, editorFolder, false, string.Empty);
+        }
+
+        internal static string[] GetRequiredFolders(
+            string runtimeFolder,
+            string editorFolder,
+            bool includeTestAssemblies,
+            string testRootFolder)
+        {
+            var result = new List<string>(includeTestAssemblies ? 5 : 2);
             if (ProjectSetupFolderUtility.TryNormalize(runtimeFolder, out var normalizedRuntimeFolder, out _))
             {
                 result.Add(normalizedRuntimeFolder);
@@ -98,6 +155,14 @@ namespace ProjectSetup.Editor
             if (ProjectSetupFolderUtility.TryNormalize(editorFolder, out var normalizedEditorFolder, out _))
             {
                 result.Add(normalizedEditorFolder);
+            }
+
+            if (includeTestAssemblies
+                && ProjectSetupFolderUtility.TryNormalize(testRootFolder, out var normalizedTestRootFolder, out _))
+            {
+                result.Add(normalizedTestRootFolder);
+                result.Add($"{normalizedTestRootFolder}/EditMode");
+                result.Add($"{normalizedTestRootFolder}/PlayMode");
             }
 
             return result.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
@@ -133,6 +198,38 @@ namespace ProjectSetup.Editor
                 + "  ],\n"
                 + "  \"includePlatforms\": [\n"
                 + "    \"Editor\"\n"
+                + "  ]\n"
+                + "}\n";
+        }
+
+        private static string CreateEditModeTestContent(string assemblyName)
+        {
+            return "{\n"
+                + $"  \"name\": \"{assemblyName}.Tests\",\n"
+                + $"  \"rootNamespace\": \"{assemblyName}.Tests\",\n"
+                + "  \"references\": [\n"
+                + $"    \"{assemblyName}\",\n"
+                + $"    \"{assemblyName}.Editor\"\n"
+                + "  ],\n"
+                + "  \"includePlatforms\": [\n"
+                + "    \"Editor\"\n"
+                + "  ],\n"
+                + "  \"optionalUnityReferences\": [\n"
+                + "    \"TestAssemblies\"\n"
+                + "  ]\n"
+                + "}\n";
+        }
+
+        private static string CreatePlayModeTestContent(string assemblyName)
+        {
+            return "{\n"
+                + $"  \"name\": \"{assemblyName}.PlayMode.Tests\",\n"
+                + $"  \"rootNamespace\": \"{assemblyName}.PlayMode.Tests\",\n"
+                + "  \"references\": [\n"
+                + $"    \"{assemblyName}\"\n"
+                + "  ],\n"
+                + "  \"optionalUnityReferences\": [\n"
+                + "    \"TestAssemblies\"\n"
                 + "  ]\n"
                 + "}\n";
         }

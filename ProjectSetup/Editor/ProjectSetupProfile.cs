@@ -60,6 +60,8 @@ namespace ProjectSetup.Editor
         [SerializeField] private string assemblyName = "Game";
         [SerializeField] private string runtimeAssemblyFolder = "Assets/Scripts";
         [SerializeField] private string editorAssemblyFolder = "Assets/Scripts/Editor";
+        [SerializeField] private bool includeTestAssemblies;
+        [SerializeField] private string testAssemblyRootFolder = "Assets/Tests";
 
         internal bool ConfigureAssetSerialization { get => configureAssetSerialization; set => configureAssetSerialization = value; }
         internal SerializationMode AssetSerialization { get => assetSerialization; set => assetSerialization = value; }
@@ -112,6 +114,8 @@ namespace ProjectSetup.Editor
         internal string AssemblyName { get => assemblyName ?? string.Empty; set => assemblyName = value ?? string.Empty; }
         internal string RuntimeAssemblyFolder { get => runtimeAssemblyFolder ?? string.Empty; set => runtimeAssemblyFolder = value ?? string.Empty; }
         internal string EditorAssemblyFolder { get => editorAssemblyFolder ?? string.Empty; set => editorAssemblyFolder = value ?? string.Empty; }
+        internal bool IncludeTestAssemblies { get => includeTestAssemblies; set => includeTestAssemblies = value; }
+        internal string TestAssemblyRootFolder { get => testAssemblyRootFolder ?? string.Empty; set => testAssemblyRootFolder = value ?? string.Empty; }
 
         internal void SetRecommendedDefaults()
         {
@@ -166,6 +170,8 @@ namespace ProjectSetup.Editor
             assemblyName = "Game";
             runtimeAssemblyFolder = "Assets/Scripts";
             editorAssemblyFolder = "Assets/Scripts/Editor";
+            includeTestAssemblies = false;
+            testAssemblyRootFolder = "Assets/Tests";
         }
 
         internal void Capture(ProjectSetupSnapshot snapshot)
@@ -223,6 +229,8 @@ namespace ProjectSetup.Editor
             assemblyName = "Game";
             runtimeAssemblyFolder = "Assets/Scripts";
             editorAssemblyFolder = "Assets/Scripts/Editor";
+            includeTestAssemblies = false;
+            testAssemblyRootFolder = "Assets/Tests";
         }
 
         private static ProjectSetupBuildScene[] CloneBuildScenes(ProjectSetupBuildScene[] values)
