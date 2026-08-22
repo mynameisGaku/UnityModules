@@ -34,6 +34,10 @@ namespace ProjectSetup.Editor
         internal const string NamingDefaultsCardName = "duplicate-naming";
         internal const string ProjectFoldersCardName = "project-folders";
         internal const string ProjectFoldersFieldName = "project-folders-field";
+        internal const string AssemblyDefinitionsCardName = "script-assemblies";
+        internal const string AssemblyNameFieldName = "assembly-name-field";
+        internal const string RuntimeAssemblyFolderFieldName = "runtime-assembly-folder-field";
+        internal const string EditorAssemblyFolderFieldName = "editor-assembly-folder-field";
         internal const string ActionBarName = "action-bar";
         private const string MenuPath = "Tools/Project Setup/Open";
 
@@ -224,6 +228,7 @@ namespace ProjectSetup.Editor
                 value => _profile.NewScriptLineEndings = (LineEndingsMode)value));
             content.Add(CreateNamingDefaultsCard());
             content.Add(CreateProjectFoldersCard());
+            content.Add(CreateAssemblyDefinitionsCard());
             content.Add(CreateBuildScenesCard());
             content.Add(CreateNameListCard(
                 "tags",
@@ -302,6 +307,42 @@ namespace ProjectSetup.Editor
             field.RegisterValueChangedCallback(change => ChangeProfile(() => _profile.ProjectFolders = ParseNameList(change.newValue)));
             card.Add(enabled);
             card.Add(field);
+            return card;
+        }
+
+        private VisualElement CreateAssemblyDefinitionsCard()
+        {
+            var card = CreateCard(
+                AssemblyDefinitionsCardName,
+                "Script Assemblies",
+                "Create a Runtime Assembly Definition and a matching Editor Assembly Definition with the correct reference. Existing files are never overwritten.");
+            var enabled = new Toggle("Create missing Runtime and Editor assemblies")
+            {
+                value = _profile.ConfigureAssemblyDefinitions
+            };
+            var assemblyName = new TextField("Assembly name")
+            {
+                name = AssemblyNameFieldName,
+                value = _profile.AssemblyName
+            };
+            var runtimeFolder = new TextField("Runtime folder")
+            {
+                name = RuntimeAssemblyFolderFieldName,
+                value = _profile.RuntimeAssemblyFolder
+            };
+            var editorFolder = new TextField("Editor folder")
+            {
+                name = EditorAssemblyFolderFieldName,
+                value = _profile.EditorAssemblyFolder
+            };
+            enabled.RegisterValueChangedCallback(change => ChangeProfile(() => _profile.ConfigureAssemblyDefinitions = change.newValue));
+            assemblyName.RegisterValueChangedCallback(change => ChangeProfile(() => _profile.AssemblyName = change.newValue));
+            runtimeFolder.RegisterValueChangedCallback(change => ChangeProfile(() => _profile.RuntimeAssemblyFolder = change.newValue));
+            editorFolder.RegisterValueChangedCallback(change => ChangeProfile(() => _profile.EditorAssemblyFolder = change.newValue));
+            card.Add(enabled);
+            card.Add(assemblyName);
+            card.Add(runtimeFolder);
+            card.Add(editorFolder);
             return card;
         }
 
