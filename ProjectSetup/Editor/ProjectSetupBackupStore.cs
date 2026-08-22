@@ -74,7 +74,7 @@ namespace ProjectSetup.Editor
             {
                 var json = File.ReadAllText(_path, new UTF8Encoding(false, true));
                 var data = JsonUtility.FromJson<ProjectSetupSnapshotData>(json);
-                if (data == null || data.schemaVersion < 1 || data.schemaVersion > 10)
+                if (data == null || data.schemaVersion < 1 || data.schemaVersion > 11)
                 {
                     error = "The Project Setup backup schema is unsupported.";
                     return false;
@@ -93,7 +93,7 @@ namespace ProjectSetup.Editor
         [Serializable]
         private sealed class ProjectSetupSnapshotData
         {
-            public int schemaVersion = 10;
+            public int schemaVersion = 11;
             public int assetSerialization;
             public string versionControlMode;
             public bool enterPlayModeOptionsEnabled;
@@ -129,6 +129,10 @@ namespace ProjectSetup.Editor
             public string[] createdProjectFolders;
             public CreatedAssetData[] createdProjectAssets;
             public CreatedRootFileData[] createdProjectRootFiles;
+            public bool hasApplicationIdentifierData;
+            public string applicationIdentifierTargetId;
+            public string applicationIdentifierTargetLabel;
+            public string applicationIdentifier;
 
             internal static ProjectSetupSnapshotData FromSnapshot(ProjectSetupSnapshot snapshot)
             {
@@ -194,7 +198,11 @@ namespace ProjectSetup.Editor
                         {
                             path = file.Path,
                             contentHash = file.ContentHash
-                        })
+                        }),
+                    hasApplicationIdentifierData = snapshot.HasApplicationIdentifierData,
+                    applicationIdentifierTargetId = snapshot.ApplicationIdentifierTargetId,
+                    applicationIdentifierTargetLabel = snapshot.ApplicationIdentifierTargetLabel,
+                    applicationIdentifier = snapshot.ApplicationIdentifier
                 };
             }
 
@@ -252,7 +260,11 @@ namespace ProjectSetup.Editor
                         ? Array.ConvertAll(
                             createdProjectRootFiles,
                             file => new ProjectSetupCreatedRootFile(file.path, file.contentHash))
-                        : Array.Empty<ProjectSetupCreatedRootFile>());
+                        : Array.Empty<ProjectSetupCreatedRootFile>(),
+                    hasApplicationIdentifierData: schemaVersion >= 11 && hasApplicationIdentifierData,
+                    applicationIdentifierTargetId: schemaVersion >= 11 ? applicationIdentifierTargetId : string.Empty,
+                    applicationIdentifierTargetLabel: schemaVersion >= 11 ? applicationIdentifierTargetLabel : string.Empty,
+                    applicationIdentifier: schemaVersion >= 11 ? applicationIdentifier : string.Empty);
             }
         }
 

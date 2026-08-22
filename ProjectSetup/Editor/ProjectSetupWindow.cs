@@ -37,6 +37,7 @@ namespace ProjectSetup.Editor
         internal const string VersionControlFilesCardName = "version-control-files";
         internal const string VersionControlFilesToggleName = "version-control-files-toggle";
         internal const string AssemblyDefinitionsCardName = "script-assemblies";
+        internal const string ApplicationIdentifierCardName = "application-identifier";
         internal const string AssemblyNameFieldName = "assembly-name-field";
         internal const string RuntimeAssemblyFolderFieldName = "runtime-assembly-folder-field";
         internal const string EditorAssemblyFolderFieldName = "editor-assembly-folder-field";
@@ -214,6 +215,14 @@ namespace ProjectSetup.Editor
             content.Add(CreateTextCard("company-name", "Company Name", "Shared Player identity value.", _profile.ConfigureCompanyName, _profile.CompanyName, value => _profile.ConfigureCompanyName = value, value => _profile.CompanyName = value));
             content.Add(CreateTextCard("product-name", "Product Name", "Shared Player product name.", _profile.ConfigureProductName, _profile.ProductName, value => _profile.ConfigureProductName = value, value => _profile.ProductName = value));
             content.Add(CreateTextCard("bundle-version", "Bundle Version", "Shared application version string.", _profile.ConfigureBundleVersion, _profile.BundleVersion, value => _profile.ConfigureBundleVersion = value, value => _profile.BundleVersion = value));
+            content.Add(CreateTextCard(
+                ApplicationIdentifierCardName,
+                "Application Identifier",
+                "Set the reverse-domain identifier for the active build target. Use lowercase segments such as com.company.game.",
+                _profile.ConfigureApplicationIdentifier,
+                _profile.ApplicationIdentifier,
+                value => _profile.ConfigureApplicationIdentifier = value,
+                value => _profile.ApplicationIdentifier = value));
             content.Add(CreateScriptingDefineCard());
             content.Add(CreateTextCard(
                 RootNamespaceCardName,

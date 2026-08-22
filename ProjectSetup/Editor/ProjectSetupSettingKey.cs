@@ -25,6 +25,7 @@ namespace ProjectSetup.Editor
         AssetNamingUsesSpace = 18,
         ProjectFolders = 19,
         AssemblyDefinitions = 20,
-        VersionControlFiles = 21
+        VersionControlFiles = 21,
+        ApplicationIdentifier = 22
     }
 }

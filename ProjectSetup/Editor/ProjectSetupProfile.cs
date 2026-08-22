@@ -28,6 +28,8 @@ namespace ProjectSetup.Editor
         [SerializeField] private string productName = "New Unity Project";
         [SerializeField] private bool configureBundleVersion;
         [SerializeField] private string bundleVersion = "1.0.0";
+        [SerializeField] private bool configureApplicationIdentifier;
+        [SerializeField] private string applicationIdentifier = "com.company.product";
         [SerializeField] private bool configureBuildScenes;
         [SerializeField] private ProjectSetupBuildScene[] buildScenes = Array.Empty<ProjectSetupBuildScene>();
         [SerializeField] private bool configureTags;
@@ -87,6 +89,8 @@ namespace ProjectSetup.Editor
         internal string ProductName { get => productName; set => productName = value; }
         internal bool ConfigureBundleVersion { get => configureBundleVersion; set => configureBundleVersion = value; }
         internal string BundleVersion { get => bundleVersion; set => bundleVersion = value; }
+        internal bool ConfigureApplicationIdentifier { get => configureApplicationIdentifier; set => configureApplicationIdentifier = value; }
+        internal string ApplicationIdentifier { get => applicationIdentifier ?? string.Empty; set => applicationIdentifier = value ?? string.Empty; }
         internal bool ConfigureBuildScenes { get => configureBuildScenes; set => configureBuildScenes = value; }
         internal ProjectSetupBuildScene[] BuildScenes
         {
@@ -140,6 +144,8 @@ namespace ProjectSetup.Editor
             productName = "New Unity Project";
             configureBundleVersion = false;
             bundleVersion = "1.0.0";
+            configureApplicationIdentifier = false;
+            applicationIdentifier = "com.company.product";
             configureBuildScenes = false;
             buildScenes = Array.Empty<ProjectSetupBuildScene>();
             configureTags = false;
@@ -198,6 +204,8 @@ namespace ProjectSetup.Editor
             productName = snapshot.ProductName;
             configureBundleVersion = true;
             bundleVersion = snapshot.BundleVersion;
+            configureApplicationIdentifier = snapshot.HasApplicationIdentifierData;
+            applicationIdentifier = snapshot.ApplicationIdentifier;
             configureBuildScenes = snapshot.HasBuildSceneData;
             buildScenes = snapshot.BuildScenes
                 .Select(scene => new ProjectSetupBuildScene(scene.SceneGuid, scene.Path, scene.Enabled))
