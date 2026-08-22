@@ -97,7 +97,7 @@ namespace ModuleInstaller.Editor.Tests
         public void ProjectSetup_UsesVersionControlAndAssemblyDefinitionCapableRelease()
         {
             Assert.That(ModuleCatalog.TryFindEntry("com.studiogaku.project-setup", out var entry), Is.True);
-            Assert.That(entry.Tag, Is.EqualTo("project-setup-v1.12.0"));
+            Assert.That(entry.Tag, Is.EqualTo("project-setup-v1.13.0"));
             Assert.That(entry.Summary, Does.Contain("project folders").And.Contain("test assembly definitions").And.Contain("version control files").And.Contain("code generation defaults").And.Contain("duplicate naming defaults").And.Contain("scripting define symbols").And.Contain("Tags").And.Contain("Layers").And.Contain("Build Scenes").And.Contain("Play Mode Start Scene"));
         }
     }
