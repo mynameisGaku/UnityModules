@@ -15,6 +15,7 @@ Unity で繰り返し発生する設定、実装、確認作業を減らすた�
 | 新しいProjectごとに基本フォルダー、asmdef、Git設定、Player識別子、build方式、managed code削除強度、IL2CPP最適化、開始Sceneを手作業したくない | [プロジェクト一括設定（Project Setup）](ProjectSetup/) | `Assets`配下の基本フォルダー、Runtime・Editor・test用asmdef、Unity向け`.gitignore`と`.gitattributes`、Project Settings、build target別Application Identifier・Scripting Backend・API Compatibility Level・Managed Stripping Level・IL2CPP Code Generation、Root Namespace、Play Mode開始Scene、条件付きコンパイル記号、Tag・Layer、Build Scenesをbackup付きでまとめて適用する。 |
 | Build Profile・Scene・出力先を毎回確認し、ビルド結果や容量差を手作業で残したくない | [ビルド実行アシスタント（Build Assistant）](BuildAssistant/README.md) | ① Profile、② Output、③ Preview、④ Confirm、⑤ Buildの順に確認し、既存結果を上書きせずDesktop Standalone buildと最大20件の履歴を残す。 |
 | 複数Sceneの順番・読込状態・Active Sceneを用途ごとに毎回戻したくない | [シーン作業セット（Scene Workspace）](SceneWorkspace/) | ProfileへSceneの順番・Loaded・Activeを保存し、Previewと確認後に安全に切り替える。 |
+| Play Mode中に調整したInspectorの値を終了後も残すため、メモして入力し直したくない | [プレイ中の調整を反映（Play Mode Tuning）](PlayModeTuning/) | 残したいComponentの項目を先に選び、Play中に手動で取り込み、終了後のPreviewと確認を経てSceneへ反映する。 |
 | Scene の読込順、Additive、Unload を安全に扱いたい | [シーン切り替え（SceneFlow）](SceneFlow/) | 4 種類の Scene 操作を直列化し、失敗理由を結果で受け取る。 |
 | Scene 切り替え中に画面を隠したい | [画面フェード（ScreenTransition）](ScreenTransition/) | UI Toolkit の全画面 Cover・Reveal を実行する。 |
 | ノッチや画面回転でUIが欠けるのを防ぎたい | [画面サイズ・ノッチ対応（AdaptiveLayout）](AdaptiveLayout/) | UI ToolkitとRectTransformを`Screen.safeArea`へ自動追従させる。 |
@@ -48,6 +49,7 @@ Unity で繰り返し発生する設定、実装、確認作業を減らすた�
 | [プロジェクト一括設定（Project Setup）](ProjectSetup/) | `Assets`配下の基本フォルダー、Runtime・Editor・test用asmdef、Unity向け`.gitignore`と`.gitattributes`、Project Settings、build target別Application Identifier・Scripting Backend・API Compatibility Level・Managed Stripping Level・IL2CPP Code Generation、Root Namespace、新規scriptの改行方式、複製時の命名規則、Play Mode Start Scene、条件付きコンパイル記号、Tag・Layer・Sorting Layer、Build Scenesをprofile化する。差分Preview、backup、適用、復元を一つのEditor画面で行い、既存fileは上書きしない。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [ビルド実行アシスタント（Build Assistant）](BuildAssistant/README.md) | 有効なBuild Profile・Scene・出力先をPreviewし、実行直前に差分を再確認して新規フォルダーへDesktop Standalone buildを実行する。結果、容量内訳、前回差分を最大20件保存し、新しいJSONへ書き出すEditor専用module。**Unity 6000.5.7f1以降**。 | なし |
 | [シーン作業セット（Scene Workspace）](SceneWorkspace/) | 複数Sceneの順番・Loaded・ActiveをProfile化し、差分Preview、古くなった計画の拒否、適用後検証、失敗時の復元結果を1つのEditor画面で扱うEditor専用module。**Unity 6000.5.7f1以降**。 | なし |
+| [プレイ中の調整を反映（Play Mode Tuning）](PlayModeTuning/) | 保存済みSceneのMonoBehaviourから残したい最上位serialized propertyを選び、Play Mode中に手動で取り込み、終了後の差分Preview、古くなった計画の拒否、適用後検証、失敗時の復元結果を1つのEditor画面で扱うEditor専用module。**Unity 6000.5.7f1以降**。 | なし |
 | [汎用データ構造（Containers）](Containers/) | コンテナ / データ構造 66 種。GC フリーのコレクション、Inspector に出せるシリアライズ対応型、空間分割、Unity のライフサイクルに耐えるコンテナ。 | なし |
 | [インスペクター入力補助（Inspector）](Inspector/) | Inspector 拡張の属性 43 種。条件による表示・非表示、グループ化とタブ、入力値の検証、メソッドのボタン化。**Unity 6000.5 以降**。 | なし |
 | [デバッグ描画（Drawing）](Drawing/) | 実行中の線・矢印・箱・球・経路・文字をコード1行で描くデバッグ可視化。Development Build専用呼び出しと持続時間に対応。**Unity 6000.5 以降**。 | なし |
@@ -105,6 +107,8 @@ Unity で繰り返し発生する設定、実装、確認作業を減らすた�
 
 複数Sceneの編集構成を用途ごとに切り替える場合は、[シーン作業セット（Scene Workspace）](SceneWorkspace/) を個別に追加して `Tools > Scene Workspace > Open` を開く。① `Workspace Profile`、② `Scene Setup/Capture`、③ `Preview Changes`、④ `Review and Confirm`、⑤ `Switch Workspace/Result` の順に確認し、Sceneを変更する前に差分と安全条件を確定する。
 
+Play Mode中の調整値を残す場合は、[プレイ中の調整を反映（Play Mode Tuning）](PlayModeTuning/) を個別に追加して `Tools > Play Mode Tuning > Open` を開く。① `Targets`、② `Capture During Play`、③ `Preview After Play`、④ `Review and Confirm`、⑤ `Apply Tuning / Result` の順に確認し、選択項目だけを手動で取り込んでから差分を反映する。
+
 特定モジュールだけを手作業で配置する場合は、そのフォルダーをプロジェクトの `Assets/Modules/` 以下へコピーする。アセンブリ定義が同梱されているので、利用側のasmdefから必要なassemblyを参照する。
 
 ```
@@ -122,6 +126,10 @@ Assets/
     ├── SceneWorkspace/
     │   ├── Editor/      SceneWorkspace.Editor
     │   ├── Tests/       SceneWorkspace.Tests
+    │   └── Documentation~/ 操作順と実画面
+    ├── PlayModeTuning/
+    │   ├── Editor/      PlayModeTuning.Editor
+    │   ├── Tests/       PlayModeTuning.Tests
     │   └── Documentation~/ 操作順と実画面
     ├── Containers/
     │   ├── Runtime/     Containers.Runtime
