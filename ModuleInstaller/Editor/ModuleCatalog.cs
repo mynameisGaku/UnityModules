@@ -15,6 +15,7 @@ namespace ModuleInstaller.Editor
             Entry("com.studiogaku.build-guard", "BuildGuard", "build-guard-v1.4.0", "Project Issue Scanner", "Finds and repairs missing references in Scenes and Prefabs."),
             Entry("com.studiogaku.reference-finder", "ReferenceFinder", "reference-finder-v1.3.0", "Asset Organizer", "Finds, replaces, and batch-renames asset references."),
             Entry("com.studiogaku.asset-import-audit", "AssetImportAudit", "asset-import-audit-v1.1.0", "Texture Import Settings", "Audits and batch-applies shared, Standalone, Android, and iOS texture import settings after a reviewed preview."),
+            Entry("com.studiogaku.build-assistant", "BuildAssistant", "build-assistant-v1.0.0", "Build Assistant", "Previews and executes reviewed desktop standalone builds in new output folders, then records bounded history, size changes, and JSON reports."),
             Entry("com.studiogaku.scene-flow", "SceneFlow", "scene-flow-v1.0.0", "Scene Switching", "Serializes Scene loading, activation, and unloading."),
             Entry("com.studiogaku.screen-transition", "ScreenTransition", "screen-transition-v1.0.1", "Screen Fade", "Covers and reveals the screen with a UI Toolkit overlay."),
             Entry("com.studiogaku.adaptive-layout", "AdaptiveLayout", "adaptive-layout-v1.0.0", "Safe Area Layout", "Keeps UI inside notches, cutouts, and changing safe areas."),
@@ -54,11 +55,11 @@ namespace ModuleInstaller.Editor
 
         private static readonly ModuleBundle[] CatalogBundles =
         {
-            Bundle("project-maintenance", "Project Maintenance", "Set up a new project and keep project assets and texture import settings maintainable.", ModuleBundleTier.Recommended,
-                "Use this when starting a project or cleaning up project-wide settings, texture import settings, missing references, and asset organization.",
-                "Open Tools > Project Setup > Open, preview and apply the needed sections, then preview texture differences from Tools > Asset Import Audit > Open.",
-                "Installation changes Packages only. Project Setup and Asset Import Audit change their selected settings only after their own explicit preview and apply actions.",
-                "com.studiogaku.project-setup", "com.studiogaku.asset-import-audit", "com.studiogaku.inspector", "com.studiogaku.drawing", "com.studiogaku.build-guard", "com.studiogaku.reference-finder"),
+            Bundle("project-maintenance", "Project Maintenance", "Set up a new project, keep project assets and texture import settings maintainable, and run reviewed desktop builds.", ModuleBundleTier.Recommended,
+                "Use this when starting a project, cleaning up project-wide settings and assets, or preparing a desktop standalone build.",
+                "Start with Tools > Project Setup > Open, audit textures from Tools > Asset Import Audit > Open, then preview a release plan from Tools > Build Assistant > Open.",
+                "Installation changes Packages only. Project Setup and Asset Import Audit change selected settings only after explicit preview and apply actions. Build Assistant writes new build output and bounded Library history only after review and confirmation.",
+                "com.studiogaku.project-setup", "com.studiogaku.asset-import-audit", "com.studiogaku.inspector", "com.studiogaku.drawing", "com.studiogaku.build-guard", "com.studiogaku.reference-finder", "com.studiogaku.build-assistant"),
             Bundle("scene-and-ui", "Scene and UI", "Build a predictable scene, screen, pause, and startup flow.", ModuleBundleTier.Recommended,
                 "Use this when scene changes, fades, safe areas, pause behavior, or startup order are being implemented together.",
                 "Import one Basics sample from Package Manager and copy only the controller pattern needed by your first scene.",

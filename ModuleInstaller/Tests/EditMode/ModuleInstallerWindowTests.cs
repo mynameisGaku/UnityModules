@@ -47,7 +47,7 @@ namespace ModuleInstaller.Editor.Tests
                 Assert.That(projectMaintenanceGuide, Is.Not.Null);
                 Assert.That(projectMaintenancePackages, Is.Not.Null);
                 Assert.That(projectMaintenanceInstall, Is.Not.Null);
-                Assert.That(projectMaintenancePackages.text, Does.Contain("Texture Import Settings"));
+                Assert.That(projectMaintenancePackages.text, Does.Contain("Texture Import Settings").And.Contain("Build Assistant"));
                 Assert.That(projectMaintenanceCard.hierarchy.IndexOf(projectMaintenanceHeading), Is.LessThan(projectMaintenanceCard.hierarchy.IndexOf(projectMaintenanceSummary)));
                 Assert.That(projectMaintenanceCard.hierarchy.IndexOf(projectMaintenanceSummary), Is.LessThan(projectMaintenanceCard.hierarchy.IndexOf(projectMaintenanceGuide)));
                 Assert.That(projectMaintenanceCard.hierarchy.IndexOf(projectMaintenanceGuide), Is.LessThan(projectMaintenanceCard.hierarchy.IndexOf(projectMaintenancePackages)));
@@ -70,6 +70,16 @@ namespace ModuleInstaller.Editor.Tests
                 Assert.That(assetImportLabel.text, Does.Contain("Texture Import Settings").And.Contain("Standalone").And.Contain("Android").And.Contain("iOS"));
                 Assert.That(assetImportReadmeButton.tooltip, Does.Contain("asset-import-audit-v1.1.0/AssetImportAudit/README.md"));
                 Assert.That(assetImportInstallButton, Is.Not.Null);
+
+                var buildAssistantRow = window.rootVisualElement.Q<VisualElement>("package-com.studiogaku.build-assistant");
+                Assert.That(buildAssistantRow, Is.Not.Null);
+                var buildAssistantLabel = buildAssistantRow.Q<Label>();
+                var buildAssistantReadmeButton = buildAssistantRow.Q<Button>("readme-package-com.studiogaku.build-assistant");
+                var buildAssistantInstallButton = buildAssistantRow.Q<Button>("install-package-com.studiogaku.build-assistant");
+                Assert.That(buildAssistantLabel.text, Does.Contain("Build Assistant").And.Contain("desktop standalone builds").And.Contain("bounded history"));
+                Assert.That(buildAssistantReadmeButton.tooltip, Does.Contain("build-assistant-v1.0.0/BuildAssistant/README.md"));
+                Assert.That(buildAssistantInstallButton, Is.Not.Null);
+                Assert.That(packages.contentContainer.hierarchy.IndexOf(buildAssistantRow), Is.EqualTo(packages.contentContainer.hierarchy.IndexOf(assetImportRow) + 1));
             }
             finally
             {

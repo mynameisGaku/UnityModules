@@ -11,7 +11,7 @@ namespace ModuleInstaller.Editor.Tests
         [Test]
         public void Catalog_UsesUniquePinnedPackageEntries()
         {
-            Assert.That(ModuleCatalog.Entries.Count, Is.EqualTo(41));
+            Assert.That(ModuleCatalog.Entries.Count, Is.EqualTo(42));
             var packageNames = new HashSet<string>(StringComparer.Ordinal);
             var folderNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -80,17 +80,18 @@ namespace ModuleInstaller.Editor.Tests
         }
 
         [Test]
-        public void ProjectMaintenanceBundle_IncludesSetupAndRepairWorkflows()
+        public void ProjectMaintenanceBundle_UsesSetupRepairAndBuildOrder()
         {
             Assert.That(ModuleCatalog.TryFindBundle("project-maintenance", out var bundle), Is.True);
-            Assert.That(bundle.PackageNames, Is.EquivalentTo(new[]
+            Assert.That(bundle.PackageNames, Is.EqualTo(new[]
             {
                 "com.studiogaku.project-setup",
                 "com.studiogaku.asset-import-audit",
                 "com.studiogaku.inspector",
                 "com.studiogaku.drawing",
                 "com.studiogaku.build-guard",
-                "com.studiogaku.reference-finder"
+                "com.studiogaku.reference-finder",
+                "com.studiogaku.build-assistant"
             }));
         }
 
@@ -110,6 +111,16 @@ namespace ModuleInstaller.Editor.Tests
             Assert.That(entry.Tag, Is.EqualTo("asset-import-audit-v1.1.0"));
             Assert.That(entry.DisplayName, Is.EqualTo("Texture Import Settings"));
             Assert.That(entry.Summary, Does.Contain("shared").And.Contain("Standalone").And.Contain("Android").And.Contain("iOS").And.Contain("reviewed preview"));
+        }
+
+        [Test]
+        public void BuildAssistant_UsesReviewedDesktopBuildRelease()
+        {
+            Assert.That(ModuleCatalog.TryFindEntry("com.studiogaku.build-assistant", out var entry), Is.True);
+            Assert.That(entry.FolderName, Is.EqualTo("BuildAssistant"));
+            Assert.That(entry.Tag, Is.EqualTo("build-assistant-v1.0.0"));
+            Assert.That(entry.DisplayName, Is.EqualTo("Build Assistant"));
+            Assert.That(entry.Summary, Does.Contain("reviewed desktop standalone builds").And.Contain("new output folders").And.Contain("bounded history").And.Contain("size changes").And.Contain("JSON reports"));
         }
     }
 }
