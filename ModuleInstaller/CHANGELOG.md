@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.4.9] - 2026-08-23
+
+- 「シーン作業セット」v1.0.0をcatalogとScene and UIへ追加しました。
+- Scene and UIを6件、個別一覧を43件へ拡張し、EditorのScene作業構成をRuntimeのScene遷移より前へ配置しました。
+- package導入、Profile作成・編集・Capture、確認済みScene構成の切り替えが変更する範囲を分けて明記しました。
+- catalog、bundle順、Editor windowの表示順と個別導線を回帰testで固定しました。
+- 導入済みprereleaseをSemVer順で比較し、公開済み安定版への更新を誤って不要扱いしないようにしました。
+
 ## [1.4.8] - 2026-08-23
 
 - 「ビルド実行アシスタント」v1.0.0をcatalogとProject Maintenanceへ追加しました。
