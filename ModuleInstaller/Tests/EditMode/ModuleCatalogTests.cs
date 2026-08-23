@@ -11,7 +11,7 @@ namespace ModuleInstaller.Editor.Tests
         [Test]
         public void Catalog_UsesUniquePinnedPackageEntries()
         {
-            Assert.That(ModuleCatalog.Entries.Count, Is.EqualTo(42));
+            Assert.That(ModuleCatalog.Entries.Count, Is.EqualTo(43));
             var packageNames = new HashSet<string>(StringComparer.Ordinal);
             var folderNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -96,6 +96,23 @@ namespace ModuleInstaller.Editor.Tests
         }
 
         [Test]
+        public void SceneAndUiBundle_UsesWorkspaceBeforeRuntimeSceneFlowOrder()
+        {
+            Assert.That(ModuleCatalog.TryFindBundle("scene-and-ui", out var bundle), Is.True);
+            Assert.That(bundle.PackageNames, Is.EqualTo(new[]
+            {
+                "com.studiogaku.scene-workspace",
+                "com.studiogaku.scene-flow",
+                "com.studiogaku.screen-transition",
+                "com.studiogaku.adaptive-layout",
+                "com.studiogaku.time-control",
+                "com.studiogaku.startup-flow"
+            }));
+            Assert.That(bundle.FirstStep, Does.Contain("Tools > Scene Workspace > Open").And.Contain("Preview Changes"));
+            Assert.That(bundle.ChangeScope, Does.Contain("Installation changes Packages only").And.Contain("Create New Profile").And.Contain("does not save it automatically").And.Contain("Switch Workspace").And.Contain("never saves or discards Scene changes"));
+        }
+
+        [Test]
         public void ProjectSetup_UsesVersionControlAndAssemblyDefinitionCapableRelease()
         {
             Assert.That(ModuleCatalog.TryFindEntry("com.studiogaku.project-setup", out var entry), Is.True);
@@ -121,6 +138,16 @@ namespace ModuleInstaller.Editor.Tests
             Assert.That(entry.Tag, Is.EqualTo("build-assistant-v1.0.0"));
             Assert.That(entry.DisplayName, Is.EqualTo("Build Assistant"));
             Assert.That(entry.Summary, Does.Contain("reviewed desktop standalone builds").And.Contain("new output folders").And.Contain("bounded history").And.Contain("size changes").And.Contain("JSON reports"));
+        }
+
+        [Test]
+        public void SceneWorkspace_UsesReviewedMultiSceneEditorRelease()
+        {
+            Assert.That(ModuleCatalog.TryFindEntry("com.studiogaku.scene-workspace", out var entry), Is.True);
+            Assert.That(entry.FolderName, Is.EqualTo("SceneWorkspace"));
+            Assert.That(entry.Tag, Is.EqualTo("scene-workspace-v1.0.0"));
+            Assert.That(entry.DisplayName, Is.EqualTo("Scene Workspace"));
+            Assert.That(entry.Summary, Does.Contain("ordered multi-scene editor workspaces").And.Contain("stale-plan checks").And.Contain("post-verification").And.Contain("rollback reporting"));
         }
     }
 }
