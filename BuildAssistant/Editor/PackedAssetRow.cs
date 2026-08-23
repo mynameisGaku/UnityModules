@@ -14,4 +14,3 @@ namespace BuildAssistant.Editor
         internal ulong PackedBytes { get; }
     }
 }
-

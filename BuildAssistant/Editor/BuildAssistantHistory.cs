@@ -27,4 +27,3 @@ namespace BuildAssistant.Editor
         public string Message { get; }
     }
 }
-

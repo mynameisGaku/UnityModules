@@ -33,4 +33,3 @@ namespace BuildAssistant.Editor
         HistoryWriteFailed = 13
     }
 }
-

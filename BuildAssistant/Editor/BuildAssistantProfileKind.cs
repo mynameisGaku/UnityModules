@@ -9,4 +9,3 @@ namespace BuildAssistant.Editor
         Custom = 1
     }
 }
-

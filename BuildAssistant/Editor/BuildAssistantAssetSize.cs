@@ -31,4 +31,3 @@ namespace BuildAssistant.Editor
         public int OccurrenceCount { get; }
     }
 }
-
