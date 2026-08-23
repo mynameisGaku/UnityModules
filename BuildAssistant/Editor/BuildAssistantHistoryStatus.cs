@@ -11,4 +11,3 @@ namespace BuildAssistant.Editor
         Interrupted = 2
     }
 }
-

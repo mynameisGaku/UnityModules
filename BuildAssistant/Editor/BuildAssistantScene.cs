@@ -39,4 +39,3 @@ namespace BuildAssistant.Editor
         public string DependencyHash { get; }
     }
 }
-

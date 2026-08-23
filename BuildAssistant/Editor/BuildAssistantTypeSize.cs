@@ -38,4 +38,3 @@ namespace BuildAssistant.Editor
         public int AssetCount { get; }
     }
 }
-

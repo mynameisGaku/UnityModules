@@ -20,4 +20,3 @@ namespace BuildAssistant.Editor
         internal string StableId { get; }
     }
 }
-

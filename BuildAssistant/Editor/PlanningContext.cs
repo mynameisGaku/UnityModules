@@ -30,4 +30,3 @@ namespace BuildAssistant.Editor
         internal BuildAssistantHistoryEntry PreviousComparableSuccess { get; }
     }
 }
-
