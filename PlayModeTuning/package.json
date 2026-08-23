@@ -1,0 +1,19 @@
+{
+  "name": "com.studiogaku.play-mode-tuning",
+  "version": "1.0.0",
+  "displayName": "Play Mode Tuning",
+  "description": "Captures explicitly selected component values during Play Mode, previews the exact changes after Play Mode, and applies one confirmed plan with stale checks, post-verification, and rollback reporting.",
+  "unity": "6000.5",
+  "unityRelease": "7f1",
+  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/blob/play-mode-tuning-v1.0.0/PlayModeTuning/Documentation~/index.md",
+  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/play-mode-tuning-v1.0.0/PlayModeTuning/CHANGELOG.md",
+  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/play-mode-tuning-v1.0.0/PlayModeTuning/LICENSE.md",
+  "license": "Refer to LICENSE.md file",
+  "keywords": ["play-mode", "tuning", "serialized-property", "editor", "workflow"],
+  "author": {
+    "name": "StudioGaku",
+    "email": "gaku.fujimoto.business@gmail.com",
+    "url": "https://github.com/mynameisGaku/UnityModules"
+  },
+  "dependencies": {}
+}
