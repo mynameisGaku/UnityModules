@@ -1,6 +1,6 @@
 # モジュール管理アシスタント（Module Manager）
 
-> Package version: 1.4.7
+> Package version: 1.4.8
 
 ## 30秒で分かる説明
 
@@ -14,9 +14,10 @@ Unity Package ManagerへGit URLを1件ずつ貼り、導入済みmoduleの公開
 
 - 普段使う4つのworkflowから、必要なmodule群をまとめて導入する。
 - `Project Maintenance`からTexture import設定の差分確認・一括適用ツールを導入する。
+- `Project Maintenance`から、確認済み計画だけを新しい出力folderへ実行する「ビルド実行アシスタント」を導入する。
 - 2つの専門向けcollectionは折りたたみ表示に分離する。
 - 各workflowの用途、最初の操作、変更範囲をwindow内で確認する。
-- 41個の公開moduleを詳細一覧から1件ずつ導入し、固定tagのREADMEを開く。
+- 42個の公開moduleを詳細一覧から1件ずつ導入し、固定tagのREADMEを開く。
 - 既に導入済みのpackageを自動で除外する。
 - 導入済みのcatalog moduleを調べ、古いversionだけを固定済み公開tagへまとめて更新する。
 - 最新version、catalogより新しいversion、独自versionは自動で上書きしない。
@@ -36,7 +37,7 @@ Unity Package ManagerへGit URLを1件ずつ貼り、導入済みmoduleの公開
 Unityの`Window > Package Management > Package Manager`を開き、`Add package from git URL...`へ次を入力します。
 
 ```text
-https://github.com/mynameisGaku/UnityModules.git?path=/ModuleInstaller#module-installer-v1.4.7
+https://github.com/mynameisGaku/UnityModules.git?path=/ModuleInstaller#module-installer-v1.4.8
 ```
 
 Package Managerの解決後、`Tools > Module Manager > Open`を開き、次の順番で操作します。
@@ -47,7 +48,7 @@ Package Managerの解決後、`Tools > Module Manager > Open`を開き、次の�
 
 ③ `Quick guide`の下に並ぶmodule名と追加件数を確認します。
 
-④ card最下部の`Install 6`のように表示されたbuttonを押し、Package Managerの解決とscript reloadが終わるまで待ちます。
+④ card最下部の`Install 7`のように表示されたbuttonを押し、Package Managerの解決とscript reloadが終わるまで待ちます。
 
 ⑤ 1件だけ導入する場合は、さらに下の個別一覧を開きます。
 
@@ -58,7 +59,7 @@ Package Managerの解決後、`Tools > Module Manager > Open`を開き、次の�
 <details>
 <summary>実際のModule Manager画面を確認する</summary>
 
-`Project Maintenance`の`Quick guide`を開いた実画面です。概要、用途、導入する6件、`Install 6`の順で上から確認できます。
+`Project Maintenance`の`Quick guide`を開いた実画面です。概要、用途、導入する7件、`Install 7`の順で上から確認できます。
 
 ![Module Managerの実画面](Documentation~/module-manager-window.png)
 
@@ -72,11 +73,11 @@ Runtime APIはありません。C#を書く必要はなく、Editor windowの操
 
 ## まずどれを選ぶか
 
-普段は41件の個別一覧を先に読む必要はありません。やりたい作業に最も近いworkflowを1つ選び、`Quick guide`とcardに表示されたmodule名を確認してください。
+普段は42件の個別一覧を先に読む必要はありません。やりたい作業に最も近いworkflowを1つ選び、`Quick guide`とcardに表示されたmodule名を確認してください。
 
 | やりたいこと | 最初に見るworkflow | 導入後の最初の操作 |
 |---|---|---|
-| 新しいProjectの基本フォルダー、Player識別子、build方式、.NET API範囲、managed code削除強度、IL2CPP生成方針、C#生成規則、Build Scenes、Texture import設定、壊れた参照、Asset整理をまとめて扱う | `Project Maintenance` | `Tools > Project Setup > Open`の後に`Tools > Asset Import Audit > Open`で差分をpreviewする |
+| 新しいProjectの基本フォルダー、Player識別子、build方式、.NET API範囲、managed code削除強度、IL2CPP生成方針、C#生成規則、Build Scenes、Texture import設定、壊れた参照、Asset整理、desktop向けbuildをまとめて扱う | `Project Maintenance` | 設定とAssetを確認した後、`Tools > Build Assistant > Open`でbuild計画をpreviewする |
 | Scene切り替え、画面fade、safe area、pause、起動順を整える | `Scene and UI` | Package Managerから必要なBasics sampleを1つimportする |
 | save、音声、不具合reportを用意する | `Game Services` | 最初に使うserviceのsampleをimportし、明示的なownerを1つ作る |
 | 入力の補助やGameplay入力の一時停止を追加する | `Input Support` | Input Assist Basicsで入力値を確認してから必要なmapだけ設定する |
@@ -94,12 +95,13 @@ Runtime APIはありません。C#を書く必要はなく、Editor windowの操
 - Package Managerが失敗した場合は、最初の失敗内容を表示して処理を終了します。無限再試行はしません。
 - workflowを導入しただけでは、Project Settings、Scene、Prefab、Asset importerを変更しません。
 - 「アセット設定チェック」は、利用者が対象・共通設定・Standalone/Android/iOS設定を選び、`Preview`で差分を確認して`Apply`したTexture importerだけを再importします。
+- 「ビルド実行アシスタント」は、確認済み計画を実行した時だけ選択した出力先へ新しい実行folderを作り、`Library/BuildAssistant`へ最大20件の履歴を保存します。JSONは利用者が保存先を選んで明示的に書き出した場合だけ作成します。
 
 ## 用途別workflow
 
 | 普段使うworkflow | 含まれる用途 |
 |---|---|
-| Project Maintenance | 基本フォルダー、asmdef、`.gitignore`、`.gitattributes`、Project Settings、build target別Application Identifier・Scripting Backend・API Compatibility Level・Managed Stripping Level・IL2CPP Code Generation、C# Root Namespace、新規script改行方式、複製時の命名規則、条件付きコンパイル記号、Tag・Layer、Build Scenes、Play Mode開始Scene、Texture共通設定とStandalone/Android/iOS override、Inspector整理、debug描画、Scene・Prefab不備修復、Asset参照・名前整理 |
+| Project Maintenance | 基本フォルダー、asmdef、`.gitignore`、`.gitattributes`、Project Settings、build target別Application Identifier・Scripting Backend・API Compatibility Level・Managed Stripping Level・IL2CPP Code Generation、C# Root Namespace、新規script改行方式、複製時の命名規則、条件付きコンパイル記号、Tag・Layer、Build Scenes、Play Mode開始Scene、Texture共通設定とStandalone/Android/iOS override、Inspector整理、debug描画、Scene・Prefab不備修復、Asset参照・名前整理、確認済みdesktop build、容量差・履歴・JSON書き出し |
 | Scene and UI | Scene切り替え、画面fade、safe area、ゲーム時間、起動手順 |
 | Game Services | save data、音声再生、不具合report |
 | Input Support | stick・button補助、Gameplay入力の一時停止 |
@@ -114,6 +116,20 @@ Runtime APIはありません。C#を書く必要はなく、Editor windowの操
 Project Maintenanceに含まれる「プロジェクト一括設定」はv1.15.0へ固定しています。新規Projectでよく使う基本フォルダー、Runtime・Editor・test用asmdef、Unity向け`.gitignore`と`.gitattributes`をまとめて作成できます。既存fileは上書きせず、復元時もこのツールが作成して内容が変わっていないfileだけを削除します。利用者が編集したfileや、Assetを追加したフォルダーは残します。build target別Application Identifier・Scripting Backend・API Compatibility Level・Managed Stripping Level・IL2CPP Code Generation、Project Settings、C# Root Namespace、新規scriptの改行方式、複製時のGameObject・Asset命名規則、条件付きコンパイル記号、Player Build Scenes、EditorのPlay Mode開始Sceneも同じprofileから適用・復元できます。
 
 同じworkflowに含まれる「アセット設定チェック」はv1.1.0へ固定しています。Textureの共通設定に加え、Standalone・Android・iOSのOverride、最大size、圧縮方針を対象ごとに比較します。設定scopeを選んで`Preview`した時点では変更せず、表示された差分を確認して`Apply`した場合だけ選択済みTexture importerを更新・再importします。Preview後に対象が変わった場合は適用を中止します。
+
+同じworkflowに含まれる「ビルド実行アシスタント」はv1.0.0へ固定しています。Unityのdesktop向けStandalone buildを、次の順で実行します。
+
+`Tools > Build Assistant > Open`を開き、次の5区分を上から順に進めます。
+
+① `Profile`で現在のBuild ProfileとEditor Active Targetを確認します。変更が必要な場合は`Open Build Profiles`からUnityの画面を開きます。
+
+② `Output`でbuildを保存する絶対pathのroot folderを選びます。既存の実行結果を上書きするpathは指定しません。
+
+③ `Preview`の`Preview Build`でScene、Build Options、Scripting Backend、出力先を記録します。この時点ではfolderやfileを作らず、Unityの設定も変更しません。
+
+④ `Confirm`でpreview結果を読み、問題がなければ確認欄をオンにします。
+
+⑤ `Build / Result / Export`の`Build Confirmed Plan`で確認済みの同じ計画だけを実行します。状態が変わっていればbuildを開始せず、previewのやり直しを案内します。完了後に結果、容量差、履歴を確認し、必要な結果だけをJSONへ書き出します。
 
 ## よくある問題
 

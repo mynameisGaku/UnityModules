@@ -1,13 +1,13 @@
 {
   "name": "com.studiogaku.module-installer",
-  "version": "1.4.7",
+  "version": "1.4.8",
   "displayName": "Module Manager",
-  "description": "Guides practical Unity workflows including project and texture import maintenance, installs their pinned module bundles, and updates installed catalog packages from one Editor window.",
+  "description": "Guides practical Unity workflows including project setup, texture import maintenance, and reviewed desktop builds, installs their pinned module bundles, and updates installed catalog packages from one Editor window.",
   "unity": "6000.5",
   "unityRelease": "7f1",
-  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/blob/module-installer-v1.4.7/ModuleInstaller/Documentation~/index.md",
-  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/module-installer-v1.4.7/ModuleInstaller/CHANGELOG.md",
-  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/module-installer-v1.4.7/ModuleInstaller/LICENSE.md",
+  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/blob/module-installer-v1.4.8/ModuleInstaller/Documentation~/index.md",
+  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/module-installer-v1.4.8/ModuleInstaller/CHANGELOG.md",
+  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/module-installer-v1.4.8/ModuleInstaller/LICENSE.md",
   "license": "Refer to LICENSE.md file",
   "keywords": [
     "package-manager",
@@ -16,6 +16,7 @@
     "modules",
     "project-setup",
     "asset-import",
+    "build-assistant",
     "editor"
   ],
   "author": {
