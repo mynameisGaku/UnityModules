@@ -1,0 +1,19 @@
+{
+  "name": "com.studiogaku.scene-workspace",
+  "version": "1.0.0",
+  "displayName": "Scene Workspace",
+  "description": "Captures, previews, and safely switches ordered multi-scene editor workspaces with stale-plan checks, post-verification, and rollback reporting.",
+  "unity": "6000.5",
+  "unityRelease": "7f1",
+  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/blob/scene-workspace-v1.0.0/SceneWorkspace/Documentation~/index.md",
+  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/scene-workspace-v1.0.0/SceneWorkspace/CHANGELOG.md",
+  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/scene-workspace-v1.0.0/SceneWorkspace/LICENSE.md",
+  "license": "Refer to LICENSE.md file",
+  "keywords": ["scene", "workspace", "multi-scene", "editor", "workflow"],
+  "author": {
+    "name": "StudioGaku",
+    "email": "gaku.fujimoto.business@gmail.com",
+    "url": "https://github.com/mynameisGaku/UnityModules"
+  },
+  "dependencies": {}
+}
