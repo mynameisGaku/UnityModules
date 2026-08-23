@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.8] - 2026-08-23
+
+- 「ビルド実行アシスタント」v1.0.0をcatalogとProject Maintenanceへ追加しました。
+- Project Maintenanceを7件、個別一覧を42件へ拡張し、build実行をworkflowの最後に配置しました。
+- package導入だけではProjectや出力先を変更せず、Build Assistantで確認済みbuildを実行した場合だけ新しい出力folderと履歴を作る範囲を明記しました。
+- catalog、bundle順、Editor windowの個別導線を回帰testで固定しました。
+
 ## [1.4.7] - 2026-08-23
 
 - Added Asset Import Audit v1.1.0 to the catalog and Project Maintenance workflow.
