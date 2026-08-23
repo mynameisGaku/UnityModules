@@ -1,0 +1,19 @@
+{
+  "name": "com.studiogaku.build-assistant",
+  "version": "1.0.0",
+  "displayName": "Build Assistant",
+  "description": "Previews and executes safe desktop standalone builds with immutable input capture, bounded history, size deltas, and explicit JSON export.",
+  "unity": "6000.5",
+  "unityRelease": "7f1",
+  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/blob/build-assistant-v1.0.0/BuildAssistant/Documentation~/index.md",
+  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/build-assistant-v1.0.0/BuildAssistant/CHANGELOG.md",
+  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/build-assistant-v1.0.0/BuildAssistant/LICENSE.md",
+  "license": "Refer to LICENSE.md file",
+  "keywords": ["build", "build-profile", "report", "history", "editor"],
+  "author": {
+    "name": "StudioGaku",
+    "email": "gaku.fujimoto.business@gmail.com",
+    "url": "https://github.com/mynameisGaku/UnityModules"
+  },
+  "dependencies": {}
+}
