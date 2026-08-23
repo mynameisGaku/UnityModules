@@ -48,10 +48,32 @@ namespace ModuleInstaller.Editor.Tests
                 Assert.That(projectMaintenancePackages, Is.Not.Null);
                 Assert.That(projectMaintenanceInstall, Is.Not.Null);
                 Assert.That(projectMaintenancePackages.text, Does.Contain("Texture Import Settings").And.Contain("Build Assistant"));
-                Assert.That(projectMaintenanceCard.hierarchy.IndexOf(projectMaintenanceHeading), Is.LessThan(projectMaintenanceCard.hierarchy.IndexOf(projectMaintenanceSummary)));
-                Assert.That(projectMaintenanceCard.hierarchy.IndexOf(projectMaintenanceSummary), Is.LessThan(projectMaintenanceCard.hierarchy.IndexOf(projectMaintenanceGuide)));
-                Assert.That(projectMaintenanceCard.hierarchy.IndexOf(projectMaintenanceGuide), Is.LessThan(projectMaintenanceCard.hierarchy.IndexOf(projectMaintenancePackages)));
-                Assert.That(projectMaintenanceCard.hierarchy.IndexOf(projectMaintenancePackages), Is.LessThan(projectMaintenanceCard.hierarchy.IndexOf(projectMaintenanceInstall)));
+                Assert.That(projectMaintenanceCard.childCount, Is.EqualTo(5));
+                Assert.That(projectMaintenanceCard.hierarchy.IndexOf(projectMaintenanceHeading), Is.EqualTo(0));
+                Assert.That(projectMaintenanceCard.hierarchy.IndexOf(projectMaintenanceSummary), Is.EqualTo(1));
+                Assert.That(projectMaintenanceCard.hierarchy.IndexOf(projectMaintenanceGuide), Is.EqualTo(2));
+                Assert.That(projectMaintenanceCard.hierarchy.IndexOf(projectMaintenancePackages), Is.EqualTo(3));
+                Assert.That(projectMaintenanceCard.hierarchy.IndexOf(projectMaintenanceInstall), Is.EqualTo(4));
+
+                var sceneAndUiCard = window.rootVisualElement.Q<VisualElement>("bundle-scene-and-ui");
+                Assert.That(sceneAndUiCard, Is.Not.Null);
+                var sceneAndUiHeading = sceneAndUiCard.Q<Label>("heading-bundle-scene-and-ui");
+                var sceneAndUiSummary = sceneAndUiCard.Q<Label>("summary-bundle-scene-and-ui");
+                var sceneAndUiGuide = sceneAndUiCard.Q<Foldout>("guide-bundle-scene-and-ui");
+                var sceneAndUiPackages = sceneAndUiCard.Q<Label>("packages-bundle-scene-and-ui");
+                var sceneAndUiInstall = sceneAndUiCard.Q<Button>("install-bundle-scene-and-ui");
+                Assert.That(sceneAndUiHeading, Is.Not.Null);
+                Assert.That(sceneAndUiSummary, Is.Not.Null);
+                Assert.That(sceneAndUiGuide, Is.Not.Null);
+                Assert.That(sceneAndUiPackages, Is.Not.Null);
+                Assert.That(sceneAndUiInstall, Is.Not.Null);
+                Assert.That(sceneAndUiPackages.text, Does.Contain("Scene Workspace").And.Contain("Scene Switching"));
+                Assert.That(sceneAndUiCard.childCount, Is.EqualTo(5));
+                Assert.That(sceneAndUiCard.hierarchy.IndexOf(sceneAndUiHeading), Is.EqualTo(0));
+                Assert.That(sceneAndUiCard.hierarchy.IndexOf(sceneAndUiSummary), Is.EqualTo(1));
+                Assert.That(sceneAndUiCard.hierarchy.IndexOf(sceneAndUiGuide), Is.EqualTo(2));
+                Assert.That(sceneAndUiCard.hierarchy.IndexOf(sceneAndUiPackages), Is.EqualTo(3));
+                Assert.That(sceneAndUiCard.hierarchy.IndexOf(sceneAndUiInstall), Is.EqualTo(4));
 
                 var projectSetupRow = window.rootVisualElement.Q<VisualElement>("package-com.studiogaku.project-setup");
                 var projectSetupLabel = projectSetupRow.Q<Label>();
@@ -80,6 +102,24 @@ namespace ModuleInstaller.Editor.Tests
                 Assert.That(buildAssistantReadmeButton.tooltip, Does.Contain("build-assistant-v1.0.0/BuildAssistant/README.md"));
                 Assert.That(buildAssistantInstallButton, Is.Not.Null);
                 Assert.That(packages.contentContainer.hierarchy.IndexOf(buildAssistantRow), Is.EqualTo(packages.contentContainer.hierarchy.IndexOf(assetImportRow) + 1));
+
+                var sceneWorkspaceRow = window.rootVisualElement.Q<VisualElement>("package-com.studiogaku.scene-workspace");
+                Assert.That(sceneWorkspaceRow, Is.Not.Null);
+                var sceneWorkspaceLabel = sceneWorkspaceRow.Q<Label>();
+                var sceneWorkspaceReadmeButton = sceneWorkspaceRow.Q<Button>("readme-package-com.studiogaku.scene-workspace");
+                var sceneWorkspaceInstallButton = sceneWorkspaceRow.Q<Button>("install-package-com.studiogaku.scene-workspace");
+                Assert.That(sceneWorkspaceLabel.text, Does.Contain("Scene Workspace").And.Contain("multi-scene editor workspaces").And.Contain("stale-plan checks"));
+                Assert.That(sceneWorkspaceReadmeButton.tooltip, Does.Contain("scene-workspace-v1.0.0/SceneWorkspace/README.md"));
+                Assert.That(sceneWorkspaceInstallButton, Is.Not.Null);
+                Assert.That(sceneWorkspaceRow.childCount, Is.EqualTo(3));
+                Assert.That(sceneWorkspaceRow.hierarchy.IndexOf(sceneWorkspaceLabel), Is.EqualTo(0));
+                Assert.That(sceneWorkspaceRow.hierarchy.IndexOf(sceneWorkspaceReadmeButton), Is.EqualTo(1));
+                Assert.That(sceneWorkspaceRow.hierarchy.IndexOf(sceneWorkspaceInstallButton), Is.EqualTo(2));
+
+                var sceneFlowRow = window.rootVisualElement.Q<VisualElement>("package-com.studiogaku.scene-flow");
+                Assert.That(sceneFlowRow, Is.Not.Null);
+                Assert.That(packages.contentContainer.hierarchy.IndexOf(sceneWorkspaceRow), Is.EqualTo(packages.contentContainer.hierarchy.IndexOf(buildAssistantRow) + 1));
+                Assert.That(packages.contentContainer.hierarchy.IndexOf(sceneFlowRow), Is.EqualTo(packages.contentContainer.hierarchy.IndexOf(sceneWorkspaceRow) + 1));
             }
             finally
             {
