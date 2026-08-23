@@ -111,9 +111,188 @@ namespace ModuleInstaller.Editor
 
         internal static bool IsUpdateRequired(string installedVersion, string targetVersion)
         {
-            return Version.TryParse(installedVersion, out var installed)
-                && Version.TryParse(targetVersion, out var target)
+            return SemanticVersion.TryParse(installedVersion, out var installed)
+                && SemanticVersion.TryParse(targetVersion, out var target)
                 && installed.CompareTo(target) < 0;
+        }
+
+        private readonly struct SemanticVersion : IComparable<SemanticVersion>
+        {
+            private const int MaxLength = 256;
+
+            private readonly string major;
+            private readonly string minor;
+            private readonly string patch;
+            private readonly string[] preRelease;
+
+            private SemanticVersion(string major, string minor, string patch, string[] preRelease)
+            {
+                this.major = major;
+                this.minor = minor;
+                this.patch = patch;
+                this.preRelease = preRelease;
+            }
+
+            internal static bool TryParse(string value, out SemanticVersion version)
+            {
+                version = default;
+                if (string.IsNullOrEmpty(value) || value.Length > MaxLength)
+                {
+                    return false;
+                }
+
+                var buildSeparator = value.IndexOf('+');
+                if (buildSeparator >= 0)
+                {
+                    if (!TryParseIdentifiers(value.Substring(buildSeparator + 1), false, out _))
+                    {
+                        return false;
+                    }
+
+                    value = value.Substring(0, buildSeparator);
+                }
+
+                var preReleaseSeparator = value.IndexOf('-');
+                var core = preReleaseSeparator >= 0 ? value.Substring(0, preReleaseSeparator) : value;
+                var preReleaseText = preReleaseSeparator >= 0 ? value.Substring(preReleaseSeparator + 1) : null;
+                var coreParts = core.Split('.');
+                if (coreParts.Length != 3
+                    || !IsNumericIdentifier(coreParts[0], true)
+                    || !IsNumericIdentifier(coreParts[1], true)
+                    || !IsNumericIdentifier(coreParts[2], true))
+                {
+                    return false;
+                }
+
+                if (preReleaseText == null)
+                {
+                    version = new SemanticVersion(coreParts[0], coreParts[1], coreParts[2], Array.Empty<string>());
+                    return true;
+                }
+
+                if (!TryParseIdentifiers(preReleaseText, true, out var preRelease))
+                {
+                    return false;
+                }
+
+                version = new SemanticVersion(coreParts[0], coreParts[1], coreParts[2], preRelease);
+                return true;
+            }
+
+            public int CompareTo(SemanticVersion other)
+            {
+                var result = CompareNumericIdentifiers(major, other.major);
+                if (result != 0)
+                {
+                    return result;
+                }
+
+                result = CompareNumericIdentifiers(minor, other.minor);
+                if (result != 0)
+                {
+                    return result;
+                }
+
+                result = CompareNumericIdentifiers(patch, other.patch);
+                if (result != 0)
+                {
+                    return result;
+                }
+
+                if (preRelease.Length == 0 || other.preRelease.Length == 0)
+                {
+                    return preRelease.Length == other.preRelease.Length ? 0 : preRelease.Length == 0 ? 1 : -1;
+                }
+
+                var sharedLength = Math.Min(preRelease.Length, other.preRelease.Length);
+                for (var index = 0; index < sharedLength; index++)
+                {
+                    result = ComparePreReleaseIdentifiers(preRelease[index], other.preRelease[index]);
+                    if (result != 0)
+                    {
+                        return result;
+                    }
+                }
+
+                return preRelease.Length.CompareTo(other.preRelease.Length);
+            }
+
+            private static bool TryParseIdentifiers(string value, bool rejectNumericLeadingZero, out string[] identifiers)
+            {
+                identifiers = value.Split('.');
+                if (identifiers.Length == 0)
+                {
+                    return false;
+                }
+
+                foreach (var identifier in identifiers)
+                {
+                    if (string.IsNullOrEmpty(identifier))
+                    {
+                        return false;
+                    }
+
+                    var numeric = true;
+                    foreach (var character in identifier)
+                    {
+                        var digit = character >= '0' && character <= '9';
+                        var letter = character >= 'A' && character <= 'Z' || character >= 'a' && character <= 'z';
+                        if (!digit && !letter && character != '-')
+                        {
+                            return false;
+                        }
+
+                        numeric &= digit;
+                    }
+
+                    if (numeric && rejectNumericLeadingZero && identifier.Length > 1 && identifier[0] == '0')
+                    {
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+
+            private static bool IsNumericIdentifier(string value, bool rejectLeadingZero)
+            {
+                if (string.IsNullOrEmpty(value) || rejectLeadingZero && value.Length > 1 && value[0] == '0')
+                {
+                    return false;
+                }
+
+                foreach (var character in value)
+                {
+                    if (character < '0' || character > '9')
+                    {
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+
+            private static int ComparePreReleaseIdentifiers(string left, string right)
+            {
+                var leftNumeric = IsNumericIdentifier(left, false);
+                var rightNumeric = IsNumericIdentifier(right, false);
+                if (leftNumeric && rightNumeric)
+                {
+                    return CompareNumericIdentifiers(left, right);
+                }
+
+                if (leftNumeric != rightNumeric)
+                {
+                    return leftNumeric ? -1 : 1;
+                }
+
+                return string.CompareOrdinal(left, right);
+            }
+
+            private static int CompareNumericIdentifiers(string left, string right)
+            {
+                return left.Length == right.Length ? string.CompareOrdinal(left, right) : left.Length.CompareTo(right.Length);
+            }
         }
     }
 }

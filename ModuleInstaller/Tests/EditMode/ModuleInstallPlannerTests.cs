@@ -88,6 +88,38 @@ namespace ModuleInstaller.Editor.Tests
         }
 
         [Test]
+        public void BuildUpdates_SelectsInstalledPrereleaseBelowPinnedStableVersion()
+        {
+            var plan = ModuleInstallPlanner.BuildUpdates(
+                new[] { "com.studiogaku.project-setup" },
+                new Dictionary<string, string>(StringComparer.Ordinal)
+                {
+                    ["com.studiogaku.project-setup"] = "1.15.0-preview.1"
+                });
+
+            Assert.That(plan.CanStart, Is.True);
+            Assert.That(plan.Entries.Count, Is.EqualTo(1));
+            Assert.That(plan.Entries[0].PackageName, Is.EqualTo("com.studiogaku.project-setup"));
+            Assert.That(plan.InstalledCount, Is.Zero);
+            Assert.That(plan.Issues, Is.Empty);
+        }
+
+        [TestCase("1.14.0-preview.1", "1.15.0", true)]
+        [TestCase("1.15.0-preview.1", "1.15.0", true)]
+        [TestCase("1.15.0-preview.2", "1.15.0-preview.10", true)]
+        [TestCase("1.15.0-preview.10", "1.15.0-preview.2", false)]
+        [TestCase("1.15.0+build.7", "1.15.0", false)]
+        [TestCase("1.16.0-preview.1", "1.15.0", false)]
+        [TestCase("custom", "1.15.0", false)]
+        public void IsUpdateRequired_UsesSemanticVersionPrecedence(
+            string installedVersion,
+            string targetVersion,
+            bool expected)
+        {
+            Assert.That(ModuleInstallPlanner.IsUpdateRequired(installedVersion, targetVersion), Is.EqualTo(expected));
+        }
+
+        [Test]
         public void BuildUpdates_ReportsUnknownPackageWithoutSelectingMissingPackages()
         {
             var plan = ModuleInstallPlanner.BuildUpdates(
