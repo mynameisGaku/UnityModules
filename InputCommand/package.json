@@ -2,10 +2,10 @@
   "name": "com.studiogaku.input-command",
   "version": "1.0.0",
   "displayName": "Input Command",
-  "description": "Turns discrete input commands into one deterministic tick-driven pipeline that buffers early presses, matches sequences and chords, arbitrates by priority, resolves opposing axis inputs, and debounces unstable commands.",
+  "description": "Provides deterministic, engine-independent components for early-input buffering, sequence and chord matching, priority arbitration, opposing-axis resolution, and sample-based command stabilization.",
   "unity": "6000.5",
   "unityRelease": "7f1",
-  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/tree/input-command-v1.0.0/InputCommand/Documentation~",
+  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/blob/input-command-v1.0.0/InputCommand/Documentation~/index.md",
   "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/input-command-v1.0.0/InputCommand/CHANGELOG.md",
   "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/input-command-v1.0.0/InputCommand/LICENSE.md",
   "dependencies": {
@@ -61,5 +61,6 @@
   ],
   "author": {
     "name": "Studio Gaku"
-  }
+  },
+  "license": "Refer to LICENSE.md file"
 }

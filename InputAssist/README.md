@@ -26,11 +26,11 @@ Unityでは、stickの中央ぶれ消し、感度curve、急変抑制、方向�
 | 数値型 | `float`、`Vector2` | `double`、`ulong` tick |
 | 時間 | `deltaTime`（秒） | 呼び出し側が持つ単調増加tick |
 | Inspector | `[Serializable]` + `[SerializeField]`で直接編集 | 非対応（codeで`TryCreate`） |
-| UnityEngine依存 | あり | なし（値型中心、追加割り当てなし） |
+| UnityEngine依存 | あり | 各型は直接参照しないが、統合assemblyは参照 |
 | 単位 | 機能をひとまとめにした2つの処理器 | 1機能=1型。必要な物だけ組む |
 
 - **MonoBehaviourへ設定を出し、`Time.deltaTime`で回す** ならUnity向けAPI。導入が最短です。
-- **fixed tickのsimulation、Replay、bit単位で同じ結果が要る、GC割り当てを増やしたくない** なら割り当てなしAPI。`float`の丸めと`deltaTime`の揺れを契約から排除できます。
+- **fixed tickのsimulation、Replay、隠れた時刻依存を避けたい、GC割り当てを増やしたくない** なら割り当てなしAPI。同じruntime/backendと同じ入力列では再現できますが、超越関数を使うため端末・backendをまたぐbit一致は保証しません。
 
 同じ「dead zone」「repeat」でも両系統は独立した実装で、互いを呼びません。片方の変更がもう片方の結果を変えることはありません。
 
@@ -167,7 +167,7 @@ Input Actionの購読、device pairing、rebind、Action Map停止、入力recor
 
 ### テスト範囲
 
-`Tests/EditMode`のEditMode testが両系統の境界値を確認します（dead zone境界、curve端点、rate limitの到達、旋回のtie、重み合計0、量子化のclamp、threshold hysteresis、tap/hold境界、repeatのcatch-up、multi-tapの確定条件）。各sampleの`Tests/PlayMode`はSceneのButton操作とresponsive geometryを確認します。
+`Tests/Editor`の`InputAssist.Editor.Tests`が両系統の境界値を確認します（dead zone境界、curve端点、rate limitの到達、旋回のtie、重み合計0、量子化のclamp、threshold hysteresis、tap/hold境界、repeatのcatch-up、multi-tapの確定条件）。各sampleの`Tests/PlayMode`はSceneのButton操作とresponsive geometryを確認します。
 
 ## 吸収した旧moduleと互換性
 
@@ -188,7 +188,9 @@ Input Actionの購読、device pairing、rebind、Action Map停止、入力recor
 | `com.studiogaku.input-repeat` | Input Repeat | `InputRepeating` |
 | `com.studiogaku.input-multi-tap-classifier` | Input Multi Tap Classifier | `InputMultiTapping` |
 
-- 上記の公開済みtagとUPM識別子は削除せず、既存利用者の互換入口として残します。今使っているprojectはそのまま動きます。
-- C#のnamespace、型名、member、既定値、失敗契約は変更していません。**既存codeの`using`と呼び出しを書き換える必要はありません。**
-- 変わるのはassemblyだけです。旧runtime assembly名（`InputRadialDeadZone.Runtime`ほか11個）を自作`asmdef`の`references`に書いている場合のみ、`InputAssist.Runtime`へ置き換えます。
+- 上記の公開済みtagとUPM識別子は削除せず、旧配布単位を継続利用する入口として残します。旧packageを使い続けるprojectはそのtagをそのまま利用できます。
+- C#のnamespace、型名、member、既定値、失敗契約は変更しておらず、source / API互換です。**移行後も既存codeの`using`と呼び出しを書き換える必要はありません。**
+- runtime assembly名は変わるためbinary互換ではありません。旧runtime assembly名（`InputRadialDeadZone.Runtime`ほか11個）を自作`asmdef`の`references`に書いている場合は`InputAssist.Runtime`へ置き換え、旧assemblyを参照するprecompiled DLLは再buildしてください。
+- 旧12 runtime assemblyは`noEngineReferences: true`でしたが、統合先`InputAssist.Runtime`は既存の`Vector2`・`Mathf` APIも収容するためUnityEngineを参照します。UnityEngine非参照assemblyとして利用する必要があるprojectは旧tagを継続利用してください。
+- 旧packageとInput Assist 2.0.0以降は同じ型を別assemblyに含むため、同一projectへ同時導入できません。
 - 新規projectでは、個別tagを探さず`com.studiogaku.input-assist` 2.0.0以降を1つ入れてください。

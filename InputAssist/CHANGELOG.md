@@ -21,9 +21,10 @@
   | `com.studiogaku.input-repeat` | Input Repeat |
   | `com.studiogaku.input-multi-tap-classifier` | Input Multi Tap Classifier |
 
-- 吸収した型のsource互換性は維持。namespace、型名、member、既定値、失敗契約は一切変更していない。既存codeの修正は不要。
-- 吸収した型のassemblyだけが`InputAssist.Runtime`へ変わる。旧assembly名（`InputRadialDeadZone.Runtime`ほか11個）を`asmdef`の`references`へ書いているprojectは、その1行を`InputAssist.Runtime`へ置き換える。
-- 旧packageの公開済みtagとUPM識別子は削除せず、既存利用者の互換入口として残す。
+- 吸収した型のsource / API互換性は維持。namespace、型名、member、既定値、失敗契約は一切変更していないため、既存codeの`using`と呼び出しは変更不要。
+- runtime assembly名が`InputAssist.Runtime`へ変わるためbinary互換ではない。旧assembly名（`InputRadialDeadZone.Runtime`ほか11個）を`asmdef`の`references`へ書いているprojectは`InputAssist.Runtime`へ置き換え、旧assemblyを参照するprecompiled DLLは再buildする。
+- 旧12 assemblyの`noEngineReferences: true`契約は統合assemblyへ引き継がない。`InputAssist.Runtime`は既存の`Vector2`・`Mathf` APIを含むためUnityEngineを参照する。
+- 旧packageの公開済みtagとUPM識別子は削除せず、旧配布単位を継続利用する入口として残す。旧packageとInput Assist 2.0.0以降は同時導入しない。
 
 ### Added
 

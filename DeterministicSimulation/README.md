@@ -224,12 +224,12 @@ catch-up 上限を超える場合は呼び出し単位でdrop判定するため�
 
 ### テスト範囲
 
-- `DeterministicSimulation.Tests`（EditMode）: Unityの実行状態に依存しない純粋検証。境界値、失敗時の無変更、
+- `DeterministicSimulation.Editor.Tests`（EditMode）: Unityの実行状態に依存しない純粋検証。境界値、失敗時の無変更、
   再現性、分割入力、drop、overflow、状態の保存と復元を扱います。
 - 各サンプル同梱の `*.Samples.PlayMode.Tests`: 実際のButton callbackと、実 `PanelSettings` 上の
   960x600 / 640x360 geometry を検証します。
 
-## 統合前のpackage（互換入口）
+## 統合前のpackage（旧配布単位の入口）
 
 このpackageは、次の7つを1つの配布単位へまとめたものです。
 
@@ -243,9 +243,10 @@ catch-up 上限を超える場合は呼び出し単位でdrop判定するため�
 | `com.studiogaku.fixed-point` | `fixed-point-v1.0.0` | `Runtime/FixedPoint` |
 | `com.studiogaku.generational-handle` | `generational-handle-v1.0.0` | `Runtime/GenerationalHandle` |
 
-公開済みのtagとUPM識別子は削除していません。既存利用者の互換入口としてそのまま有効です。
+公開済みのtagとUPM識別子は削除していません。旧配布単位を継続利用する入口としてそのまま有効です。旧packageと本packageは同じ型を別assemblyに含むため同時導入できません。
 
-**C#の名前空間・型名・メンバーは統合前と一切変わりません。**
-`using SimulationClock;` や `using GenerationalHandles;` はそのまま通るため、移行にあたって既存コードの編集は不要です。
-変わるのは、Package Manager で入れる package が7つから1つになる点と、
-asmdef の References が各 `*.Runtime` から `DeterministicSimulation.Runtime` の1つになる点だけです。
+**C#の名前空間・型名・メンバー・動作は統合前と同一で、source / API互換です。**
+`using SimulationClock;` や `using GenerationalHandles;` と呼び出しcodeはそのまま使えます。
+一方、runtime assembly名は変わるためbinary互換ではありません。Package Manager で旧packageを本packageへ置き換え、
+asmdef の References を各 `*.Runtime` から `DeterministicSimulation.Runtime` へ変更してください。
+旧assemblyを参照するprecompiled DLLは再buildが必要です。

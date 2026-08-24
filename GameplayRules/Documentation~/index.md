@@ -3,7 +3,7 @@
 ## Boundaryとデータフロー
 
 - Input: 検証済みの有限値、整数量、明示tick、正規化sample、policy列挙値。
-- State: immutableなstruct。保持するのは値と上限だけで、時計もbufferも持ちません。
+- State: callerが所有する値型と局所object。必要な履歴やentryは明示容量のcollectionにだけ保持し、Unityの時計やglobal stateは読みません。
 - Output: 前後値、要求・実適用・未適用delta、per-line／per-stepの内訳、成否と明示error。
 
 Unityのframe、時刻、`deltaTime`、乱数、global state、UIは境界外です。同じ入力列は同じ出力列になります。
@@ -34,8 +34,8 @@ NaN・Infinity・負値・範囲外・重複ID・件数超過・不正policyは�
 
 ## 検証
 
-EditMode testは`GameplayRules.Tests`にまとまり、境界値、clamp、不足、順序安定性、不正入力での非変更、結果のequality、再現可能なsequenceを確認します。19個のBasics sampleは実Buttonでの操作結果と、960×600／640×360の実描画geometry、`timeScale=0`での再現性をPlayMode testで確認します。
+EditMode testは`GameplayRules.Editor.Tests`にまとまり、境界値、clamp、不足、順序安定性、不正入力での非変更、結果のequality、再現可能なsequenceを確認します。19個のBasics sampleは実Buttonでの操作結果と、960×600／640×360の実描画geometry、`timeScale=0`での再現性をPlayMode testで確認します。
 
 ## 互換性
 
-C#の名前空間、型名、member名は統合前の19 packageと同一です。変更点はassembly名が`GameplayRules.Runtime`に一本化されたことだけで、旧UPM識別子と公開済みtagは互換入口として残っています。
+C#の名前空間、型名、member名、動作は統合前の19 packageと同一で、source / API互換です。runtime assembly名は`GameplayRules.Runtime`へ変わるためbinary互換ではありません。自作asmdefのReferences変更と、旧assemblyを参照するprecompiled DLLの再buildが必要です。Threat Score Resolverを除く18packageの公開済みtagは旧配布単位と旧UPM識別子を継続利用する入口として残ります。単独tagがなかったThreat Score Resolverには旧UPM識別子を指定する旧配布入口がなく、本packageで初めてtag付き配布になります。

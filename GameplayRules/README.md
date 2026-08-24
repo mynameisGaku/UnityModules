@@ -59,7 +59,7 @@
 
 3. Importされた`Samples/Gameplay Rules/1.0.0/Resource Meter Basics/`の中のSceneを開き、Play modeに入ります。
 
-4. 自分のcodeから使う場合は、必要な計算の名前空間を`using`します。追加のassembly参照設定は不要です（`GameplayRules.Runtime`は`autoReferenced`）。
+4. asmdefを使っていない通常のScriptでは、必要な計算の名前空間を`using`するだけです。自作asmdef配下のScriptから使う場合は、そのasmdefのReferencesへ`GameplayRules.Runtime`を追加します。`autoReferenced: true`はpredefined assemblyからの自動参照を有効にする設定です。
 
 ## 最小コード
 
@@ -117,8 +117,8 @@ public static class ResourceExample
 
 ### assemblyとtest
 
-- runtime assemblyは`GameplayRules.Runtime`のみ（`noEngineReferences: true`、`autoReferenced: true`、`rootNamespace`なし）。
-- EditMode testは`GameplayRules.Tests`にまとまっています。境界値、clamp、不足、順序安定性、不正入力での非変更、結果のequality、再現可能なsequenceを検証します。
+- runtime assemblyは`GameplayRules.Runtime`のみ（`noEngineReferences: true`、`autoReferenced: true`、`rootNamespace`なし）。predefined assemblyからは自動参照され、自作asmdefからは明示参照する。
+- EditMode testは`GameplayRules.Editor.Tests`にまとまっています。境界値、clamp、不足、順序安定性、不正入力での非変更、結果のequality、再現可能なsequenceを検証します。
 - 各sampleは`<統合前module名>.Samples`という独立assemblyのままで、runtimeは`GameplayRules.Runtime`を参照します。PlayMode testも各sample内に残っています。
 
 ### 統合前のpackageからの移行
@@ -145,8 +145,8 @@ public static class ResourceExample
 | `com.studiogaku.utility-score-evaluator` | Utility Score Evaluator | `utility-score-evaluator-v1.0.0` |
 | `com.studiogaku.stable-score-selector` | Stable Score Selector | `stable-score-selector-v1.0.0` |
 | `com.studiogaku.damage-mitigation-evaluator` | Damage Mitigation Evaluator | `damage-mitigation-evaluator-v1.0.0` |
-| `com.studiogaku.threat-score-resolver` | Threat Score Resolver | `threat-score-resolver-v1.0.0` |
+| `com.studiogaku.threat-score-resolver` | Threat Score Resolver | なし（単独tag未公開） |
 
-- 上記の旧UPM識別子と公開済みtagは削除していません。既存利用者の互換入口としてそのまま利用できます。新規導入では`com.studiogaku.gameplay-rules`を使ってください。
-- **C#の名前空間、型名、member名、およびその挙動は統合前と完全に同一です。既存codeの編集は不要です。** 変更が必要になるのは、自作asmdefのReferencesに旧runtime assembly名を書いている場合だけで、その1行を`GameplayRules.Runtime`へ置き換えます。
+- Threat Score Resolverを除く18packageは、公開済みtag内に旧UPM識別子を保っています。Threat Score Resolverは単独tagがなく、旧UPM識別子を指定して導入できる旧配布入口もありません。本packageで初めてtag付き配布になります。新規導入では`com.studiogaku.gameplay-rules`を使ってください。
+- **C#の名前空間、型名、member名、およびその挙動は統合前と同一で、source / API互換です。** runtime assembly名は変わるためbinary互換ではありません。自作asmdefのReferencesを`GameplayRules.Runtime`へ変更し、旧assemblyを参照するprecompiled DLLは再buildしてください。
 - 統合前のpackageと本packageを同時に導入すると型が重複します。どちらか一方だけを導入してください。

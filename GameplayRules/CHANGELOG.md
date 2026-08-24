@@ -5,12 +5,12 @@
 ### Added
 
 - 19個の独立moduleを1つの導入単位へ統合した`Gameplay Rules`。resource・cost、能力値補正、重み付き選択と整数按分、curveとtier、標本統計と傾向推定、charge・定期tick・時限stack・stack移送、数値条件・utility score・敵対度・damage軽減の判定を1つのassemblyで提供する
-- 単一runtime assembly `GameplayRules.Runtime`と単一EditMode test assembly `GameplayRules.Tests`
+- 単一runtime assembly `GameplayRules.Runtime`と単一EditMode test assembly `GameplayRules.Editor.Tests`
 - 統合前の各moduleに対応する19個のBasics sample
 
 ### Changed
 
-- 統合前の19個のUPM識別子を`com.studiogaku.gameplay-rules`へ集約した。旧識別子と公開済みtagは互換入口として引き続き利用できる
+- 統合前の19個のUPM識別子を`com.studiogaku.gameplay-rules`へ集約した。Threat Score Resolverを除く18packageの公開済みtagは旧配布単位を継続利用する入口として残す。Threat Score Resolverには単独tagがなく、本packageで初めてtag付き配布する
 - 各sampleのassembly definitionが参照するruntime assemblyを`GameplayRules.Runtime`へ変更した
 
 ### 統合した旧package
@@ -37,4 +37,4 @@
 
 ### Compatibility
 
-- C#名前空間、型名、member名は統合前と同一である。既存codeの編集は不要
+- C#名前空間、型名、member名、動作は統合前と同一でsource / API互換。runtime assembly名が変わるためbinary互換ではなく、自作asmdefのReferences変更と旧assemblyを参照するprecompiled DLLの再buildが必要

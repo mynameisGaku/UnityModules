@@ -5,7 +5,7 @@
   "description": "Bundles the deterministic, engine-independent gameplay calculations for resources and costs, stat modifiers, weighted selection and integer allocation, piecewise curves and threshold tiers, rolling sampling statistics and linear trends, timed stacks, stack transfers and periodic ticks, and numeric requirement, utility score, threat score, and damage mitigation evaluation into one package.",
   "unity": "6000.5",
   "unityRelease": "7f1",
-  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/tree/gameplay-rules-v1.0.0/GameplayRules/Documentation~",
+  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/blob/gameplay-rules-v1.0.0/GameplayRules/Documentation~/index.md",
   "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/gameplay-rules-v1.0.0/GameplayRules/CHANGELOG.md",
   "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/gameplay-rules-v1.0.0/GameplayRules/LICENSE.md",
   "dependencies": {
@@ -135,5 +135,6 @@
   ],
   "author": {
     "name": "Studio Gaku"
-  }
+  },
+  "license": "Refer to LICENSE.md file"
 }

@@ -15,7 +15,7 @@
 | Inspector | `[Serializable]`で直接編集 | 非対応 |
 | 割り当て | 処理器はclass、更新中の追加割り当てなし | 値型中心、更新中の追加割り当てなし |
 
-MonoBehaviourへ設定を出して`Time.deltaTime`で回すならUnity向けAPI、fixed tick simulationやReplayで完全な再現性が要るなら割り当てなしAPIを選びます。2系統は独立実装で互いを呼びません。
+MonoBehaviourへ設定を出して`Time.deltaTime`で回すならUnity向けAPI、fixed tick simulationやReplayで隠れた時刻依存を避けるなら割り当てなしAPIを選びます。同じruntime/backendと同じ入力列では再現できますが、`Math.Sqrt`などを使うため端末・backendをまたぐbit一致は保証しません。2系統は独立実装で互いを呼びません。
 
 `InputAssist.InputDirectionMode`と`InputDirectionQuantization.InputDirectionMode`は別namespaceの別enumとして共存します。片方だけを`using`するか、完全修飾名で参照してください。
 
@@ -81,11 +81,11 @@ Scene切替、Replay seek、testのarrange時に明示的に状態を戻せま�
 
 ## 吸収した旧package
 
-2.0.0で次の12packageをInput Assistへ吸収しました。公開済みtagとUPM識別子は互換入口として残し、C#のnamespaceと型名は変更していません。
+2.0.0で次の12packageをInput Assistへ吸収しました。公開済みtagとUPM識別子は旧配布単位を継続利用する入口として残し、C#のnamespace、型名、member、動作は変更していないためsource / API互換です。
 
 `com.studiogaku.input-radial-dead-zone`、`com.studiogaku.input-vector-response-curve`、`com.studiogaku.input-vector-slew-limiter`、`com.studiogaku.input-vector-exponential-smoother`、`com.studiogaku.input-vector-direction-limiter`、`com.studiogaku.input-vector-weighted-mixer`、`com.studiogaku.input-direction-quantizer`、`com.studiogaku.input-quantizer`、`com.studiogaku.input-threshold-classifier`、`com.studiogaku.input-press-classifier`、`com.studiogaku.input-repeat`、`com.studiogaku.input-multi-tap-classifier`
 
-旧runtime assembly名を自作`asmdef`の`references`に書いている場合のみ、`InputAssist.Runtime`へ置き換えます。
+runtime assembly名は変わるためbinary互換ではありません。旧runtime assembly名を自作`asmdef`の`references`に書いている場合は`InputAssist.Runtime`へ置き換え、旧assemblyを参照するprecompiled DLLは再buildしてください。旧12 assemblyは`noEngineReferences: true`でしたが、統合先は`Vector2`・`Mathf` APIも収容するためUnityEngineを参照します。UnityEngine非参照assemblyが必要な場合は旧tagを継続利用してください。旧packageとInput Assist 2.0.0以降は同時導入できません。
 
 ## 非目標
 

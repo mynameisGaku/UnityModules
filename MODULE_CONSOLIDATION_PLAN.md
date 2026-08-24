@@ -1,12 +1,15 @@
 # モジュール統合・追加機能の検討
 
-`dev` の 65 パッケージを対象に、重複の実測結果と統合案、重複しない追加機能候補をまとめる。
-統合は本文書の案 A〜C を実施済みで、案 D・E と追加機能は未着手。
+`dev` に当初存在した 65 パッケージを対象に、重複の実測結果と統合判断、重複しない追加機能候補をまとめる。
+案 A の実施後は 60 パッケージ、案 B・C と Input Assist への吸収後は 24 パッケージとなった。
+案 D・E は追加検討の結果、配布単位の変更としては採用しない。追加機能は未着手。
 判断基準は [モジュール設計・案内ガイド](MODULE_GUIDE.md) の「配布単位の決め方」に従う。
 
 ---
 
-## 1. 現状の実測
+## 1. 統合前の実測
+
+次の値は、統合計画を作成した 65 パッケージ時点の基準値である。現在値ではない。
 
 | 指標 | 値 |
 |---|---|
@@ -16,6 +19,17 @@
 | Module Installer の catalog 掲載数 | 43（**21 モジュールが未掲載**） |
 | `*Error` enum の種類 | 56（ほぼ 1 パッケージ 1 個） |
 | `IsFinite` の private 再実装 | 28 パッケージ |
+
+### 実施結果
+
+| 時点 | UPM パッケージ数 | 内容 |
+|---|---:|---|
+| 統合前 | 65 | 初期実測 |
+| 案 A の Input Command 統合後 | 60 | 6 パッケージを 1 パッケージへ統合 |
+| 案 A〜C 完了後 | 24 | Input Assist への 12 パッケージ吸収、Gameplay Rules と Deterministic Simulation の新設を含む |
+
+現在の `dev` は 24 パッケージ、171 asmdef、Module Installer の catalog は 22 entry である。
+24 パッケージへの到達は案 A〜C の結果であり、案 D・E による削減を含まない。
 
 ### 純粋計算パッケージが全体の 3 分の 2
 
@@ -69,13 +83,14 @@
   吸収：InputRadialDeadZone, InputVectorResponseCurve, InputVectorSlewLimiter, InputVectorExponentialSmoother,
   InputVectorDirectionLimiter, InputVectorWeightedMixer, InputDirectionQuantizer, InputQuantizer,
   InputThresholdClassifier, InputPressClassifier, InputRepeat, InputMultiTapClassifier（12 個）
-- **入力コマンド判定（Input Command）** — `ulong tick` + `int commandId` の決定論的なコマンド認識。
+- **入力コマンド判定（Input Command）** — 明示 tick で進む判定、sample 回数で進む安定化、状態を持たない優先順位選択をまとめた入力コマンド部品群。
   収容：InputCommandBuffer, InputSequenceMatcher, InputChordMatcher, InputCommandArbiter,
   InputAxisConflictResolver, InputStabilizer（6 個）
 
-後者は**統合すると機能が増える**点が重要。6 個は全て `ulong tick` と `int commandId` を扱うのに、
-現状は共有型が無いため「stabilizer の出力を buffer に入れ、sequence matcher に流し、arbiter で優先度解決する」という
-本来の使い方をするたびに利用者が変換コードを書いている。1 パッケージにすれば pipeline として繋がる。
+6 個は入力コマンド判定という導入目的を共有するが、共通の `tick` / `commandId` signature を持つ 1 本の pipeline ではない。
+Buffer、Sequence Matcher、Chord Matcher、Axis Conflict Resolver は明示 tick を使い、Stabilizer は sample 回数で進み、
+Arbiter は状態を持たない静的選択である。各段は独立したまま必要なものを選んで使い、入出力が異なる段を繋ぐ adapter は利用側が持つ。
+統合の効果は新しい facade の追加ではなく、関連する 6 機能を 1 回の導入と 1 つの runtime assembly で利用できることにある。
 
 `InputGate` は Input System の実行状態を所有するので MODULE_GUIDE 通り独立を維持する。
 
@@ -90,7 +105,7 @@
 - `RollingSampleWindow.Snapshot` が min / max / mean を計算しており、`SampleStatistics` の部分集合になっている。
 - `ResourceMeter`（状態を持つ消費）と `ResourceCostEvaluator`（状態を変えない可否判定）が同一 namespace で分離している。
 - `StableScoreSelector` と `UtilityScoreEvaluator` は「候補から 1 つ選ぶ」の前段・後段で、単独では使い道が狭い。
-- 19 個の `*Error` enum が統一できる。
+- 19 個の公開 `*Error` enum はsource / API互換のため維持しつつ、配布とassembly境界を1つに集約できる。
 
 利用者から見た導入単位は「ゲームルールの数値計算が要る」の 1 つで、個別に導入・更新・削除する理由が無い。
 
@@ -102,7 +117,7 @@ SimulationClock, DeterministicRandom, StateFingerprint, ReplayTape, CanonicalPay
 Module Installer の `deterministic-simulation` bundle が既に 7 個セットで案内しており、
 配布単位が bundle と一致していない。
 
-### 案 D：Editor モジュールの共通基盤（コピペの実害）
+### 案 D：Editor モジュールの共通基盤（検討結果：見送り）
 
 ProjectSetup / SceneWorkspace / PlayModeTuning / AssetImportAudit / BuildAssistant は
 「Preview → Backup → Apply → 適用後検証 → 失敗時復元」という同じ骨格を 5 回書いている。
@@ -114,14 +129,14 @@ ProjectSetup / SceneWorkspace / PlayModeTuning / AssetImportAudit / BuildAssista
 - `*Plan` / `*Planner` / `*PlanRegistry` / `*Snapshot` / `*ApplyResult` / `*CaptureResult` / `*Change` /
   `*UiText` / `I*Gateway` / `Unity*Gateway` の型構成が SceneWorkspace と PlayModeTuning でほぼ一致。
 
-**提案**：利用者向けパッケージは分けたまま、内部共有パッケージ
-`com.studiogaku.editor-change-plan`（Plan / Snapshot / Fingerprint / ExecutionGuard / 差分 Preview 表示）を作り、
-5 モジュールの依存にする。Module Installer が依存を解決するので利用者の手順は増えない。
+共通化候補はあるが、この repository は各パッケージを Git URL の `?path=` で独立配布している。
+未公開の同一 repository 内パッケージを共有依存へ加えると、現在の tag と catalog だけでは依存先の導入を保証できず、
+利用者向けの導入入口と release 手順が増える。現時点では新しい共有パッケージを作らない。
 
-あわせて **SceneWorkspace と PlayModeTuning は 1 パッケージに統合**してよい。
-どちらも「Editor の状態を Profile 化して安全に戻す」で、探すときも導入するときも一緒になる。
+SceneWorkspace は Scene 集合の復元、PlayModeTuning は Play 中の設定変更計画を所有し、変更対象と失敗時の復元契約が異なる。
+用途別 bundle で一緒に案内できるため、配布パッケージは統合しない。共通化は各パッケージ内で同一契約を確認できる箇所に限定する。
 
-### 案 E：Containers と個別モジュールの重複
+### 案 E：Containers と個別モジュールの重複（検討結果：配布統合しない）
 
 Containers（66 型・13,069 行）が、独立パッケージと同じ概念を別実装で持っている。
 
@@ -135,10 +150,10 @@ Containers（66 型・13,069 行）が、独立パッケージと同じ概念を
 | `SnapshotHistory<T>` | ReplayTape |
 | `InventoryGrid` | StackTransferPlanner |
 
-概念ごとに置き場所を 1 つに決める。判断の目安は決定論要件の有無で、
-`ulong tick` で再現性を保証する必要があるものは再現可能シミュレーション側、
-そうでない汎用データ構造は Containers 側に寄せる。
-`GenerationalHandle` は `Containers.SlotMap` と役割が完全に重なるため、Containers へ寄せて独立配布を終了するのが妥当。
+表の型は概念が近くても、公開 API、状態表現、上限、決定論契約が同一とは限らない。
+案 A〜C で旧個別パッケージはすでに統合先へ移っており、Containers へ再移動してもパッケージ数は減らず、
+assembly 名をもう一度変えて移行負担を増やす。現時点では配布先を変更しない。
+将来、完全に同じ契約と移行経路を実証できた型だけを、公開 API を保った内部実装の共通化候補として再評価する。
 
 ### 統合しない方がよいもの
 
@@ -150,34 +165,38 @@ DiagnosticsContext / InputGate / Inspector / Drawing / Containers。
 
 ### 統合後の姿
 
-**65 → 27 パッケージ**（入力 19→2、ゲーム計算 19→1、決定論 7→1）。
-案 D の SceneWorkspace + PlayModeTuning 統合と内部共有パッケージ、案 E の Containers 重複整理は未実施で、
-それらを行うと 24 パッケージになる。
+**65 → 60 → 24 パッケージ**となった。
+
+- 65 → 60: Input Command が旧 6 パッケージを 1 つへ統合。
+- 60 → 24: Input Assist が旧 12 パッケージを吸収し、Gameplay Rules が旧 19 パッケージ、
+  Deterministic Simulation が旧 7 パッケージをそれぞれ 1 つへ統合。
+
+案 D・E はこの数に含まれず、追加のパッケージ削減策としても採用しない。
 
 ---
 
 ## 3. 移行手順（既存利用者を壊さない）
 
-MODULE_GUIDE の「公開済みタグと UPM 識別子は削除せず、既存利用者の互換入口として残す」に従う。
+MODULE_GUIDE の「公開済みtagは旧配布単位を継続利用する入口として残し、source / API互換とbinary互換を区別する」に従う。
 
-1. 統合先パッケージを新 UPM 識別子で公開し、既存 namespace と型名はそのまま残す。
-   案 B・C は namespace が既に共通なので、利用者側のコード変更は `using` の追加も不要。
+1. 統合先パッケージを新 UPM 識別子で公開し、既存 namespace、型名、member、動作をそのまま残す。
+   これは source / API 互換であり、assembly 名を維持する binary 互換ではない。
+   自作 asmdef の References は統合後の runtime assembly 名へ変更し、旧 assembly を参照する precompiled DLL は再buildする。
 2. 旧パッケージの公開 tag は凍結する。削除も新 version 追加もしない。
 3. 旧 README の冒頭に統合先を 1 行で案内する。
 4. Module Installer の catalog を統合後の単位へ差し替える。
-   **現在 catalog に載っていない 20 モジュール**（Containers, PlayModeTuning, 入力細分化 18 個）は、
+   **統合前に catalog に載っていなかった 21 モジュール**（Containers, PlayModeTuning, 入力細分化 18 個, ThreatScoreResolver）は、
    統合後の単位で初めて掲載できる状態になる。
 5. README の「詳細モジュール一覧」と「旧入力モジュールとの関係」を更新する。
 
 ## 4. 統合と同時に直したい不整合
 
-- **catalog 未掲載 21 件** — Containers と PlayModeTuning は README には載っているが Module Installer から導入できない。
-- **不要な依存宣言** — 純粋計算 26 パッケージが `com.unity.modules.uielements` を宣言しているが、
-  Runtime 側で `UnityEngine` を参照している file は 0。Sample Scene のためだけの依存が本体に付いている。
-  統合すれば 26 個の誤った依存が 3 個に減る。
-- **XML doc コメントの言語** — MODULE_GUIDE は「ソースコード、ソース内コメントは英語だけ」と定めているが、
-  Runtime / Editor 配下に日本語コメントを含む file が 55 パッケージに存在する
-  （Containers 81 file、Inspector 50 file が最多）。統合時に方針をどちらかへ確定させる。
+- **catalog 未掲載 21 件** — Containers、PlayModeTuning、入力細分化18件、ThreatScoreResolverはModule Installerから導入できなかった。
+- **Sample用の依存宣言** — 統合前のInput Command 6件、Gameplay Rules 19件、Deterministic Simulation 7件の計32packageは、
+  engine-freeなRuntimeに対してSample Scene用の`com.unity.modules.uielements`を宣言していた。
+  統合により同じ宣言は3packageへ集約されたが、Runtime実装の直接依存ではないことを文書で区別する。
+- **ソース内コメントの言語** — 実装には日本語コメントが広く存在するため、MODULE_GUIDEを現行規約へ合わせた。
+  識別子とpathは英語のASCII名を維持し、型・関数・fieldの役割、入力、失敗条件を説明するコメントは簡潔な日本語で書く。
 
 ---
 
@@ -193,8 +212,10 @@ tag が無いまま公開すると、catalog からの導入が失敗する。
 | `input-command-v1.0.0` | `InputCommand/` |
 | `gameplay-rules-v1.0.0` | `GameplayRules/` |
 | `deterministic-simulation-v1.0.0` | `DeterministicSimulation/` |
+| `module-installer-v1.5.0` | `ModuleInstaller/` |
 
-統合前の 44 個の公開tagは削除しない。既存利用者の `?path=/<Folder>#<tag>` はそのまま動き続ける。
+今回の統合対象で公開済みだった旧packageの43個のtagは削除しない。既存利用者の`?path=/<Folder>#<tag>`はそのまま動き続ける。
+旧パッケージと統合後パッケージは同じ型を別 assembly に含むため、同一 project へ同時導入はしない。
 
 `Containers` は公開tagが 1 つも無いため、まだ catalog へ載せられない。
 `containers-v1.0.0` を作成した時点で catalog へ追加する。
@@ -235,7 +256,7 @@ Layer を profile から作った直後に、Inspector のチェックボック�
 ProjectSetup が asmdef を作るところまでは面倒を見るが、その後の依存関係の劣化
 （循環参照、Editor→Runtime の逆参照、不要な参照によるコンパイル時間の増加）を見る手段が無い。
 「実機や Player build まで進まないと発見しにくい問題」に該当する。
-asmdef 249 個を持つこの repo 自体が最初の利用者になる。
+asmdef 171 個を持つこの repo 自体が最初の利用者になる。
 
 ### 優先度：中
 

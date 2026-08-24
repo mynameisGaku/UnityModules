@@ -4,25 +4,25 @@
 
 「地面に着く直前に押したJumpが消える」「↓↘→+パンチが繋がらない」「LB+RBの同時押しが片方しか拾えない」「JumpとDashが同じframeで両方出る」「←と→を同時に押すとキャラが止まる」「トリガーの震えでcommandが連打になる」。Unityでこれらを直すたびに、Update内でframe数や`Time.time`を数える小さな処理を書き直すことになります。
 
-このmoduleは、その6種類の判断を1つのpackageへまとめます。渡すのは`ulong tick`と`int commandId`だけです。Input SystemもUnity時刻も内部で読まないので、pause中、fixed simulation、Replay、単体テストのどこでも同じ結果を再現できます。
+このmoduleは、その6種類の判断を1つのpackageへまとめます。各部品へ tick、command ID、候補値、priority など必要な入力を明示的に渡します。Input SystemもUnity時刻も内部で読まないので、pause中、fixed simulation、Replay、単体テストのどこでも同じ入力列から同じ結果を再現できます。
 
 ## できること
 
 - 操作可能になる少し前に押されたcommandを、tick単位の短い有効期間だけ保持して順番に消費する。
 - Light→Light→Heavyのような順序入力を、間隔上限と再開規則付きで判定する。
 - 複数buttonの同時押しを、成立幅の上限と再武装規則付きで判定する。
-- 同じtickに複数のcommandが出た時、priorityと先着順で1つだけ選ぶ。
+- 複数のcommand候補から最大priorityを選び、同値なら入力配列の小さいindexを選ぶ。
 - ←と→のような相反入力を、宣言したpolicy（neutral / 片側優先 / 後押し優先）で-1・0・1へ解決する。
 - 震える入力を、同じ候補がN回連続した時だけ確定させて落ち着かせる。
 
-6つとも同じ`tick`と`commandId`を扱うため、段の間に変換codeを書かずにそのまま繋げられます。
+6つは同じpackageから選んで使える独立部品です。Buffer、Sequence Matcher、Chord Matcher、Axis Conflict Resolverは明示tickを使い、Stabilizerはsample回数で進み、Arbiterは状態を持ちません。共通facadeや自動pipelineはなく、入出力が異なる部品を繋ぐadapterは利用側が持ちます。
 
 ## 使わない方がよい場合
 
 - Input SystemやLegacy Input Managerから値を読みたい。このmoduleはbutton edgeを読みません。adapterは利用側が書きます。
 - stickのdead zone、感度curve、平滑化、方向分割がほしい。それは **入力補助（Input Assist）** の担当です。
 - 入力そのものを一時的に止めたい。それは **入力の一時停止（Input Gate）** の担当です。
-- 秒やUnity frameで期限を数えたい。このmoduleは利用側が進めるtickでしか時間を測りません。
+- 秒やUnity frameで期限を数えたい。時間を扱う4部品は、利用側が進めるtickだけを基準にします。
 - Player・AIの行動決定、animation遷移、network同期がほしい。いずれも対象外です。
 
 ## 3分で試す
@@ -46,13 +46,13 @@ Package Managerの **Samples** から目的に近いものをImportします。
 | Command Buffer Basics | tick 100のJump記録、tick 101でのFIFO消費、tick 104での期限切れ |
 | Sequence Matcher Basics | Light-Light-Heavy一致、間隔超過での失敗と再開 |
 | Chord Matcher Basics | 同時押しの成立、再武装、遅れた押下の拒否 |
-| Command Arbiter Basics | 最大priority選択、同値時の先着index、重複拒否 |
+| Command Arbiter Basics | 最大priority選択、同値時は入力配列の小さいindex、重複拒否 |
 | Axis Conflict Resolver Basics | 後押し優先、片側releaseでの復帰、同一tickの引き分け |
 | Stabilizer Basics | 候補の進行、3sample目での確定、ノイズの打ち消し |
 
-### 3. tickを進める側を決める
+### 3. tickを使う部品の進行元を決める
 
-`FixedUpdate`、Simulation Clockのstep、Replay再生のいずれか1か所だけがtickを進めるようにします。tickは戻せません。
+Buffer、Sequence Matcher、Chord Matcher、Axis Conflict Resolverを使う場合は、`FixedUpdate`、Simulation Clockのstep、Replay再生のいずれか1か所だけがtickを進めるようにします。tickは戻せません。StabilizerとArbiterはtickを受け取りません。
 
 ## 最小コード
 
@@ -92,7 +92,7 @@ public sealed class JumpBuffer : MonoBehaviour
 }
 ```
 
-他の段も同じ形です。`TryCreate`で設定を固定し、毎step`Try...`へtickと入力を渡し、返ってきたstatus structを読みます。
+状態を持つ部品は`TryCreate`で設定を固定し、各部品の契約に従ってtickまたはsampleを渡し、返ってきたstatus structを読みます。状態を持たないArbiterは候補配列を呼び出しごとに選択します。
 
 ```csharp
 using InputSequencing;
@@ -108,7 +108,7 @@ if (status.Matched) { /* Light-Light-Heavyが成立 */ }
 - 画面上のlabelが、現在tick、保持中entry、進行度、確定値のように段ごとの内部stateを毎step表示します。成功も失敗も同じ場所に出ます。
 - Consoleには何も出ません。このmoduleはlogを出さず、結果はすべて戻り値のstatus structとerror enumで返します。
 - 生成fileはありません。ScriptableObject、`Resources`、Project Settingsへの書き込みはありません。
-- 同じ入力列を同じtick列で流せば、実行のたびに必ず同じ結果になります。
+- 各部品へ同じ設定と同じ明示入力列を渡せば、実行のたびに同じ結果になります。
 
 ## よくある問題
 
@@ -122,10 +122,10 @@ if (status.Matched) { /* Light-Light-Heavyが成立 */ }
 `out`のerror enumを見てください。容量超過、tick逆行、不正id、未発見をすべて別の値で区別しています。失敗時に既存stateは変わりません。
 
 **入力が1step飛ぶ / 二重に進む**
-tickを進める場所が複数あります。`TryAdvanceTo`と各`TrySample`・`TryPush`は同じtick値を1か所から受け取ってください。同じtickの再入力は受理されますが、逆行は拒否されます。
+tickを進める場所が複数あります。`InputCommandBuffer`、`InputSequenceMatcher`、`InputChordMatcher`、`InputAxisConflictResolver`へ渡すtickは1か所から供給してください。同じtickの再入力は受理されますが、逆行は拒否されます。`InputCommandStabilizer`はtickではなく呼び出したsample回数で進みます。
 
 **Input Assistとの違い**
-Input Assistは生の`Vector2`・`bool`を扱いやすい値とgestureへ変換する前段です。このmoduleは、そこから出た離散commandをtick上で扱います。Input Gateは入力の実行可否そのものを止める別moduleです。
+Input Assistは生の`Vector2`・`bool`を扱いやすい値とgestureへ変換する前段です。このmoduleは、そこから出た離散commandをbuffer、matcher、arbiterなど目的別の部品で扱います。tickを使う部品は利用側のsimulation stepに従い、StabilizerとArbiterはtickを受け取りません。Input Gateは入力の実行可否そのものを止める別moduleです。
 
 **Unity versionが古い**
 `unity: 6000.5` / `unityRelease: 7f1` を対象にしています。Sampleは`com.unity.modules.uielements`を使います。
@@ -134,7 +134,7 @@ Input Assistは生の`Vector2`・`bool`を扱いやすい値とgestureへ変換�
 
 ### namespaceと互換性
 
-C# namespace、型名、member、動作は旧packageから一切変更していません。既存codeの編集は不要です。
+C# namespace、型名、member、動作は旧packageから変更しておらず、source / API 互換です。runtime assembly名は変わるためbinary互換ではありません。自作asmdefの`references`を`InputCommand.Runtime`へ変更し、旧assemblyを参照するprecompiled DLLは再buildしてください。
 
 | 段 | namespace | 主な型 |
 |---|---|---|
@@ -158,7 +158,7 @@ assemblyは`InputCommand.Runtime`1つです。旧`InputCommandBuffer.Runtime`等
 - `com.studiogaku.input-axis-conflict-resolver`
 - `com.studiogaku.input-stabilizer`
 
-公開済みのtagとUPM識別子は削除しません。既存利用者の互換入口としてそのまま使えます。新規導入では、このpackageを推奨します。
+公開済みのtagとUPM識別子は削除しません。旧配布単位を継続利用する入口としてそのまま使えます。旧packageと本packageは同じ型を別assemblyに含むため同時導入できません。新規導入では、このpackageを推奨します。
 
 ### 固定契約
 
@@ -168,7 +168,7 @@ assemblyは`InputCommand.Runtime`1つです。旧`InputCommandBuffer.Runtime`等
 - `InputCommandBuffer`の容量は`1..1024`の固定長で、期限内entryを黙って上書きしない。有効期間は記録tickから`RetentionTicks`後まで両端を含む。同一idの重複記録は最も古い一致から消費する。
 - `InputSequenceMatcher`は間隔上限超過で進行をtimeoutさせ、規則に従って再開する。
 - `InputChordMatcher`は必要command集合が成立幅の上限内で揃った時だけtriggerし、成立後はrearmまで再triggerしない。
-- `InputCommandArbiter`は状態を持たない静的選択で、候補は最大64件。最大priorityを選び、同値は先着indexで解決する。有効候補が無い場合は選択なしを返す。
+- `InputCommandArbiter`は状態を持たない静的選択で、候補は最大64件。最大priorityを選び、同値は入力配列の小さいindexで解決する。有効候補が無い場合は選択なしを返す。
 - `InputCommandStabilizer`はtickではなくsample回数で動き、同じ候補が`RequiredConsecutiveSamples`回連続した時だけ確定値を更新する。
 - すべての失敗は段ごとのerror enumで区別し、失敗時に既存stateを変更しない。例外も暗黙clampも使わない。
 
@@ -184,4 +184,4 @@ assemblyは`InputCommand.Runtime`1つです。旧`InputCommandBuffer.Runtime`等
 
 ### テスト範囲
 
-EditMode assembly`InputCommand.Tests`が、6段それぞれの境界値、順序、失敗時非変更、reset・clearを検証します。各Sampleは実PanelのButton操作をPlayMode testで検証します。
+EditMode assembly`InputCommand.Editor.Tests`が、6段それぞれの境界値、順序、失敗時非変更、reset・clearを検証します。各Sampleは実PanelのButton操作をPlayMode testで検証します。

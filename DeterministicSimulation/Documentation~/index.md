@@ -45,7 +45,7 @@ Runtime asmdef は `noEngineReferences: true` です。Unity API は同梱サン
 
 旧7package（`com.studiogaku.simulation-clock` / `deterministic-random` / `state-fingerprint` /
 `replay-tape` / `canonical-payload` / `fixed-point` / `generational-handle`）を1配布単位へ統合したものです。
-名前空間と型は統合前と同一で、公開済みtagも互換入口として残ります。
+名前空間、型、member、動作は統合前と同一でsource / API互換です。runtime assembly名は`DeterministicSimulation.Runtime`へ変わるためbinary互換ではなく、自作asmdefのReferences変更と、旧assemblyを参照するprecompiled DLLの再buildが必要です。公開済みtagは旧配布単位を継続利用する入口として残りますが、統合後packageとは同時導入できません。
 
 ## Avoided Overengineering
 

@@ -2,12 +2,12 @@
 
 ## 問題
 
-離散command(Jump、Dash、Light、Heavy)の扱いは、先行入力の保持、順序判定、同時押し判定、優先順位の決定、相反する方向入力の解決、ノイズ除去という小さな判断の集まりです。これらを別packageへ分けると、利用側が`ulong` tickと`int` command idを毎回受け渡すための変換codeを書くことになります。
+離散command(Jump、Dash、Light、Heavy)の扱いは、先行入力の保持、順序判定、同時押し判定、優先順位の決定、相反する方向入力の解決、ノイズ除去という小さな判断の集まりです。別packageへ分けず、同じ目的で導入する6つの独立部品としてまとめています。
 
 Input Commandは、この6つを1つのassemblyへまとめ、同じ境界だけを所有します。
 
 ```text
-Input: positive command id (int) and explicit nondecreasing simulation tick (ulong)
+Input: explicit command IDs, ticks, axis candidates, samples, and priorities required by each stage
 State: per-stage deterministic state owned by the caller
 Output: immutable status struct or explicit error enum
 ```
@@ -23,7 +23,7 @@ Unity時刻、入力device、乱数、global stateを読みません。
 | 先行入力 | `InputCommandBuffer` | `InputBuffering` | 固定容量・inclusive retention windowでcommandを保持しFIFOで消費する |
 | 順序判定 | `InputSequenceMatcher` | `InputSequencing` | pattern一致をgap timeoutとrestart規則付きで判定する |
 | 同時押し判定 | `InputChordMatcher` | `InputChording` | 必要command集合の同時成立をspan上限とrearm規則付きで判定する |
-| 優先順位 | `InputCommandArbiter` | `InputArbitration` | 有効候補から最大priorityを選び、同値は先着indexで解決する |
+| 優先順位 | `InputCommandArbiter` | `InputArbitration` | 有効候補から最大priorityを選び、同値は入力配列の小さいindexで解決する |
 
 段は独立です。必要な段だけを使えます。
 
@@ -43,7 +43,7 @@ Input System等のadapterがbutton edgeを正のcommand idへ変換し、Simulat
 
 ## 移行
 
-旧6packageからの移行にcode編集は不要です。namespaceと型名は変更していません。旧packageを削除し、このpackageを追加してください。
+旧6packageからの移行では、namespace、型名、member、動作を変更していないためsource / API互換です。一方、runtime assembly名は変わるためbinary互換ではありません。旧packageを削除して本packageを追加し、自作asmdefのReferencesを`InputCommand.Runtime`へ変更してください。旧assemblyを参照するprecompiled DLLは再buildが必要です。
 
 ## 非目標
 
