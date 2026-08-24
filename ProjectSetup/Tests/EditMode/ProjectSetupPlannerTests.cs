@@ -546,6 +546,137 @@ namespace ProjectSetup.Tests
         }
 
         [Test]
+        public void Build_LayerCollisionMatricesArePlannedIndependently()
+        {
+            var physicsMasks = EmptyCollisionMasks();
+            EnableCollision(physicsMasks, 8, 9);
+            var physics2DMasks = EmptyCollisionMasks();
+            _profile.ConfigurePhysicsLayerCollisions = true;
+            _profile.PhysicsLayerCollisions = new[]
+            {
+                new ProjectSetupLayerCollision("ExistingLayer", "OtherLayer", true)
+            };
+            _profile.ConfigurePhysics2DLayerCollisions = true;
+            _profile.Physics2DLayerCollisions = new[]
+            {
+                new ProjectSetupLayerCollision("ExistingLayer", "OtherLayer", true)
+            };
+            var current = SnapshotWithLayerCollisionMatrices(physicsMasks, physics2DMasks);
+
+            var plan = ProjectSetupPlanner.Build(_profile, current);
+
+            Assert.That(plan.IsValid, Is.True, string.Join("\n", plan.Errors));
+            Assert.That(plan.Changes, Has.None.Property("Key").EqualTo(ProjectSetupSettingKey.PhysicsLayerCollisions));
+            Assert.That(plan.Changes, Has.Exactly(1).Property("Key").EqualTo(ProjectSetupSettingKey.Physics2DLayerCollisions));
+        }
+
+        [Test]
+        public void Build_LayerCollisionAllowsSelfPair()
+        {
+            _profile.ConfigurePhysicsLayerCollisions = true;
+            _profile.PhysicsLayerCollisions = new[]
+            {
+                new ProjectSetupLayerCollision("ExistingLayer", "ExistingLayer", true)
+            };
+            var current = SnapshotWithLayerCollisionMatrices(EmptyCollisionMasks(), EmptyCollisionMasks());
+
+            var plan = ProjectSetupPlanner.Build(_profile, current);
+
+            Assert.That(plan.IsValid, Is.True, string.Join("\n", plan.Errors));
+            Assert.That(plan.Changes, Has.Exactly(1).Property("Key").EqualTo(ProjectSetupSettingKey.PhysicsLayerCollisions));
+            Assert.That(plan.Changes.Single().Label, Does.Contain("ExistingLayer ↔ ExistingLayer"));
+        }
+
+        [Test]
+        public void Build_LayerCollisionRejectsReversedDuplicatePair()
+        {
+            _profile.ConfigurePhysicsLayerCollisions = true;
+            _profile.PhysicsLayerCollisions = new[]
+            {
+                new ProjectSetupLayerCollision("ExistingLayer", "OtherLayer", true),
+                new ProjectSetupLayerCollision("OtherLayer", "ExistingLayer", false)
+            };
+            var current = SnapshotWithLayerCollisionMatrices(EmptyCollisionMasks(), EmptyCollisionMasks());
+
+            var plan = ProjectSetupPlanner.Build(_profile, current);
+
+            Assert.That(plan.IsValid, Is.False);
+            Assert.That(plan.Errors, Has.Some.Contains("duplicate pair"));
+        }
+
+        [TestCase(" ExistingLayer", "trimmed")]
+        [TestCase("MissingLayer", "does not exist")]
+        public void Build_LayerCollisionRejectsInvalidLayerName(string firstLayer, string expectedError)
+        {
+            _profile.ConfigurePhysicsLayerCollisions = true;
+            _profile.PhysicsLayerCollisions = new[]
+            {
+                new ProjectSetupLayerCollision(firstLayer, "OtherLayer", true)
+            };
+            var current = SnapshotWithLayerCollisionMatrices(EmptyCollisionMasks(), EmptyCollisionMasks());
+
+            var plan = ProjectSetupPlanner.Build(_profile, current);
+
+            Assert.That(plan.IsValid, Is.False);
+            Assert.That(plan.Errors, Has.Some.Contains(expectedError));
+        }
+
+        [Test]
+        public void Build_LayerCollisionResolvesLayerAddedBySameProfile()
+        {
+            _profile.ConfigureLayers = true;
+            _profile.Layers = new[] { "NewLayer" };
+            _profile.ConfigurePhysicsLayerCollisions = true;
+            _profile.PhysicsLayerCollisions = new[]
+            {
+                new ProjectSetupLayerCollision("ExistingLayer", "NewLayer", true)
+            };
+            var current = SnapshotWithLayerCollisionMatrices(
+                EmptyCollisionMasks(),
+                EmptyCollisionMasks(),
+                includeOtherLayer: false);
+
+            var plan = ProjectSetupPlanner.Build(_profile, current);
+
+            Assert.That(plan.IsValid, Is.True, string.Join("\n", plan.Errors));
+            Assert.That(plan.Changes, Has.Exactly(1).Property("Key").EqualTo(ProjectSetupSettingKey.Layers));
+            Assert.That(plan.Changes, Has.Exactly(1).Property("Key").EqualTo(ProjectSetupSettingKey.PhysicsLayerCollisions));
+        }
+
+        [Test]
+        public void Build_LayerCollisionMatchingCurrentStateIsNoOp()
+        {
+            var physicsMasks = EmptyCollisionMasks();
+            EnableCollision(physicsMasks, 8, 9);
+            _profile.ConfigurePhysicsLayerCollisions = true;
+            _profile.PhysicsLayerCollisions = new[]
+            {
+                new ProjectSetupLayerCollision("ExistingLayer", "OtherLayer", true)
+            };
+            var current = SnapshotWithLayerCollisionMatrices(physicsMasks, EmptyCollisionMasks());
+
+            var plan = ProjectSetupPlanner.Build(_profile, current);
+
+            Assert.That(plan.IsValid, Is.True, string.Join("\n", plan.Errors));
+            Assert.That(plan.Changes, Has.None.Property("Key").EqualTo(ProjectSetupSettingKey.PhysicsLayerCollisions));
+        }
+
+        [Test]
+        public void Build_LayerCollisionRejectsMoreThanAllUnorderedLayerPairs()
+        {
+            _profile.ConfigurePhysicsLayerCollisions = true;
+            _profile.PhysicsLayerCollisions = Enumerable.Range(0, 529)
+                .Select(_ => new ProjectSetupLayerCollision("ExistingLayer", "ExistingLayer", true))
+                .ToArray();
+            var current = SnapshotWithLayerCollisionMatrices(EmptyCollisionMasks(), EmptyCollisionMasks());
+
+            var plan = ProjectSetupPlanner.Build(_profile, current);
+
+            Assert.That(plan.IsValid, Is.False);
+            Assert.That(plan.Errors, Has.Some.Contains("at most 528 rules"));
+        }
+
+        [Test]
         public void Build_RejectsEmptyBuildSceneList()
         {
             _profile.ConfigureBuildScenes = true;
@@ -1079,6 +1210,51 @@ namespace ProjectSetup.Tests
                     new ProjectSetupSortingLayer("Default", 0, false),
                     new ProjectSetupSortingLayer("ExistingSorting", 10, false)
                 });
+        }
+
+        private static ProjectSetupSnapshot SnapshotWithLayerCollisionMatrices(
+            int[] physicsMasks,
+            int[] physics2DMasks,
+            bool includeOtherLayer = true)
+        {
+            var layers = new string[32];
+            layers[0] = "Default";
+            layers[8] = "ExistingLayer";
+            if (includeOtherLayer)
+            {
+                layers[9] = "OtherLayer";
+            }
+
+            return new ProjectSetupSnapshot(
+                SerializationMode.ForceText,
+                "Visible Meta Files",
+                false,
+                EnterPlayModeOptions.None,
+                ColorSpace.Gamma,
+                false,
+                "DefaultCompany",
+                "New Unity Project",
+                "1.0.0",
+                true,
+                new[] { "Untagged" },
+                new string[0],
+                layers,
+                new[] { new ProjectSetupSortingLayer("Default", 0, false) },
+                hasPhysicsLayerCollisionData: true,
+                physicsLayerCollisionMasks: physicsMasks,
+                hasPhysics2DLayerCollisionData: true,
+                physics2DLayerCollisionMasks: physics2DMasks);
+        }
+
+        private static int[] EmptyCollisionMasks()
+        {
+            return new int[ProjectSetupLayerCollisionStore.LayerCount];
+        }
+
+        private static void EnableCollision(int[] masks, int first, int second)
+        {
+            masks[first] |= 1 << second;
+            masks[second] |= 1 << first;
         }
     }
 }

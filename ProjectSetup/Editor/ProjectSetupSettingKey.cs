@@ -30,6 +30,8 @@ namespace ProjectSetup.Editor
         ScriptingBackend = 23,
         ApiCompatibilityLevel = 24,
         ManagedStrippingLevel = 25,
-        Il2CppCodeGeneration = 26
+        Il2CppCodeGeneration = 26,
+        PhysicsLayerCollisions = 27,
+        Physics2DLayerCollisions = 28
     }
 }

@@ -45,6 +45,10 @@ namespace ProjectSetup.Editor
         [SerializeField] private string[] tags = Array.Empty<string>();
         [SerializeField] private bool configureLayers;
         [SerializeField] private string[] layers = Array.Empty<string>();
+        [SerializeField] private bool configurePhysicsLayerCollisions;
+        [SerializeField] private ProjectSetupLayerCollision[] physicsLayerCollisions = Array.Empty<ProjectSetupLayerCollision>();
+        [SerializeField] private bool configurePhysics2DLayerCollisions;
+        [SerializeField] private ProjectSetupLayerCollision[] physics2DLayerCollisions = Array.Empty<ProjectSetupLayerCollision>();
         [SerializeField] private bool configureSortingLayers;
         [SerializeField] private string[] sortingLayers = Array.Empty<string>();
         [SerializeField] private bool configureScriptingDefineSymbols;
@@ -118,6 +122,18 @@ namespace ProjectSetup.Editor
         internal string[] Tags { get => tags ?? Array.Empty<string>(); set => tags = value ?? Array.Empty<string>(); }
         internal bool ConfigureLayers { get => configureLayers; set => configureLayers = value; }
         internal string[] Layers { get => layers ?? Array.Empty<string>(); set => layers = value ?? Array.Empty<string>(); }
+        internal bool ConfigurePhysicsLayerCollisions { get => configurePhysicsLayerCollisions; set => configurePhysicsLayerCollisions = value; }
+        internal ProjectSetupLayerCollision[] PhysicsLayerCollisions
+        {
+            get => CloneLayerCollisions(physicsLayerCollisions);
+            set => physicsLayerCollisions = CloneLayerCollisions(value);
+        }
+        internal bool ConfigurePhysics2DLayerCollisions { get => configurePhysics2DLayerCollisions; set => configurePhysics2DLayerCollisions = value; }
+        internal ProjectSetupLayerCollision[] Physics2DLayerCollisions
+        {
+            get => CloneLayerCollisions(physics2DLayerCollisions);
+            set => physics2DLayerCollisions = CloneLayerCollisions(value);
+        }
         internal bool ConfigureSortingLayers { get => configureSortingLayers; set => configureSortingLayers = value; }
         internal string[] SortingLayers { get => sortingLayers ?? Array.Empty<string>(); set => sortingLayers = value ?? Array.Empty<string>(); }
         internal bool ConfigureScriptingDefineSymbols { get => configureScriptingDefineSymbols; set => configureScriptingDefineSymbols = value; }
@@ -177,6 +193,10 @@ namespace ProjectSetup.Editor
             tags = Array.Empty<string>();
             configureLayers = false;
             layers = Array.Empty<string>();
+            configurePhysicsLayerCollisions = false;
+            physicsLayerCollisions = Array.Empty<ProjectSetupLayerCollision>();
+            configurePhysics2DLayerCollisions = false;
+            physics2DLayerCollisions = Array.Empty<ProjectSetupLayerCollision>();
             configureSortingLayers = false;
             sortingLayers = Array.Empty<string>();
             configureScriptingDefineSymbols = false;
@@ -247,6 +267,14 @@ namespace ProjectSetup.Editor
             tags = snapshot.CustomTags.ToArray();
             configureLayers = snapshot.HasTagManagerData;
             layers = snapshot.Layers.Skip(8).Where(value => !string.IsNullOrEmpty(value)).ToArray();
+            configurePhysicsLayerCollisions = snapshot.HasPhysicsLayerCollisionData;
+            physicsLayerCollisions = snapshot.HasPhysicsLayerCollisionData
+                ? ProjectSetupLayerCollisionStore.CreateNamedRules(snapshot.Layers, snapshot.PhysicsLayerCollisionMasks)
+                : Array.Empty<ProjectSetupLayerCollision>();
+            configurePhysics2DLayerCollisions = snapshot.HasPhysics2DLayerCollisionData;
+            physics2DLayerCollisions = snapshot.HasPhysics2DLayerCollisionData
+                ? ProjectSetupLayerCollisionStore.CreateNamedRules(snapshot.Layers, snapshot.Physics2DLayerCollisionMasks)
+                : Array.Empty<ProjectSetupLayerCollision>();
             configureSortingLayers = snapshot.HasTagManagerData;
             sortingLayers = snapshot.SortingLayers.Where(layer => layer.UniqueId != 0).Select(layer => layer.Name).ToArray();
             configureScriptingDefineSymbols = snapshot.HasScriptingDefineData;
@@ -286,6 +314,13 @@ namespace ProjectSetup.Editor
             }
 
             return values.Select(value => value?.Clone() ?? new ProjectSetupBuildScene()).ToArray();
+        }
+
+        private static ProjectSetupLayerCollision[] CloneLayerCollisions(ProjectSetupLayerCollision[] values)
+        {
+            return values == null
+                ? Array.Empty<ProjectSetupLayerCollision>()
+                : values.Select(value => value?.Clone() ?? new ProjectSetupLayerCollision()).ToArray();
         }
     }
 }

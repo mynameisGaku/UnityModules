@@ -1,6 +1,6 @@
-# プロジェクト一括設定（Project Setup）1.15.0
+# プロジェクト一括設定（Project Setup）1.16.0
 
-基本フォルダー、Runtime／Editor／test asmdef、`.gitignore`、`.gitattributes`、Application Identifier・Scripting Backend・API Compatibility Level・Managed Stripping Level・IL2CPP Code Generationを含むProject設定、C#生成時のRoot Namespaceと改行方式、複製時の命名規則、Play Modeの開始Scene、条件付きコンパイル記号、Tag/Layer、Build Scenesをprofile化し、差分確認、backup、適用、復元を1つのEditor windowで行います。
+基本フォルダー、Runtime／Editor／test asmdef、`.gitignore`、`.gitattributes`、Application Identifier・Scripting Backend・API Compatibility Level・Managed Stripping Level・IL2CPP Code Generationを含むProject設定、C#生成時のRoot Namespaceと改行方式、複製時の命名規則、Play Modeの開始Scene、条件付きコンパイル記号、Tag/Layer、Physics／Physics 2D Layer Collision、Build Scenesをprofile化し、差分確認、backup、適用、復元を1つのEditor windowで行います。
 
 ## 最短手順
 
@@ -38,6 +38,8 @@ import時やUnity起動時には適用しません。
 - Build Scenesの順序とEnabled状態
 - Tags
 - User Layers
+- Physics Layer Collisions（名前で指定した3D pairだけを変更）
+- Physics 2D Layer Collisions（名前で指定した2D pairだけを変更）
 - Sorting Layers
 
 Build Scenesは選択中Build Profileの実効一覧を扱います。独自一覧を使うBuild Profileではそのprofile assetを、global一覧を継承するprofileではglobal一覧を更新します。
@@ -55,6 +57,8 @@ API Compatibility Levelは、現在選択中のbuild targetへ`.NET Standard`ま
 Managed Stripping Levelは、現在選択中のbuild targetへ`Disabled`、`Minimal`、`Low`、`Medium`、`High`のいずれかを設定します。高くするほど未使用と判断されたmanaged codeを削除しやすくなるため、reflection、serialization、動的生成を使うplug-inの保全設定を確認してから有効にしてください。Previewにはtarget名と変更前後を表示し、Restore時にtargetが変わっている場合は停止します。初期profileでは無効です。
 
 IL2CPP Code Generationは、現在選択中のbuild targetがIL2CPPの場合だけ`OptimizeSpeed`または`OptimizeSize`を設定します。Mono targetでは変更を作らず、Scripting Backendとの組み合わせをPreviewで検証します。生成コードの速度、サイズ、build時間へ影響するため、対象projectのPlayer buildで確認してください。Apply直前のtargetと値はbackupへ保存し、Restore時にtargetが変わっている場合は停止します。初期profileでは無効です。
+
+Physics／Physics 2D Layer Collisionは別々のcardで有効化し、正確なLayer名のunordered pairごとに`Collides`を指定します。同じLayer同士も設定でき、`A / B`と`B / A`の重複、空欄、前後space、存在しないLayer名はPreviewで停止します。同じprofileが追加するLayerはTagManagerへ作成した後の実slotを再取得してから解決し、一覧にないpairは変更しません。`Capture current`は名前付きLayer同士をportableなruleへ変換し、backupは名前のないslotを含む32行のmatrix全体を保持します。
 
 Root NamespaceはUnityが生成するC# projectの既定namespaceを設定します。asmdefに個別のRoot Namespaceがある場合はasmdef側が優先されます。New Script Line EndingsはApply後に新しく作成するC# scriptだけへ反映し、既存fileは変更しません。
 
@@ -81,10 +85,10 @@ Version Control FilesはProject rootへUnity向け`.gitignore`と`.gitattributes
 - build targetがbackup時から変わった場合、API Compatibility Levelの復元を停止します。
 - build targetがbackup時から変わった場合、Managed Stripping Levelの復元を停止します。
 - build targetがbackup時から変わった場合、IL2CPP Code Generationの復元を停止します。
-- backup schema v15はApplication Identifier、Scripting Backend、API Compatibility Level、Managed Stripping Level、IL2CPP Code Generation、Project Folders、asmdef、Version Control Filesの作成履歴、Root Namespace、新規scriptの改行方式、Duplicate Naming、Play Mode Start Scene、Scripting Define Symbols、TagManager、Build Scenesを含みます。
+- backup schema v16はApplication Identifier、Scripting Backend、API Compatibility Level、Managed Stripping Level、IL2CPP Code Generation、Project Folders、asmdef、Version Control Filesの作成履歴、Root Namespace、新規scriptの改行方式、Duplicate Naming、Play Mode Start Scene、Scripting Define Symbols、TagManager、32 slotすべてのPhysics／Physics 2D Layer Collision Matrix、Build Scenesを含みます。
 
-通常のApplyではTag、Layer、Sorting Layerの既存項目を削除・改名・並べ替えません。Build Scenesはprofileの一覧へ完全に置き換えるため、順序とEnabled状態をPreviewで確認してください。
+通常のApplyではTag、Layer、Sorting Layerの既存項目を削除・改名・並べ替えません。Layer Collisionはprofileに明記したpairだけを変更します。Build Scenesはprofileの一覧へ完全に置き換えるため、順序とEnabled状態をPreviewで確認してください。
 
 ## 対象外
 
-Physics matrix、Layer collision、Scene Asset作成、package導入、自動適用は扱いません。
+Collider、Rigidbody、Physics Material、Scene Asset作成、package導入、自動適用は扱いません。

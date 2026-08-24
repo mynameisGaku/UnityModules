@@ -70,6 +70,12 @@ namespace ProjectSetup.Tests
                 Assert.That(root.Q<Button>(ProjectSetupWindow.AddBuildSceneButtonName), Is.Not.Null);
                 Assert.That(root.Q<VisualElement>("tags"), Is.Not.Null);
                 Assert.That(root.Q<VisualElement>("layers"), Is.Not.Null);
+                Assert.That(root.Q<VisualElement>(ProjectSetupWindow.PhysicsLayerCollisionsCardName), Is.Not.Null);
+                Assert.That(root.Q<VisualElement>(ProjectSetupWindow.PhysicsLayerCollisionsListName), Is.Not.Null);
+                Assert.That(root.Q<Button>(ProjectSetupWindow.AddPhysicsLayerCollisionButtonName), Is.Not.Null);
+                Assert.That(root.Q<VisualElement>(ProjectSetupWindow.Physics2DLayerCollisionsCardName), Is.Not.Null);
+                Assert.That(root.Q<VisualElement>(ProjectSetupWindow.Physics2DLayerCollisionsListName), Is.Not.Null);
+                Assert.That(root.Q<Button>(ProjectSetupWindow.AddPhysics2DLayerCollisionButtonName), Is.Not.Null);
                 Assert.That(root.Q<VisualElement>("sorting-layers"), Is.Not.Null);
                 Assert.That(root.Q<VisualElement>(ProjectSetupWindow.ProfileToolbarName).style.flexShrink.value, Is.Zero);
                 Assert.That(root.Q<VisualElement>(ProjectSetupWindow.ActionBarName).style.flexShrink.value, Is.Zero);

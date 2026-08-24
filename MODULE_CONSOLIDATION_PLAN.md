@@ -244,17 +244,17 @@ UI のボタン表記を差し替える口を提供する。優先基準の「�
 PlayerPrefs を直に使うと毎回 default と migration を書き直すことになる。
 SaveSystem はゲーム進行の slot・破損検出・backup が責務なので重複しない。
 
-**3. 物理レイヤー衝突マトリクスの適用（ProjectSetup へ追加）**
+**3. 物理レイヤー衝突マトリクスの適用（ProjectSetup 1.16.0で実装）**
 
-`ProjectSetupSettingKey` は Tags / Layers / SortingLayers まで対応済みだが、
-Physics・Physics2D の Layer Collision Matrix が未対応。
-Layer を profile から作った直後に、Inspector のチェックボックスを手作業で押す作業だけが残っている。
-新規パッケージではなく ProjectSetup の setting key 追加が正しい形。
+Physics・Physics2Dを別々の名前付きpair ruleとしてprofileへ追加した。
+同じApplyで作るLayerは実slotを再取得してから解決し、Previewではpairごとの`Collide`／`Ignore`を表示する。
+backup schema v16は名前のないslotを含む32行matrix全体を保持し、rollbackとRestoreで正確に戻す。
+新規packageは増やさず、ProjectSetupのsetting keyとして責務を維持した。
 
 **4. asmdef 依存の可視化と循環検出（新規モジュール）**
 
 ProjectSetup が asmdef を作るところまでは面倒を見るが、その後の依存関係の劣化
-（循環参照、Editor→Runtime の逆参照、不要な参照によるコンパイル時間の増加）を見る手段が無い。
+（循環参照、Playerで有効なassembly→Editor専用assemblyの逆参照、不要な参照によるコンパイル時間の増加）を見る手段が無い。
 「実機や Player build まで進まないと発見しにくい問題」に該当する。
 asmdef 171 個を持つこの repo 自体が最初の利用者になる。
 

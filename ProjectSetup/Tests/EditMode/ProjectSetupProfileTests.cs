@@ -40,6 +40,10 @@ namespace ProjectSetup.Tests
                 Assert.That(profile.Tags, Is.Empty);
                 Assert.That(profile.ConfigureLayers, Is.False);
                 Assert.That(profile.Layers, Is.Empty);
+                Assert.That(profile.ConfigurePhysicsLayerCollisions, Is.False);
+                Assert.That(profile.PhysicsLayerCollisions, Is.Empty);
+                Assert.That(profile.ConfigurePhysics2DLayerCollisions, Is.False);
+                Assert.That(profile.Physics2DLayerCollisions, Is.Empty);
                 Assert.That(profile.ConfigureSortingLayers, Is.False);
                 Assert.That(profile.SortingLayers, Is.Empty);
                 Assert.That(profile.ConfigureScriptingDefineSymbols, Is.False);
@@ -85,6 +89,11 @@ namespace ProjectSetup.Tests
                 var layers = new string[32];
                 layers[8] = "Gameplay";
                 layers[12] = "Interaction";
+                var physicsMasks = new int[32];
+                EnableCollision(physicsMasks, 8, 8);
+                EnableCollision(physicsMasks, 12, 12);
+                var physics2DMasks = new int[32];
+                EnableCollision(physics2DMasks, 8, 12);
                 var snapshot = new ProjectSetupSnapshot(
                     SerializationMode.Mixed,
                     "Hidden Meta Files",
@@ -142,7 +151,11 @@ namespace ProjectSetup.Tests
                     hasManagedStrippingLevelData: true,
                     managedStrippingLevelTargetId: "Standalone",
                     managedStrippingLevelTargetLabel: "Windows",
-                    managedStrippingLevel: ManagedStrippingLevel.High);
+                    managedStrippingLevel: ManagedStrippingLevel.High,
+                    hasPhysicsLayerCollisionData: true,
+                    physicsLayerCollisionMasks: physicsMasks,
+                    hasPhysics2DLayerCollisionData: true,
+                    physics2DLayerCollisionMasks: physics2DMasks);
 
                 profile.Capture(snapshot);
 
@@ -180,6 +193,24 @@ namespace ProjectSetup.Tests
                 Assert.That(profile.Tags, Is.EqualTo(new[] { "Collectible" }));
                 Assert.That(profile.ConfigureLayers, Is.True);
                 Assert.That(profile.Layers, Is.EqualTo(new[] { "Gameplay", "Interaction" }));
+                Assert.That(profile.ConfigurePhysicsLayerCollisions, Is.True);
+                Assert.That(
+                    profile.PhysicsLayerCollisions.Select(FormatCollision),
+                    Is.EqualTo(new[]
+                    {
+                        "Gameplay|Gameplay|True",
+                        "Gameplay|Interaction|False",
+                        "Interaction|Interaction|True"
+                    }));
+                Assert.That(profile.ConfigurePhysics2DLayerCollisions, Is.True);
+                Assert.That(
+                    profile.Physics2DLayerCollisions.Select(FormatCollision),
+                    Is.EqualTo(new[]
+                    {
+                        "Gameplay|Gameplay|False",
+                        "Gameplay|Interaction|True",
+                        "Interaction|Interaction|False"
+                    }));
                 Assert.That(profile.ConfigureSortingLayers, Is.True);
                 Assert.That(profile.SortingLayers, Is.EqualTo(new[] { "Foreground" }));
                 Assert.That(profile.ConfigureScriptingDefineSymbols, Is.True);
@@ -206,6 +237,67 @@ namespace ProjectSetup.Tests
             {
                 Object.DestroyImmediate(profile);
             }
+        }
+
+        [Test]
+        public void LayerCollisionValues_DefensivelyCopyAssignedRulesAndSnapshotMasks()
+        {
+            var profile = ScriptableObject.CreateInstance<ProjectSetupProfile>();
+            try
+            {
+                var sourceRule = new ProjectSetupLayerCollision("Gameplay", "Interaction", false);
+                var sourceRules = new[] { sourceRule };
+
+                profile.PhysicsLayerCollisions = sourceRules;
+                profile.Physics2DLayerCollisions = sourceRules;
+                sourceRule.FirstLayer = "Changed";
+                sourceRules[0] = new ProjectSetupLayerCollision("Other", "Other", true);
+
+                Assert.That(profile.PhysicsLayerCollisions, Is.Not.SameAs(sourceRules));
+                Assert.That(profile.PhysicsLayerCollisions[0], Is.Not.SameAs(sourceRule));
+                Assert.That(FormatCollision(profile.PhysicsLayerCollisions[0]), Is.EqualTo("Gameplay|Interaction|False"));
+                Assert.That(FormatCollision(profile.Physics2DLayerCollisions[0]), Is.EqualTo("Gameplay|Interaction|False"));
+
+                var physicsMasks = new int[32];
+                var physics2DMasks = new int[32];
+                EnableCollision(physicsMasks, 0, 31);
+                EnableCollision(physics2DMasks, 8, 12);
+                var snapshot = new ProjectSetupSnapshot(
+                    SerializationMode.ForceText,
+                    "Visible Meta Files",
+                    false,
+                    EnterPlayModeOptions.None,
+                    ColorSpace.Gamma,
+                    false,
+                    "Company",
+                    "Product",
+                    "1.0.0",
+                    hasPhysicsLayerCollisionData: true,
+                    physicsLayerCollisionMasks: physicsMasks,
+                    hasPhysics2DLayerCollisionData: true,
+                    physics2DLayerCollisionMasks: physics2DMasks);
+
+                physicsMasks[0] = 0;
+                physics2DMasks[8] = 0;
+
+                Assert.That(ProjectSetupLayerCollisionStore.IsCollisionEnabled(snapshot.PhysicsLayerCollisionMasks, 0, 31), Is.True);
+                Assert.That(ProjectSetupLayerCollisionStore.IsCollisionEnabled(snapshot.Physics2DLayerCollisionMasks, 8, 12), Is.True);
+            }
+            finally
+            {
+                Object.DestroyImmediate(profile);
+            }
+        }
+
+        private static void EnableCollision(int[] masks, int first, int second)
+        {
+            masks[first] |= 1 << second;
+            masks[second] |= 1 << first;
+        }
+
+        private static string FormatCollision(ProjectSetupLayerCollision collision)
+        {
+            return $"{collision.FirstLayer}|{collision.SecondLayer}|{collision.CollisionsEnabled}";
         }
     }
 }

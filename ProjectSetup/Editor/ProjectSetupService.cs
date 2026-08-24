@@ -165,6 +165,8 @@ namespace ProjectSetup.Editor
                 profile.Capture(desired);
                 profile.ConfigureTags = false;
                 profile.ConfigureLayers = false;
+                profile.ConfigurePhysicsLayerCollisions = false;
+                profile.ConfigurePhysics2DLayerCollisions = false;
                 profile.ConfigureSortingLayers = false;
                 profile.ConfigureBuildScenes = false;
                 profile.ConfigureScriptingDefineSymbols = false;
@@ -212,6 +214,25 @@ namespace ProjectSetup.Editor
                             $"Restore {desired.SortingLayers.Length} layer(s) exactly"));
                     }
                 }
+
+                AddLayerCollisionRestoreChange(
+                    desired.HasPhysicsLayerCollisionData,
+                    desired.PhysicsLayerCollisionMasks,
+                    current.HasPhysicsLayerCollisionData,
+                    current.PhysicsLayerCollisionMasks,
+                    ProjectSetupSettingKey.PhysicsLayerCollisions,
+                    "Physics Layer Collisions",
+                    changes,
+                    errors);
+                AddLayerCollisionRestoreChange(
+                    desired.HasPhysics2DLayerCollisionData,
+                    desired.Physics2DLayerCollisionMasks,
+                    current.HasPhysics2DLayerCollisionData,
+                    current.Physics2DLayerCollisionMasks,
+                    ProjectSetupSettingKey.Physics2DLayerCollisions,
+                    "Physics 2D Layer Collisions",
+                    changes,
+                    errors);
 
                 if (desired.HasBuildSceneData)
                 {
@@ -389,6 +410,43 @@ namespace ProjectSetup.Editor
             }
 
             return count;
+        }
+
+        private static void AddLayerCollisionRestoreChange(
+            bool hasDesiredData,
+            IReadOnlyList<int> desiredMasks,
+            bool hasCurrentData,
+            IReadOnlyList<int> currentMasks,
+            ProjectSetupSettingKey key,
+            string label,
+            ICollection<ProjectSetupChange> changes,
+            ICollection<string> errors)
+        {
+            if (!hasDesiredData)
+            {
+                return;
+            }
+
+            if (!ProjectSetupLayerCollisionStore.IsSymmetric(desiredMasks))
+            {
+                errors.Add($"The backup {label} matrix must contain exactly {ProjectSetupLayerCollisionStore.LayerCount} symmetric rows.");
+                return;
+            }
+
+            if (!hasCurrentData || !ProjectSetupLayerCollisionStore.IsSymmetric(currentMasks))
+            {
+                errors.Add($"The current {label} matrix is unavailable.");
+                return;
+            }
+
+            if (!desiredMasks.SequenceEqual(currentMasks))
+            {
+                changes.Add(new ProjectSetupChange(
+                    key,
+                    label,
+                    "Current 32-layer matrix",
+                    "Restore the saved 32-layer matrix exactly"));
+            }
         }
     }
 }

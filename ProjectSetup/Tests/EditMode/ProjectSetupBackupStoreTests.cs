@@ -71,7 +71,42 @@ namespace ProjectSetup.Tests
             Assert.That(actual.ManagedStrippingLevel, Is.EqualTo(expected.ManagedStrippingLevel));
             Assert.That(actual.Il2CppCodeGenerationTargetId, Is.EqualTo(expected.Il2CppCodeGenerationTargetId));
             Assert.That(actual.Il2CppCodeGeneration, Is.EqualTo(expected.Il2CppCodeGeneration));
-            Assert.That(File.ReadAllText(_path), Does.Contain("\"schemaVersion\": 15"));
+            Assert.That(File.ReadAllText(_path), Does.Contain("\"schemaVersion\": 16"));
+        }
+
+        [Test]
+        public void SaveAndLoad_RoundTripsLayerCollisionMatricesIncludingBitThirtyOne()
+        {
+            var physicsMasks = new int[ProjectSetupLayerCollisionStore.LayerCount];
+            EnableCollision(physicsMasks, 0, 31);
+            var physics2DMasks = new int[ProjectSetupLayerCollisionStore.LayerCount];
+            EnableCollision(physics2DMasks, 8, 31);
+            var expected = new ProjectSetupSnapshot(
+                SerializationMode.ForceText,
+                "Visible Meta Files",
+                false,
+                EnterPlayModeOptions.None,
+                ColorSpace.Gamma,
+                false,
+                "Company",
+                "Product",
+                "1.0.0",
+                hasPhysicsLayerCollisionData: true,
+                physicsLayerCollisionMasks: physicsMasks,
+                hasPhysics2DLayerCollisionData: true,
+                physics2DLayerCollisionMasks: physics2DMasks);
+            var store = new ProjectSetupBackupStore(_path);
+
+            store.Save(expected);
+            var loaded = store.TryLoad(out var actual, out var error);
+
+            Assert.That(loaded, Is.True, error);
+            Assert.That(actual.HasPhysicsLayerCollisionData, Is.True);
+            Assert.That(actual.PhysicsLayerCollisionMasks, Is.EqualTo(physicsMasks));
+            Assert.That(actual.HasPhysics2DLayerCollisionData, Is.True);
+            Assert.That(actual.Physics2DLayerCollisionMasks, Is.EqualTo(physics2DMasks));
+            Assert.That(ProjectSetupLayerCollisionStore.IsCollisionEnabled(actual.PhysicsLayerCollisionMasks, 0, 31), Is.True);
+            Assert.That(ProjectSetupLayerCollisionStore.IsCollisionEnabled(actual.Physics2DLayerCollisionMasks, 8, 31), Is.True);
         }
 
         [Test]
@@ -182,6 +217,25 @@ namespace ProjectSetup.Tests
         }
 
         [Test]
+        public void TryLoad_SchemaFifteenIgnoresLayerCollisionData()
+        {
+            Directory.CreateDirectory(_directory);
+            File.WriteAllText(
+                _path,
+                "{\"schemaVersion\":15,\"hasPhysicsLayerCollisionData\":true,\"physicsLayerCollisionMasks\":[-2147483648],\"hasPhysics2DLayerCollisionData\":true,\"physics2DLayerCollisionMasks\":[256]}",
+                new UTF8Encoding(false));
+            var store = new ProjectSetupBackupStore(_path);
+
+            var loaded = store.TryLoad(out var snapshot, out var error);
+
+            Assert.That(loaded, Is.True, error);
+            Assert.That(snapshot.HasPhysicsLayerCollisionData, Is.False);
+            Assert.That(snapshot.PhysicsLayerCollisionMasks, Is.Empty);
+            Assert.That(snapshot.HasPhysics2DLayerCollisionData, Is.False);
+            Assert.That(snapshot.Physics2DLayerCollisionMasks, Is.Empty);
+        }
+
+        [Test]
         public void TryLoad_SchemaNineIgnoresVersionControlOwnershipData()
         {
             Directory.CreateDirectory(_directory);
@@ -272,6 +326,12 @@ namespace ProjectSetup.Tests
                 il2CppCodeGenerationTargetId: "Standalone",
                 il2CppCodeGenerationTargetLabel: "Windows",
                 il2CppCodeGeneration: Il2CppCodeGeneration.OptimizeSize);
+        }
+
+        private static void EnableCollision(int[] masks, int first, int second)
+        {
+            masks[first] |= 1 << second;
+            masks[second] |= 1 << first;
         }
     }
 }

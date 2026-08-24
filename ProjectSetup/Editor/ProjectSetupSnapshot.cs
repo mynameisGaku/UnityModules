@@ -70,7 +70,11 @@ namespace ProjectSetup.Editor
             bool hasIl2CppCodeGenerationData = false,
             string il2CppCodeGenerationTargetId = null,
             string il2CppCodeGenerationTargetLabel = null,
-            Il2CppCodeGeneration il2CppCodeGeneration = Il2CppCodeGeneration.OptimizeSpeed)
+            Il2CppCodeGeneration il2CppCodeGeneration = Il2CppCodeGeneration.OptimizeSpeed,
+            bool hasPhysicsLayerCollisionData = false,
+            int[] physicsLayerCollisionMasks = null,
+            bool hasPhysics2DLayerCollisionData = false,
+            int[] physics2DLayerCollisionMasks = null)
         {
             AssetSerialization = assetSerialization;
             VersionControlMode = versionControlMode ?? string.Empty;
@@ -131,6 +135,10 @@ namespace ProjectSetup.Editor
             Il2CppCodeGenerationTargetId = il2CppCodeGenerationTargetId ?? string.Empty;
             Il2CppCodeGenerationTargetLabel = il2CppCodeGenerationTargetLabel ?? string.Empty;
             Il2CppCodeGeneration = il2CppCodeGeneration;
+            HasPhysicsLayerCollisionData = hasPhysicsLayerCollisionData;
+            PhysicsLayerCollisionMasks = Clone(physicsLayerCollisionMasks);
+            HasPhysics2DLayerCollisionData = hasPhysics2DLayerCollisionData;
+            Physics2DLayerCollisionMasks = Clone(physics2DLayerCollisionMasks);
         }
 
         internal SerializationMode AssetSerialization { get; }
@@ -192,6 +200,10 @@ namespace ProjectSetup.Editor
         internal string Il2CppCodeGenerationTargetId { get; }
         internal string Il2CppCodeGenerationTargetLabel { get; }
         internal Il2CppCodeGeneration Il2CppCodeGeneration { get; }
+        internal bool HasPhysicsLayerCollisionData { get; }
+        internal int[] PhysicsLayerCollisionMasks { get; }
+        internal bool HasPhysics2DLayerCollisionData { get; }
+        internal int[] Physics2DLayerCollisionMasks { get; }
 
         internal ProjectSetupSnapshot WithCreatedProjectFolders(string[] paths)
         {
@@ -287,7 +299,13 @@ namespace ProjectSetup.Editor
                 && HasIl2CppCodeGenerationData == other.HasIl2CppCodeGenerationData
                 && (!HasIl2CppCodeGenerationData
                     || (string.Equals(Il2CppCodeGenerationTargetId, other.Il2CppCodeGenerationTargetId, StringComparison.Ordinal)
-                        && Il2CppCodeGeneration == other.Il2CppCodeGeneration));
+                        && Il2CppCodeGeneration == other.Il2CppCodeGeneration))
+                && HasPhysicsLayerCollisionData == other.HasPhysicsLayerCollisionData
+                && (!HasPhysicsLayerCollisionData
+                    || SequenceEqual(PhysicsLayerCollisionMasks, other.PhysicsLayerCollisionMasks))
+                && HasPhysics2DLayerCollisionData == other.HasPhysics2DLayerCollisionData
+                && (!HasPhysics2DLayerCollisionData
+                    || SequenceEqual(Physics2DLayerCollisionMasks, other.Physics2DLayerCollisionMasks));
         }
 
         internal bool Matches(ProjectSetupSnapshot actual)
@@ -343,7 +361,13 @@ namespace ProjectSetup.Editor
                 && (!HasIl2CppCodeGenerationData
                     || (actual.HasIl2CppCodeGenerationData
                         && string.Equals(Il2CppCodeGenerationTargetId, actual.Il2CppCodeGenerationTargetId, StringComparison.Ordinal)
-                        && Il2CppCodeGeneration == actual.Il2CppCodeGeneration));
+                        && Il2CppCodeGeneration == actual.Il2CppCodeGeneration))
+                && (!HasPhysicsLayerCollisionData
+                    || (actual.HasPhysicsLayerCollisionData
+                        && SequenceEqual(PhysicsLayerCollisionMasks, actual.PhysicsLayerCollisionMasks)))
+                && (!HasPhysics2DLayerCollisionData
+                    || (actual.HasPhysics2DLayerCollisionData
+                        && SequenceEqual(Physics2DLayerCollisionMasks, actual.Physics2DLayerCollisionMasks)));
         }
 
         private bool ScalarEquals(ProjectSetupSnapshot other)
@@ -442,6 +466,16 @@ namespace ProjectSetup.Editor
                     hash = (hash * 397) ^ StringComparer.Ordinal.GetHashCode(Il2CppCodeGenerationTargetId ?? string.Empty);
                     hash = (hash * 397) ^ (int)Il2CppCodeGeneration;
                 }
+                hash = (hash * 397) ^ HasPhysicsLayerCollisionData.GetHashCode();
+                if (HasPhysicsLayerCollisionData)
+                {
+                    hash = AddHash(hash, PhysicsLayerCollisionMasks);
+                }
+                hash = (hash * 397) ^ HasPhysics2DLayerCollisionData.GetHashCode();
+                if (HasPhysics2DLayerCollisionData)
+                {
+                    hash = AddHash(hash, Physics2DLayerCollisionMasks);
+                }
                 return hash;
             }
         }
@@ -513,7 +547,11 @@ namespace ProjectSetup.Editor
                 HasIl2CppCodeGenerationData,
                 Il2CppCodeGenerationTargetId,
                 Il2CppCodeGenerationTargetLabel,
-                Il2CppCodeGeneration);
+                Il2CppCodeGeneration,
+                HasPhysicsLayerCollisionData,
+                PhysicsLayerCollisionMasks,
+                HasPhysics2DLayerCollisionData,
+                Physics2DLayerCollisionMasks);
         }
 
         private static string[] Clone(string[] values)
@@ -541,6 +579,11 @@ namespace ProjectSetup.Editor
             return values == null
                 ? Array.Empty<ProjectSetupCreatedRootFile>()
                 : (ProjectSetupCreatedRootFile[])values.Clone();
+        }
+
+        private static int[] Clone(int[] values)
+        {
+            return values == null ? Array.Empty<int>() : (int[])values.Clone();
         }
 
         private static bool SequenceEqual<T>(IReadOnlyList<T> left, IReadOnlyList<T> right)

@@ -253,6 +253,70 @@ namespace ProjectSetup.Tests
         }
 
         [Test]
+        public void PreviewRestore_LayerCollisionMatricesAreComparedIndependently()
+        {
+            var unchangedPhysics = EmptyCollisionMasks();
+            EnableCollision(unchangedPhysics, 8, 9);
+            var current = SnapshotWithLayerCollisionMatrices(unchangedPhysics, EmptyCollisionMasks());
+            var desiredPhysics2D = EmptyCollisionMasks();
+            EnableCollision(desiredPhysics2D, 8, 12);
+            var desired = SnapshotWithLayerCollisionMatrices(unchangedPhysics, desiredPhysics2D);
+            var environment = new FakeEnvironment(current);
+            var backup = new FakeBackupStore { Snapshot = desired, HasSnapshot = true };
+            var service = new ProjectSetupService(environment, backup);
+
+            var plan = service.PreviewRestore(out _, out var error);
+
+            Assert.That(plan.IsValid, Is.True, error);
+            Assert.That(plan.Changes, Has.None.Property("Key").EqualTo(ProjectSetupSettingKey.PhysicsLayerCollisions));
+            Assert.That(plan.Changes, Has.Exactly(1).Property("Key").EqualTo(ProjectSetupSettingKey.Physics2DLayerCollisions));
+            Assert.That(plan.Changes.Single().DesiredValue, Does.Contain("exactly"));
+        }
+
+        [Test]
+        public void RestoreLast_RestoresBothLayerCollisionMatricesExactly()
+        {
+            var desiredPhysics = EmptyCollisionMasks();
+            EnableCollision(desiredPhysics, 0, 31);
+            var desiredPhysics2D = EmptyCollisionMasks();
+            EnableCollision(desiredPhysics2D, 8, 12);
+            var before = SnapshotWithLayerCollisionMatrices(EmptyCollisionMasks(), EmptyCollisionMasks());
+            var desired = SnapshotWithLayerCollisionMatrices(desiredPhysics, desiredPhysics2D);
+            var environment = new FakeEnvironment(before);
+            var backup = new FakeBackupStore { Snapshot = desired, HasSnapshot = true };
+            var service = new ProjectSetupService(environment, backup);
+
+            var preview = service.PreviewRestore(out _, out var error);
+            var result = service.RestoreLast();
+
+            Assert.That(preview.IsValid, Is.True, error);
+            Assert.That(preview.Changes, Has.Exactly(1).Property("Key").EqualTo(ProjectSetupSettingKey.PhysicsLayerCollisions));
+            Assert.That(preview.Changes, Has.Exactly(1).Property("Key").EqualTo(ProjectSetupSettingKey.Physics2DLayerCollisions));
+            Assert.That(result.Succeeded, Is.True, result.Message);
+            Assert.That(environment.State, Is.EqualTo(desired));
+        }
+
+        [Test]
+        public void PreviewRestore_AsymmetricLayerCollisionBackupIsRejectedWithoutApply()
+        {
+            var corruptPhysics = EmptyCollisionMasks();
+            corruptPhysics[8] |= 1 << 9;
+            var current = SnapshotWithLayerCollisionMatrices(EmptyCollisionMasks(), EmptyCollisionMasks());
+            var desired = SnapshotWithLayerCollisionMatrices(corruptPhysics, EmptyCollisionMasks());
+            var environment = new FakeEnvironment(current);
+            var backup = new FakeBackupStore { Snapshot = desired, HasSnapshot = true };
+            var service = new ProjectSetupService(environment, backup);
+
+            var plan = service.PreviewRestore(out _, out _);
+            var result = service.RestoreLast();
+
+            Assert.That(plan.IsValid, Is.False);
+            Assert.That(plan.Errors, Has.Some.Contains("symmetric rows"));
+            Assert.That(result.Succeeded, Is.False);
+            Assert.That(environment.ApplySnapshotCount, Is.Zero);
+        }
+
+        [Test]
         public void PreviewRestore_WhenBuildSceneTargetChangedReturnsError()
         {
             var current = SnapshotWithBuildScenes("profile:new", "Assets/New.unity");
@@ -480,6 +544,37 @@ namespace ProjectSetup.Tests
                     new ProjectSetupSortingLayer("Default", 0, false),
                     new ProjectSetupSortingLayer(sortingLayer, sortingLayerId, false)
                 });
+        }
+
+        private static ProjectSetupSnapshot SnapshotWithLayerCollisionMatrices(
+            int[] physicsMasks,
+            int[] physics2DMasks)
+        {
+            return new ProjectSetupSnapshot(
+                SerializationMode.ForceText,
+                "Visible Meta Files",
+                false,
+                EnterPlayModeOptions.None,
+                ColorSpace.Gamma,
+                false,
+                "DefaultCompany",
+                "New Unity Project",
+                "1.0.0",
+                hasPhysicsLayerCollisionData: true,
+                physicsLayerCollisionMasks: physicsMasks,
+                hasPhysics2DLayerCollisionData: true,
+                physics2DLayerCollisionMasks: physics2DMasks);
+        }
+
+        private static int[] EmptyCollisionMasks()
+        {
+            return new int[ProjectSetupLayerCollisionStore.LayerCount];
+        }
+
+        private static void EnableCollision(int[] masks, int first, int second)
+        {
+            masks[first] |= 1 << second;
+            masks[second] |= 1 << first;
         }
 
         private static ProjectSetupSnapshot SnapshotWithBuildScenes(string targetId, string path)

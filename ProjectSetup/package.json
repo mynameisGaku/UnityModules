@@ -1,13 +1,13 @@
 {
   "name": "com.studiogaku.project-setup",
-  "version": "1.15.0",
+  "version": "1.16.0",
   "displayName": "Project Setup",
-  "description": "Previews, applies, and restores reusable Unity project folders, Assembly Definitions, version control files, Project Settings, build-target identifiers, scripting backends, API compatibility, managed stripping levels, IL2CPP code generation, code generation defaults, Play Mode start Scene, scripting define symbols, Build Scenes, Tags, and Layers from one Editor window.",
+  "description": "Previews, applies, and restores reusable Unity project folders, Assembly Definitions, version control files, Project Settings, build-target identifiers, scripting backends, API compatibility, managed stripping levels, IL2CPP code generation, code generation defaults, Play Mode start Scene, scripting define symbols, Build Scenes, Tags, Layers, and named Physics collision rules from one Editor window.",
   "unity": "6000.5",
   "unityRelease": "7f1",
-  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/blob/project-setup-v1.15.0/ProjectSetup/Documentation~/index.md",
-  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/project-setup-v1.15.0/ProjectSetup/CHANGELOG.md",
-  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/project-setup-v1.15.0/ProjectSetup/LICENSE.md",
+  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/blob/project-setup-v1.16.0/ProjectSetup/Documentation~/index.md",
+  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/project-setup-v1.16.0/ProjectSetup/CHANGELOG.md",
+  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/project-setup-v1.16.0/ProjectSetup/LICENSE.md",
   "license": "Refer to LICENSE.md file",
   "keywords": [
     "project-settings",
@@ -30,6 +30,8 @@
     "build-scenes",
     "tags",
     "layers",
+    "physics",
+    "collision-matrix",
     "editor",
     "backup"
   ],
@@ -39,6 +41,8 @@
     "url": "https://github.com/mynameisGaku/UnityModules"
   },
   "dependencies": {
-    "com.unity.modules.uielements": "1.0.0"
+    "com.unity.modules.uielements": "1.0.0",
+    "com.unity.modules.physics": "1.0.0",
+    "com.unity.modules.physics2d": "1.0.0"
   }
 }

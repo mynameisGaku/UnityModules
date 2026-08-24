@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.16.0] - 2026-08-25
+
+- Added independent Physics and Physics 2D Layer Collision rule lists addressed by exact Layer names.
+- Added same-Apply resolution for Layers created by the profile, deterministic per-pair Preview, and explicit duplicate or unknown-name validation.
+- Added full 32-layer matrix backup schema v16, exact rollback and Restore for named and unnamed slots, and real settings coverage.
+
 ## [1.15.0] - 2026-08-23
 
 - Added profile-owned IL2CPP Code Generation selection for OptimizeSpeed or OptimizeSize on the active build target.

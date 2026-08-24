@@ -75,13 +75,23 @@ namespace ProjectSetup.Editor
             {
                 var json = File.ReadAllText(_path, new UTF8Encoding(false, true));
                 var data = JsonUtility.FromJson<ProjectSetupSnapshotData>(json);
-                if (data == null || data.schemaVersion < 1 || data.schemaVersion > 15)
+                if (data == null || data.schemaVersion < 1 || data.schemaVersion > 16)
                 {
                     error = "The Project Setup backup schema is unsupported.";
                     return false;
                 }
 
                 snapshot = data.ToSnapshot();
+                if ((snapshot.HasPhysicsLayerCollisionData
+                        && !ProjectSetupLayerCollisionStore.IsSymmetric(snapshot.PhysicsLayerCollisionMasks))
+                    || (snapshot.HasPhysics2DLayerCollisionData
+                        && !ProjectSetupLayerCollisionStore.IsSymmetric(snapshot.Physics2DLayerCollisionMasks)))
+                {
+                    snapshot = default;
+                    error = "The Project Setup backup contains an invalid Layer Collision Matrix.";
+                    return false;
+                }
+
                 return true;
             }
             catch (Exception exception)
@@ -94,7 +104,7 @@ namespace ProjectSetup.Editor
         [Serializable]
         private sealed class ProjectSetupSnapshotData
         {
-            public int schemaVersion = 15;
+            public int schemaVersion = 16;
             public int assetSerialization;
             public string versionControlMode;
             public bool enterPlayModeOptionsEnabled;
@@ -150,6 +160,10 @@ namespace ProjectSetup.Editor
             public string il2CppCodeGenerationTargetId;
             public string il2CppCodeGenerationTargetLabel;
             public int il2CppCodeGeneration;
+            public bool hasPhysicsLayerCollisionData;
+            public int[] physicsLayerCollisionMasks;
+            public bool hasPhysics2DLayerCollisionData;
+            public int[] physics2DLayerCollisionMasks;
 
             internal static ProjectSetupSnapshotData FromSnapshot(ProjectSetupSnapshot snapshot)
             {
@@ -235,7 +249,11 @@ namespace ProjectSetup.Editor
                     hasIl2CppCodeGenerationData = snapshot.HasIl2CppCodeGenerationData,
                     il2CppCodeGenerationTargetId = snapshot.Il2CppCodeGenerationTargetId,
                     il2CppCodeGenerationTargetLabel = snapshot.Il2CppCodeGenerationTargetLabel,
-                    il2CppCodeGeneration = (int)snapshot.Il2CppCodeGeneration
+                    il2CppCodeGeneration = (int)snapshot.Il2CppCodeGeneration,
+                    hasPhysicsLayerCollisionData = snapshot.HasPhysicsLayerCollisionData,
+                    physicsLayerCollisionMasks = snapshot.PhysicsLayerCollisionMasks,
+                    hasPhysics2DLayerCollisionData = snapshot.HasPhysics2DLayerCollisionData,
+                    physics2DLayerCollisionMasks = snapshot.Physics2DLayerCollisionMasks
                 };
             }
 
@@ -321,7 +339,11 @@ namespace ProjectSetup.Editor
                     il2CppCodeGenerationTargetLabel: schemaVersion >= 15 ? il2CppCodeGenerationTargetLabel : string.Empty,
                     il2CppCodeGeneration: schemaVersion >= 15
                         ? (Il2CppCodeGeneration)il2CppCodeGeneration
-                        : Il2CppCodeGeneration.OptimizeSpeed);
+                        : Il2CppCodeGeneration.OptimizeSpeed,
+                    hasPhysicsLayerCollisionData: schemaVersion >= 16 && hasPhysicsLayerCollisionData,
+                    physicsLayerCollisionMasks: schemaVersion >= 16 ? physicsLayerCollisionMasks : Array.Empty<int>(),
+                    hasPhysics2DLayerCollisionData: schemaVersion >= 16 && hasPhysics2DLayerCollisionData,
+                    physics2DLayerCollisionMasks: schemaVersion >= 16 ? physics2DLayerCollisionMasks : Array.Empty<int>());
             }
         }
 

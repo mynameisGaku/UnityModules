@@ -34,6 +34,7 @@ namespace ProjectSetup.Editor
         public ProjectSetupSnapshot Capture()
         {
             ProjectSetupTagManagerStore.Capture(out var tags, out var customTags, out var layers, out var sortingLayers, out var tagManagerFileText);
+            ProjectSetupLayerCollisionStore.Capture(out var physicsLayerCollisionMasks, out var physics2DLayerCollisionMasks);
             CaptureBuildScenes(out var buildSceneTargetId, out var buildSceneTargetLabel, out var buildScenes);
             CapturePlayModeStartScene(out var playModeStartSceneGuid, out var playModeStartScenePath);
             CaptureScriptingDefines(out var hasScriptingDefineData, out var scriptingDefineTargetId, out var scriptingDefineTargetLabel, out var scriptingDefineSymbols);
@@ -99,7 +100,11 @@ namespace ProjectSetup.Editor
                 hasIl2CppCodeGenerationData: hasIl2CppCodeGenerationData,
                 il2CppCodeGenerationTargetId: il2CppCodeGenerationTargetId,
                 il2CppCodeGenerationTargetLabel: il2CppCodeGenerationTargetLabel,
-                il2CppCodeGeneration: il2CppCodeGeneration);
+                il2CppCodeGeneration: il2CppCodeGeneration,
+                hasPhysicsLayerCollisionData: true,
+                physicsLayerCollisionMasks: physicsLayerCollisionMasks,
+                hasPhysics2DLayerCollisionData: true,
+                physics2DLayerCollisionMasks: physics2DLayerCollisionMasks);
         }
 
         public ProjectSetupEnvironmentApplyResult Apply(ProjectSetupProfile profile)
@@ -218,6 +223,8 @@ namespace ProjectSetup.Editor
             }
 
             ProjectSetupTagManagerStore.Apply(profile);
+            ProjectSetupTagManagerStore.Capture(out _, out _, out var currentLayers, out _, out _);
+            ProjectSetupLayerCollisionStore.Apply(profile, currentLayers);
             AssetDatabase.SaveAssets();
             if (profile.ConfigureVersionControlFiles)
             {
@@ -361,6 +368,7 @@ namespace ProjectSetup.Editor
             _versionControlFileStore.Restore(snapshot.CreatedProjectRootFiles);
 
             ProjectSetupTagManagerStore.Restore(snapshot);
+            ProjectSetupLayerCollisionStore.Restore(snapshot);
             AssetDatabase.SaveAssets();
         }
 

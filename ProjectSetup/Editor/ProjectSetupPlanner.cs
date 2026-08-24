@@ -15,6 +15,7 @@ namespace ProjectSetup.Editor
         private const int MaximumVersionLength = 64;
         private const int MaximumNameLength = 64;
         private const int MaximumRequestedNameCount = 64;
+        private const int MaximumLayerCollisionRuleCount = 528;
         private const int MaximumBuildSceneCount = 64;
         private const int MaximumScriptingDefineLength = 64;
         private const int MaximumRootNamespaceLength = 128;
@@ -125,6 +126,27 @@ namespace ProjectSetup.Editor
             AddVersionControlFileChange(profile, current, changes);
             AddNameListChange(profile.ConfigureTags, profile.Tags, current.Tags, ProjectSetupSettingKey.Tags, "Tags", changes, errors);
             AddLayerChange(profile, current, changes, errors);
+            var prospectiveLayers = BuildProspectiveLayers(profile, current.Layers);
+            AddLayerCollisionChanges(
+                profile.ConfigurePhysicsLayerCollisions,
+                profile.PhysicsLayerCollisions,
+                current.HasPhysicsLayerCollisionData,
+                current.PhysicsLayerCollisionMasks,
+                prospectiveLayers,
+                ProjectSetupSettingKey.PhysicsLayerCollisions,
+                "Physics 3D",
+                changes,
+                errors);
+            AddLayerCollisionChanges(
+                profile.ConfigurePhysics2DLayerCollisions,
+                profile.Physics2DLayerCollisions,
+                current.HasPhysics2DLayerCollisionData,
+                current.Physics2DLayerCollisionMasks,
+                prospectiveLayers,
+                ProjectSetupSettingKey.Physics2DLayerCollisions,
+                "Physics 2D",
+                changes,
+                errors);
             AddNameListChange(
                 profile.ConfigureSortingLayers,
                 profile.SortingLayers,
@@ -634,6 +656,110 @@ namespace ProjectSetup.Editor
             }
 
             AddMissingNames(changes, ProjectSetupSettingKey.Layers, "Layers", missing);
+        }
+
+        private static string[] BuildProspectiveLayers(ProjectSetupProfile profile, IReadOnlyList<string> current)
+        {
+            var layers = new string[ProjectSetupLayerCollisionStore.LayerCount];
+            for (var index = 0; index < layers.Length && index < (current?.Count ?? 0); index++)
+            {
+                layers[index] = current[index] ?? string.Empty;
+            }
+
+            if (!profile.ConfigureLayers)
+            {
+                return layers;
+            }
+
+            var existing = new HashSet<string>(layers, StringComparer.Ordinal);
+            foreach (var requested in profile.Layers)
+            {
+                if (string.IsNullOrEmpty(requested) || !existing.Add(requested))
+                {
+                    continue;
+                }
+
+                for (var layerIndex = 8; layerIndex < layers.Length; layerIndex++)
+                {
+                    if (!string.IsNullOrEmpty(layers[layerIndex]))
+                    {
+                        continue;
+                    }
+
+                    layers[layerIndex] = requested;
+                    break;
+                }
+            }
+
+            return layers;
+        }
+
+        private static void AddLayerCollisionChanges(
+            bool enabled,
+            IReadOnlyList<ProjectSetupLayerCollision> rules,
+            bool hasCurrentData,
+            IReadOnlyList<int> currentMasks,
+            IReadOnlyList<string> layers,
+            ProjectSetupSettingKey key,
+            string label,
+            ICollection<ProjectSetupChange> changes,
+            ICollection<string> errors)
+        {
+            if (!enabled)
+            {
+                return;
+            }
+
+            if (!hasCurrentData || !ProjectSetupLayerCollisionStore.IsSymmetric(currentMasks))
+            {
+                errors.Add($"{label} Layer Collision Matrix is unavailable.");
+                return;
+            }
+
+            if (rules.Count > MaximumLayerCollisionRuleCount)
+            {
+                errors.Add($"{label} Layer Collision Matrix supports at most {MaximumLayerCollisionRuleCount} rules.");
+                return;
+            }
+
+            var pairs = new HashSet<int>();
+            for (var index = 0; index < rules.Count; index++)
+            {
+                var rule = rules[index];
+                if (rule == null || !IsValidName(rule.FirstLayer) || !IsValidName(rule.SecondLayer))
+                {
+                    errors.Add($"{label} Layer Collision rule {index + 1} must contain two trimmed Layer names.");
+                    continue;
+                }
+
+                var first = ProjectSetupLayerCollisionStore.FindLayerIndex(layers, rule.FirstLayer);
+                var second = ProjectSetupLayerCollisionStore.FindLayerIndex(layers, rule.SecondLayer);
+                if (first < 0 || second < 0)
+                {
+                    errors.Add($"{label} Layer Collision rule {index + 1} refers to a Layer that does not exist or is not added by this profile.");
+                    continue;
+                }
+
+                var lower = Math.Min(first, second);
+                var upper = Math.Max(first, second);
+                if (!pairs.Add((lower * ProjectSetupLayerCollisionStore.LayerCount) + upper))
+                {
+                    errors.Add($"{label} Layer Collision contains the duplicate pair '{rule.FirstLayer}' and '{rule.SecondLayer}'.");
+                    continue;
+                }
+
+                var currentEnabled = ProjectSetupLayerCollisionStore.IsCollisionEnabled(currentMasks, first, second);
+                if (currentEnabled == rule.CollisionsEnabled)
+                {
+                    continue;
+                }
+
+                changes.Add(new ProjectSetupChange(
+                    key,
+                    $"{label} Layer Collision: {rule.FirstLayer} ↔ {rule.SecondLayer}",
+                    currentEnabled ? "Collide" : "Ignore",
+                    rule.CollisionsEnabled ? "Collide" : "Ignore"));
+            }
         }
 
         private static void AddNameListChange(

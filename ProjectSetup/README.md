@@ -2,13 +2,13 @@
 
 Unityの新規Projectで毎回行う設定を、1つのprofileからまとめてPreview・適用・復元するEditor専用ツールです。
 
-`Assets`配下の基本フォルダー、Runtime／Editor／test asmdef、`.gitignore`、`.gitattributes`、`Project Settings`、build target別のApplication Identifier・Scripting Backend・API Compatibility Level・Managed Stripping Level・IL2CPP Code Generation、C#のRoot Namespaceと改行方式、複製時の命名規則、Play Modeの開始Scene、条件付きコンパイル記号、Tag、Layer、Sorting Layer、Build Scenesを別々の画面やscriptで設定する手間を減らします。自動適用はせず、実際に変わる項目を確認してから実行できます。
+`Assets`配下の基本フォルダー、Runtime／Editor／test asmdef、`.gitignore`、`.gitattributes`、`Project Settings`、build target別のApplication Identifier・Scripting Backend・API Compatibility Level・Managed Stripping Level・IL2CPP Code Generation、C#のRoot Namespaceと改行方式、複製時の命名規則、Play Modeの開始Scene、条件付きコンパイル記号、Tag、Layer、Physics／Physics 2DのLayer Collision、Sorting Layer、Build Scenesを別々の画面やscriptで設定する手間を減らします。自動適用はせず、実際に変わる項目を確認してから実行できます。
 
 ## まず知りたいこと
 
 | 質問 | 答え |
 |---|---|
-| 何が楽になる？ | 基本フォルダー、asmdef、Git用fileの作成と、Application Identifier・Scripting Backend・API Compatibility Level・Managed Stripping Level・IL2CPP Code Generationを含むProject設定、C#生成時の既定値、複製名、Play Modeの開始Scene、条件付きコンパイル記号、Tag/Layer、Build Scenesを1つのprofileからまとめて設定できます。 |
+| 何が楽になる？ | 基本フォルダー、asmdef、Git用fileの作成と、Application Identifier・Scripting Backend・API Compatibility Level・Managed Stripping Level・IL2CPP Code Generationを含むProject設定、C#生成時の既定値、複製名、Play Modeの開始Scene、条件付きコンパイル記号、Tag/Layer、3D/2DのLayer Collision、Build Scenesを1つのprofileからまとめて設定できます。 |
 | 勝手に変更される？ | されません。import時やUnity起動時には何も適用しません。 |
 | 実行前に確認できる？ | `Preview changes`で変更前と変更後を一覧表示します。 |
 | 失敗したら？ | Apply前にbackupし、書込後の検証に失敗した場合は可能な範囲で自動復元します。 |
@@ -38,6 +38,7 @@ Unityの新規Projectで毎回行う設定を、1つのprofileからまとめて
 | build targetごとのmanaged code削除強度をそろえる | `Managed Stripping Level` |
 | IL2CPPの速度優先／サイズ優先をそろえる | `IL2CPP Code Generation` |
 | Tag、Layer、compile記号を手入力せず追加する | `Tags`、`Layers`、`Scripting Define Symbols` |
+| 名前で指定したLayer同士の3D／2D衝突をそろえる | `Physics Layer Collisions`、`Physics 2D Layer Collisions` |
 | 直前の一括変更を戻す | `Restore last backup` |
 
 ## できること
@@ -121,6 +122,17 @@ Apply直前のtargetと値はbackupへ保存します。Restore時にbuild targe
 - Sorting Layer
 
 通常のApplyでは不足する名称だけを追加します。既存の名称、順序、Layer slot、Sorting Layer IDは変更しません。
+
+### Physics／Physics 2DのLayer Collision
+
+- `Physics Layer Collisions`と`Physics 2D Layer Collisions`を別々に有効化する。
+- `Layer A`と`Layer B`を正確な名前で指定し、`Collides`をon/offする。
+- 同じLayer同士のruleも設定できる。
+- `A / B`と`B / A`は同じ組み合わせとして扱い、重複ruleはPreviewで停止する。
+- profileが同じApplyで追加するLayerも、実際に割り当てられたslotを再取得してからruleを適用する。
+- 一覧にないLayer pairは変更しない。
+
+`Capture current`は、現在名前が付いているLayer同士をportableなruleとしてprofileへ取り込みます。名前のないslotはprofile ruleの対象にはできませんが、Apply前のbackupには32 slotすべての3D／2D matrixを保存するため、rollbackと`Restore last backup`では正確に戻せます。各ruleはPreviewへ`Collide`／`Ignore`の差分として表示されます。
 
 ### 条件付きコンパイル記号
 
@@ -288,6 +300,7 @@ Apply後に複製したGameObjectとAssetだけへ反映されます。既に存
 - Project Foldersは不足フォルダーだけを作成します。既存file、既存フォルダー、既存Assetの名前や場所は変更しません。
 - Version Control FilesはProject rootへ不足fileだけを作成します。既存fileと同名directoryは上書きしません。
 - Script Assembliesは新しいasmdefをimportするため、Unityがscriptを再コンパイルします。既存asmdefや同名fileは上書きしません。
+- Layer Collisionはprofileに明記した3D／2D pairだけを変更します。同じApplyで追加するLayerは、作成後の実slotを名前から再解決します。
 - Build Scenesは不足分の追加ではなく、profileの一覧へ完全に置き換えます。
 - RestoreはApply直前へ戻すため、その後に追加したTag/Layer/Sceneを取り除く場合があります。
 
@@ -303,7 +316,7 @@ Scripting Define Symbolsを復元する場合は、backup作成時と同じbuild
 
 Application Identifier、Scripting Backend、API Compatibility Level、Managed Stripping Level、IL2CPP Code Generationを復元する場合も、backup作成時と同じbuild targetを選択してください。別targetへ切り替わっている場合は復元を停止します。
 
-backupはUTF-8 BOMなしのJSONです。schema v15はProject設定、Application Identifier・Scripting Backend・API Compatibility Level・Managed Stripping Level・IL2CPP Code Generationと対象build target、Applyが作成したフォルダー・asmdef・version control fileのpathと内容hash、Root Namespace、新規scriptの改行方式、複製時の命名規則、Play Mode Start Scene、Scripting Define Symbolsと対象build target、TagManager全体、Build SceneのGUID・順序・Enabled状態・保存先を保持します。schema v1からv14も読み取れますが、そのversionに存在しない項目は復元しません。
+backupはUTF-8 BOMなしのJSONです。schema v16はProject設定、Application Identifier・Scripting Backend・API Compatibility Level・Managed Stripping Level・IL2CPP Code Generationと対象build target、Applyが作成したフォルダー・asmdef・version control fileのpathと内容hash、Root Namespace、新規scriptの改行方式、複製時の命名規則、Play Mode Start Scene、Scripting Define Symbolsと対象build target、TagManager全体、32 slotすべてのPhysics／Physics 2D Layer Collision Matrix、Build SceneのGUID・順序・Enabled状態・保存先を保持します。schema v1からv15も読み取れますが、そのversionに存在しない項目は復元しません。
 
 ## profileを別Projectで使う
 
@@ -311,7 +324,7 @@ backupはUTF-8 BOMなしのJSONです。schema v15はProject設定、Application
 
 ## 対象外
 
-- PhysicsやLayer collision matrix
+- Collider、Rigidbody、Physics MaterialなどScene内の物理component設定
 - Scene Assetそのものの作成
 - packageの導入・更新
 - Play Modeやbuild時の自動適用

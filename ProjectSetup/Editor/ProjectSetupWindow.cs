@@ -27,6 +27,12 @@ namespace ProjectSetup.Editor
         internal const string BuildScenesCardName = "build-scenes";
         internal const string BuildScenesListName = "build-scenes-list";
         internal const string AddBuildSceneButtonName = "add-build-scene-button";
+        internal const string PhysicsLayerCollisionsCardName = "physics-layer-collisions";
+        internal const string PhysicsLayerCollisionsListName = "physics-layer-collisions-list";
+        internal const string AddPhysicsLayerCollisionButtonName = "add-physics-layer-collision-button";
+        internal const string Physics2DLayerCollisionsCardName = "physics-2d-layer-collisions";
+        internal const string Physics2DLayerCollisionsListName = "physics-2d-layer-collisions-list";
+        internal const string AddPhysics2DLayerCollisionButtonName = "add-physics-2d-layer-collision-button";
         internal const string PlayModeStartSceneCardName = "play-mode-start-scene";
         internal const string PlayModeStartSceneFieldName = "play-mode-start-scene-field";
         internal const string ScriptingDefineCardName = "scripting-define-symbols";
@@ -63,6 +69,8 @@ namespace ProjectSetup.Editor
         private Button _applyButton;
         private Button _restoreButton;
         private VisualElement _buildSceneList;
+        private VisualElement _physicsLayerCollisionList;
+        private VisualElement _physics2DLayerCollisionList;
 
         [MenuItem(MenuPath)]
         private static void Open()
@@ -280,6 +288,8 @@ namespace ProjectSetup.Editor
                 _profile.Layers,
                 value => _profile.ConfigureLayers = value,
                 value => _profile.Layers = value));
+            content.Add(CreateLayerCollisionCard(false));
+            content.Add(CreateLayerCollisionCard(true));
             content.Add(CreateNameListCard(
                 "sorting-layers",
                 "Sorting Layers",
@@ -444,6 +454,188 @@ namespace ProjectSetup.Editor
             addButton.style.marginTop = 5f;
             card.Add(addButton);
             return card;
+        }
+
+        private VisualElement CreateLayerCollisionCard(bool physics2D)
+        {
+            var card = CreateCard(
+                physics2D ? Physics2DLayerCollisionsCardName : PhysicsLayerCollisionsCardName,
+                physics2D ? "Physics 2D Layer Collisions" : "Physics Layer Collisions",
+                "Apply only these named Layer pairs. Newly added Layers are resolved after their slots are created; unspecified pairs remain unchanged.");
+            var enabled = new Toggle("Apply these collision rules")
+            {
+                value = physics2D
+                    ? _profile.ConfigurePhysics2DLayerCollisions
+                    : _profile.ConfigurePhysicsLayerCollisions
+            };
+            enabled.RegisterValueChangedCallback(change => ChangeProfile(() =>
+            {
+                if (physics2D)
+                {
+                    _profile.ConfigurePhysics2DLayerCollisions = change.newValue;
+                }
+                else
+                {
+                    _profile.ConfigurePhysicsLayerCollisions = change.newValue;
+                }
+            }));
+            card.Add(enabled);
+
+            var list = new VisualElement
+            {
+                name = physics2D ? Physics2DLayerCollisionsListName : PhysicsLayerCollisionsListName
+            };
+            list.style.marginTop = 4f;
+            if (physics2D)
+            {
+                _physics2DLayerCollisionList = list;
+            }
+            else
+            {
+                _physicsLayerCollisionList = list;
+            }
+
+            card.Add(list);
+            RefreshLayerCollisionRows(physics2D);
+
+            var addButton = new Button(() => AddLayerCollision(physics2D))
+            {
+                name = physics2D ? AddPhysics2DLayerCollisionButtonName : AddPhysicsLayerCollisionButtonName,
+                text = "Add Layer pair"
+            };
+            addButton.style.alignSelf = Align.FlexStart;
+            addButton.style.marginTop = 5f;
+            card.Add(addButton);
+            return card;
+        }
+
+        private void RefreshLayerCollisionRows(bool physics2D)
+        {
+            var list = physics2D ? _physics2DLayerCollisionList : _physicsLayerCollisionList;
+            if (list == null)
+            {
+                return;
+            }
+
+            list.Clear();
+            var rules = GetLayerCollisions(physics2D);
+            if (rules.Length == 0)
+            {
+                var empty = new Label("No pairs are configured. Unspecified Layer pairs are left unchanged.");
+                empty.style.whiteSpace = WhiteSpace.Normal;
+                empty.style.marginBottom = 3f;
+                list.Add(empty);
+                return;
+            }
+
+            for (var index = 0; index < rules.Length; index++)
+            {
+                AddLayerCollisionRow(list, physics2D, index, rules[index]);
+            }
+        }
+
+        private void AddLayerCollisionRow(
+            VisualElement list,
+            bool physics2D,
+            int index,
+            ProjectSetupLayerCollision rule)
+        {
+            var row = new VisualElement
+            {
+                name = $"{(physics2D ? "physics-2d" : "physics")}-layer-collision-row-{index}"
+            };
+            row.style.flexDirection = FlexDirection.Row;
+            row.style.flexWrap = Wrap.Wrap;
+            row.style.alignItems = Align.Center;
+            row.style.marginBottom = 4f;
+
+            var first = new TextField("Layer A") { value = rule?.FirstLayer ?? string.Empty };
+            first.style.flexGrow = 1f;
+            first.style.minWidth = 180f;
+            first.RegisterValueChangedCallback(change => UpdateLayerCollision(
+                physics2D,
+                index,
+                item => item.FirstLayer = change.newValue));
+            row.Add(first);
+
+            var second = new TextField("Layer B") { value = rule?.SecondLayer ?? string.Empty };
+            second.style.flexGrow = 1f;
+            second.style.minWidth = 180f;
+            second.style.marginLeft = 5f;
+            second.RegisterValueChangedCallback(change => UpdateLayerCollision(
+                physics2D,
+                index,
+                item => item.SecondLayer = change.newValue));
+            row.Add(second);
+
+            var collides = new Toggle("Collides") { value = rule?.CollisionsEnabled ?? true };
+            collides.style.marginLeft = 5f;
+            collides.RegisterValueChangedCallback(change => UpdateLayerCollision(
+                physics2D,
+                index,
+                item => item.CollisionsEnabled = change.newValue));
+            row.Add(collides);
+
+            var remove = new Button(() => RemoveLayerCollision(physics2D, index)) { text = "Remove" };
+            remove.style.marginLeft = 4f;
+            row.Add(remove);
+            list.Add(row);
+        }
+
+        private void AddLayerCollision(bool physics2D)
+        {
+            var rules = GetLayerCollisions(physics2D);
+            Array.Resize(ref rules, rules.Length + 1);
+            rules[rules.Length - 1] = new ProjectSetupLayerCollision();
+            SetLayerCollisions(physics2D, rules);
+            MarkProfileDirty();
+            RefreshLayerCollisionRows(physics2D);
+            RefreshPreview();
+        }
+
+        private void UpdateLayerCollision(bool physics2D, int index, Action<ProjectSetupLayerCollision> update)
+        {
+            var rules = GetLayerCollisions(physics2D);
+            if (index < 0 || index >= rules.Length)
+            {
+                return;
+            }
+
+            rules[index] ??= new ProjectSetupLayerCollision();
+            update(rules[index]);
+            SetLayerCollisions(physics2D, rules);
+            MarkProfileDirty();
+            RefreshPreview();
+        }
+
+        private void RemoveLayerCollision(bool physics2D, int index)
+        {
+            var rules = GetLayerCollisions(physics2D)
+                .Where((_, itemIndex) => itemIndex != index)
+                .ToArray();
+            SetLayerCollisions(physics2D, rules);
+            MarkProfileDirty();
+            RefreshLayerCollisionRows(physics2D);
+            RefreshPreview();
+        }
+
+        private ProjectSetupLayerCollision[] GetLayerCollisions(bool physics2D)
+        {
+            return physics2D
+                ? _profile.Physics2DLayerCollisions
+                : _profile.PhysicsLayerCollisions;
+        }
+
+        private void SetLayerCollisions(bool physics2D, ProjectSetupLayerCollision[] rules)
+        {
+            if (physics2D)
+            {
+                _profile.Physics2DLayerCollisions = rules;
+            }
+            else
+            {
+                _profile.PhysicsLayerCollisions = rules;
+            }
         }
 
         private void RefreshBuildSceneRows()
