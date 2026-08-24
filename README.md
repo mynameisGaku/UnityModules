@@ -27,6 +27,9 @@ Unity で繰り返し発生する設定、実装、確認作業を減らすた�
 | Assetの利用箇所を確認・置換し、複数の名前もまとめて整理したい | [アセット整理・参照管理（Reference Finder）](ReferenceFinder/) | 直接・間接参照の検索、安全な参照置換、GUIDを維持する一括RenameをPreview後に実行する。 |
 | 不具合調査用の状態とログを手動保存したい | [不具合レポート保存（DiagnosticsContext）](DiagnosticsContext/) | context、breadcrumb、Unity log を有界 JSON に書き出す。 |
 | スティック補正とTap・Hold・Repeatをまとめて扱いたい | [入力補助（Input Assist）](InputAssist/) | dead zone、感度curve、滑らかさ、4/8方向、button gestureを1つの導入で処理する。 |
+| 先行入力、コマンド入力、同時押し、入力の優先順位を扱いたい | [入力コマンド判定（Input Command）](InputCommand/) | tick基準でbuffer・順序・同時押し・優先順位・対向軸・チャタリングを1つの導入で判定する。 |
+| リソース、能力補正、抽選、しきい値などゲームの数値計算を毎回書きたくない | [ゲーム判定・計算（Gameplay Rules）](GameplayRules/) | 用途別namespaceから、決定論的で状態を壊さない計算を選んで使う。 |
+| Replayやlockstepのために計算を再現可能にしたい | [再現可能シミュレーション（Deterministic Simulation）](DeterministicSimulation/) | 固定刻み、再現可能な乱数、記録tape、状態fingerprintを1つの導入で揃える。 |
 | Gameplay 入力だけ一時的に止めたい | [入力の一時停止（InputGate）](InputGate/) | PlayerInput の Action Map を入れ子で停止・復元する。 |
 | Inspector の表示整理や入力検証を減らしたい | [インスペクター入力補助（Inspector）](Inspector/) | 条件表示、group、tab、検証、button 属性を使う。 |
 | 実行中の位置・範囲・経路を見たい | [デバッグ描画（Drawing）](Drawing/) | 線、矢印、箱、球、経路、文字をコードから描く。 |
@@ -35,9 +38,11 @@ Unity で繰り返し発生する設定、実装、確認作業を減らすた�
 
 ## 整理方針
 
-小さな計算処理は単独テスト可能なまま保ち、配布単位は利用目的でまとめる。入力加工系は「入力補助」、ゲームの数値計算系は「ゲーム判定・計算」、再現性の基盤は「再現可能シミュレーション」へ統合する。公開済みのフォルダー名とタグは既存利用者のために残す。
+小さな計算処理は単独テスト可能なまま保ち、配布単位は利用目的でまとめる。同じ namespace が複数の配布 package に分かれている状態は、統合が必要な合図として扱う。
 
-新規機能は、Unity 固有の設定・Scene・Prefab・Build・端末差の面倒を直接減らすものを優先する。
+入力加工系は「入力補助」、tick 基準のコマンド判定は「入力コマンド判定」、ゲームの数値計算系は「ゲーム判定・計算」、再現性の基盤は「再現可能シミュレーション」へ統合済み。公開済みのフォルダー名と tag は既存利用者のために残す。
+
+新規機能は、Unity 固有の設定・Scene・Prefab・Build・端末差の面倒を直接減らすものを優先する。判断基準は [モジュール設計・案内ガイド](MODULE_GUIDE.md)、統合の実測根拠と今後の候補は [モジュール統合・追加機能の検討](MODULE_CONSOLIDATION_PLAN.md) にまとめている。
 
 ---
 
@@ -62,46 +67,32 @@ Unity で繰り返し発生する設定、実装、確認作業を減らすた�
 | [プロジェクト不備確認・修復（Build Guard）](BuildGuard/) | build対象Sceneと選択PrefabのMissing Script・削除済みObject Referenceを一覧から開き、Missing Scriptだけを確認・Undo付きで除去できる。SceneはPlayer build開始時にも自動検査するEditor専用module。**Unity 6000.5 以降**。 | なし |
 | [アセット設定チェック（Asset Import Audit）](AssetImportAudit/) | `Assets`配下のTexture2Dを決定論的に検査し、共通設定とStandalone・Android・iOS別OverrideをShared・Platform・両方のscopeでPreview・選択適用・全件適用する。Preview後のstale importerは拒否するEditor専用module。**Unity 6000.5 以降**。 | なし |
 | [アセット整理・参照管理（Reference Finder）](ReferenceFinder/) | 選択Assetの直接・間接参照元を検索し、安全に特定できた参照だけをUndo付きで置換する。さらに複数Assetへ文字置換・prefix・suffixをまとめて適用し、GUIDを維持してRenameするEditor専用module。**Unity 6000.5 以降**。 | なし |
-| [入力補助（Input Assist）](InputAssist/) | 2D入力へradial dead zone、感度curve、増減速度制限、4/8方向判定をまとめて適用し、button入力からTap・Hold・Repeat・multi-tapを判定する。入力値と経過時間は利用側から渡すため、Input System・AI・Replayのどれでも使える。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
+| [入力補助（Input Assist）](InputAssist/) | 2D入力へradial dead zone、応答curve、増減速度制限、方向量子化、重み付き合成を適用し、button入力からTap・Hold・Repeat・multi-tapを判定する。Unity向けの`float`+`deltaTime`契約と、確保を伴わない`double`契約を同じpackageが持つ。入力値と経過時間は利用側から渡すため、Input System・AI・Replayのどれでも使える。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 | [入力の一時停止（InputGate）](InputGate/) | PlayerInputの実行中Action Mapを入れ子leaseで停止し、最後の解放時にActionごとの有効状態を復元する。**Unity 6000.5 / Input System 1.20.0 以降**。 | com.unity.inputsystem 1.20.0 / com.unity.modules.uielements 1.0.0 |
 | [音声再生管理（AudioControl）](AudioControl/) | owner付きAudioSource poolで再生、voice上限、priority steal、handle停止、非スケールfadeを管理する。**Unity 6000.5 以降**。 | com.unity.modules.audio 1.0.0 / com.unity.modules.uielements 1.0.0 |
 | [起動手順管理（StartupFlow）](StartupFlow/) | 明示した非同期stepをOrderとIdで決定論的に直列実行し、進捗・失敗位置・完了件数・協調cancelを結果として返す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
-| [固定刻みシミュレーション時計（SimulationClock）](SimulationClock/) | 明示した整数経過時間を再現可能な固定step範囲・端数・補間率・drop量へ変換し、状態を保存・復元する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
-| [再現可能な乱数（DeterministicRandom）](DeterministicRandom/) | version付き256-bit状態を保存・復元し、同じseed・状態・操作順から同じ64-bit列・範囲整数・浮動小数を再現する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
-| [状態一致チェック（StateFingerprint）](StateFingerprint/) | 明示した型付きfield列をversion固定canonical bytesへ変換し、Replay前後のstate一致をportable SHA-256 fingerprintで検証する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
-| [入力記録・再生（ReplayTape）](ReplayTape/) | 非減少tick・command id・opaque payloadをversion固定canonical tapeへ記録し、完全検証後に同じ順序で読み戻す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
-| [再現用データ変換（CanonicalPayload）](CanonicalPayload/) | 明示したschema順のprimitive値をlittle-endian・IEEE 754・厳格UTF-8の有界canonical bytesへ変換し、同順序で読み戻す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
-| [固定小数点計算（FixedPoint）](FixedPoint/) | signed Q16.16の小数値を整数raw値で保持し、0方向丸めと明示overflowを持つ四則演算をplatform間で再現する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
-| [解放済み参照の識別（GenerationalHandle）](GenerationalHandle/) | 最小の空きslotを決定論的に割り当て、generationで解放済みの古いhandleを新しいentryから区別する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
-| [ゲージ値管理（ResourceMeter）](ResourceMeter/) | immutable capacity内の有限resourceを回復・部分消費・全量必須消費し、前後値・実適用量・未適用量・境界遷移を再構築可能に返す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
-| [能力値補正（StatModifierStack）](StatModifierStack/) | 最大32件の有限modifierをID昇順でFlat・加算percent・乗算factorの3 stageへ合成し、最終値・stage合計・件数を再構築可能に返す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
-| [重み付き抽選（WeightedChoiceTable）](WeightedChoiceTable/) | 最大32件の正weightをID昇順の累積区間へ変換し、明示sampleから選択ID・index・区間・totalを再構築可能に返す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
-| [区間補間カーブ（PiecewiseLinearCurve）](PiecewiseLinearCurve/) | 最大32個の有限pointをX昇順で保持し、有限queryを隣接2点から線形補間して値・segment・補間率・clamp状態を再構築可能に返す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
-| [直近データ保持（RollingSampleWindow）](RollingSampleWindow/) | 最大32件の有限sampleを固定長FIFO窓へ保持し、追加ごとの退避値と前後snapshot、count・min・max・mean・oldest・newestを再構築可能に返す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
-| [しきい値ランク判定（ThresholdTierTable）](ThresholdTierTable/) | 最大32件の有限thresholdを昇順に保持し、有限queryから現在tier・次tier・0〜1の段階内進捗を再構築可能に返す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
-| [増減傾向の推定（LinearTrendEstimator）](LinearTrendEstimator/) | 2〜32個の等間隔な有限sampleへ最小二乗直線を当て、mean・slope・intercept・next predictionを再構築可能に返す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
-| [チャージ回復計算（ChargeCooldown）](ChargeCooldown/) | 最大32 chargeの消費と逐次回復を明示simulation tickから計算し、前後state・回復数・消費成否を再構築可能に返す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
-| [少数データ統計（SampleStatistics）](SampleStatistics/) | 1〜32個の有限sampleからminimum・maximum・mean・range・母分散・母標準偏差を再構築可能に返す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
-| [コスト消費判定（ResourceCostEvaluator）](ResourceCostEvaluator/) | 最大32件ずつのresource残量とcostから、stateを変更せず全支払可否・支払後残量・不足量をresource別に返す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
-| [数値条件判定（NumericRequirementEvaluator）](NumericRequirementEvaluator/) | 最大32件の有限な実値・基準値・比較方法・許容差から、stateを変更せず全条件の成立可否と入力順の全明細を返す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
-| [行動スコア計算（UtilityScoreEvaluator）](UtilityScoreEvaluator/) | 最大32候補・各16factorの0〜1 utilityと正weightから、stateを変更せず最高score候補・安定tie-break・全寄与明細を返す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
-| [候補の安定選択（StableScoreSelector）](StableScoreSelector/) | 最大32候補の0〜1 scoreとcurrent IDから、同点・微差では維持し、明示優位差以上でだけ安定して切り替える。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
-| [整数の重み配分（WeightedIntegerAllocator）](WeightedIntegerAllocator/) | 最大32 entryへ整数総量を非負整数weight比で配分し、largest remainderと入力順tie-breakで合計を失わず返す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
-| [スタック移動計画（StackTransferPlanner）](StackTransferPlanner/) | 最大32 sourceと32 destination間の整数unit移送を入力順で計画し、stateを変更せず両側の全明細と未充足量を返す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
-| [時間制スタック更新（TimedStackResolver）](TimedStackResolver/) | 時限effectの現在stack数・残りtick数と追加状態を、独立した再適用方針と上限から決定論的に解決する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
-| [定期発火計画（PeriodicTickPlanner）](PeriodicTickPlanner/) | 次回tick・間隔・残り回数から、指定simulation tickまでの定期発火範囲と次cursorを有界かつ決定論的に計画する。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
-| [ダメージ軽減計算（DamageMitigationEvaluator）](DamageMitigationEvaluator/) | 元damageへ固定軽減・率軽減を入力順に適用し、各層の要求量・実適用量・残damageを再構築可能に返す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
-| [敵対度計算（ThreatScoreResolver）](ThreatScoreResolver/) | 1〜32対象の非負threat scoreへ最大64件の有限増減を入力順に適用し、0下限・全明細・安定首位を返す。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
+| [入力コマンド判定（Input Command）](InputCommand/) | 先行入力buffer、順序判定、同時押し、優先順位選択、対向軸解決、チャタリング除去を`ulong tick`と`int commandId`で統一して扱う。1 assemblyにまとまっているため、stabilizer→buffer→sequence→arbiterをそのまま繋げられる。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
+| [ゲーム判定・計算（Gameplay Rules）](GameplayRules/) | リソースとコスト、能力補正、重み付き抽選と整数配分、区間curveとしきい値tier、直近statisticsと傾向推定、時限stackと定期発火、数値条件・行動score・敵対度の評価、ダメージ軽減を用途別namespaceでまとめて提供する決定論的な計算群。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
+| [再現可能シミュレーション（Deterministic Simulation）](DeterministicSimulation/) | 固定刻み時計、再現可能な乱数、canonicalなdata変換、固定小数点、入力記録tape、状態fingerprint、世代付きhandleをまとめる。replayやlockstepは単独moduleでは成立しないため、1つの導入単位にしている。**Unity 6000.5 以降**。 | com.unity.modules.uielements 1.0.0 |
 
-### 旧入力モジュールとの関係
+### 統合前モジュールとの関係
 
-通常のスティック補正とbutton gestureは、新規導入では [入力補助（Input Assist）](InputAssist/) を使う。公開済みの細分化moduleは既存利用者との互換性のため残している。sequence・chord・buffer・priority選択など高度なcommand処理が必要な場合だけ、対応する旧moduleを個別に選ぶ。
+44 個の細分化 module は、次の 4 つへ統合した。C# の namespace と型名は変更していないため、既存 code の修正は不要で、`references` に書いた asmdef 名だけを差し替える。
+
+| 統合先 | 統合前 |
+|---|---|
+| [入力補助（Input Assist）](InputAssist/) | Input Radial Dead Zone / Input Vector Response Curve / Input Vector Slew Limiter / Input Vector Exponential Smoother / Input Vector Direction Limiter / Input Vector Weighted Mixer / Input Direction Quantizer / Input Quantizer / Input Threshold Classifier / Input Press Classifier / Input Repeat / Input Multi Tap Classifier |
+| [入力コマンド判定（Input Command）](InputCommand/) | Input Command Buffer / Input Sequence Matcher / Input Chord Matcher / Input Command Arbiter / Input Axis Conflict Resolver / Input Stabilizer |
+| [ゲーム判定・計算（Gameplay Rules）](GameplayRules/) | Resource Meter / Resource Cost Evaluator / Stat Modifier Stack / Weighted Choice Table / Weighted Integer Allocator / Piecewise Linear Curve / Rolling Sample Window / Sample Statistics / Linear Trend Estimator / Threshold Tier Table / Charge Cooldown / Periodic Tick Planner / Timed Stack Resolver / Stack Transfer Planner / Numeric Requirement Evaluator / Utility Score Evaluator / Stable Score Selector / Damage Mitigation Evaluator / Threat Score Resolver |
+| [再現可能シミュレーション（Deterministic Simulation）](DeterministicSimulation/) | Simulation Clock / Deterministic Random / State Fingerprint / Replay Tape / Canonical Payload / Fixed Point / Generational Handle |
+
+統合前の公開 tag は削除していない。`?path=/<旧フォルダー名>#<旧tag>` で固定している既存利用者はそのまま動き続ける。新規導入と更新では統合後の package を使う。
 
 ---
 
 ## 使い方
 
-新しいProjectでは、まず [モジュール管理（Module Manager）](ModuleInstaller/) をPackage Managerへ追加し、`Tools > Module Manager > Open`から4つの実用workflowを選ぶ。`Quick guide`で用途・最初の操作・変更範囲を確認し、未導入moduleの追加件数を確認してから実行する。専門向けcollectionと43件の個別一覧は初期状態で折りたたまれ、個別行の`Read guide`はcatalogと同じ公開tagのREADMEを開く。更新は公開tagへ固定され、同じversion・より新しいversion・catalog外versionを上書きしない。
+新しいProjectでは、まず [モジュール管理（Module Manager）](ModuleInstaller/) をPackage Managerへ追加し、`Tools > Module Manager > Open`から4つの実用workflowを選ぶ。`Quick guide`で用途・最初の操作・変更範囲を確認し、未導入moduleの追加件数を確認してから実行する。専門向けcollectionと22件の個別一覧は初期状態で折りたたまれ、個別行の`Read guide`はcatalogと同じ公開tagのREADMEを開く。更新は公開tagへ固定され、同じversion・より新しいversion・catalog外versionを上書きしない。
 
 新規Projectの設定をそろえる場合は、[プロジェクト一括設定（Project Setup）](ProjectSetup/) を追加して `Tools > Project Setup > Open` を開く。`New recommended profile`で安全な推奨profileを作り、必要なら基本フォルダー、Runtime・Editor・test用asmdef、Unity向け`.gitignore`と`.gitattributes`、build target別Application Identifier・Scripting Backend・API Compatibility Level・Managed Stripping Level・IL2CPP Code Generation、Root Namespace、新規scriptの改行方式、複製時の命名規則、Play Mode Start Scene、条件付きコンパイル記号、Tag・Layer・Sorting Layer、Build Scenesを追加する。`Preview changes`で差分を確認してから`Apply profile`を実行すると、適用直前の設定とツールが自動backupされる。復元時は、ツールが作成した後に内容が変わっていないfileだけを削除する。
 
@@ -115,189 +106,98 @@ Play Mode中の調整値を残す場合は、[プレイ中の調整を反映（P
 Assets/
 └── Modules/
     ├── ModuleInstaller/
-    │   ├── Editor/      ModuleInstaller.Editor
-    │   └── Tests/       ModuleInstaller.Tests
+    │   ├── Editor/          ModuleInstaller.Editor
+    │   └── Tests/           ModuleInstaller.Tests
     ├── ProjectSetup/
-    │   ├── Editor/      ProjectSetup.Editor
-    │   └── Tests/       ProjectSetup.Tests
-    ├── BuildAssistant/
-    │   ├── Editor/      BuildAssistant.Editor
-    │   └── Tests/       BuildAssistant.Tests
-    ├── SceneWorkspace/
-    │   ├── Editor/      SceneWorkspace.Editor
-    │   ├── Tests/       SceneWorkspace.Tests
-    │   └── Documentation~/ 操作順と実画面
-    ├── PlayModeTuning/
-    │   ├── Editor/      PlayModeTuning.Editor
-    │   ├── Tests/       PlayModeTuning.Tests
-    │   └── Documentation~/ 操作順と実画面
-    ├── Containers/
-    │   ├── Runtime/     Containers.Runtime
-    │   ├── Editor/      Containers.Editor
-    │   └── Tests/       Containers.Tests
-    ├── Inspector/
-    │   ├── Runtime/     Inspector.Runtime   属性の定義だけ
-    │   ├── Editor/      Inspector.Editor    解釈と描画
-    │   └── Tests/       Inspector.Tests
-    ├── Drawing/
-    │   ├── Runtime/     Drawing.Runtime
-    │   └── Tests/       Drawing.Tests
-    ├── SaveSystem/
-    │   ├── Runtime/     SaveSystem.Runtime
-    │   ├── Tests/       SaveSystem.Tests
-    │   └── Samples~/    SaveSystem.Samples
-    ├── SceneFlow/
-    │   ├── Runtime/     SceneFlow.Runtime
-    │   ├── Editor/      SceneFlow.Editor
-    │   ├── Tests/       SceneFlow.Tests / SceneFlow.Editor.Tests / SceneFlow.PlayMode.Tests
-    │   └── Samples~/    SceneFlow.Samples
-    ├── ScreenTransition/
-    │   ├── Runtime/     ScreenTransition.Runtime
-    │   ├── Tests/       ScreenTransition.Tests / ScreenTransition.PlayMode.Tests
-    │   └── Samples~/    ScreenTransition.Samples / ScreenTransition.Samples.PlayMode.Tests
-    ├── AdaptiveLayout/
-    │   ├── Runtime/     AdaptiveLayout.Runtime
-    │   ├── Tests/       AdaptiveLayout.Tests / AdaptiveLayout.PlayMode.Tests
-    │   └── Samples~/    AdaptiveLayout.Samples / AdaptiveLayout.Samples.PlayMode.Tests
-    ├── TimeControl/
-    │   ├── Runtime/     TimeControl.Runtime
-    │   ├── Tests/       TimeControl.Tests / TimeControl.PlayMode.Tests
-    │   └── Samples~/    TimeControl.Samples / TimeControl.Samples.PlayMode.Tests
-    ├── DiagnosticsContext/
-    │   ├── Runtime/     DiagnosticsContext.Runtime
-    │   ├── Tests/       DiagnosticsContext.Tests / DiagnosticsContext.PlayMode.Tests
-    │   └── Samples~/    DiagnosticsContext.Samples / DiagnosticsContext.Samples.PlayMode.Tests
+    │   ├── Editor/          ProjectSetup.Editor
+    │   └── Tests/           ProjectSetup.Tests
     ├── BuildGuard/
-    │   ├── Editor/      BuildGuard.Editor
-    │   ├── Tests/       BuildGuard.Tests
-    │   └── Samples~/    Build Guard Basics
+    │   ├── Editor/          BuildGuard.Editor
+    │   └── Tests/           BuildGuard.Tests
     ├── AssetImportAudit/
-    │   ├── Editor/      AssetImportAudit.Editor
-    │   └── Tests/       AssetImportAudit.Tests
+    │   ├── Editor/          AssetImportAudit.Editor
+    │   └── Tests/           AssetImportAudit.Tests
     ├── ReferenceFinder/
-    │   ├── Editor/      ReferenceFinder.Editor
-    │   ├── Tests/       ReferenceFinder.Tests
-    │   └── Samples~/    Reference Finder Basics
-    ├── InputAssist/
-    │   ├── Runtime/     InputAssist.Runtime
-    │   ├── Tests/       InputAssist.Tests
-    │   └── Samples~/    InputAssist.Samples / InputAssist.Samples.PlayMode.Tests
-    ├── InputGate/
-        ├── Runtime/     InputGate.Runtime
-        ├── Tests/       InputGate.Tests / InputGate.PlayMode.Tests
-        └── Samples~/    InputGate.Samples / InputGate.Samples.PlayMode.Tests
-    ├── AudioControl/
-        ├── Runtime/     AudioControl.Runtime
-        ├── Tests/       AudioControl.Tests / AudioControl.PlayMode.Tests
-        └── Samples~/    AudioControl.Samples / AudioControl.Samples.PlayMode.Tests
+    │   ├── Editor/          ReferenceFinder.Editor
+    │   ├── Tests/           ReferenceFinder.Tests
+    │   └── Samples~/        2 assemblies
+    ├── BuildAssistant/
+    │   ├── Editor/          BuildAssistant.Editor
+    │   └── Tests/           BuildAssistant.Tests
+    ├── SceneWorkspace/
+    │   ├── Editor/          SceneWorkspace.Editor
+    │   ├── Tests/           SceneWorkspace.Tests
+    │   └── Documentation~/  操作順と実画面
+    ├── PlayModeTuning/
+    │   ├── Editor/          PlayModeTuning.Editor
+    │   ├── Tests/           PlayModeTuning.Tests
+    │   └── Documentation~/  操作順と実画面
+    ├── Inspector/
+    │   ├── Runtime/         Inspector.Runtime
+    │   ├── Editor/          Inspector.Editor
+    │   ├── Tests/           Inspector.Tests
+    │   └── Samples~/        1 assembly
+    ├── Drawing/
+    │   ├── Runtime/         Drawing.Runtime
+    │   ├── Tests/           Drawing.Tests
+    │   └── Samples~/        1 assembly
+    ├── Containers/
+    │   ├── Runtime/         Containers.Runtime
+    │   ├── Editor/          Containers.Editor
+    │   └── Tests/           Containers.Tests
+    ├── SceneFlow/
+    │   ├── Runtime/         SceneFlow.Runtime
+    │   ├── Editor/          SceneFlow.Editor
+    │   ├── Tests/           SceneFlow.Tests, SceneFlow.Editor.Tests, SceneFlow.PlayMode.Tests
+    │   └── Samples~/        2 assemblies
+    ├── ScreenTransition/
+    │   ├── Runtime/         ScreenTransition.Runtime
+    │   ├── Tests/           ScreenTransition.Tests, ScreenTransition.PlayMode.Tests
+    │   └── Samples~/        2 assemblies
+    ├── AdaptiveLayout/
+    │   ├── Runtime/         AdaptiveLayout.Runtime
+    │   ├── Tests/           AdaptiveLayout.Tests, AdaptiveLayout.PlayMode.Tests
+    │   └── Samples~/        2 assemblies
+    ├── TimeControl/
+    │   ├── Runtime/         TimeControl.Runtime
+    │   ├── Tests/           TimeControl.Tests, TimeControl.PlayMode.Tests
+    │   └── Samples~/        2 assemblies
     ├── StartupFlow/
-        ├── Runtime/     StartupFlow.Runtime
-        ├── Tests/       StartupFlow.Tests / StartupFlow.PlayMode.Tests
-        └── Samples~/    StartupFlow.Samples / StartupFlow.Samples.PlayMode.Tests
-    ├── SimulationClock/
-        ├── Runtime/     SimulationClock.Runtime
-        ├── Tests/       SimulationClock.Tests
-        └── Samples~/    SimulationClock.Samples / SimulationClock.Samples.PlayMode.Tests
-    ├── DeterministicRandom/
-        ├── Runtime/     DeterministicRandom.Runtime
-        ├── Tests/       DeterministicRandom.Tests
-        └── Samples~/    DeterministicRandom.Samples / DeterministicRandom.Samples.PlayMode.Tests
-    ├── StateFingerprint/
-        ├── Runtime/     StateFingerprint.Runtime
-        ├── Tests/       StateFingerprint.Tests
-        └── Samples~/    StateFingerprint.Samples / StateFingerprint.Samples.PlayMode.Tests
-    ├── ReplayTape/
-        ├── Runtime/     ReplayTape.Runtime
-        ├── Tests/       ReplayTape.Tests
-        └── Samples~/    ReplayTape.Samples / ReplayTape.Samples.PlayMode.Tests
-    ├── CanonicalPayload/
-        ├── Runtime/     CanonicalPayload.Runtime
-        ├── Tests/       CanonicalPayload.Tests
-        └── Samples~/    CanonicalPayload.Samples / CanonicalPayload.Samples.PlayMode.Tests
-    ├── FixedPoint/
-        ├── Runtime/     FixedPoint.Runtime
-        ├── Tests/       FixedPoint.Tests
-        └── Samples~/    FixedPoint.Samples / FixedPoint.Samples.PlayMode.Tests
-    ├── GenerationalHandle/
-        ├── Runtime/     GenerationalHandle.Runtime
-        ├── Tests/       GenerationalHandle.Tests
-        └── Samples~/    GenerationalHandle.Samples / GenerationalHandle.Samples.PlayMode.Tests
-    ├── ResourceMeter/
-        ├── Runtime/     ResourceMeter.Runtime
-        ├── Tests/       ResourceMeter.Tests
-        └── Samples~/    ResourceMeter.Samples / ResourceMeter.Samples.PlayMode.Tests
-    ├── StatModifierStack/
-        ├── Runtime/     StatModifierStack.Runtime
-        ├── Tests/       StatModifierStack.Tests
-        └── Samples~/    StatModifierStack.Samples / StatModifierStack.Samples.PlayMode.Tests
-    ├── WeightedChoiceTable/
-        ├── Runtime/     WeightedChoiceTable.Runtime
-        ├── Tests/       WeightedChoiceTable.Tests
-        └── Samples~/    WeightedChoiceTable.Samples / WeightedChoiceTable.Samples.PlayMode.Tests
-    ├── PiecewiseLinearCurve/
-        ├── Runtime/     PiecewiseLinearCurve.Runtime
-        ├── Tests/       PiecewiseLinearCurve.Tests
-        └── Samples~/    PiecewiseLinearCurve.Samples / PiecewiseLinearCurve.Samples.PlayMode.Tests
-    ├── RollingSampleWindow/
-        ├── Runtime/     RollingSampleWindow.Runtime
-        ├── Tests/       RollingSampleWindow.Tests
-        └── Samples~/    RollingSampleWindow.Samples / RollingSampleWindow.Samples.PlayMode.Tests
-    ├── ThresholdTierTable/
-        ├── Runtime/     ThresholdTierTable.Runtime
-        ├── Tests/       ThresholdTierTable.Tests
-        └── Samples~/    ThresholdTierTable.Samples / ThresholdTierTable.Samples.PlayMode.Tests
-    ├── LinearTrendEstimator/
-        ├── Runtime/     LinearTrendEstimator.Runtime
-        ├── Tests/       LinearTrendEstimator.Tests
-        └── Samples~/    LinearTrendEstimator.Samples / LinearTrendEstimator.Samples.PlayMode.Tests
-    ├── ChargeCooldown/
-        ├── Runtime/     ChargeCooldown.Runtime
-        ├── Tests/       ChargeCooldown.Tests
-        └── Samples~/    ChargeCooldown.Samples / ChargeCooldown.Samples.PlayMode.Tests
-    ├── SampleStatistics/
-        ├── Runtime/     SampleStatistics.Runtime
-        ├── Tests/       SampleStatistics.Tests
-        └── Samples~/    SampleStatistics.Samples / SampleStatistics.Samples.PlayMode.Tests
-    ├── ResourceCostEvaluator/
-        ├── Runtime/     ResourceCostEvaluator.Runtime
-        ├── Tests/       ResourceCostEvaluator.Tests
-        └── Samples~/    ResourceCostEvaluator.Samples / ResourceCostEvaluator.Samples.PlayMode.Tests
-    ├── NumericRequirementEvaluator/
-        ├── Runtime/     NumericRequirementEvaluator.Runtime
-        ├── Tests/       NumericRequirementEvaluator.Tests
-        └── Samples~/    NumericRequirementEvaluator.Samples / NumericRequirementEvaluator.Samples.PlayMode.Tests
-    ├── UtilityScoreEvaluator/
-        ├── Runtime/     UtilityScoreEvaluator.Runtime
-        ├── Tests/       UtilityScoreEvaluator.Tests
-        └── Samples~/    UtilityScoreEvaluator.Samples / UtilityScoreEvaluator.Samples.PlayMode.Tests
-    ├── StableScoreSelector/
-        ├── Runtime/     StableScoreSelector.Runtime
-        ├── Tests/       StableScoreSelector.Tests
-        └── Samples~/    StableScoreSelector.Samples / StableScoreSelector.Samples.PlayMode.Tests
-    ├── WeightedIntegerAllocator/
-        ├── Runtime/     WeightedIntegerAllocator.Runtime
-        ├── Tests/       WeightedIntegerAllocator.Tests
-        └── Samples~/    WeightedIntegerAllocator.Samples / WeightedIntegerAllocator.Samples.PlayMode.Tests
-    ├── StackTransferPlanner/
-        ├── Runtime/     StackTransferPlanner.Runtime
-        ├── Tests/       StackTransferPlanner.Tests
-        └── Samples~/    StackTransferPlanner.Samples / StackTransferPlanner.Samples.PlayMode.Tests
-    ├── TimedStackResolver/
-        ├── Runtime/     TimedStackResolver.Runtime
-        ├── Tests/       TimedStackResolver.Tests
-        └── Samples~/    TimedStackResolver.Samples / TimedStackResolver.Samples.PlayMode.Tests
-    ├── PeriodicTickPlanner/
-        ├── Runtime/     PeriodicTickPlanner.Runtime
-        ├── Tests/       PeriodicTickPlanner.Tests
-        └── Samples~/    PeriodicTickPlanner.Samples / PeriodicTickPlanner.Samples.PlayMode.Tests
-    ├── DamageMitigationEvaluator/
-        ├── Runtime/     DamageMitigationEvaluator.Runtime
-        ├── Tests/       DamageMitigationEvaluator.Tests
-        └── Samples~/    DamageMitigationEvaluator.Samples / DamageMitigationEvaluator.Samples.PlayMode.Tests
-    └── ThreatScoreResolver/
-        ├── Runtime/     ThreatScoreResolver.Runtime
-        ├── Tests/       ThreatScoreResolver.Tests
-        └── Samples~/    ThreatScoreResolver.Samples / ThreatScoreResolver.Samples.PlayMode.Tests
+    │   ├── Runtime/         StartupFlow.Runtime
+    │   ├── Tests/           StartupFlow.Tests, StartupFlow.PlayMode.Tests
+    │   └── Samples~/        2 assemblies
+    ├── SaveSystem/
+    │   ├── Runtime/         SaveSystem.Runtime
+    │   ├── Tests/           SaveSystem.Tests
+    │   └── Samples~/        1 assembly
+    ├── AudioControl/
+    │   ├── Runtime/         AudioControl.Runtime
+    │   ├── Tests/           AudioControl.Tests, AudioControl.PlayMode.Tests
+    │   └── Samples~/        2 assemblies
+    ├── DiagnosticsContext/
+    │   ├── Runtime/         DiagnosticsContext.Runtime
+    │   ├── Tests/           DiagnosticsContext.Tests, DiagnosticsContext.PlayMode.Tests
+    │   └── Samples~/        2 assemblies
+    ├── InputAssist/
+    │   ├── Runtime/         InputAssist.Runtime
+    │   ├── Tests/           InputAssist.Tests
+    │   └── Samples~/        26 assemblies
+    ├── InputCommand/
+    │   ├── Runtime/         InputCommand.Runtime
+    │   ├── Tests/           InputCommand.Tests
+    │   └── Samples~/        12 assemblies
+    ├── InputGate/
+    │   ├── Runtime/         InputGate.Runtime
+    │   ├── Tests/           InputGate.Tests, InputGate.PlayMode.Tests
+    │   └── Samples~/        2 assemblies
+    ├── GameplayRules/
+    │   ├── Runtime/         GameplayRules.Runtime
+    │   ├── Tests/           GameplayRules.Tests
+    │   └── Samples~/        38 assemblies
+    └── DeterministicSimulation/
+        ├── Runtime/         DeterministicSimulation.Runtime
+        ├── Tests/           DeterministicSimulation.Tests
+        └── Samples~/        14 assemblies
 ```
 
 UPM パッケージとして扱う場合は、モジュールのフォルダを `Packages/` 以下に置くか、

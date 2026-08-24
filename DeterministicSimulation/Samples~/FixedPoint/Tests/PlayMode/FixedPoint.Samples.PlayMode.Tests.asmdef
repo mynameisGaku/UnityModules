@@ -1,0 +1,22 @@
+{
+  "name": "FixedPoint.Samples.PlayMode.Tests",
+  "rootNamespace": "FixedPoint.Samples.PlayMode.Tests",
+  "references": [
+    "DeterministicSimulation.Runtime",
+    "FixedPoint.Samples",
+    "UnityEngine.TestRunner"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": true,
+  "precompiledReferences": [
+    "nunit.framework.dll"
+  ],
+  "autoReferenced": false,
+  "defineConstraints": [
+    "UNITY_INCLUDE_TESTS"
+  ],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

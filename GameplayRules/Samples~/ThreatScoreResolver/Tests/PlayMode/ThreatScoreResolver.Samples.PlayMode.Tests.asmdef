@@ -1,0 +1,22 @@
+{
+  "name": "ThreatScoreResolver.Samples.PlayMode.Tests",
+  "rootNamespace": "GameplayThreat.Samples.PlayMode.Tests",
+  "references": [
+    "GameplayRules.Runtime",
+    "ThreatScoreResolver.Samples",
+    "UnityEngine.TestRunner"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": true,
+  "precompiledReferences": [
+    "nunit.framework.dll"
+  ],
+  "autoReferenced": false,
+  "defineConstraints": [
+    "UNITY_INCLUDE_TESTS"
+  ],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

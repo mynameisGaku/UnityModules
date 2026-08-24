@@ -1,0 +1,22 @@
+{
+  "name": "WeightedIntegerAllocator.Samples.PlayMode.Tests",
+  "rootNamespace": "GameplayAllocation.Samples.PlayMode.Tests",
+  "references": [
+    "GameplayRules.Runtime",
+    "WeightedIntegerAllocator.Samples",
+    "UnityEngine.TestRunner"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": true,
+  "precompiledReferences": [
+    "nunit.framework.dll"
+  ],
+  "autoReferenced": false,
+  "defineConstraints": [
+    "UNITY_INCLUDE_TESTS"
+  ],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

@@ -1,0 +1,16 @@
+{
+  "name": "DeterministicRandom.Samples",
+  "rootNamespace": "DeterministicRandom.Samples",
+  "references": [
+    "DeterministicSimulation.Runtime"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

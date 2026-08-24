@@ -1,13 +1,13 @@
 {
   "name": "com.studiogaku.input-assist",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "displayName": "Input Assist",
-  "description": "Inspector-friendly 2D input filtering and button gesture tracking with explicit time and no Input System dependency.",
+  "description": "Inspector-friendly 2D input filtering and button gesture tracking with explicit time and no Input System dependency, plus allocation-free deterministic value types for radial dead zone, response curve, slew limit, exponential smoothing, direction limit, weighted mixing, axis and direction quantization, threshold hysteresis, press, repeat, and multi-tap classification.",
   "unity": "6000.5",
   "unityRelease": "7f1",
-  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/blob/input-assist-v1.0.0/InputAssist/Documentation~/index.md",
-  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/input-assist-v1.0.0/InputAssist/CHANGELOG.md",
-  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/input-assist-v1.0.0/InputAssist/LICENSE.md",
+  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/blob/input-assist-v2.0.0/InputAssist/Documentation~/index.md",
+  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/input-assist-v2.0.0/InputAssist/CHANGELOG.md",
+  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/input-assist-v2.0.0/InputAssist/LICENSE.md",
   "license": "Refer to LICENSE.md file",
   "dependencies": {
     "com.unity.modules.uielements": "1.0.0"
@@ -17,6 +17,66 @@
       "displayName": "Input Assist Basics",
       "description": "Ready-to-open vector filtering and button gesture controls with responsive UI Toolkit output.",
       "path": "Samples~/Basics"
+    },
+    {
+      "displayName": "Input Radial Dead Zone Basics",
+      "description": "Inner, mid, outer, over-range, non-finite rejection, and responsive UI Toolkit geometry.",
+      "path": "Samples~/RadialDeadZone"
+    },
+    {
+      "displayName": "Input Vector Response Curve Basics",
+      "description": "Compares four magnitude curves, explicit range rejection, and responsive UI Toolkit geometry.",
+      "path": "Samples~/VectorResponseCurve"
+    },
+    {
+      "displayName": "Input Vector Slew Limiter Basics",
+      "description": "One-step, repeated-step, diagonal, target reach, rejection, and responsive UI Toolkit geometry.",
+      "path": "Samples~/VectorSlewLimiter"
+    },
+    {
+      "displayName": "Input Vector Exponential Smoother Basics",
+      "description": "Compares repeated filtering steps, exact factor-one arrival, explicit rejection, and responsive UI Toolkit geometry.",
+      "path": "Samples~/VectorExponentialSmoother"
+    },
+    {
+      "displayName": "Input Vector Direction Limiter Basics",
+      "description": "Compares counter-clockwise, clockwise, repeated, opposite-tie, rejection, and responsive UI Toolkit geometry scenarios.",
+      "path": "Samples~/VectorDirectionLimiter"
+    },
+    {
+      "displayName": "Input Vector Weighted Mixer Basics",
+      "description": "Compares equal and unequal weights, zero and empty inputs, explicit rejection, and responsive UI Toolkit geometry.",
+      "path": "Samples~/VectorWeightedMixer"
+    },
+    {
+      "displayName": "Input Direction Quantizer Basics",
+      "description": "Radial dead-zone, four-way tie, eight-way sectors, non-finite rejection, and responsive UI Toolkit geometry.",
+      "path": "Samples~/DirectionQuantizer"
+    },
+    {
+      "displayName": "Input Quantizer Basics",
+      "description": "Dead-zone, symmetric quantization, clamping, non-finite rejection, and responsive UI Toolkit geometry.",
+      "path": "Samples~/Quantizer"
+    },
+    {
+      "displayName": "Input Threshold Classifier Basics",
+      "description": "Inclusive release and press boundaries, hysteresis retention, non-finite rejection, and responsive UI Toolkit geometry.",
+      "path": "Samples~/ThresholdClassifier"
+    },
+    {
+      "displayName": "Input Press Classifier Basics",
+      "description": "Tap, hold start, hold completion, and responsive UI Toolkit geometry from explicit ticks.",
+      "path": "Samples~/PressClassifier"
+    },
+    {
+      "displayName": "Input Repeat Basics",
+      "description": "Immediate press, delayed repeat, tick-jump catch-up, release, and responsive UI Toolkit geometry.",
+      "path": "Samples~/Repeat"
+    },
+    {
+      "displayName": "Input Multi Tap Classifier Basics",
+      "description": "Pending tap windows, gap completion, maximum-count completion, and responsive UI Toolkit geometry.",
+      "path": "Samples~/MultiTapClassifier"
     }
   ],
   "keywords": [
@@ -28,7 +88,25 @@
     "tap",
     "hold",
     "repeat",
-    "multi-tap"
+    "multi-tap",
+    "slew",
+    "rate-limit",
+    "exponential-smoothing",
+    "low-pass",
+    "direction-limit",
+    "steering",
+    "weighted-average",
+    "mix",
+    "quantization",
+    "four-way",
+    "eight-way",
+    "threshold",
+    "hysteresis",
+    "tick",
+    "deterministic",
+    "simulation",
+    "replay",
+    "allocation-free"
   ],
   "author": {
     "name": "Studio Gaku"

@@ -1,0 +1,16 @@
+{
+  "name": "InputThresholding.Samples",
+  "rootNamespace": "InputThresholding.Samples",
+  "references": [
+    "InputAssist.Runtime"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

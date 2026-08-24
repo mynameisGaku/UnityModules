@@ -1,6 +1,7 @@
 # モジュール統合・追加機能の検討
 
-現状 64 パッケージを対象に、重複の実測結果と統合案、重複しない追加機能候補をまとめる。
+`dev` の 65 パッケージを対象に、重複の実測結果と統合案、重複しない追加機能候補をまとめる。
+統合は本文書の案 A〜C を実施済みで、案 D・E と追加機能は未着手。
 判断基準は [モジュール設計・案内ガイド](MODULE_GUIDE.md) の「配布単位の決め方」に従う。
 
 ---
@@ -9,21 +10,21 @@
 
 | 指標 | 値 |
 |---|---|
-| UPM パッケージ数 | 64 |
-| asmdef 数 | 249（1 パッケージあたり約 3.9） |
-| Sample Scene 数 | 61 |
-| Module Installer の catalog 掲載数 | 43（**20 モジュールが未掲載**） |
-| `*Error` enum の種類 | 55（ほぼ 1 パッケージ 1 個） |
-| `IsFinite` の private 再実装 | 27 パッケージ |
+| UPM パッケージ数 | 65 |
+| asmdef 数 | 253（1 パッケージあたり約 3.9） |
+| Sample Scene 数 | 62 |
+| Module Installer の catalog 掲載数 | 43（**21 モジュールが未掲載**） |
+| `*Error` enum の種類 | 56（ほぼ 1 パッケージ 1 個） |
+| `IsFinite` の private 再実装 | 28 パッケージ |
 
 ### 純粋計算パッケージが全体の 3 分の 2
 
 | 群 | パッケージ数 | Runtime 実装行数 | パッケージ内の総 file 数 |
 |---|---|---|---|
 | 入力細分化 | 18 | 3,901 | 842 |
-| ゲーム判定・計算 | 18 | 5,953 | 928 |
+| ゲーム判定・計算 | 19 | 6,339 | 982 |
 | 再現可能シミュレーション | 7 | 2,570 | 338 |
-| **合計** | **43**（全体の 67%） | **12,424** | **2,108** |
+| **合計** | **44**（全体の 68%） | **12,810** | **2,162** |
 
 実装 1 行あたり packaging file が 0.17 個ある。README・CHANGELOG・LICENSE・package.json・asmdef 4 種・Sample Scene・.meta が
 200〜500 行の計算クラスごとに複製されている状態で、MODULE_GUIDE の
@@ -78,9 +79,9 @@
 
 `InputGate` は Input System の実行状態を所有するので MODULE_GUIDE 通り独立を維持する。
 
-### 案 B：ゲーム判定・計算 18 → 1
+### 案 B：ゲーム判定・計算 19 → 1
 
-18 パッケージ・5,953 行を 1 パッケージへまとめ、既存の namespace をそのまま区分として使う
+19 パッケージ・6,339 行を 1 パッケージへまとめ、既存の namespace をそのまま区分として使う
 （`GameplayResources` / `GameplayStats` / `GameplaySelection` / `GameplayDecision` / `GameplayProgression` /
 `GameplayAnalysis` / `GameplayTiming` / `GameplayAllocation` / `GameplayDamage` / `GameplayRules`）。
 
@@ -89,7 +90,7 @@
 - `RollingSampleWindow.Snapshot` が min / max / mean を計算しており、`SampleStatistics` の部分集合になっている。
 - `ResourceMeter`（状態を持つ消費）と `ResourceCostEvaluator`（状態を変えない可否判定）が同一 namespace で分離している。
 - `StableScoreSelector` と `UtilityScoreEvaluator` は「候補から 1 つ選ぶ」の前段・後段で、単独では使い道が狭い。
-- 18 個の `*Error` enum が統一できる。
+- 19 個の `*Error` enum が統一できる。
 
 利用者から見た導入単位は「ゲームルールの数値計算が要る」の 1 つで、個別に導入・更新・削除する理由が無い。
 
@@ -149,8 +150,9 @@ DiagnosticsContext / InputGate / Inspector / Drawing / Containers。
 
 ### 統合後の姿
 
-**64 → 26 パッケージ**（入力 19→2、ゲーム計算 18→1、決定論 7→1、SceneWorkspace+PlayModeTuning 2→1、
-GenerationalHandle は Containers へ吸収、内部共有 1 追加）。
+**65 → 27 パッケージ**（入力 19→2、ゲーム計算 19→1、決定論 7→1）。
+案 D の SceneWorkspace + PlayModeTuning 統合と内部共有パッケージ、案 E の Containers 重複整理は未実施で、
+それらを行うと 24 パッケージになる。
 
 ---
 
@@ -169,13 +171,34 @@ MODULE_GUIDE の「公開済みタグと UPM 識別子は削除せず、既存�
 
 ## 4. 統合と同時に直したい不整合
 
-- **catalog 未掲載 20 件** — Containers と PlayModeTuning は README には載っているが Module Installer から導入できない。
-- **不要な依存宣言** — 純粋計算 25 パッケージが `com.unity.modules.uielements` を宣言しているが、
+- **catalog 未掲載 21 件** — Containers と PlayModeTuning は README には載っているが Module Installer から導入できない。
+- **不要な依存宣言** — 純粋計算 26 パッケージが `com.unity.modules.uielements` を宣言しているが、
   Runtime 側で `UnityEngine` を参照している file は 0。Sample Scene のためだけの依存が本体に付いている。
-  統合すれば 25 個の誤った依存が 1 個に減る。
+  統合すれば 26 個の誤った依存が 3 個に減る。
 - **XML doc コメントの言語** — MODULE_GUIDE は「ソースコード、ソース内コメントは英語だけ」と定めているが、
-  Runtime / Editor 配下に日本語コメントを含む file が 54 パッケージに存在する
+  Runtime / Editor 配下に日本語コメントを含む file が 55 パッケージに存在する
   （Containers 81 file、Inspector 50 file が最多）。統合時に方針をどちらかへ確定させる。
+
+---
+
+## 4-2. dev から main へ上げる前に必要な作業
+
+Module Installer の catalog は、統合後のパッケージを**まだ存在しない公開tag**で参照している。
+`dev` では未公開tagを指していてよいが、`main` へ上げる前に次のtagを作成する必要がある。
+tag が無いまま公開すると、catalog からの導入が失敗する。
+
+| 作成する tag | 対象フォルダー |
+|---|---|
+| `input-assist-v2.0.0` | `InputAssist/` |
+| `input-command-v1.0.0` | `InputCommand/` |
+| `gameplay-rules-v1.0.0` | `GameplayRules/` |
+| `deterministic-simulation-v1.0.0` | `DeterministicSimulation/` |
+
+統合前の 44 個の公開tagは削除しない。既存利用者の `?path=/<Folder>#<tag>` はそのまま動き続ける。
+
+`Containers` は公開tagが 1 つも無いため、まだ catalog へ載せられない。
+`containers-v1.0.0` を作成した時点で catalog へ追加する。
+`ThreatScoreResolver` も単独tagが無く、`GameplayRules` の一部として初めて公開される。
 
 ---
 

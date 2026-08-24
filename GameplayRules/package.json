@@ -1,0 +1,139 @@
+{
+  "name": "com.studiogaku.gameplay-rules",
+  "version": "1.0.0",
+  "displayName": "Gameplay Rules",
+  "description": "Bundles the deterministic, engine-independent gameplay calculations for resources and costs, stat modifiers, weighted selection and integer allocation, piecewise curves and threshold tiers, rolling sampling statistics and linear trends, timed stacks, stack transfers and periodic ticks, and numeric requirement, utility score, threat score, and damage mitigation evaluation into one package.",
+  "unity": "6000.5",
+  "unityRelease": "7f1",
+  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/tree/gameplay-rules-v1.0.0/GameplayRules/Documentation~",
+  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/gameplay-rules-v1.0.0/GameplayRules/CHANGELOG.md",
+  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/gameplay-rules-v1.0.0/GameplayRules/LICENSE.md",
+  "dependencies": {
+    "com.unity.modules.uielements": "1.0.0"
+  },
+  "samples": [
+    {
+      "displayName": "Resource Meter Basics",
+      "description": "Compares restore, partial spend, full-required spend, exact depletion, invalid input rejection, and responsive UI Toolkit geometry.",
+      "path": "Samples~/ResourceMeter"
+    },
+    {
+      "displayName": "Resource Cost Evaluator Basics",
+      "description": "Compares payable, shortage, missing-balance, zero-cost, and invalid-input plans with responsive UI Toolkit geometry.",
+      "path": "Samples~/ResourceCostEvaluator"
+    },
+    {
+      "displayName": "Stat Modifier Stack Basics",
+      "description": "Compares flat, additive-percent, multiplicative-factor, update, duplicate rejection, and responsive UI Toolkit geometry scenarios.",
+      "path": "Samples~/StatModifierStack"
+    },
+    {
+      "displayName": "Weighted Choice Table Basics",
+      "description": "Adds three weighted entries, selects two explicit samples, and verifies responsive UI Toolkit geometry.",
+      "path": "Samples~/WeightedChoiceTable"
+    },
+    {
+      "displayName": "Weighted Integer Allocator Basics",
+      "description": "Demonstrates equal, exact weighted, largest-remainder, zero-weight, and zero-total allocations with responsive UI Toolkit geometry.",
+      "path": "Samples~/WeightedIntegerAllocator"
+    },
+    {
+      "displayName": "Piecewise Linear Curve Basics",
+      "description": "Adds three points, evaluates two queries, and verifies responsive UI Toolkit geometry.",
+      "path": "Samples~/PiecewiseLinearCurve"
+    },
+    {
+      "displayName": "Rolling Sample Window Basics",
+      "description": "Adds four samples to a capacity-three FIFO window, verifies eviction and clear, and checks responsive UI Toolkit geometry.",
+      "path": "Samples~/RollingSampleWindow"
+    },
+    {
+      "displayName": "Sample Statistics Basics",
+      "description": "Compares balanced, constant, spread, subrange, and out-of-range samples and checks responsive UI Toolkit geometry.",
+      "path": "Samples~/SampleStatistics"
+    },
+    {
+      "displayName": "Linear Trend Estimator Basics",
+      "description": "Compares rising, flat, falling, noisy, and out-of-range samples and checks responsive UI Toolkit geometry.",
+      "path": "Samples~/LinearTrendEstimator"
+    },
+    {
+      "displayName": "Threshold Tier Table Basics",
+      "description": "Evaluates five values against Bronze, Silver, and Gold thresholds and checks responsive UI Toolkit geometry.",
+      "path": "Samples~/ThresholdTierTable"
+    },
+    {
+      "displayName": "Charge Cooldown Basics",
+      "description": "Spends three charges and verifies boundary recharge, tick-jump catch-up, and responsive UI Toolkit geometry.",
+      "path": "Samples~/ChargeCooldown"
+    },
+    {
+      "displayName": "Periodic Tick Planner Basics",
+      "description": "Demonstrates future, exact, catch-up, limited, and completed periodic tick plans with responsive UI Toolkit geometry.",
+      "path": "Samples~/PeriodicTickPlanner"
+    },
+    {
+      "displayName": "Timed Stack Resolver Basics",
+      "description": "Demonstrates add, replace, maximum, refresh, extend, clamp, and inactive-to-active timed-stack policies with responsive UI Toolkit geometry.",
+      "path": "Samples~/TimedStackResolver"
+    },
+    {
+      "displayName": "Stack Transfer Planner Basics",
+      "description": "Demonstrates full, partial, source-limited, destination-limited, and zero-unit transfer plans with responsive UI Toolkit geometry.",
+      "path": "Samples~/StackTransferPlanner"
+    },
+    {
+      "displayName": "Numeric Requirement Evaluator Basics",
+      "description": "Compares all-pass, mixed, tolerance, strict, and invalid requirement sets with responsive UI Toolkit geometry.",
+      "path": "Samples~/NumericRequirementEvaluator"
+    },
+    {
+      "displayName": "Utility Score Evaluator Basics",
+      "description": "Compares highest, weighted, tied, fully explained, and invalid candidate sets with responsive UI Toolkit geometry.",
+      "path": "Samples~/UtilityScoreEvaluator"
+    },
+    {
+      "displayName": "Stable Score Selector Basics",
+      "description": "Demonstrates initial selection, current retention, threshold switching, tie retention, and missing-current recovery with responsive UI Toolkit geometry.",
+      "path": "Samples~/StableScoreSelector"
+    },
+    {
+      "displayName": "Damage Mitigation Evaluator Basics",
+      "description": "Compares flat, ratio, ordered, clamped, and invalid mitigation plans with responsive UI Toolkit geometry.",
+      "path": "Samples~/DamageMitigationEvaluator"
+    },
+    {
+      "displayName": "Threat Score Resolver Basics",
+      "description": "Compares add, reduce, ordered, clamped, and invalid threat adjustments with responsive UI Toolkit geometry.",
+      "path": "Samples~/ThreatScoreResolver"
+    }
+  ],
+  "keywords": [
+    "gameplay",
+    "rules",
+    "resource",
+    "cost",
+    "stat",
+    "modifier",
+    "weighted",
+    "selection",
+    "allocation",
+    "curve",
+    "tier",
+    "statistics",
+    "trend",
+    "cooldown",
+    "tick",
+    "stack",
+    "requirement",
+    "utility",
+    "threat",
+    "damage",
+    "mitigation",
+    "deterministic",
+    "simulation"
+  ],
+  "author": {
+    "name": "Studio Gaku"
+  }
+}

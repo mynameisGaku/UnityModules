@@ -1,4 +1,0 @@
-Replay Tape 1.0.0
-
-This package contains no third-party source code.
-UI Toolkit is a built-in Unity module used only by the bundled sample.

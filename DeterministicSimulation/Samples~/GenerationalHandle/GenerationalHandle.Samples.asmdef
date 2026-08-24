@@ -1,0 +1,16 @@
+{
+  "name": "GenerationalHandle.Samples",
+  "rootNamespace": "GenerationalHandles.Samples",
+  "references": [
+    "DeterministicSimulation.Runtime"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

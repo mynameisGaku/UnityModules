@@ -11,7 +11,7 @@ namespace ModuleInstaller.Editor.Tests
         [Test]
         public void Catalog_UsesUniquePinnedPackageEntries()
         {
-            Assert.That(ModuleCatalog.Entries.Count, Is.EqualTo(43));
+            Assert.That(ModuleCatalog.Entries.Count, Is.EqualTo(22));
             var packageNames = new HashSet<string>(StringComparer.Ordinal);
             var folderNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -75,6 +75,7 @@ namespace ModuleInstaller.Editor.Tests
             Assert.That(bundle.PackageNames, Is.EquivalentTo(new[]
             {
                 "com.studiogaku.input-assist",
+                "com.studiogaku.input-command",
                 "com.studiogaku.input-gate"
             }));
         }
@@ -102,6 +103,7 @@ namespace ModuleInstaller.Editor.Tests
             Assert.That(bundle.PackageNames, Is.EqualTo(new[]
             {
                 "com.studiogaku.scene-workspace",
+                "com.studiogaku.play-mode-tuning",
                 "com.studiogaku.scene-flow",
                 "com.studiogaku.screen-transition",
                 "com.studiogaku.adaptive-layout",
@@ -148,6 +150,65 @@ namespace ModuleInstaller.Editor.Tests
             Assert.That(entry.Tag, Is.EqualTo("scene-workspace-v1.0.0"));
             Assert.That(entry.DisplayName, Is.EqualTo("Scene Workspace"));
             Assert.That(entry.Summary, Does.Contain("ordered multi-scene editor workspaces").And.Contain("stale-plan checks").And.Contain("post-verification").And.Contain("rollback reporting"));
+        }
+
+        [Test]
+        public void Catalog_ExposesConsolidatedPackagesInsteadOfMicroPackages()
+        {
+            var consolidated = new[]
+            {
+                "com.studiogaku.input-assist",
+                "com.studiogaku.input-command",
+                "com.studiogaku.gameplay-rules",
+                "com.studiogaku.deterministic-simulation"
+            };
+
+            for (var index = 0; index < consolidated.Length; index++)
+            {
+                Assert.That(ModuleCatalog.TryFindEntry(consolidated[index], out _), Is.True, consolidated[index]);
+            }
+
+            var retired = new[]
+            {
+                "com.studiogaku.resource-meter",
+                "com.studiogaku.stat-modifier-stack",
+                "com.studiogaku.damage-mitigation-evaluator",
+                "com.studiogaku.simulation-clock",
+                "com.studiogaku.deterministic-random",
+                "com.studiogaku.generational-handle",
+                "com.studiogaku.input-radial-dead-zone",
+                "com.studiogaku.input-command-buffer"
+            };
+
+            for (var index = 0; index < retired.Length; index++)
+            {
+                Assert.That(ModuleCatalog.TryFindEntry(retired[index], out _), Is.False, retired[index]);
+            }
+        }
+
+        [Test]
+        public void EveryCatalogEntry_IsReachableFromExactlyOneBundle()
+        {
+            for (var entryIndex = 0; entryIndex < ModuleCatalog.Entries.Count; entryIndex++)
+            {
+                var packageName = ModuleCatalog.Entries[entryIndex].PackageName;
+                var bundleCount = 0;
+
+                for (var bundleIndex = 0; bundleIndex < ModuleCatalog.Bundles.Count; bundleIndex++)
+                {
+                    var bundle = ModuleCatalog.Bundles[bundleIndex];
+
+                    for (var packageIndex = 0; packageIndex < bundle.PackageNames.Count; packageIndex++)
+                    {
+                        if (string.Equals(bundle.PackageNames[packageIndex], packageName, System.StringComparison.Ordinal))
+                        {
+                            bundleCount++;
+                        }
+                    }
+                }
+
+                Assert.That(bundleCount, Is.EqualTo(1), packageName);
+            }
         }
     }
 }
