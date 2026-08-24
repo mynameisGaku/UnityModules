@@ -1,0 +1,76 @@
+# Assembly依存チェック（Assembly Dependency Audit）
+
+## 30秒で分かる説明
+
+`Assets`と`Packages`にあるAssembly Definition（`.asmdef`）の参照関係を3列でたどり、循環参照やPlayer向けAssemblyからEditor専用Assemblyへの参照などを見つけるEditor専用ツールです。Projectのfileは変更せず、現在の構成を読み取って表示します。
+
+## できること
+
+- `Assets`と`Packages`から見つかった`.asmdef`を決定論的なpath順で検査する。
+- `Referenced By`、`Assemblies`、`Depends On`の3列で、選択Assemblyの参照元と参照先を同時に確認する。
+- 検索と問題filterで、大きなProjectの対象を絞り込む。
+- 循環参照と自己参照を報告する。
+- Playerで使えるAssemblyからEditor専用Assemblyへの参照を報告する。
+- 不正なJSON、空のAssembly名、重複したAssembly名またはGUIDを報告する。
+- 解決できない参照と、同名候補が複数ある曖昧な参照を報告する。
+- 1つの`.asmdef`内で名前参照と`GUID:`参照が混在している状態を報告する。
+- `includePlatforms`と`excludePlatforms`が同時に指定されている状態を報告する。
+
+## 使わない方がよい場合
+
+問題を自動修正したい場合、使われていないAssembly参照を自動判定したい場合、compile時間を推定したい場合には向きません。このツールは`.asmdef`に明示された構造を読み取り、修正前の判断材料を提示する用途へ限定しています。
+
+## 3分で試す
+
+1. Package Managerの`Add package from git URL...`へ次を入力します。
+
+   ```text
+   https://github.com/mynameisGaku/UnityModules.git?path=/AssemblyDependencyAudit#assembly-dependency-audit-v1.0.0
+   ```
+
+2. `Tools > Assembly Dependency Audit > Open`を開きます。
+3. `Refresh`を押して、`Assets`と`Packages`のAssembly Definitionを読み取ります。
+4. 中央の`Assemblies`列からAssemblyを選びます。
+5. 左の`Referenced By`で参照元、右の`Depends On`で直接の参照先を確認します。
+6. 問題がある場合は問題filterで絞り、表示されたpathと内容を確認してから元の`.asmdef`を編集します。
+
+## 実行するとどうなるか
+
+Refresh結果はasset pathのOrdinal順、同一pathではGUIDのOrdinal順で安定して表示されます。中央で選択したAssemblyに対して、直接参照しているAssemblyを左列、直接参照するAssemblyを右列へ表示します。循環参照は循環へ含まれるAssemblyを問題としてまとめ、その他の構成不備は該当する`.asmdef`と参照値を示します。
+
+Refreshはread-onlyです。`.asmdef`、`.asmref`、script、Scene、Prefab、Project Settings、Package manifestを変更せず、Assetのimportやcompileも要求しません。
+
+## よくある問題
+
+### 参照先が見つからない
+
+名前参照の綴り、または`GUID:`に続く値を確認してください。Packageを削除した後の参照が残っている場合もあります。本ツールは推測で別のAssemblyへ結び替えません。
+
+### 同じAssembly名が複数表示される
+
+Assembly名はProject内で一意である必要があります。同名候補がある間、名前参照の解決先を決めず、重複と曖昧な参照を別々に報告します。pathを確認して名前を整理した後、Refreshし直してください。
+
+### PlayerからEditor専用Assemblyへの参照になる
+
+参照元のplatform設定、参照先の`includePlatforms` / `excludePlatforms`、またはAssemblyの責務境界を確認してください。このツールはPlayer buildへ入るべき参照先を自動選択しません。
+
+### 問題がない参照も表示される
+
+3列viewは問題の有無に関係なく明示的な依存を表示します。問題だけを確認する場合は問題filterを使ってください。
+
+## 公開API
+
+公開C# APIはありません。`AssemblyDependencyAudit.Editor`はEditorWindowと内部の検査処理だけを提供し、Runtime assemblyは追加しません。
+
+## 変更範囲と失敗条件
+
+- 読み取り対象は、UnityのAsset Databaseが認識した`.asmdef`と、`Assets`および導入済み`Packages`の物理rootから見つかった`.asmdef`の和集合です。dot始まり、末尾`~`、reparse pointのdirectoryは物理列挙で降りません。
+- `.asmref`、precompiled plugin、C# sourceの型利用、AddressablesやAsset参照は依存graphへ含めません。
+- RefreshはProject fileとUnity設定を変更しません。問題を直すには、表示内容を確認した利用者が対象`.asmdef`を編集する必要があります。
+- 1件でもfileを読み取れない場合はRefresh全体を失敗として部分結果を破棄します。読み取れた不正JSONは問題として残し、推測した内容でgraphを補いません。
+- 重複名で名前参照が曖昧な場合は、候補のどれかへ勝手に接続しません。
+- Package Cacheなど書き込みが想定されない場所の`.asmdef`も表示しますが、編集可否はPackageの導入方法に依存します。
+
+## 非目標
+
+自動修正、`.asmdef`の生成・削除・書き換え、unused参照判定、compile時間・incremental build効果の推定、型単位やAsset単位の依存解析、`.asmref`解析、Player buildの自動実行、graph画像のexportは扱いません。Sampleは同梱しません。

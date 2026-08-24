@@ -1,0 +1,1 @@
+Assembly Dependency Audit does not include third-party source code.

@@ -1,0 +1,19 @@
+{
+  "name": "com.studiogaku.assembly-dependency-audit",
+  "version": "1.0.0",
+  "displayName": "Assembly Dependency Audit",
+  "description": "Visualizes asmdef dependencies under Assets and Packages and reports structural dependency issues without modifying project files.",
+  "unity": "6000.5",
+  "unityRelease": "7f1",
+  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/blob/assembly-dependency-audit-v1.0.0/AssemblyDependencyAudit/Documentation~/index.md",
+  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/assembly-dependency-audit-v1.0.0/AssemblyDependencyAudit/CHANGELOG.md",
+  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/assembly-dependency-audit-v1.0.0/AssemblyDependencyAudit/LICENSE.md",
+  "license": "Refer to LICENSE.md file",
+  "keywords": ["assembly-definition", "dependency", "audit", "editor"],
+  "author": {
+    "name": "StudioGaku",
+    "email": "gaku.fujimoto.business@gmail.com",
+    "url": "https://github.com/mynameisGaku/UnityModules"
+  },
+  "dependencies": {}
+}

@@ -2,7 +2,7 @@
 
 `dev` に当初存在した 65 パッケージを対象に、重複の実測結果と統合判断、重複しない追加機能候補をまとめる。
 案 A の実施後は 60 パッケージ、案 B・C と Input Assist への吸収後は 24 パッケージとなった。
-案 D・E は追加検討の結果、配布単位の変更としては採用しない。追加機能はProjectSetupのLayer衝突設定とInputDeviceDisplayから順に実装している。
+案 D・E は追加検討の結果、配布単位の変更としては採用しない。追加機能はProjectSetupのLayer衝突設定、InputDeviceDisplay、AssemblyDependencyAuditから順に実装している。
 判断基準は [モジュール設計・案内ガイド](MODULE_GUIDE.md) の「配布単位の決め方」に従う。
 
 ---
@@ -28,7 +28,7 @@
 | 案 A の Input Command 統合後 | 60 | 6 パッケージを 1 パッケージへ統合 |
 | 案 A〜C 完了後 | 24 | Input Assist への 12 パッケージ吸収、Gameplay Rules と Deterministic Simulation の新設を含む |
 
-現在の `dev` は 25 パッケージ、175 asmdef、Module Installer の catalog は 22 entry である。InputDeviceDisplayは公開tag作成前のためcatalogへ先行登録していない。
+現在の `dev` は 26 パッケージ、177 asmdef、Module Installer の catalog は 22 entry である。InputDeviceDisplayとAssemblyDependencyAuditは公開tag作成前のためcatalogへ先行登録していない。
 24 パッケージへの到達は案 A〜C の結果であり、案 D・E による削減を含まない。
 
 ### 純粋計算パッケージが全体の 3 分の 2
@@ -250,12 +250,11 @@ Physics・Physics2Dを別々の名前付きpair ruleとしてprofileへ追加し
 backup schema v16は名前のないslotを含む32行matrix全体を保持し、rollbackとRestoreで正確に戻す。
 新規packageは増やさず、ProjectSetupのsetting keyとして責務を維持した。
 
-**4. asmdef 依存の可視化と循環検出（新規モジュール）**
+**4. asmdef 依存の可視化と循環検出（AssemblyDependencyAudit 1.0.0で実装）**
 
-ProjectSetup が asmdef を作るところまでは面倒を見るが、その後の依存関係の劣化
-（循環参照、Playerで有効なassembly→Editor専用assemblyの逆参照、不要な参照によるコンパイル時間の増加）を見る手段が無い。
-「実機や Player build まで進まないと発見しにくい問題」に該当する。
-asmdef 175 個を持つこの repo 自体が最初の利用者になる。
+ProjectSetupがasmdefを作る責務とは分け、`Assets`と導入済み`Packages`のasmdefをread-onlyで走査するEditor専用moduleを追加した。
+参照元・assembly・参照先の3列graph、循環、未解決・曖昧・自己参照、Playerで有効なassembly→Editor専用assemblyの逆参照、platform指定の矛盾を表示する。
+現在の177 asmdefを持つこのrepo自体を最初の利用者とし、未使用参照やcompile時間は推測せず、asmdefの書換えやbuild停止も行わない。
 
 ### 優先度：中
 

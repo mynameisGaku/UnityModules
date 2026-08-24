@@ -25,6 +25,7 @@ READMEとモジュール一覧では、日本語で目的を先に示す。Packa
 |---|---|---|
 | モジュール導入アシスタント | Module Installer | 用途別セットから必要なモジュールをまとめて導入する。 |
 | プロジェクト初期設定 | Project Setup | 新規Projectで繰り返す設定とTag・Layer・Sorting Layer・3D/2D Layer Collisionをprofileからまとめて適用する。 |
+| Assembly依存チェック | Assembly Dependency Audit | asmdefの参照元・参照先、循環、PlayerからEditorへの逆参照などをread-onlyで確認する。 |
 | シーン切り替え | SceneFlow | Scene の読込・追加・切替・解放を扱う。 |
 | 画面フェード | ScreenTransition | 画面を覆う・戻す演出を扱う。 |
 | ゲーム時間制御 | TimeControl | 一時停止・スロー・倍速を扱う。 |
@@ -64,6 +65,12 @@ Unity 側から `Vector2` と `deltaTime` を渡す `float` 契約と、確保�
 Input Systemのglobalな実入力から最後に操作されたdeviceを表示familyへ分類し、UIが文字・glyph・styleを選ぶための状態を提供する。
 Input Assistの値整形やInputGateのAction Map停止とはownerと寿命が異なるため、独立packageとして維持する。
 manufacturer文字列の推測、入力消費、rebind、pairing、player別追跡、glyph assetの所有は行わない。
+
+### Assembly依存チェック（Assembly Dependency Audit）
+
+`Assets`と導入済み`Packages`のasmdefをread-onlyで走査し、参照元・assembly・参照先の3列graphと構造上の問題を表示する。
+Project Setupはasmdefの作成までを所有し、このmoduleは作成後の参照関係だけを監査するため、変更責務を分離して独立packageとして維持する。
+未使用参照やcompile時間の推定、asmdefの書換え、build停止は行わない。
 
 ### ゲーム判定・計算（Gameplay Rules）
 
