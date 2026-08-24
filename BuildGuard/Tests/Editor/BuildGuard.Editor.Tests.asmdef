@@ -1,5 +1,5 @@
 {
-    "name": "BuildGuard.Tests",
+    "name": "BuildGuard.Editor.Tests",
     "rootNamespace": "BuildGuard.Tests",
     "references": [
         "BuildGuard.Editor",

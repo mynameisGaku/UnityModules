@@ -1,6 +1,6 @@
-# Build Guard 1.4.0
+# Build Guard 1.5.0
 
-Build Guardは、Player build対象Sceneと選択Prefabの壊れたComponent参照を手動scanし、Sceneはbuild時にも自動検査するEditor専用moduleです。Runtime assembly、設定asset、global singleton、公開APIを持ちません。
+Build Guardは、Player build対象Sceneと選択Prefabの壊れたComponent参照をscanし、build対象SceneのPrefab構造変更を別flowでreviewするEditor専用moduleです。Runtime assembly、設定asset、global singleton、公開APIを持ちません。
 
 ## 利用者の操作
 
@@ -23,6 +23,14 @@ Missing Scriptの`Open and Remove`は、確認後に同じ方法でSceneとGameO
 
 `Open Prefab`はPrefab Modeを開き、兄弟index付き階層pathがまだ一致すればGameObjectを選択します。Missing Scriptの`Open and Remove`は対象hierarchyをUndoへ記録してmissing slotだけを除去し、Prefab Stageをdirty状態のまま残します。利用者が保存またはUndoするまでPrefab assetへ確定しません。
 
+### Prefab structural override review
+
+**Tools > Build Guard > Review Prefab Overrides** は、active Build Profileで有効なSceneのoutermost connected Prefab instanceを検査します。Added／Removed GameObjectとAdded／Removed ComponentだけをScene、instance、path、Component、sourceの安定順で表示します。Transformを含むProperty Modificationは対象外です。
+
+`Refresh / Scan`は最大1,000件のimmutable snapshotを作ります。Cancelまたは1 Sceneでもscan failureが発生した場合はpartial findingsを全て破棄します。これはMissing Script／Missing Object Referenceのbuild blockerとは接続されず、findingがあってもPlayer buildを停止しません。
+
+`Open & Select`はScene GUIDとfinding identityを同じscannerで再確認します。loaded Sceneでは一致するGameObjectだけを選択します。closed Sceneはadditiveで一時確認して必ず閉じ直し、currentならScene assetを選択します。変更済みfindingはstaleと案内します。Apply、Revert、Undo、保存、dirty化は行いません。
+
 ### 自動build検査
 
 同じruleを2つのPlayer build callbackから適用します。
@@ -44,6 +52,10 @@ Sceneのroot順と各Transformのchild順でactive・inactiveに関係なく全G
 
 Prefab instanceも展開済みScene階層として同じ規則で扱います。選択Prefab scanも一時的なPrefab contents Sceneへ同じruleを適用します。結果はAsset path、階層path、Component順、property pathの順へ並べます。
 
+### Structural Prefab Override
+
+Sceneにあるoutermost connected Prefab instanceごとにUnityのadded／removed GameObject・Component APIを読み、追加・削除したsubtreeを1件へ正規化します。nested PrefabとVariantのsource identityを保持し、property override APIは読みません。結果はreview専用で、build callbackやMissing Script／Missing Object Referenceのinspectionへ渡しません。
+
 ## Sceneの扱い
 
 - 既に読み込まれているSceneはそのまま検査します。
@@ -52,6 +64,7 @@ Prefab instanceも展開済みScene階層として同じ規則で扱います。
 - 同じScene pathが重複している場合は、大小文字を区別せず1回だけ検査します。
 - 空pathやScene assetとして解決できないpathはUnity本体のbuild診断へ委ねます。
 - scanはScene、Prefab instance、GameObject、Componentを変更しません。
+- structural override navigationで一時openしたSceneも必ず閉じ、元のactive／open／dirty状態を維持します。
 
 GameObject名には兄弟indexを付けます。`/`、`\\`、改行、復帰、tabは一行で判別できるようescapeします。このpath生成と解決は手動windowと自動build検査で共通です。
 
@@ -60,6 +73,7 @@ GameObject名には兄弟indexを付けます。`/`、`\\`、改行、復帰、t
 `OnProcessScene`へ渡される`BuildReport`がnullのPlayMode読込と、`BuildPipeline.isBuildingPlayer`がfalseのAssetBundle buildは拒否しません。次も対象外です。
 
 - Missing Object Referenceの自動修復
+- Prefab structural overrideのProperty Modification表示、Apply、Revert、自動修復、build停止
 - 複数Sceneの一括修復と自動保存
 - project内の全Prefab・Scene・ScriptableObjectの常時scan（Prefabは利用者が明示選択した範囲だけ）
 - Runtimeで後から設定するnull fieldの必須判定
@@ -81,4 +95,4 @@ Package ManagerからSampleをImportすると、次を確認できます。
 
 ## 検証方針
 
-Editor testはinactive階層、Prefab instance、削除済みRenderTexture、path escape、階層pathの逆引き、決定論的message、複数Sceneと選択Prefabの手動scan、cancel、結果window、Scene・Prefab移動、Missing Script除去とUndo、閉じたSceneとPrefab contentsの一時読込を検証します。配布gateではclean projectへtarballを導入し、有効Sceneと選択Prefabのscan、Missing Script除去後の未保存状態、正常Sceneのbuild成功、2種類の不備Sceneのbuild失敗を実際に確認します。
+Editor testはinactive階層、Prefab instance、削除済みRenderTexture、path escape、階層pathの逆引き、決定論的message、複数Sceneと選択Prefabの手動scan、cancel、結果window、Scene・Prefab移動、Missing Script除去とUndo、閉じたSceneとPrefab contentsの一時読込を検証します。structural override reviewはnested／Variant／removed override、安定順、1,000件上限、cancel／failureのpartial破棄、stale identity、Scene open／active／dirty状態保全を検証します。配布gateではclean projectへtarballを導入し、有効Sceneと選択Prefabのscan、Missing Script除去後の未保存状態、正常Sceneのbuild成功、2種類の不備Sceneのbuild失敗を実際に確認します。

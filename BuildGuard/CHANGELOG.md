@@ -2,6 +2,19 @@
 
 このパッケージの変更履歴。書式は [Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) に、バージョン番号は [Semantic Versioning](https://semver.org/lang/ja/) に従います。
 
+## [1.5.0] - 2026-08-25
+
+### Added
+
+- active Build Profileで有効なSceneのPrefab structural overrideを一覧化する、build blockerとは独立したreview window。
+- Added／Removed GameObject・Componentだけを最大1,000件のsnapshotとして安定表示するmanual review flow。
+- finding選択前の再scanとidentity照合、loaded Sceneでのobject選択、closed Sceneを開いたままにしないScene asset案内。
+- cancel／scan failure時のpartial result破棄、stale finding、表示上限、Scene open／active／dirty状態保全に対するEditor回帰検証。
+
+### Changed
+
+- package説明と利用手順へ、Property Modificationを除外し、Apply／Revert／保存やPlayer build停止を行わないreview境界を追加。
+
 ## [1.4.0] - 2026-08-22
 
 ### Added

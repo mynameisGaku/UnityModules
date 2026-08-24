@@ -30,7 +30,7 @@ READMEとモジュール一覧では、日本語で目的を先に示す。Packa
 | 画面フェード | ScreenTransition | 画面を覆う・戻す演出を扱う。 |
 | ゲーム時間制御 | TimeControl | 一時停止・スロー・倍速を扱う。 |
 | 入力の一時停止 | InputGate | Gameplay の入力を一時的に止める。 |
-| プロジェクト不備確認・修復 | BuildGuard | Scene・PrefabのMissing Scriptなどを見つけ、修復場所へ移動する。 |
+| プロジェクト不備確認・修復 | BuildGuard | Scene・PrefabのMissing Scriptなどを見つけ、Prefabの構造変更を別flowでreviewする。 |
 | 不具合レポート保存 | DiagnosticsContext | 調査用の状態とログを JSON に残す。 |
 | 入力補助 | Input Assist | スティック値の補正とbutton gestureをまとめて扱う。 |
 | 入力デバイス表示 | Input Device Display | 最後に実入力したdeviceを表示向けfamilyへ分類する。 |
@@ -119,4 +119,4 @@ Project Setupはasmdefの作成までを所有し、このmoduleは作成後の�
 - 毎回同じ MonoBehaviour や Editor script を書く作業。
 - 実機や Player build まで進まないと発見しにくい問題。
 
-Project SettingsとTag・Layer・Sorting Layer・Physics／Physics 2D Layer Collisionの反復作業は「プロジェクト初期設定」へまとめる。Build Guardの検査・修復やModule Installerのpackage導入とは責務を分け、設定の差分Preview・backup・適用・復元を一つの作業単位として提供する。
+Project SettingsとTag・Layer・Sorting Layer・Physics／Physics 2D Layer Collisionの反復作業は「プロジェクト初期設定」へまとめる。Build Guardの壊れた参照検査・修復とPrefab構造変更review、Module Installerのpackage導入とは責務を分け、設定の差分Preview・backup・適用・復元を一つの作業単位として提供する。

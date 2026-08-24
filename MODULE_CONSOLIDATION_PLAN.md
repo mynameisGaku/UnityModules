@@ -258,17 +258,17 @@ ProjectSetupがasmdefを作る責務とは分け、`Assets`と導入済み`Packa
 
 ### 優先度：中
 
-**5. Prefab override の逸脱検査（BuildGuard へ追加）**
+**5. Prefab override の逸脱検査（BuildGuard 1.5.0で実装）**
 
-BuildGuard は Missing Script と削除済み Object Reference を見るが、
-Scene 上の Prefab instance に意図せず残った override は見ていない。
-「Scene・Prefab・Build 設定の見落とし」に該当し、既存の scanner 構成へ検査項目として足せる。
+enabled build Sceneのoutermost connected Prefab instanceからAdded／Removed GameObject・Componentだけを抽出し、専用windowで最大1,000件の安定snapshotとしてreviewする。
+Property Modificationは意図を判定しないため除外し、finding選択時は同じscannerでidentityを再確認してstaleな移動を拒否する。
+Missing Script／Missing Object Referenceのbuild blockerとは接続せず、Apply、Revert、自動保存、dirty化、Player build停止を行わないmanual reviewへ限定した。
 
-**6. build 前チェックの一本化（BuildGuard × BuildAssistant の接続）**
+**6. build 前チェックの一本化（既存のactual build接続を維持）**
 
-BuildGuard に `BuildGuardPreflightProcessor` がある。
-BuildAssistant の Preview 段階で、BuildGuard の検査・AssetImportAudit の逸脱・ProjectSetup の設定差分を
-1 つの preflight 結果としてまとめて出す。新規モジュールを作らずに、既にある 3 つを繋ぐだけで効果が出る。
+BuildAssistantは通常の`BuildPipeline.BuildPlayer`を呼ぶため、BuildGuardが導入済みなら`BuildGuardPreflightProcessor`と`BuildGuardSceneProcessor`がactual buildへ既に適用される。
+BuildAssistantのPreviewへ別moduleの結果を集約すると、package間のhard dependency、staleな重複scan、blockerとadvisoryの混在を招くため追加実装は見送る。
+AssetImportAuditは期待するimport policy、ProjectSetupは利用者が選んだprofileを前提とするmanual Previewとして独立を維持し、Structural Prefab Overrideもbuild blockerへ昇格しない。
 
 **7. 未翻訳・未使用の文字列キー検査（新規 Editor モジュール）**
 

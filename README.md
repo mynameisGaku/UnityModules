@@ -14,7 +14,7 @@ Unity で繰り返し発生する設定、実装、確認作業を減らすた�
 | Git URLを1件ずつ追加せず、用途別にモジュールをまとめて導入・更新したい | [モジュール管理（Module Manager）](ModuleInstaller/) | 普段使う4workflowから選び、用途・最初の操作・変更範囲を確認して導入する。専門向けcollectionと個別moduleは折りたたみから選べる。 |
 | 新しいProjectごとに基本フォルダー、asmdef、Git設定、Player識別子、build方式、managed code削除強度、IL2CPP最適化、開始Scene、Layer衝突を手作業したくない | [プロジェクト一括設定（Project Setup）](ProjectSetup/) | `Assets`配下の基本フォルダー、Runtime・Editor・test用asmdef、Unity向け`.gitignore`と`.gitattributes`、Project Settings、build target別Application Identifier・Scripting Backend・API Compatibility Level・Managed Stripping Level・IL2CPP Code Generation、Root Namespace、Play Mode開始Scene、条件付きコンパイル記号、Tag・Layer、Physics／Physics 2D Layer Collision、Build Scenesをbackup付きでまとめて適用する。 |
 | asmdefの参照元・参照先、循環、PlayerからEditorへの逆参照を確認したい | [Assembly依存チェック（Assembly Dependency Audit）](AssemblyDependencyAudit/) | `Assets`と導入済み`Packages`のasmdefをread-onlyで走査し、3列graphと構造上の問題を表示する。 |
-| Build Profile・Scene・出力先を毎回確認し、ビルド結果や容量差を手作業で残したくない | [ビルド実行アシスタント（Build Assistant）](BuildAssistant/README.md) | ① Profile、② Output、③ Preview、④ Confirm、⑤ Buildの順に確認し、既存結果を上書きせずDesktop Standalone buildと最大20件の履歴を残す。 |
+| Build Profile・Scene・出力先を毎回確認し、ビルド結果や容量差を手作業で残したくない | [ビルド実行アシスタント（Build Assistant）](BuildAssistant/README.md) | ① Profile、② Output、③ Preview、④ Confirm、⑤ Buildの順に確認し、既存結果を上書きせずDesktop Standalone buildと最大20件の履歴を残す。Build Guard併用時はactual build callbackで壊れたSceneも検査する。 |
 | 複数Sceneの順番・読込状態・Active Sceneを用途ごとに毎回戻したくない | [シーン作業セット（Scene Workspace）](SceneWorkspace/) | ProfileへSceneの順番・Loaded・Activeを保存し、Previewと確認後に安全に切り替える。 |
 | Play Mode中に調整したInspectorの値を終了後も残すため、メモして入力し直したくない | [プレイ中の調整を反映（Play Mode Tuning）](PlayModeTuning/) | 残したいComponentの項目を先に選び、Play中に手動で取り込み、終了後のPreviewと確認を経てSceneへ反映する。 |
 | Scene の読込順、Additive、Unload を安全に扱いたい | [シーン切り替え（SceneFlow）](SceneFlow/) | 4 種類の Scene 操作を直列化し、失敗理由を結果で受け取る。 |
@@ -23,7 +23,7 @@ Unity で繰り返し発生する設定、実装、確認作業を減らすた�
 | Pause、Slow、Fast を複数機能から安全に使いたい | [ゲーム時間制御（TimeControl）](TimeControl/) | lease を重ねて `Time.timeScale` を競合なく制御する。 |
 | BGM・SE の同時再生数や fade をまとめたい | [音声再生管理（AudioControl）](AudioControl/) | AudioSource pool、優先度、停止 handle、fade を管理する。 |
 | セーブ枠、破損、バックアップを毎回実装したくない | [セーブデータ管理（SaveSystem）](SaveSystem/) | 型付き JSON、複数 slot、破損検出、backup 復旧を使う。 |
-| SceneやPrefabのMissing Script・削除済み参照をまとめて直したい | [プロジェクト不備確認・修復（Build Guard）](BuildGuard/) | build対象Sceneと選択Prefabを検査し、修復場所へ移動する。Missing ScriptはUndo付きで除去できる。 |
+| SceneやPrefabのMissing Script・削除済み参照を直し、Prefabの構造変更も別flowで確認したい | [プロジェクト不備確認・修復（Build Guard）](BuildGuard/) | build対象Sceneと選択Prefabの壊れた参照を検査し、Missing ScriptはUndo付きで除去する。Prefabの追加・削除GameObject／Componentはbuildを止めないreview windowで確認する。 |
 | Texture Import Settingsを大量のAssetへ一括確認・適用したい | [アセット設定チェック（Asset Import Audit）](AssetImportAudit/) | Assets配下をPreviewし、共通設定とStandalone・Android・iOS別Overrideを選択または全件へ適用する。Preview後の外部変更は拒否する。 |
 | Assetの利用箇所を確認・置換し、複数の名前もまとめて整理したい | [アセット整理・参照管理（Reference Finder）](ReferenceFinder/) | 直接・間接参照の検索、安全な参照置換、GUIDを維持する一括RenameをPreview後に実行する。 |
 | 不具合調査用の状態とログを手動保存したい | [不具合レポート保存（DiagnosticsContext）](DiagnosticsContext/) | context、breadcrumb、Unity log を有界 JSON に書き出す。 |
@@ -55,7 +55,7 @@ Unity で繰り返し発生する設定、実装、確認作業を減らすた�
 | [モジュール管理（Module Manager）](ModuleInstaller/) | Project Maintenance、Scene and UI、Game Services、Input Supportの4workflowを先に示し、`Quick guide`で用途・導入後の最初の操作・変更範囲を確認してから固定公開tagをまとめて追加する。決定論・ゲーム計算は専門向けcollectionへ分離し、個別moduleは公開tagのREADMEを開いてから導入できる。**Unity 6000.5.7f1以降**。 | com.unity.modules.uielements 1.0.0 |
 | [プロジェクト一括設定（Project Setup）](ProjectSetup/) | `Assets`配下の基本フォルダー、Runtime・Editor・test用asmdef、Unity向け`.gitignore`と`.gitattributes`、Project Settings、build target別Application Identifier・Scripting Backend・API Compatibility Level・Managed Stripping Level・IL2CPP Code Generation、Root Namespace、新規scriptの改行方式、複製時の命名規則、Play Mode Start Scene、条件付きコンパイル記号、Tag・Layer・Sorting Layer、Physics／Physics 2D Layer Collision、Build Scenesをprofile化する。差分Preview、backup、適用、復元を一つのEditor画面で行い、既存fileは上書きしない。**Unity 6000.5.7f1以降**。 | com.unity.modules.uielements / physics / physics2d 1.0.0 |
 | [Assembly依存チェック（Assembly Dependency Audit）](AssemblyDependencyAudit/) | `Assets`と導入済み`Packages`のasmdefをread-onlyで走査し、参照元・assembly・参照先の3列graph、循環、未解決・曖昧・自己参照、PlayerからEditor専用assemblyへの逆参照、platform指定の矛盾を表示するEditor専用module。未使用参照やcompile時間は推測しない。**Unity 6000.5.7f1以降**。 | なし |
-| [ビルド実行アシスタント（Build Assistant）](BuildAssistant/README.md) | 有効なBuild Profile・Scene・出力先をPreviewし、実行直前に差分を再確認して新規フォルダーへDesktop Standalone buildを実行する。結果、容量内訳、前回差分を最大20件保存し、新しいJSONへ書き出すEditor専用module。**Unity 6000.5.7f1以降**。 | なし |
+| [ビルド実行アシスタント（Build Assistant）](BuildAssistant/README.md) | 有効なBuild Profile・Scene・出力先をPreviewし、実行直前に差分を再確認して新規フォルダーへDesktop Standalone buildを実行する。結果、容量内訳、前回差分を最大20件保存し、新しいJSONへ書き出すEditor専用module。Build Guardが導入済みなら、通常の`BuildPipeline.BuildPlayer` callbackによりactual build Sceneのblocker検査も自動適用される。Previewには他moduleのpolicy結果を混在させない。**Unity 6000.5.7f1以降**。 | なし |
 | [シーン作業セット（Scene Workspace）](SceneWorkspace/) | 複数Sceneの順番・Loaded・ActiveをProfile化し、差分Preview、古くなった計画の拒否、適用後検証、失敗時の復元結果を1つのEditor画面で扱うEditor専用module。**Unity 6000.5.7f1以降**。 | なし |
 | [プレイ中の調整を反映（Play Mode Tuning）](PlayModeTuning/) | 保存済みSceneのMonoBehaviourから残したい最上位serialized propertyを選び、Play Mode中に手動で取り込み、終了後の差分Preview、古くなった計画の拒否、適用後検証、失敗時の復元結果を1つのEditor画面で扱うEditor専用module。**Unity 6000.5.7f1以降**。 | なし |
 | [汎用データ構造（Containers）](Containers/) | コンテナ / データ構造 66 種。GC フリーのコレクション、Inspector に出せるシリアライズ対応型、空間分割、Unity のライフサイクルに耐えるコンテナ。**Unity 6000.0以降**。 | なし |
@@ -67,7 +67,7 @@ Unity で繰り返し発生する設定、実装、確認作業を減らすた�
 | [画面サイズ・ノッチ対応（AdaptiveLayout）](AdaptiveLayout/) | `Screen.safeArea`をUI ToolkitとRectTransformへ適用し、ノッチ、角丸、画面回転、解像度変更に追従する。**Unity 6000.5.7f1以降**。 | com.unity.modules.uielements 1.0.0 |
 | [ゲーム時間制御（TimeControl）](TimeControl/) | Scene所有のControllerが複数leaseの相対倍率を最小値で集約し、pause・slow motion・単独fast-forwardをTime.timeScaleへ安全に反映する。**Unity 6000.5.7f1以降**。 | com.unity.modules.uielements 1.0.0 |
 | [不具合レポート保存（DiagnosticsContext）](DiagnosticsContext/) | 明示追加したcontext・breadcrumbと実行中のUnity Warning・Error・Assert・Exceptionを有界に保持し、手動操作時だけJSON reportへ書き出す。**Unity 6000.5.7f1以降**。 | com.unity.modules.uielements 1.0.0 |
-| [プロジェクト不備確認・修復（Build Guard）](BuildGuard/) | build対象Sceneと選択PrefabのMissing Script・削除済みObject Referenceを一覧から開き、Missing Scriptだけを確認・Undo付きで除去できる。SceneはPlayer build開始時にも自動検査するEditor専用module。**Unity 6000.5.7f1以降**。 | なし |
+| [プロジェクト不備確認・修復（Build Guard）](BuildGuard/) | build対象Sceneと選択PrefabのMissing Script・削除済みObject Referenceを一覧から開き、Missing Scriptだけを確認・Undo付きで除去できる。別windowではenabled build SceneのPrefabへ追加・削除したGameObject／Componentをreviewし、stale再確認後に安全に対象へ移動する。Property Modificationは含めず、review結果はPlayer buildを止めないEditor専用module。**Unity 6000.5.7f1以降**。 | なし |
 | [アセット設定チェック（Asset Import Audit）](AssetImportAudit/) | `Assets`配下のTexture2Dを決定論的に検査し、共通設定とStandalone・Android・iOS別OverrideをShared・Platform・両方のscopeでPreview・選択適用・全件適用する。Preview後のstale importerは拒否するEditor専用module。**Unity 6000.5.7f1以降**。 | なし |
 | [アセット整理・参照管理（Reference Finder）](ReferenceFinder/) | 選択Assetの直接・間接参照元を検索し、安全に特定できた参照だけをUndo付きで置換する。さらに複数Assetへ文字置換・prefix・suffixをまとめて適用し、GUIDを維持してRenameするEditor専用module。**Unity 6000.5.7f1以降**。 | なし |
 | [入力補助（Input Assist）](InputAssist/) | 2D入力へradial dead zone、応答curve、増減速度制限、方向量子化、重み付き合成を適用し、button入力からTap・Hold・Repeat・multi-tapを判定する。Unity向けの`float`+`deltaTime`契約と、確保を伴わない`double`契約を同じpackageが持つ。入力値と経過時間は利用側から渡すため、Input System・AI・Replayのどれでも使える。**Unity 6000.5.7f1以降**。 | com.unity.modules.uielements 1.0.0 |
@@ -120,7 +120,7 @@ Assets/
     │   └── Tests/Editor/    AssemblyDependencyAudit.Editor.Tests
     ├── BuildGuard/
     │   ├── Editor/          BuildGuard.Editor
-    │   └── Tests/           BuildGuard.Tests
+    │   └── Tests/Editor/    BuildGuard.Editor.Tests
     ├── AssetImportAudit/
     │   ├── Editor/          AssetImportAudit.Editor
     │   └── Tests/           AssetImportAudit.Tests

@@ -2,4 +2,4 @@
 
 using System.Runtime.CompilerServices;
 
-[assembly: InternalsVisibleTo("BuildGuard.Tests")]
+[assembly: InternalsVisibleTo("BuildGuard.Editor.Tests")]
