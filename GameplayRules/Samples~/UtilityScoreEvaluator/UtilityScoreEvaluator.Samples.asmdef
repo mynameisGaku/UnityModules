@@ -1,0 +1,16 @@
+{
+  "name": "UtilityScoreEvaluator.Samples",
+  "rootNamespace": "GameplayDecision.Samples",
+  "references": [
+    "GameplayRules.Runtime"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

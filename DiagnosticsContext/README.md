@@ -1,6 +1,16 @@
-# Diagnostics Context
+# 不具合レポート保存（DiagnosticsContext）
+
+## 30秒で分かる
 
 Diagnostics Contextは、障害調査に必要な小さなcontext、時系列breadcrumb、実行中のUnity Warning・Error・Assert・Exceptionを明示的なownerの寿命内だけ有界に保持し、利用者が要求したときだけJSON reportとして保存します。通常の例外処理やクラッシュ収集の代替ではなく、「問い合わせ時に現在までの手掛かりを書き出す」ための補助モジュールです。
+
+「何をしていたときに起きたか」を利用者へ聞くだけでなく、ゲーム側が明示した状態と直近の出来事を一つの JSON に残せます。
+
+## こんなときに使う
+
+- 再現しにくい不具合の直前操作を breadcrumb として残したい。
+- Scene、mode、選択中 ID など、調査に必要な値だけを context へ追加したい。
+- 利用者の明示操作で保存し、内容を確認してから共有してもらいたい。
 
 動作確認対象: **Unity 6000.5.7f1** / Windows / .NET Standard 2.1
 

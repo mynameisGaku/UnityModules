@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.5.0] - 2026-08-24
+
+- 65個から統合された24 packageのうち、公開tagを持つ22件を6 bundle（`7 / 7 / 3 / 3 / 1 / 1`）としてcatalogへ整理しました。
+- Input Assist 2.0.0、Input Command 1.0.0、Gameplay Rules 1.0.0、Deterministic Simulation 1.0.0へ、旧44 packageの機能をnamespaceと公開型名を維持したまま集約しました。
+- Scene and UIへPlay Mode Tuning 1.0.0を追加し、7件構成へ更新しました。対象選択、Play Mode中の手動取り込み、非変更Preview、確認、同一・未使用計画の単回反映、Scene dirty、保存は手動、ApplyとRollbackの個別結果を案内します。
+- Input SupportへInput Command 1.0.0を追加し、Input Assist、Input Command、Input Gateの3件構成へ更新しました。
+- 統合前のUPM package IDまたは`Assets/Modules/<旧Folder>`が残る場合、導入・更新ともPackage Managerの変更前に停止する競合検査を追加しました。旧packageやsource copyは自動削除せず、利用者が内容を確認して手動で移行します。
+- 個別一覧を22件へ更新し、bundle、更新一覧、競合表示、README導線の回帰testを新しいcatalogへ合わせました。
+
 ## [1.4.9] - 2026-08-23
 
 - 「シーン作業セット」v1.0.0をcatalogとScene and UIへ追加しました。

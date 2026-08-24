@@ -1,0 +1,16 @@
+{
+  "name": "PiecewiseLinearCurve.Samples",
+  "rootNamespace": "GameplayMath.Samples",
+  "references": [
+    "GameplayRules.Runtime"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

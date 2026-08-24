@@ -1,0 +1,22 @@
+{
+  "name": "ChargeCooldown.Samples.PlayMode.Tests",
+  "rootNamespace": "GameplayTiming.Samples.PlayMode.Tests",
+  "references": [
+    "GameplayRules.Runtime",
+    "ChargeCooldown.Samples",
+    "UnityEngine.TestRunner"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": true,
+  "precompiledReferences": [
+    "nunit.framework.dll"
+  ],
+  "autoReferenced": false,
+  "defineConstraints": [
+    "UNITY_INCLUDE_TESTS"
+  ],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

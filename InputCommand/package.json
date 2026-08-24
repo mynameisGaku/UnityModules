@@ -1,0 +1,66 @@
+{
+  "name": "com.studiogaku.input-command",
+  "version": "1.0.0",
+  "displayName": "Input Command",
+  "description": "Provides deterministic, engine-independent components for early-input buffering, sequence and chord matching, priority arbitration, opposing-axis resolution, and sample-based command stabilization.",
+  "unity": "6000.5",
+  "unityRelease": "7f1",
+  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/blob/input-command-v1.0.0/InputCommand/Documentation~/index.md",
+  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/input-command-v1.0.0/InputCommand/CHANGELOG.md",
+  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/input-command-v1.0.0/InputCommand/LICENSE.md",
+  "dependencies": {
+    "com.unity.modules.uielements": "1.0.0"
+  },
+  "samples": [
+    {
+      "displayName": "Command Buffer Basics",
+      "description": "Explicit-tick recording, in-window FIFO consumption, expiry, and responsive UI Toolkit geometry.",
+      "path": "Samples~/CommandBuffer"
+    },
+    {
+      "displayName": "Sequence Matcher Basics",
+      "description": "Light-Light-Heavy matching, gap timeout and restart, and responsive UI Toolkit geometry.",
+      "path": "Samples~/SequenceMatcher"
+    },
+    {
+      "displayName": "Chord Matcher Basics",
+      "description": "Inclusive chord span, rearm, late rejection, and responsive UI Toolkit geometry.",
+      "path": "Samples~/ChordMatcher"
+    },
+    {
+      "displayName": "Command Arbiter Basics",
+      "description": "No selection, highest-priority selection, stable first-index ties, duplicate rejection, and responsive UI Toolkit geometry.",
+      "path": "Samples~/CommandArbiter"
+    },
+    {
+      "displayName": "Axis Conflict Resolver Basics",
+      "description": "Last-pressed-wins, release fallback, same-tick tie, and responsive UI Toolkit geometry.",
+      "path": "Samples~/AxisConflictResolver"
+    },
+    {
+      "displayName": "Stabilizer Basics",
+      "description": "Candidate progress, third-sample commit, noise cancellation, and responsive UI Toolkit geometry.",
+      "path": "Samples~/Stabilizer"
+    }
+  ],
+  "keywords": [
+    "input-command",
+    "input",
+    "command",
+    "buffer",
+    "sequence",
+    "chord",
+    "arbitration",
+    "priority",
+    "socd",
+    "debounce",
+    "tick",
+    "deterministic",
+    "simulation",
+    "replay"
+  ],
+  "author": {
+    "name": "Studio Gaku"
+  },
+  "license": "Refer to LICENSE.md file"
+}

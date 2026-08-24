@@ -1,0 +1,22 @@
+{
+  "name": "RollingSampleWindow.Samples.PlayMode.Tests",
+  "rootNamespace": "GameplayMetrics.Samples.PlayMode.Tests",
+  "references": [
+    "GameplayRules.Runtime",
+    "RollingSampleWindow.Samples",
+    "UnityEngine.TestRunner"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": true,
+  "precompiledReferences": [
+    "nunit.framework.dll"
+  ],
+  "autoReferenced": false,
+  "defineConstraints": [
+    "UNITY_INCLUDE_TESTS"
+  ],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

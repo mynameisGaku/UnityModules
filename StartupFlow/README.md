@@ -1,6 +1,16 @@
-# Startup Flow
+# 起動手順管理（StartupFlow）
+
+## 30秒で分かる
 
 明示した `IStartupStep` を `Order` 昇順、同値なら `Id` の ordinal 昇順で1件ずつ実行し、現在 step、step進捗、全体進捗、停止位置、完了件数を返す Unity 向け startup orchestration モジュールです。
+
+設定読込、認証、マスターデータ準備、最初の Scene 選択など、起動時の非同期処理が `Start` や Coroutine に散らばる問題を一つの順序へまとめます。
+
+## こんなときに使う
+
+- 複数の初期化処理を決まった順番で実行したい。
+- 起動画面へ、現在の処理名と全体進捗を表示したい。
+- どの step で失敗・cancel したかを結果として受け取りたい。
 
 ## 要件
 

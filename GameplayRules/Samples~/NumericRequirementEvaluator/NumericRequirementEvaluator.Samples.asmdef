@@ -1,0 +1,16 @@
+{
+  "name": "NumericRequirementEvaluator.Samples",
+  "rootNamespace": "GameplayRules.Samples",
+  "references": [
+    "GameplayRules.Runtime"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

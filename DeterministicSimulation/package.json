@@ -1,0 +1,66 @@
+{
+  "name": "com.studiogaku.deterministic-simulation",
+  "version": "1.0.0",
+  "displayName": "Deterministic Simulation",
+  "description": "Reproducible simulation building blocks in one package: fixed-step clocks, saveable random state, canonical payload encoding, checked fixed-point arithmetic, bounded replay tapes, versioned state fingerprints, and generation-checked handles.",
+  "unity": "6000.5",
+  "unityRelease": "7f1",
+  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/blob/deterministic-simulation-v1.0.0/DeterministicSimulation/Documentation~/index.md",
+  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/deterministic-simulation-v1.0.0/DeterministicSimulation/CHANGELOG.md",
+  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/deterministic-simulation-v1.0.0/DeterministicSimulation/LICENSE.md",
+  "dependencies": {
+    "com.unity.modules.uielements": "1.0.0"
+  },
+  "samples": [
+    {
+      "displayName": "Simulation Clock Basics",
+      "description": "Ready-to-open scene for exact elapsed inputs, bounded catch-up, state reset, replay verification, and responsive UI.",
+      "path": "Samples~/SimulationClock"
+    },
+    {
+      "displayName": "Deterministic Random Basics",
+      "description": "Ready-to-open scene for versioned seeds, bounded rolls, state replay, reset, and responsive UI.",
+      "path": "Samples~/DeterministicRandom"
+    },
+    {
+      "displayName": "State Fingerprint Basics",
+      "description": "Ready-to-open scene for exact rebuild, state mutation, snapshot replay, reset, and responsive UI.",
+      "path": "Samples~/StateFingerprint"
+    },
+    {
+      "displayName": "Replay Tape Basics",
+      "description": "Ready-to-open scene for recording, building, replaying, resetting, and responsive UI verification.",
+      "path": "Samples~/ReplayTape"
+    },
+    {
+      "displayName": "Canonical Payload Basics",
+      "description": "Encode, decode, corruption rejection, stable rebuild, and responsive UI Toolkit geometry.",
+      "path": "Samples~/CanonicalPayload"
+    },
+    {
+      "displayName": "Fixed Point Basics",
+      "description": "Exact Q16.16 operations, overflow rejection, and responsive UI Toolkit geometry.",
+      "path": "Samples~/FixedPoint"
+    },
+    {
+      "displayName": "Generational Handle Basics",
+      "description": "Acquire, release, deterministic slot reuse, and stale handle rejection with responsive UI Toolkit geometry.",
+      "path": "Samples~/GenerationalHandle"
+    }
+  ],
+  "keywords": [
+    "deterministic",
+    "simulation",
+    "fixed-step",
+    "replay",
+    "random",
+    "fingerprint",
+    "fixed-point",
+    "canonical",
+    "handle"
+  ],
+  "author": {
+    "name": "Studio Gaku"
+  },
+  "license": "Refer to LICENSE.md file"
+}

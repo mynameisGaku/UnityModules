@@ -1,4 +1,0 @@
-State Fingerprint 1.0.0
-
-This package contains no third-party source code.
-SHA-256 is provided by the .NET standard library available in Unity.

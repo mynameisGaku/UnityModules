@@ -55,12 +55,14 @@ namespace ModuleInstaller.Editor
             if (IsBusy)
             {
                 message = "Another package operation is already in progress.";
+                _store.LastMessage = message;
                 return false;
             }
 
             if (plan.Issues.Count > 0)
             {
                 message = plan.Issues[0].Message;
+                _store.LastMessage = message;
                 return false;
             }
 
@@ -71,6 +73,13 @@ namespace ModuleInstaller.Editor
                     : plan.InstalledCount > 0
                         ? "Every selected module is already installed."
                         : "No module was selected.";
+                _store.LastMessage = message;
+                return false;
+            }
+
+            if (!ValidateEntries(plan.Entries, operation, out message))
+            {
+                _store.LastMessage = message;
                 return false;
             }
 
@@ -130,6 +139,13 @@ namespace ModuleInstaller.Editor
             if (state.Operation == ModuleInstallOperation.Update)
             {
                 var installedVersions = _environment.GetInstalledPackageVersions();
+                if (!ValidatePendingState(state, installedVersions, out var issueMessage))
+                {
+                    _store.LastMessage = issueMessage;
+                    ClearQueue();
+                    return;
+                }
+
                 state.Items.RemoveAll(item =>
                     installedVersions.TryGetValue(item.PackageName, out var installedVersion)
                     && !ModuleInstallPlanner.IsUpdateRequired(installedVersion, item.TargetVersion));
@@ -137,6 +153,13 @@ namespace ModuleInstaller.Editor
             else
             {
                 var installed = _environment.GetInstalledPackageNames();
+                if (!ValidatePendingState(state, installed, out var issueMessage))
+                {
+                    _store.LastMessage = issueMessage;
+                    ClearQueue();
+                    return;
+                }
+
                 state.Items.RemoveAll(item => installed.Contains(item.PackageName));
             }
 
@@ -160,6 +183,115 @@ namespace ModuleInstaller.Editor
                 ? $"Updating {state.Items.Count} module(s)..."
                 : $"Installing {state.Items.Count} module(s)...";
             _request = _client.AddAndRemove(urls);
+        }
+
+        private bool ValidateEntries(
+            IReadOnlyList<ModuleCatalogEntry> entries,
+            ModuleInstallOperation operation,
+            out string issueMessage)
+        {
+            var packageNames = new string[entries.Count];
+            for (var index = 0; index < entries.Count; index++)
+            {
+                packageNames[index] = entries[index].PackageName;
+            }
+
+            ModuleInstallPlan plan;
+            if (operation == ModuleInstallOperation.Update)
+            {
+                var installedVersions = _environment.GetInstalledPackageVersions();
+                if (!TryValidateUpdateTargetsPresent(packageNames, installedVersions, out issueMessage))
+                {
+                    return false;
+                }
+
+                plan = ModuleInstallPlanner.BuildUpdates(
+                    packageNames,
+                    installedVersions,
+                    _environment.GetAssetModuleFolders());
+            }
+            else
+            {
+                plan = ModuleInstallPlanner.Build(
+                    packageNames,
+                    _environment.GetInstalledPackageNames(),
+                    _environment.GetAssetModuleFolders());
+            }
+
+            return TryAcceptValidationPlan(plan, out issueMessage);
+        }
+
+        private bool ValidatePendingState(
+            ModuleInstallQueueState state,
+            IReadOnlyDictionary<string, string> installedVersions,
+            out string issueMessage)
+        {
+            var packageNames = GetPendingPackageNames(state);
+            if (!TryValidateUpdateTargetsPresent(packageNames, installedVersions, out issueMessage))
+            {
+                return false;
+            }
+
+            var plan = ModuleInstallPlanner.BuildUpdates(
+                packageNames,
+                installedVersions,
+                _environment.GetAssetModuleFolders());
+            return TryAcceptValidationPlan(plan, out issueMessage);
+        }
+
+        private static bool TryValidateUpdateTargetsPresent(
+            IReadOnlyList<string> packageNames,
+            IReadOnlyDictionary<string, string> installedVersions,
+            out string issueMessage)
+        {
+            for (var index = 0; index < packageNames.Count; index++)
+            {
+                var packageName = packageNames[index];
+                if (!installedVersions.ContainsKey(packageName))
+                {
+                    issueMessage = $"Update stopped because {packageName} is no longer installed. Refresh the update plan before retrying.";
+                    return false;
+                }
+            }
+
+            issueMessage = string.Empty;
+            return true;
+        }
+
+        private bool ValidatePendingState(
+            ModuleInstallQueueState state,
+            ISet<string> installedPackageNames,
+            out string issueMessage)
+        {
+            var packageNames = GetPendingPackageNames(state);
+            var plan = ModuleInstallPlanner.Build(
+                packageNames,
+                installedPackageNames,
+                _environment.GetAssetModuleFolders());
+            return TryAcceptValidationPlan(plan, out issueMessage);
+        }
+
+        private static string[] GetPendingPackageNames(ModuleInstallQueueState state)
+        {
+            var packageNames = new string[state.Items.Count];
+            for (var index = 0; index < state.Items.Count; index++)
+            {
+                packageNames[index] = state.Items[index].PackageName;
+            }
+
+            return packageNames;
+        }
+
+        private static bool TryAcceptValidationPlan(ModuleInstallPlan plan, out string issueMessage)
+        {
+            if (plan.Issues.Count == 0)
+            {
+                issueMessage = string.Empty;
+                return true;
+            }
+
+            issueMessage = plan.Issues[0].Message;
+            return false;
         }
 
         private ModuleInstallQueueState ReadQueue()

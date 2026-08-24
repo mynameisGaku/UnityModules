@@ -1,13 +1,13 @@
 {
   "name": "com.studiogaku.module-installer",
-  "version": "1.4.9",
+  "version": "1.5.0",
   "displayName": "Module Manager",
-  "description": "Guides practical Unity workflows including project setup, multi-scene Editor workspaces, texture import maintenance, and reviewed desktop builds, installs their pinned module bundles, and updates installed catalog packages from one Editor window.",
+  "description": "Guides six pinned Unity module collections, installs or updates 22 catalog packages, and blocks legacy package or Assets-copy conflicts before Package Manager mutation.",
   "unity": "6000.5",
   "unityRelease": "7f1",
-  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/blob/module-installer-v1.4.9/ModuleInstaller/Documentation~/index.md",
-  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/module-installer-v1.4.9/ModuleInstaller/CHANGELOG.md",
-  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/module-installer-v1.4.9/ModuleInstaller/LICENSE.md",
+  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/blob/module-installer-v1.5.0/ModuleInstaller/Documentation~/index.md",
+  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/module-installer-v1.5.0/ModuleInstaller/CHANGELOG.md",
+  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/module-installer-v1.5.0/ModuleInstaller/LICENSE.md",
   "license": "Refer to LICENSE.md file",
   "keywords": [
     "package-manager",
@@ -18,6 +18,11 @@
     "asset-import",
     "build-assistant",
     "scene-workspace",
+    "play-mode-tuning",
+    "input-assist",
+    "input-command",
+    "gameplay-rules",
+    "deterministic-simulation",
     "editor"
   ],
   "author": {

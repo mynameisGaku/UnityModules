@@ -40,18 +40,21 @@ namespace ModuleInstaller.Editor
                     continue;
                 }
 
-                if (installedPackageNames.Contains(entry.PackageName))
+                if (TryCreateLegacyConflict(entry, installedPackageNames, assetModuleFolders, out var legacyConflict))
                 {
-                    installedCount++;
+                    issues.Add(legacyConflict);
                     continue;
                 }
 
                 if (assetModuleFolders.Contains(entry.FolderName))
                 {
-                    issues.Add(new ModuleInstallIssue(
-                        ModuleInstallIssueKind.AssetCopyConflict,
-                        entry.FolderName,
-                        $"Assets/Modules/{entry.FolderName} already exists. Remove that copy before installing the UPM package."));
+                    issues.Add(CreateAssetCopyConflict(entry.FolderName));
+                    continue;
+                }
+
+                if (installedPackageNames.Contains(entry.PackageName))
+                {
+                    installedCount++;
                     continue;
                 }
 
@@ -63,7 +66,8 @@ namespace ModuleInstaller.Editor
 
         internal static ModuleInstallPlan BuildUpdates(
             IEnumerable<string> packageNames,
-            IReadOnlyDictionary<string, string> installedPackageVersions)
+            IReadOnlyDictionary<string, string> installedPackageVersions,
+            ISet<string> assetModuleFolders)
         {
             if (packageNames == null)
             {
@@ -71,6 +75,8 @@ namespace ModuleInstaller.Editor
             }
 
             installedPackageVersions ??= new Dictionary<string, string>(StringComparer.Ordinal);
+            assetModuleFolders ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var installedPackageNames = new HashSet<string>(installedPackageVersions.Keys, StringComparer.Ordinal);
             var entries = new List<ModuleCatalogEntry>();
             var issues = new List<ModuleInstallIssue>();
             var seen = new HashSet<string>(StringComparer.Ordinal);
@@ -97,6 +103,18 @@ namespace ModuleInstaller.Editor
                     continue;
                 }
 
+                if (TryCreateLegacyConflict(entry, installedPackageNames, assetModuleFolders, out var legacyConflict))
+                {
+                    issues.Add(legacyConflict);
+                    continue;
+                }
+
+                if (assetModuleFolders.Contains(entry.FolderName))
+                {
+                    issues.Add(CreateAssetCopyConflict(entry.FolderName));
+                    continue;
+                }
+
                 if (!IsUpdateRequired(installedVersion, entry.Version))
                 {
                     currentCount++;
@@ -107,6 +125,49 @@ namespace ModuleInstaller.Editor
             }
 
             return new ModuleInstallPlan(entries, issues, currentCount);
+        }
+
+        private static ModuleInstallIssue CreateAssetCopyConflict(string folderName)
+        {
+            return new ModuleInstallIssue(
+                ModuleInstallIssueKind.AssetCopyConflict,
+                folderName,
+                $"Assets/Modules/{folderName} already exists. Remove that copy before installing or updating the UPM package.");
+        }
+
+        private static bool TryCreateLegacyConflict(
+            ModuleCatalogEntry entry,
+            ISet<string> installedPackageNames,
+            ISet<string> assetModuleFolders,
+            out ModuleInstallIssue issue)
+        {
+            var conflicts = new List<string>();
+            for (var index = 0; index < entry.LegacyPackageNames.Count; index++)
+            {
+                var legacyPackageName = entry.LegacyPackageNames[index];
+                if (installedPackageNames.Contains(legacyPackageName))
+                {
+                    conflicts.Add(legacyPackageName);
+                }
+
+                var legacyFolderName = entry.LegacyFolderNames[index];
+                if (assetModuleFolders.Contains(legacyFolderName))
+                {
+                    conflicts.Add($"Assets/Modules/{legacyFolderName}");
+                }
+            }
+
+            if (conflicts.Count == 0)
+            {
+                issue = default;
+                return false;
+            }
+
+            issue = new ModuleInstallIssue(
+                ModuleInstallIssueKind.LegacyModuleConflict,
+                entry.PackageName,
+                $"{entry.DisplayName} conflicts with legacy module(s): {string.Join(", ", conflicts)}. Remove them manually before retrying; Module Manager never removes legacy modules automatically.");
+            return true;
         }
 
         internal static bool IsUpdateRequired(string installedVersion, string targetVersion)

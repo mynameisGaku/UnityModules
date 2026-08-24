@@ -1,0 +1,16 @@
+{
+  "name": "InputFiltering.Samples",
+  "rootNamespace": "InputFiltering.Samples",
+  "references": [
+    "InputAssist.Runtime"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

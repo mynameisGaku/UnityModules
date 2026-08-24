@@ -1,3 +1,0 @@
-Generational Handle 1.0.0 does not include third-party source code or third-party binary libraries.
-
-The bundled sample uses Unity UI Toolkit through the built-in com.unity.modules.uielements module.
