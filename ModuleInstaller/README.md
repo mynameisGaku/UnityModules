@@ -1,6 +1,6 @@
 # モジュール管理アシスタント（Module Manager）
 
-> Package version: 1.4.9
+> Package version: 1.5.0
 
 ## 30秒で分かる説明
 
@@ -8,21 +8,22 @@ Unity Package ManagerへGit URLを1件ずつ貼り、導入済みmoduleの公開
 
 `Tools > Module Manager > Open`を開くと、普段使う機能を「Project Maintenance」「Scene and UI」「Game Services」「Input Support」の4つにまとめて表示します。各cardの`Quick guide`で、向いている状況、導入後の最初の操作、変更される範囲を確認してから公開tagをまとめて導入できます。
 
-決定論的simulationと細かなゲーム計算は、通常の4用途と混同しないよう`Specialized collections`へ折りたたんでいます。個別moduleは互換用の詳細一覧に残し、固定公開版のREADMEを`Read guide`から開けます。
+決定論的simulationと細かなゲーム計算は、通常の4用途と混同しないよう`Specialized collections`へ折りたたんでいます。合計6 bundleは`7 / 7 / 3 / 3 / 1 / 1`件、個別一覧は公開tagを持つ22件です。固定公開版のREADMEを`Read guide`から開けます。
 
 ## できること
 
 - 普段使う4つのworkflowから、必要なmodule群をまとめて導入する。
 - `Project Maintenance`からTexture import設定の差分確認・一括適用ツールを導入する。
 - `Project Maintenance`から、確認済み計画だけを新しい出力folderへ実行する「ビルド実行アシスタント」を導入する。
-- `Scene and UI`の6件から、複数Sceneの作業構成を保存・Preview・切り替える「シーン作業セット」を導入する。
+- `Scene and UI`の7件から、複数Sceneの作業構成を安全に切り替える「シーン作業セット」と、Play Mode中に取り込んだ調整を確認後にSceneへ反映する「プレイ中の調整を反映」を導入する。
 - 2つの専門向けcollectionは折りたたみ表示に分離する。
 - 各workflowの用途、最初の操作、変更範囲をwindow内で確認する。
-- 43個の公開moduleを詳細一覧から1件ずつ導入し、固定tagのREADMEを開く。
+- 22個の公開moduleを詳細一覧から1件ずつ導入し、固定tagのREADMEを開く。
 - 既に導入済みのpackageを自動で除外する。
 - 導入済みのcatalog moduleを調べ、古いversionだけを固定済み公開tagへまとめて更新する。
 - 最新version、catalogより新しいversion、独自versionは自動で上書きしない。
 - `Assets/Modules/<Folder>`に同じmoduleのcopyがある場合、assembly重複を避けるため導入前に停止する。
+- 統合前の旧UPM package IDまたは`Assets/Modules/<旧Folder>`が残る場合、型とassemblyの重複を避けるため導入・更新前に停止する。
 - `main`や`dev`ではなく、一覧に固定した公開tagのGit URLだけをPackage Managerへ渡す。
 - package追加によるdomain reload後も、同じUnity session内で導入結果を確認する。
 - 各buttonを`Install N`、`Installed`、`Resolve conflict`へ切り替え、次に必要な操作を示す。
@@ -38,7 +39,7 @@ Unity Package ManagerへGit URLを1件ずつ貼り、導入済みmoduleの公開
 Unityの`Window > Package Management > Package Manager`を開き、`Add package from git URL...`へ次を入力します。
 
 ```text
-https://github.com/mynameisGaku/UnityModules.git?path=/ModuleInstaller#module-installer-v1.4.9
+https://github.com/mynameisGaku/UnityModules.git?path=/ModuleInstaller#module-installer-v1.5.0
 ```
 
 Package Managerの解決後、`Tools > Module Manager > Open`を開き、次の順番で操作します。
@@ -55,14 +56,14 @@ Package Managerの解決後、`Tools > Module Manager > Open`を開き、次の�
 
 導入済みmoduleの更新は、window上部に表示される対象名とversionを確認してから`Update N`を押します。
 
-![Module Managerの操作順](Documentation~/module-manager-guide.png)
+![7件のScene and UIを選び、Quick guideからInstall 7までを上から確認するModule Managerの操作順](Documentation~/module-manager-guide.png)
 
 <details>
 <summary>実際のModule Manager画面を確認する</summary>
 
-`Scene and UI`の`Quick guide`を開いた実画面です。概要、用途、導入する6件、`Install 6`の順で上から確認できます。
+`Scene and UI`の`Quick guide`を開いた実画面です。概要、用途、導入する7件、`Install 7`の順で上から確認できます。
 
-![Module Managerの実画面](Documentation~/module-manager-window.png)
+![Play Mode Tuningを含むScene and UI 7件とInstall 7を表示したModule Managerの実画面](Documentation~/module-manager-window.png)
 
 </details>
 
@@ -74,14 +75,14 @@ Runtime APIはありません。C#を書く必要はなく、Editor windowの操
 
 ## まずどれを選ぶか
 
-普段は43件の個別一覧を先に読む必要はありません。やりたい作業に最も近いworkflowを1つ選び、`Quick guide`とcardに表示されたmodule名を確認してください。
+普段は22件の個別一覧を先に読む必要はありません。やりたい作業に最も近いworkflowを1つ選び、`Quick guide`とcardに表示されたmodule名を確認してください。
 
 | やりたいこと | 最初に見るworkflow | 導入後の最初の操作 |
 |---|---|---|
 | 新しいProjectの基本フォルダー、Player識別子、build方式、.NET API範囲、managed code削除強度、IL2CPP生成方針、C#生成規則、Build Scenes、Texture import設定、壊れた参照、Asset整理、desktop向けbuildをまとめて扱う | `Project Maintenance` | 設定とAssetを確認した後、`Tools > Build Assistant > Open`でbuild計画をpreviewする |
-| 編集作業ごとの複数Scene構成、Scene切り替え、画面fade、safe area、pause、起動順を整える | `Scene and UI` | `Tools > Scene Workspace > Open`でProfileを選び、Scene構成を設定して`Preview Changes`を押す |
+| 編集作業ごとの複数Scene構成、Play Mode中のInspector調整の反映、Scene切り替え、画面fade、safe area、pause、起動順を整える | `Scene and UI` | `Tools > Scene Workspace > Open`でScene構成をPreviewする。Play Modeの値を残す場合は`Tools > Play Mode Tuning > Open`で対象を先に選ぶ |
 | save、音声、不具合reportを用意する | `Game Services` | 最初に使うserviceのsampleをimportし、明示的なownerを1つ作る |
-| 入力の補助やGameplay入力の一時停止を追加する | `Input Support` | Input Assist Basicsで入力値を確認してから必要なmapだけ設定する |
+| stick・button入力の補助、buffered command認識、Gameplay入力の一時停止を追加する | `Input Support` | Input Assist sampleで値を確認し、command認識が必要ならInput Command、map停止が必要ならInput Gateを追加する |
 
 `Deterministic Simulation`と`Game Rules and Math`は、決定論的simulationや細かな計算部品が本当に必要な場合にだけ選びます。`Advanced: read about or install one module`は既存projectとの互換や、必要なmoduleが明確な場合の入口です。
 
@@ -92,7 +93,7 @@ Runtime APIはありません。C#を書く必要はなく、Editor windowの操
 - 導入済みpackageは再追加されません。
 - 更新時は、導入済みversionがcatalogの公開versionより古いpackageだけに固定tag URLを再指定します。
 - 同じversion、より新しいversion、SemVerとして比較できない独自versionは変更しません。`preview`などのprereleaseはSemVer順で公開versionと比較します。
-- `Assets/Modules`に同名folderがある場合はmanifestを変更せず、解消方法をwindowへ表示します。
+- 対象packageの現行folderに加え、統合前の旧UPM package IDまたは`Assets/Modules/<旧Folder>`が残る場合は、manifestやPackage Managerを変更せず、解消方法をwindowへ表示します。旧packageとsource copyは自動削除しません。
 - Package Managerが失敗した場合は、最初の失敗内容を表示して処理を終了します。無限再試行はしません。
 - workflowを導入しただけでは、Project Settings、Scene、Prefab、Asset importerを変更しません。
 - 「アセット設定チェック」は、利用者が対象・共通設定・Standalone/Android/iOS設定を選び、`Preview`で差分を確認して`Apply`したTexture importerだけを再importします。
@@ -101,19 +102,34 @@ Runtime APIはありません。C#を書く必要はなく、Editor windowの操
 
 ## 用途別workflow
 
-| 普段使うworkflow | 含まれる用途 |
-|---|---|
-| Project Maintenance | 基本フォルダー、asmdef、`.gitignore`、`.gitattributes`、Project Settings、build target別Application Identifier・Scripting Backend・API Compatibility Level・Managed Stripping Level・IL2CPP Code Generation、C# Root Namespace、新規script改行方式、複製時の命名規則、条件付きコンパイル記号、Tag・Layer、Build Scenes、Play Mode開始Scene、Texture共通設定とStandalone/Android/iOS override、Inspector整理、debug描画、Scene・Prefab不備修復、Asset参照・名前整理、確認済みdesktop build、容量差・履歴・JSON書き出し |
-| Scene and UI | Editorの複数Scene作業構成、Scene切り替え、画面fade、safe area、ゲーム時間、起動手順 |
-| Game Services | save data、音声再生、不具合report |
-| Input Support | stick・button補助、Gameplay入力の一時停止 |
+| 普段使うworkflow | 件数 | 含まれる用途 |
+|---|---:|---|
+| Project Maintenance | 7 | 基本フォルダー、asmdef、`.gitignore`、`.gitattributes`、Project Settings、build target別Application Identifier・Scripting Backend・API Compatibility Level・Managed Stripping Level・IL2CPP Code Generation、C# Root Namespace、新規script改行方式、複製時の命名規則、条件付きコンパイル記号、Tag・Layer、Build Scenes、Play Mode開始Scene、Texture共通設定とStandalone/Android/iOS override、Inspector整理、debug描画、Scene・Prefab不備修復、Asset参照・名前整理、確認済みdesktop build、容量差・履歴・JSON書き出し |
+| Scene and UI | 7 | Editorの複数Scene作業構成、Play Mode調整の確認済みScene反映、Scene切り替え、画面fade、safe area、ゲーム時間、起動手順 |
+| Game Services | 3 | save data、音声再生、不具合report |
+| Input Support | 3 | stick・button補助、buffer・sequence・chord・priority・opposing-axis・stabilizationによるcommand認識、Gameplay入力の一時停止 |
 
 次の2つは`Specialized collections`内にあります。要件が明確な場合だけ開いてください。
 
-| 専門向けcollection | 含まれる用途 |
-|---|---|
-| Deterministic Simulation | 固定step、再現乱数、state照合、replay、canonical data、固定小数点、handle |
-| Game Rules and Math | resource、能力値、条件、選択、配分、stack、定期処理、damage |
+| 専門向けcollection | 件数 | 含まれる用途 |
+|---|---:|---|
+| Deterministic Simulation | 1 | 固定step、再現乱数、state照合、replay、canonical data、固定小数点、handle |
+| Game Rules and Math | 1 | resource、能力値、条件、選択、配分、stack、定期処理、damage |
+
+## v1.5.0のpackage統合
+
+以前の細分化moduleは、公開namespaceと型名を維持したまま次の4 packageへ集約されています。
+
+| 統合先 | 統合した旧package数 | 主な範囲 |
+|---|---:|---|
+| Input Assist 2.0.0 | 12 | 入力値整形、方向量子化、button分類、repeat、multi-tap |
+| Input Command 1.0.0 | 6 | buffer、sequence、chord、priority、opposing-axis、stabilization |
+| Gameplay Rules 1.0.0 | 19 | resource、stat、選択、統計、timing、score、damage計算 |
+| Deterministic Simulation 1.0.0 | 7 | clock、乱数、fingerprint、replay、canonical payload、固定小数点、世代handle |
+
+旧tagで固定したprojectを直ちに変更する必要はありません。ただし、統合先と旧packageを同じprojectで同時に読み込むと、同じnamespace・型・asmdefが重複します。Module Managerは、統合した44件の旧UPM package IDまたは対応する`Assets/Modules/<旧Folder>`を検出すると、導入・更新ともPackage Managerの変更前に停止します。
+
+移行時はversion controlで差分を確認し、統合先のpackageへasmdef参照を書き換えた後、Package Managerから旧packageをRemoveするか、旧source copyを手動で退避・削除してください。Module Managerはpackageやfileを自動で移動・削除しません。競合を解消してからwindowを開き直し、導入または更新を再実行します。
 
 Project Maintenanceに含まれる「プロジェクト一括設定」はv1.15.0へ固定しています。新規Projectでよく使う基本フォルダー、Runtime・Editor・test用asmdef、Unity向け`.gitignore`と`.gitattributes`をまとめて作成できます。既存fileは上書きせず、復元時もこのツールが作成して内容が変わっていないfileだけを削除します。利用者が編集したfileや、Assetを追加したフォルダーは残します。build target別Application Identifier・Scripting Backend・API Compatibility Level・Managed Stripping Level・IL2CPP Code Generation、Project Settings、C# Root Namespace、新規scriptの改行方式、複製時のGameObject・Asset命名規則、条件付きコンパイル記号、Player Build Scenes、EditorのPlay Mode開始Sceneも同じprofileから適用・復元できます。
 
@@ -147,11 +163,31 @@ Scene and UIに含まれる「シーン作業セット」はv1.0.0へ固定し�
 
 ⑤ `Switch Workspace/Result`の`Switch Workspace`で、確認済みの同じ計画だけを1回適用します。結果欄では`Apply`と`Rollback`を分けて確認できます。Dirty Scene、無題Scene、欠損Scene、重複Sceneなどがある場合はSceneを変更する前に停止し、未保存変更を自動で保存・破棄しません。
 
+同じworkflowに含まれる「プレイ中の調整を反映」はv1.0.0へ固定しています。Play Mode中にInspectorで調整した値のうち、先に選んだ項目だけを手動で取り込み、Play Mode終了後に確認して保存済みSceneへ反映します。
+
+`Tools > Play Mode Tuning > Open`を開き、次の5区分を上から順に進めます。
+
+① `Targets`で、保存済みSceneの`MonoBehaviour`と残したい最上位serialized propertyを選び、`Start Session`で対象identityと元の値を固定します。
+
+② `Capture During Play`で、Play Mode中に値を調整し、残したい状態になった時点で`Capture Selected Values`を押します。自動取り込みはしません。
+
+③ `Preview After Play`で、Play Mode終了後に元の値と取り込んだ値の差を確認します。PreviewはScene、Component、Assetを変更しません。
+
+④ `Review and Confirm`で、対象、property path、元の値、取り込んだ値を確認し、確認欄をオンにします。Preview後に対象identity、現在値、未選択項目などが変わったplanは古いものとして停止します。
+
+⑤ `Apply Tuning / Result`で、Previewした同じ未使用planだけを1回反映します。成功時は対象Sceneを変更済み（dirty）にしますが、自動保存しません。反映または反映後確認に失敗した場合は反映前の選択値への復元を試み、`Apply`と`Rollback`の成否を別々の結果として表示します。
+
 ## よくある問題
 
 ### `Assets/Modules/... already exists`と表示される
 
 同じassemblyをAssets copyとUPM packageの両方から読み込むと、型やasmdefが重複します。どちらの導入方法を使うか決め、UPMへ移行する場合は既存copyをversion controlで退避・削除してから再実行してください。
+
+### 統合前のpackageが競合すると表示される
+
+Input Assist 2.0.0、Input Command、Gameplay Rules、Deterministic Simulationには、以前の44 packageと同じnamespace・型が含まれます。旧UPM package IDまたは`Assets/Modules/<旧Folder>`が1件でも残っている場合、Module Managerは導入・更新のmanifest変更前に停止します。
+
+asmdef参照を統合先へ書き換え、Package Managerから旧packageを手動でRemoveするか、旧source copyをversion controlで退避・削除してください。Module Managerが旧packageやfolderを自動削除することはありません。
 
 ### package追加後にwindowが閉じた
 
@@ -159,7 +195,7 @@ Package Managerの解決でdomain reloadが起きる場合があります。`Too
 
 ### 一部だけ導入したい
 
-`Advanced: read about or install one module`から個別に選んでください。`Read guide`はcatalogと同じ公開tagのREADMEを開きます。既存の細分化packageは互換入口として残っていますが、新規導入では4つのworkflowを推奨します。
+`Advanced: read about or install one module`から22件の公開packageを個別に選んでください。`Read guide`はcatalogと同じ公開tagのREADMEを開きます。統合前の細分化packageはcatalogへ表示しません。旧tag固定projectは引き続きそのversionを利用できますが、統合先packageとの併用はできません。
 
 ### packageを削除したい
 
@@ -170,7 +206,7 @@ Package Managerから対象packageを個別にRemoveしてください。このv
 - Editor専用で、Player buildへRuntime assemblyを追加しません。
 - module一覧・folder・tag・Git URLはpackage内の固定catalogです。
 - bundle導入と一括更新は`Client.AddAndRemove`へ対象URLだけを一括で渡し、削除要求は渡しません。
-- unknown package、Assets copy競合、既存処理中はPackage Managerを呼びません。
+- unknown package、現行または統合前のAssets copy競合、統合前のUPM package競合、既存処理中はPackage Managerを呼びません。
 - 進行中の選択は`SessionState`に保持し、Unity再起動後まで永続化しません。
 - package追加の成否はPackage Managerが返す結果に従います。repositoryへのnetwork接続とGitが必要です。
 
