@@ -1,0 +1,22 @@
+{
+  "name": "InputStabilization.Samples.PlayMode.Tests",
+  "rootNamespace": "InputStabilization.Samples.PlayMode.Tests",
+  "references": [
+    "InputCommand.Runtime",
+    "InputStabilization.Samples",
+    "UnityEngine.TestRunner"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": true,
+  "precompiledReferences": [
+    "nunit.framework.dll"
+  ],
+  "autoReferenced": false,
+  "defineConstraints": [
+    "UNITY_INCLUDE_TESTS"
+  ],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

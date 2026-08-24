@@ -1,0 +1,16 @@
+{
+  "name": "InputSequencing.Samples",
+  "rootNamespace": "InputSequencing.Samples",
+  "references": [
+    "InputCommand.Runtime"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

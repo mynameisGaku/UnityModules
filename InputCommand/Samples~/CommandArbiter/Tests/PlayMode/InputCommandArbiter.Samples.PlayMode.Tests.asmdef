@@ -1,0 +1,22 @@
+{
+  "name": "InputArbitration.Samples.PlayMode.Tests",
+  "rootNamespace": "InputArbitration.Samples.PlayMode.Tests",
+  "references": [
+    "InputCommand.Runtime",
+    "InputArbitration.Samples",
+    "UnityEngine.TestRunner"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": true,
+  "precompiledReferences": [
+    "nunit.framework.dll"
+  ],
+  "autoReferenced": false,
+  "defineConstraints": [
+    "UNITY_INCLUDE_TESTS"
+  ],
+  "versionDefines": [],
+  "noEngineReferences": false
+}
