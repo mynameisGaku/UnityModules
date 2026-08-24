@@ -32,6 +32,7 @@ READMEとモジュール一覧では、日本語で目的を先に示す。Packa
 | プロジェクト不備確認・修復 | BuildGuard | Scene・PrefabのMissing Scriptなどを見つけ、修復場所へ移動する。 |
 | 不具合レポート保存 | DiagnosticsContext | 調査用の状態とログを JSON に残す。 |
 | 入力補助 | Input Assist | スティック値の補正とbutton gestureをまとめて扱う。 |
+| 入力デバイス表示 | Input Device Display | 最後に実入力したdeviceを表示向けfamilyへ分類する。 |
 | 入力コマンド判定 | Input Command | 先行入力・順序・同時押し・対向軸を明示tickで判定し、優先順位選択と入力安定化も扱う。 |
 | ゲーム判定・計算 | Gameplay Rules | ゲームルールから使う決定論的な数値計算をまとめて扱う。 |
 | 再現可能シミュレーション | Deterministic Simulation | 固定刻み・乱数・記録・状態ハッシュで再現性を作る。 |
@@ -57,6 +58,12 @@ Unity 側から `Vector2` と `deltaTime` を渡す `float` 契約と、確保�
 共通 facade や自動 pipeline は作らず、関連機能を一つの導入単位と runtime assembly から選んで使えるようにする。
 
 `InputGate` は Input System の実行状態を所有するため、「入力の一時停止」として独立を維持する。
+
+### 入力デバイス表示（Input Device Display）
+
+Input Systemのglobalな実入力から最後に操作されたdeviceを表示familyへ分類し、UIが文字・glyph・styleを選ぶための状態を提供する。
+Input Assistの値整形やInputGateのAction Map停止とはownerと寿命が異なるため、独立packageとして維持する。
+manufacturer文字列の推測、入力消費、rebind、pairing、player別追跡、glyph assetの所有は行わない。
 
 ### ゲーム判定・計算（Gameplay Rules）
 

@@ -2,7 +2,7 @@
 
 `dev` に当初存在した 65 パッケージを対象に、重複の実測結果と統合判断、重複しない追加機能候補をまとめる。
 案 A の実施後は 60 パッケージ、案 B・C と Input Assist への吸収後は 24 パッケージとなった。
-案 D・E は追加検討の結果、配布単位の変更としては採用しない。追加機能は未着手。
+案 D・E は追加検討の結果、配布単位の変更としては採用しない。追加機能はProjectSetupのLayer衝突設定とInputDeviceDisplayから順に実装している。
 判断基準は [モジュール設計・案内ガイド](MODULE_GUIDE.md) の「配布単位の決め方」に従う。
 
 ---
@@ -28,7 +28,7 @@
 | 案 A の Input Command 統合後 | 60 | 6 パッケージを 1 パッケージへ統合 |
 | 案 A〜C 完了後 | 24 | Input Assist への 12 パッケージ吸収、Gameplay Rules と Deterministic Simulation の新設を含む |
 
-現在の `dev` は 24 パッケージ、171 asmdef、Module Installer の catalog は 22 entry である。
+現在の `dev` は 25 パッケージ、175 asmdef、Module Installer の catalog は 22 entry である。InputDeviceDisplayは公開tag作成前のためcatalogへ先行登録していない。
 24 パッケージへの到達は案 A〜C の結果であり、案 D・E による削減を含まない。
 
 ### 純粋計算パッケージが全体の 3 分の 2
@@ -229,13 +229,12 @@ MODULE_GUIDE の「新規モジュールの優先基準」に照らし、repo �
 
 ### 優先度：高
 
-**1. 入力デバイス切替の検出と表示切替（新規モジュール）**
+**1. 入力デバイス切替の検出と表示切替（InputDeviceDisplay 1.0.0で実装）**
 
-`Gamepad.current` / `Keyboard.current` / `Touchscreen` の参照が repo 全体で 0 件。
-InputAssist は入力値の整形、InputGate は停止で、「今どのデバイスで遊んでいるか」を扱うモジュールが無い。
-最後に操作されたデバイスの種別（Keyboard / Xbox / PlayStation / Switch / Touch）を判定し、
-UI のボタン表記を差し替える口を提供する。優先基準の「入力方式による Unity 固有の差異」に直接あたり、
-実機で持ち替えるまで気づかない典型的な問題を潰せる。
+Input Systemのglobalな実入力eventを観測し、最後に操作されたdeviceをKeyboard／Mouse、Xbox、PlayStation、Switch、一般Gamepad、Touchの表示familyへ分類する。
+既知gamepadはInput Systemの型階層で判定し、project固有deviceは厳密layout overrideを標準分類より先に評価する。manufacturerやproductの自由記述文字列からは推測しない。
+Input Assistの値整形、InputGateのAction Map停止、Input Systemのpairingやrebindを変更せず、利用側UIが所有する文字・glyph・画像・styleを選ぶための状態だけを提供する。
+追跡はapplication全体で1つとし、player別追跡、入力消費、永続化、glyph assetは対象外にした。
 
 **2. ユーザー設定（オプション）の保存（新規モジュール）**
 
@@ -256,7 +255,7 @@ backup schema v16は名前のないslotを含む32行matrix全体を保持し、
 ProjectSetup が asmdef を作るところまでは面倒を見るが、その後の依存関係の劣化
 （循環参照、Playerで有効なassembly→Editor専用assemblyの逆参照、不要な参照によるコンパイル時間の増加）を見る手段が無い。
 「実機や Player build まで進まないと発見しにくい問題」に該当する。
-asmdef 171 個を持つこの repo 自体が最初の利用者になる。
+asmdef 175 個を持つこの repo 自体が最初の利用者になる。
 
 ### 優先度：中
 

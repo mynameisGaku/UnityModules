@@ -1,0 +1,36 @@
+{
+  "name": "com.studiogaku.input-device-display",
+  "version": "1.0.0",
+  "displayName": "Input Device Display",
+  "description": "Input Systemのglobalな実入力を監視し、最後に操作されたdeviceを表示向けfamilyへ分類するモジュール。厳密一致のlayout override、未判定時fallback、不正設定の明示失敗を提供し、glyph asset、rebind、pairing、入力消費、player別追跡、manufacturer文字列による推測は行いません。",
+  "unity": "6000.5",
+  "unityRelease": "7f1",
+  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/blob/input-device-display-v1.0.0/InputDeviceDisplay/Documentation~/index.md",
+  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/input-device-display-v1.0.0/InputDeviceDisplay/CHANGELOG.md",
+  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/input-device-display-v1.0.0/InputDeviceDisplay/LICENSE.md",
+  "license": "Refer to LICENSE.md file",
+  "keywords": [
+    "input",
+    "input-system",
+    "device",
+    "gamepad",
+    "prompt",
+    "ui"
+  ],
+  "author": {
+    "name": "StudioGaku",
+    "email": "gaku.fujimoto.business@gmail.com",
+    "url": "https://github.com/mynameisGaku/UnityModules"
+  },
+  "dependencies": {
+    "com.unity.inputsystem": "1.20.0",
+    "com.unity.modules.uielements": "1.0.0"
+  },
+  "samples": [
+    {
+      "displayName": "Input Device Display Basics",
+      "description": "Keyboard、Mouse、Gamepad、Touchの実入力で表示familyが切り替わることを確認するサンプル。",
+      "path": "Samples~/Basics"
+    }
+  ]
+}

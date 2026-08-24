@@ -3,7 +3,7 @@
 Unity で繰り返し発生する設定、実装、確認作業を減らすためのモジュール集。
 利用者向けの名前は日本語で目的を示し、フォルダー名・名前空間・UPM 識別子には互換性のため英語の技術名を残している。
 
-対応versionはpackageごとに異なります。23packageは**Unity 6000.5.7f1以降**、Containersは**Unity 6000.0以降**です。
+対応versionはpackageごとに異なります。24packageは**Unity 6000.5.7f1以降**、Containersは**Unity 6000.0以降**です。
 
 ---
 
@@ -27,6 +27,7 @@ Unity で繰り返し発生する設定、実装、確認作業を減らすた�
 | Assetの利用箇所を確認・置換し、複数の名前もまとめて整理したい | [アセット整理・参照管理（Reference Finder）](ReferenceFinder/) | 直接・間接参照の検索、安全な参照置換、GUIDを維持する一括RenameをPreview後に実行する。 |
 | 不具合調査用の状態とログを手動保存したい | [不具合レポート保存（DiagnosticsContext）](DiagnosticsContext/) | context、breadcrumb、Unity log を有界 JSON に書き出す。 |
 | スティック補正とTap・Hold・Repeatをまとめて扱いたい | [入力補助（Input Assist）](InputAssist/) | dead zone、感度curve、滑らかさ、4/8方向、button gestureを1つの導入で処理する。 |
+| Keyboard・Mouse・Gamepad・Touchで操作案内を切り替えたい | [入力デバイス表示（Input Device Display）](InputDeviceDisplay/) | 最後に実入力したdeviceを表示向けfamilyへ分類し、利用側UIの文字・画像・style切替に使う。 |
 | 先行入力、コマンド入力、同時押し、入力の優先順位を扱いたい | [入力コマンド判定（Input Command）](InputCommand/) | 明示tickを使うbuffer・順序・同時押し・対向軸と、優先順位選択・sample基準の入力安定化を1つの導入で利用する。 |
 | リソース、能力補正、抽選、しきい値などゲームの数値計算を毎回書きたくない | [ゲーム判定・計算（Gameplay Rules）](GameplayRules/) | 用途別namespaceから、決定論的で状態を壊さない計算を選んで使う。 |
 | Replayやlockstepのために計算を再現可能にしたい | [再現可能シミュレーション（Deterministic Simulation）](DeterministicSimulation/) | 固定刻み、再現可能な乱数、記録tape、状態fingerprintを1つの導入で揃える。 |
@@ -68,6 +69,7 @@ Unity で繰り返し発生する設定、実装、確認作業を減らすた�
 | [アセット設定チェック（Asset Import Audit）](AssetImportAudit/) | `Assets`配下のTexture2Dを決定論的に検査し、共通設定とStandalone・Android・iOS別OverrideをShared・Platform・両方のscopeでPreview・選択適用・全件適用する。Preview後のstale importerは拒否するEditor専用module。**Unity 6000.5.7f1以降**。 | なし |
 | [アセット整理・参照管理（Reference Finder）](ReferenceFinder/) | 選択Assetの直接・間接参照元を検索し、安全に特定できた参照だけをUndo付きで置換する。さらに複数Assetへ文字置換・prefix・suffixをまとめて適用し、GUIDを維持してRenameするEditor専用module。**Unity 6000.5.7f1以降**。 | なし |
 | [入力補助（Input Assist）](InputAssist/) | 2D入力へradial dead zone、応答curve、増減速度制限、方向量子化、重み付き合成を適用し、button入力からTap・Hold・Repeat・multi-tapを判定する。Unity向けの`float`+`deltaTime`契約と、確保を伴わない`double`契約を同じpackageが持つ。入力値と経過時間は利用側から渡すため、Input System・AI・Replayのどれでも使える。**Unity 6000.5.7f1以降**。 | com.unity.modules.uielements 1.0.0 |
+| [入力デバイス表示（Input Device Display）](InputDeviceDisplay/) | Input Systemのglobalな実入力から最後に操作されたdeviceをKeyboard／Mouse、Xbox、PlayStation、Switch、一般Gamepad、Touchの表示familyへ分類する。厳密layout overrideと明示fallbackを備え、glyph asset、rebind、pairing、player別追跡は扱わない。**Unity 6000.5.7f1以降**。 | com.unity.inputsystem 1.20.0 / com.unity.modules.uielements 1.0.0 |
 | [入力の一時停止（InputGate）](InputGate/) | PlayerInputの実行中Action Mapを入れ子leaseで停止し、最後の解放時にActionごとの有効状態を復元する。**Unity 6000.5.7f1 / Input System 1.20.0以降**。 | com.unity.inputsystem 1.20.0 / com.unity.modules.uielements 1.0.0 |
 | [音声再生管理（AudioControl）](AudioControl/) | owner付きAudioSource poolで再生、voice上限、priority steal、handle停止、非スケールfadeを管理する。**Unity 6000.5.7f1以降**。 | com.unity.modules.audio 1.0.0 / com.unity.modules.uielements 1.0.0 |
 | [起動手順管理（StartupFlow）](StartupFlow/) | 明示した非同期stepをOrderとIdで決定論的に直列実行し、進捗・失敗位置・完了件数・協調cancelを結果として返す。**Unity 6000.5.7f1以降**。 | com.unity.modules.uielements 1.0.0 |
@@ -190,6 +192,10 @@ Assets/
     │   ├── Runtime/         InputGate.Runtime
     │   ├── Tests/           InputGate.Tests, InputGate.PlayMode.Tests
     │   └── Samples~/        2 assemblies
+    ├── InputDeviceDisplay/
+    │   ├── Runtime/         InputDeviceDisplay.Runtime
+    │   ├── Tests/           InputDeviceDisplay.Editor.Tests, InputDeviceDisplay.PlayMode.Tests
+    │   └── Samples~/        1 assembly
     ├── GameplayRules/
     │   ├── Runtime/         GameplayRules.Runtime
     │   ├── Tests/Editor/    GameplayRules.Editor.Tests

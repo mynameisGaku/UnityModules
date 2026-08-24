@@ -1,0 +1,10 @@
+Third-Party Notices
+===================
+
+このパッケージ本体には、第三者が制作したコード、フォント、音声、画像、映像その他のコンポーネントを同梱していません。
+
+package manifestはUnity Input System `com.unity.inputsystem` 1.20.0と、Unity組込みUI Toolkit module `com.unity.modules.uielements` 1.0.0を依存関係として宣言します。Input System packageの利用条件は、導入先Unity EditorのPackage Managerに表示されるライセンス情報とUnity Companion Licenseを確認してください。
+
+https://unity.com/legal/licenses/unity-companion-license
+
+Unity Editor、UnityEngine、Unity Input System、およびUnity UI Toolkit APIは実行環境から利用し、このパッケージ内へ再配布していません。

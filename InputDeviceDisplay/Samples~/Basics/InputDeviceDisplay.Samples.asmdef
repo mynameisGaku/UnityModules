@@ -1,0 +1,16 @@
+{
+  "name": "InputDeviceDisplay.Samples",
+  "rootNamespace": "InputDeviceDisplay.Samples",
+  "references": [
+    "InputDeviceDisplay.Runtime"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}
