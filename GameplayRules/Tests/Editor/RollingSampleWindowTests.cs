@@ -267,7 +267,7 @@ namespace GameplayMetrics.Tests
         [Test]
         public void PublicApi_ExportsExactlyFourRuntimeTypes()
         {
-            var names = typeof(RollingSampleWindow).Assembly.GetExportedTypes().Select(type => type.FullName).OrderBy(name => name).ToArray();
+            var names = typeof(RollingSampleWindow).Assembly.GetExportedTypes().Where(type => string.Equals(type.Namespace, "GameplayMetrics", StringComparison.Ordinal)).Select(type => type.FullName).OrderBy(name => name).ToArray();
             Assert.That(names, Is.EqualTo(new[]
             {
                 "GameplayMetrics.RollingSampleWindow",

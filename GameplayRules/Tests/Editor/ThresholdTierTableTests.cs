@@ -248,7 +248,7 @@ namespace GameplayProgression.Tests
         public void PublicRuntimeSurface_ContainsExactlyFourTypes()
         {
             var assembly = typeof(ThresholdTierTable).Assembly;
-            var publicTypes = assembly.GetExportedTypes().OrderBy(type => type.FullName, StringComparer.Ordinal).ToArray();
+            var publicTypes = assembly.GetExportedTypes().Where(type => string.Equals(type.Namespace, "GameplayProgression", StringComparison.Ordinal)).OrderBy(type => type.FullName, StringComparer.Ordinal).ToArray();
             Assert.That(publicTypes, Is.EqualTo(new[]
             {
                 typeof(ThresholdTier),

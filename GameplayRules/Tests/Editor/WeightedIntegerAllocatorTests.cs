@@ -260,9 +260,9 @@ namespace GameplayAllocation.Tests
         }
 
         [Test]
-        public void RuntimeAssemblyExportsOnlyDocumentedPublicTypes()
+        public void PublicRuntimeSurface_ContainsExactlyFiveTypes()
         {
-            var names = typeof(WeightedIntegerAllocator).Assembly.GetExportedTypes().Select(type => type.FullName).OrderBy(value => value).ToArray();
+            var names = typeof(WeightedIntegerAllocator).Assembly.GetExportedTypes().Where(type => string.Equals(type.Namespace, "GameplayAllocation", StringComparison.Ordinal)).Select(type => type.FullName).OrderBy(value => value).ToArray();
             CollectionAssert.AreEqual(new[]
             {
                 "GameplayAllocation.WeightedIntegerAllocation",

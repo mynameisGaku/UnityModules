@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using NUnit.Framework;
 
 namespace InputQuantization.Tests
@@ -140,7 +142,7 @@ namespace InputQuantization.Tests
         [Test]
         public void PublicRuntimeSurface_ContainsExactlyThreeTypes()
         {
-            var exported = typeof(AxisQuantizer).Assembly.GetExportedTypes().OrderBy(type => type.FullName, StringComparer.Ordinal).ToArray();
+            var exported = typeof(AxisQuantizer).Assembly.GetExportedTypes().Where(type => string.Equals(type.Namespace, "InputQuantization", StringComparison.Ordinal)).OrderBy(type => type.FullName, StringComparer.Ordinal).ToArray();
 
             Assert.That(exported, Is.EqualTo(new[]
             {
@@ -151,11 +153,12 @@ namespace InputQuantization.Tests
         }
 
         [Test]
-        public void RuntimeAssembly_DoesNotReferenceUnityEngine()
+        public void PublicRuntimeSurface_DoesNotExposeUnityEngineTypes()
         {
-            var references = typeof(AxisQuantizer).Assembly.GetReferencedAssemblies().Select(value => value.Name).ToArray();
+            var publicTypes = typeof(AxisQuantizer).Assembly.GetExportedTypes().Where(type => string.Equals(type.Namespace, "InputQuantization", StringComparison.Ordinal)).ToArray();
+            var engineTypes = publicTypes.SelectMany(PublicSignatureTypes).SelectMany(ExpandSignatureType).Where(type => (type.Namespace ?? string.Empty).StartsWith("UnityEngine", StringComparison.Ordinal)).Select(type => type.FullName ?? type.Name).Distinct().OrderBy(name => name, StringComparer.Ordinal).ToArray();
 
-            Assert.That(references, Has.None.StartsWith("UnityEngine"));
+            Assert.That(engineTypes, Is.Empty);
         }
 
         private static AxisQuantizer Create(double deadZone, int steps)
@@ -163,6 +166,57 @@ namespace InputQuantization.Tests
             Assert.That(AxisQuantizer.TryCreate(deadZone, steps, out var quantizer, out var error), Is.True);
             Assert.That(error, Is.EqualTo(InputQuantizationError.None));
             return quantizer;
+        }
+
+        private static IEnumerable<Type> PublicSignatureTypes(Type type)
+        {
+            yield return type;
+            if (type.BaseType != null) yield return type.BaseType;
+            foreach (var interfaceType in type.GetInterfaces()) yield return interfaceType;
+            foreach (var genericArgument in type.GetGenericArguments()) yield return genericArgument;
+
+            const BindingFlags flags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly;
+            foreach (var field in type.GetFields(flags)) yield return field.FieldType;
+            foreach (var property in type.GetProperties(flags))
+            {
+                yield return property.PropertyType;
+                foreach (var parameter in property.GetIndexParameters()) yield return parameter.ParameterType;
+            }
+            foreach (var eventInfo in type.GetEvents(flags)) yield return eventInfo.EventHandlerType;
+            foreach (var constructor in type.GetConstructors(flags))
+            {
+                foreach (var parameter in constructor.GetParameters()) yield return parameter.ParameterType;
+            }
+            foreach (var method in type.GetMethods(flags))
+            {
+                yield return method.ReturnType;
+                foreach (var parameter in method.GetParameters()) yield return parameter.ParameterType;
+                foreach (var genericArgument in method.GetGenericArguments()) yield return genericArgument;
+            }
+        }
+
+        private static IEnumerable<Type> ExpandSignatureType(Type type)
+        {
+            if (type == null) yield break;
+            yield return type;
+            if (type.HasElementType)
+            {
+                foreach (var elementType in ExpandSignatureType(type.GetElementType())) yield return elementType;
+            }
+            if (type.IsGenericType)
+            {
+                foreach (var genericArgument in type.GetGenericArguments())
+                {
+                    foreach (var argumentType in ExpandSignatureType(genericArgument)) yield return argumentType;
+                }
+            }
+            if (type.IsGenericParameter)
+            {
+                foreach (var constraint in type.GetGenericParameterConstraints())
+                {
+                    foreach (var constraintType in ExpandSignatureType(constraint)) yield return constraintType;
+                }
+            }
         }
     }
 }

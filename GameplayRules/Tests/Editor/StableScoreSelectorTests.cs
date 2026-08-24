@@ -281,9 +281,9 @@ namespace GameplayDecision.Tests
         }
 
         [Test]
-        public void RuntimeAssemblyExportsOnlyDocumentedPublicTypes()
+        public void PublicRuntimeSurface_ContainsExactlyThirteenGameplayDecisionTypes()
         {
-            var names = typeof(StableScoreSelector).Assembly.GetExportedTypes().Select(type => type.FullName).OrderBy(value => value).ToArray();
+            var names = typeof(StableScoreSelector).Assembly.GetExportedTypes().Where(type => string.Equals(type.Namespace, "GameplayDecision", StringComparison.Ordinal)).Select(type => type.FullName).OrderBy(value => value).ToArray();
             CollectionAssert.AreEqual(new[]
             {
                 "GameplayDecision.StableScoreCandidate",
@@ -291,7 +291,14 @@ namespace GameplayDecision.Tests
                 "GameplayDecision.StableScoreDecisionReason",
                 "GameplayDecision.StableScoreError",
                 "GameplayDecision.StableScoreSelection",
-                "GameplayDecision.StableScoreSelector"
+                "GameplayDecision.StableScoreSelector",
+                "GameplayDecision.UtilityScoreCandidate",
+                "GameplayDecision.UtilityScoreCandidateLine",
+                "GameplayDecision.UtilityScoreError",
+                "GameplayDecision.UtilityScoreEvaluation",
+                "GameplayDecision.UtilityScoreEvaluator",
+                "GameplayDecision.UtilityScoreFactor",
+                "GameplayDecision.UtilityScoreFactorLine"
             }, names);
         }
 

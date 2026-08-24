@@ -346,7 +346,7 @@ namespace GameplayMath.Tests
         [Test]
         public void PublicRuntimeSurface_ContainsOnlyFiveTypes()
         {
-            var exported = typeof(PiecewiseLinearCurve).Assembly.GetExportedTypes().OrderBy(type => type.FullName).Select(type => type.FullName).ToArray();
+            var exported = typeof(PiecewiseLinearCurve).Assembly.GetExportedTypes().Where(type => string.Equals(type.Namespace, "GameplayMath", StringComparison.Ordinal)).OrderBy(type => type.FullName).Select(type => type.FullName).ToArray();
 
             Assert.That(exported, Is.EqualTo(new[]
             {

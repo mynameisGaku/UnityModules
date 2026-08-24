@@ -245,7 +245,7 @@ namespace GameplayRules.Tests
         [Test]
         public void PublicRuntimeSurface_ContainsExactlySixTypes()
         {
-            var actual = typeof(NumericRequirementEvaluator).Assembly.GetExportedTypes().OrderBy(type => type.FullName, StringComparer.Ordinal).ToArray();
+            var actual = typeof(NumericRequirementEvaluator).Assembly.GetExportedTypes().Where(type => string.Equals(type.Namespace, "GameplayRules", StringComparison.Ordinal)).OrderBy(type => type.FullName, StringComparer.Ordinal).ToArray();
             var expected = new[]
             {
                 typeof(NumericRequirement),

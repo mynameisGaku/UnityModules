@@ -301,7 +301,7 @@ namespace CanonicalPayload.Tests
         [Test]
         public void PublicRuntimeSurface_ContainsExactlyFourTypes()
         {
-            var exported = typeof(CanonicalPayloadWriter).Assembly.GetExportedTypes().OrderBy(value => value.FullName).ToArray();
+            var exported = typeof(CanonicalPayloadWriter).Assembly.GetExportedTypes().Where(value => string.Equals(value.Namespace, "CanonicalPayload", StringComparison.Ordinal)).OrderBy(value => value.FullName).ToArray();
             Assert.That(exported.Select(value => value.FullName), Is.EqualTo(new[]
             {
                 "CanonicalPayload.CanonicalPayloadError",

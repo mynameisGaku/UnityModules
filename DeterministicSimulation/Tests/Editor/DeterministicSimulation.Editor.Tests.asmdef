@@ -1,24 +1,22 @@
 {
-  "name": "GameplayRules.Tests",
+  "name": "DeterministicSimulation.Editor.Tests",
   "rootNamespace": "",
   "references": [
-    "GameplayRules.Runtime"
+    "DeterministicSimulation.Runtime"
   ],
   "includePlatforms": [
     "Editor"
   ],
   "excludePlatforms": [],
   "allowUnsafeCode": false,
-  "overrideReferences": true,
-  "precompiledReferences": [
-    "nunit.framework.dll"
-  ],
+  "overrideReferences": false,
+  "precompiledReferences": [],
   "autoReferenced": false,
   "defineConstraints": [
     "UNITY_INCLUDE_TESTS"
   ],
   "versionDefines": [],
-  "noEngineReferences": true,
+  "noEngineReferences": false,
   "optionalUnityReferences": [
     "TestAssemblies"
   ]

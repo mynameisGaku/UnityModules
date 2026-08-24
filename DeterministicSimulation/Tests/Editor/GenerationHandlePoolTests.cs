@@ -221,7 +221,7 @@ namespace GenerationalHandles.Tests
         public void PublicRuntimeSurface_ContainsExactlyThreeTypes()
         {
             var assembly = typeof(GenerationHandlePool).Assembly;
-            var exported = assembly.GetExportedTypes().OrderBy(type => type.FullName, StringComparer.Ordinal).ToArray();
+            var exported = assembly.GetExportedTypes().Where(type => string.Equals(type.Namespace, "GenerationalHandles", StringComparison.Ordinal)).OrderBy(type => type.FullName, StringComparer.Ordinal).ToArray();
 
             Assert.That(exported, Is.EqualTo(new[]
             {

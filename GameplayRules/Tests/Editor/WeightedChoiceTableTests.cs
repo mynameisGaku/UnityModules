@@ -419,7 +419,7 @@ namespace GameplaySelection.Tests
         [Test]
         public void PublicRuntimeSurface_ContainsOnlyFiveTypes()
         {
-            var exported = typeof(WeightedChoiceTable).Assembly.GetExportedTypes().OrderBy(type => type.FullName).Select(type => type.FullName).ToArray();
+            var exported = typeof(WeightedChoiceTable).Assembly.GetExportedTypes().Where(type => string.Equals(type.Namespace, "GameplaySelection", StringComparison.Ordinal)).OrderBy(type => type.FullName).Select(type => type.FullName).ToArray();
 
             Assert.That(exported, Is.EqualTo(new[]
             {

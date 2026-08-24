@@ -261,18 +261,24 @@ namespace GameplayDecision.Tests
         }
 
         [Test]
-        public void PublicRuntimeSurface_ContainsExactlySevenTypes()
+        public void PublicRuntimeSurface_ContainsExactlyThirteenGameplayDecisionTypes()
         {
-            var actual = typeof(UtilityScoreEvaluator).Assembly.GetExportedTypes().OrderBy(type => type.FullName, StringComparer.Ordinal).ToArray();
+            var actual = typeof(UtilityScoreEvaluator).Assembly.GetExportedTypes().Where(type => string.Equals(type.Namespace, "GameplayDecision", StringComparison.Ordinal)).OrderBy(type => type.FullName, StringComparer.Ordinal).ToArray();
             var expected = new[]
             {
-                typeof(UtilityScoreFactor),
+                typeof(StableScoreCandidate),
+                typeof(StableScoreCandidateLine),
+                typeof(StableScoreDecisionReason),
+                typeof(StableScoreError),
+                typeof(StableScoreSelection),
+                typeof(StableScoreSelector),
                 typeof(UtilityScoreCandidate),
-                typeof(UtilityScoreError),
-                typeof(UtilityScoreFactorLine),
                 typeof(UtilityScoreCandidateLine),
+                typeof(UtilityScoreError),
                 typeof(UtilityScoreEvaluation),
-                typeof(UtilityScoreEvaluator)
+                typeof(UtilityScoreEvaluator),
+                typeof(UtilityScoreFactor),
+                typeof(UtilityScoreFactorLine)
             }.OrderBy(type => type.FullName, StringComparer.Ordinal).ToArray();
             Assert.That(actual, Is.EqualTo(expected));
         }

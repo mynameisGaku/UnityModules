@@ -168,7 +168,7 @@ namespace FixedPoint.Tests
         [Test]
         public void PublicRuntimeSurface_ContainsExactlyThreeTypes()
         {
-            var types = typeof(Fixed32).Assembly.GetExportedTypes().OrderBy(value => value.FullName).ToArray();
+            var types = typeof(Fixed32).Assembly.GetExportedTypes().Where(value => string.Equals(value.Namespace, "FixedPoint", StringComparison.Ordinal)).OrderBy(value => value.FullName).ToArray();
             CollectionAssert.AreEqual(new[]
             {
                 typeof(Fixed32),

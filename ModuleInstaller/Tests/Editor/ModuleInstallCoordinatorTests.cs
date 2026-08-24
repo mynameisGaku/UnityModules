@@ -93,7 +93,8 @@ namespace ModuleInstaller.Editor.Tests
             var coordinator = CreateCoordinator(client, environment, new FakeStore());
             var plan = ModuleInstallPlanner.BuildUpdates(
                 new[] { "com.studiogaku.project-setup" },
-                environment.InstalledVersions);
+                environment.InstalledVersions,
+                environment.AssetFolders);
 
             Assert.That(coordinator.TryStartUpdates(plan, out _), Is.True);
             Assert.That(client.CallCount, Is.EqualTo(1));
@@ -115,7 +116,8 @@ namespace ModuleInstaller.Editor.Tests
             var first = CreateCoordinator(new FakeClient(), environment, store);
             var plan = ModuleInstallPlanner.BuildUpdates(
                 new[] { "com.studiogaku.project-setup" },
-                environment.InstalledVersions);
+                environment.InstalledVersions,
+                environment.AssetFolders);
             Assert.That(first.TryStartUpdates(plan, out _), Is.True);
 
             environment.InstalledVersions["com.studiogaku.project-setup"] = "1.15.0";
@@ -126,6 +128,135 @@ namespace ModuleInstaller.Editor.Tests
             Assert.That(resumed.IsBusy, Is.False);
             Assert.That(resumedClient.CallCount, Is.Zero);
             Assert.That(resumed.LastMessage, Does.Contain("up to date"));
+        }
+
+        [Test]
+        public void TryStart_RechecksLegacyConflictBeforePackageManagerMutation()
+        {
+            var client = new FakeClient();
+            var environment = new FakeEnvironment();
+            var coordinator = CreateCoordinator(client, environment, new FakeStore());
+            var plan = ModuleInstallPlanner.Build(
+                new[] { "com.studiogaku.input-command" },
+                environment.Installed,
+                environment.AssetFolders);
+            environment.Installed.Add("com.studiogaku.input-command-buffer");
+
+            Assert.That(coordinator.TryStart(plan, out var message), Is.False);
+            Assert.That(client.CallCount, Is.Zero);
+            Assert.That(coordinator.IsBusy, Is.False);
+            Assert.That(message, Does.Contain("com.studiogaku.input-command-buffer"));
+            Assert.That(coordinator.LastMessage, Does.Contain("com.studiogaku.input-command-buffer"));
+        }
+
+        [Test]
+        public void TryStartUpdates_RechecksLegacyAssetConflictBeforePackageManagerMutation()
+        {
+            var client = new FakeClient();
+            var environment = new FakeEnvironment();
+            environment.Installed.Add("com.studiogaku.input-assist");
+            environment.InstalledVersions["com.studiogaku.input-assist"] = "1.0.0";
+            var coordinator = CreateCoordinator(client, environment, new FakeStore());
+            var plan = ModuleInstallPlanner.BuildUpdates(
+                new[] { "com.studiogaku.input-assist" },
+                environment.InstalledVersions,
+                environment.AssetFolders);
+            environment.AssetFolders.Add("InputRepeat");
+
+            Assert.That(coordinator.TryStartUpdates(plan, out var message), Is.False);
+            Assert.That(client.CallCount, Is.Zero);
+            Assert.That(coordinator.IsBusy, Is.False);
+            Assert.That(message, Does.Contain("Assets/Modules/InputRepeat"));
+            Assert.That(coordinator.LastMessage, Does.Contain("Assets/Modules/InputRepeat"));
+        }
+
+        [Test]
+        public void TryStartUpdates_StopsWhenTargetWasRemovedAfterPlanning()
+        {
+            var client = new FakeClient();
+            var environment = new FakeEnvironment();
+            environment.InstalledVersions["com.studiogaku.project-setup"] = "1.0.0";
+            var coordinator = CreateCoordinator(client, environment, new FakeStore());
+            var plan = ModuleInstallPlanner.BuildUpdates(
+                new[] { "com.studiogaku.project-setup" },
+                environment.InstalledVersions,
+                environment.AssetFolders);
+            environment.InstalledVersions.Remove("com.studiogaku.project-setup");
+
+            Assert.That(coordinator.TryStartUpdates(plan, out var message), Is.False);
+            Assert.That(client.CallCount, Is.Zero);
+            Assert.That(coordinator.IsBusy, Is.False);
+            Assert.That(message, Does.Contain("no longer installed"));
+            Assert.That(coordinator.LastMessage, Does.Contain("no longer installed"));
+        }
+
+        [Test]
+        public void Tick_UpdateAfterReloadStopsWhenTargetWasRemoved()
+        {
+            var environment = new FakeEnvironment();
+            environment.InstalledVersions["com.studiogaku.project-setup"] = "1.0.0";
+            var store = new FakeStore();
+            var first = CreateCoordinator(new FakeClient(), environment, store);
+            var plan = ModuleInstallPlanner.BuildUpdates(
+                new[] { "com.studiogaku.project-setup" },
+                environment.InstalledVersions,
+                environment.AssetFolders);
+            Assert.That(first.TryStartUpdates(plan, out _), Is.True);
+            environment.InstalledVersions.Remove("com.studiogaku.project-setup");
+
+            var resumedClient = new FakeClient();
+            var resumed = CreateCoordinator(resumedClient, environment, store);
+            resumed.Tick();
+
+            Assert.That(resumed.IsBusy, Is.False);
+            Assert.That(resumedClient.CallCount, Is.Zero);
+            Assert.That(resumed.LastMessage, Does.Contain("no longer installed"));
+        }
+
+        [Test]
+        public void Tick_UpdateAfterReloadStopsWhenLegacyPackageAppears()
+        {
+            var environment = new FakeEnvironment();
+            environment.InstalledVersions["com.studiogaku.input-assist"] = "1.0.0";
+            var store = new FakeStore();
+            var first = CreateCoordinator(new FakeClient(), environment, store);
+            var plan = ModuleInstallPlanner.BuildUpdates(
+                new[] { "com.studiogaku.input-assist" },
+                environment.InstalledVersions,
+                environment.AssetFolders);
+            Assert.That(first.TryStartUpdates(plan, out _), Is.True);
+            environment.InstalledVersions["com.studiogaku.input-repeat"] = "1.0.0";
+
+            var resumedClient = new FakeClient();
+            var resumed = CreateCoordinator(resumedClient, environment, store);
+            resumed.Tick();
+
+            Assert.That(resumed.IsBusy, Is.False);
+            Assert.That(resumedClient.CallCount, Is.Zero);
+            Assert.That(resumed.LastMessage, Does.Contain("com.studiogaku.input-repeat"));
+        }
+
+        [Test]
+        public void Tick_UpdateAfterReloadStopsWhenLegacyAssetCopyAppears()
+        {
+            var environment = new FakeEnvironment();
+            environment.InstalledVersions["com.studiogaku.input-assist"] = "1.0.0";
+            var store = new FakeStore();
+            var first = CreateCoordinator(new FakeClient(), environment, store);
+            var plan = ModuleInstallPlanner.BuildUpdates(
+                new[] { "com.studiogaku.input-assist" },
+                environment.InstalledVersions,
+                environment.AssetFolders);
+            Assert.That(first.TryStartUpdates(plan, out _), Is.True);
+            environment.AssetFolders.Add("InputRepeat");
+
+            var resumedClient = new FakeClient();
+            var resumed = CreateCoordinator(resumedClient, environment, store);
+            resumed.Tick();
+
+            Assert.That(resumed.IsBusy, Is.False);
+            Assert.That(resumedClient.CallCount, Is.Zero);
+            Assert.That(resumed.LastMessage, Does.Contain("Assets/Modules/InputRepeat"));
         }
 
         private static ModuleInstallCoordinator CreateCoordinator(

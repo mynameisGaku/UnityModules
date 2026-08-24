@@ -1,8 +1,8 @@
 {
-  "name": "InputCommand.Tests",
+  "name": "GameplayRules.Editor.Tests",
   "rootNamespace": "",
   "references": [
-    "InputCommand.Runtime"
+    "GameplayRules.Runtime"
   ],
   "includePlatforms": [
     "Editor"

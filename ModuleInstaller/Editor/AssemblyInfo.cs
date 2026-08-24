@@ -2,4 +2,4 @@
 
 using System.Runtime.CompilerServices;
 
-[assembly: InternalsVisibleTo("ModuleInstaller.Tests")]
+[assembly: InternalsVisibleTo("ModuleInstaller.Editor.Tests")]

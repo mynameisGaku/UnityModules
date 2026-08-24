@@ -231,16 +231,20 @@ namespace GameplayResources.Tests
         }
 
         [Test]
-        public void PublicRuntimeSurface_ContainsExactlyFiveTypes()
+        public void PublicRuntimeSurface_ContainsExactlyNineGameplayResourcesTypes()
         {
-            var actual = typeof(ResourceCostEvaluator).Assembly.GetExportedTypes().OrderBy(type => type.FullName, StringComparer.Ordinal).ToArray();
+            var actual = typeof(ResourceCostEvaluator).Assembly.GetExportedTypes().Where(type => string.Equals(type.Namespace, "GameplayResources", StringComparison.Ordinal)).OrderBy(type => type.FullName, StringComparer.Ordinal).ToArray();
             var expected = new[]
             {
                 typeof(ResourceAmount),
+                typeof(ResourceChangeResult),
                 typeof(ResourceCostError),
                 typeof(ResourceCostEvaluation),
                 typeof(ResourceCostEvaluator),
-                typeof(ResourceCostLine)
+                typeof(ResourceCostLine),
+                typeof(ResourceMeter),
+                typeof(ResourceMeterError),
+                typeof(ResourceSpendPolicy)
             }.OrderBy(type => type.FullName, StringComparer.Ordinal).ToArray();
             Assert.That(actual, Is.EqualTo(expected));
         }

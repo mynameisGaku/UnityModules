@@ -280,9 +280,9 @@ namespace ReplayTape.Tests
 
         /// <summary>public Runtime型をbuilder、value、reader、entry、errorの5つへ限定する。</summary>
         [Test]
-        public void RuntimeAssembly_ExportsExactlyFiveContractTypes()
+        public void PublicRuntimeSurface_ContainsExactlyFiveContractTypes()
         {
-            var names = typeof(ReplayTapeBuilder).Assembly.GetExportedTypes().Select(type => type.FullName).OrderBy(name => name).ToArray();
+            var names = typeof(ReplayTapeBuilder).Assembly.GetExportedTypes().Where(type => string.Equals(type.Namespace, "ReplayTape", StringComparison.Ordinal)).Select(type => type.FullName).OrderBy(name => name).ToArray();
             Assert.That(names, Is.EqualTo(new[]
             {
                 "ReplayTape.ReplayTapeBuilder",

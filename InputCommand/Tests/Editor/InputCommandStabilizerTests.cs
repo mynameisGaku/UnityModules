@@ -203,7 +203,7 @@ namespace InputStabilization.Tests
         [Test]
         public void PublicRuntimeSurface_ContainsExactlyThreeTypes()
         {
-            var exported = typeof(InputCommandStabilizer).Assembly.GetExportedTypes().OrderBy(type => type.FullName, StringComparer.Ordinal).ToArray();
+            var exported = typeof(InputCommandStabilizer).Assembly.GetExportedTypes().Where(type => string.Equals(type.Namespace, "InputStabilization", StringComparison.Ordinal)).OrderBy(type => type.FullName, StringComparer.Ordinal).ToArray();
 
             Assert.That(exported, Is.EqualTo(new[]
             {

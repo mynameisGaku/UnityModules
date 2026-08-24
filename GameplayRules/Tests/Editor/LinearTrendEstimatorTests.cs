@@ -168,14 +168,17 @@ namespace GameplayAnalysis.Tests
         }
 
         [Test]
-        public void PublicRuntimeSurface_ContainsExactlyThreeTypes()
+        public void PublicRuntimeSurface_ContainsExactlySixGameplayAnalysisTypes()
         {
-            var publicTypes = typeof(LinearTrendEstimator).Assembly.GetExportedTypes().OrderBy(type => type.FullName, StringComparer.Ordinal).ToArray();
+            var publicTypes = typeof(LinearTrendEstimator).Assembly.GetExportedTypes().Where(type => string.Equals(type.Namespace, "GameplayAnalysis", StringComparison.Ordinal)).OrderBy(type => type.FullName, StringComparer.Ordinal).ToArray();
             Assert.That(publicTypes, Is.EqualTo(new[]
             {
                 typeof(LinearTrendError),
                 typeof(LinearTrendEstimate),
-                typeof(LinearTrendEstimator)
+                typeof(LinearTrendEstimator),
+                typeof(SampleStatistics),
+                typeof(SampleStatisticsError),
+                typeof(SampleStatisticsResult)
             }.OrderBy(type => type.FullName, StringComparer.Ordinal).ToArray()));
         }
 

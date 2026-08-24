@@ -1,8 +1,8 @@
 {
-  "name": "ModuleInstaller.Tests",
-  "rootNamespace": "ModuleInstaller.Editor.Tests",
+  "name": "InputAssist.Editor.Tests",
+  "rootNamespace": "InputAssist.Tests",
   "references": [
-    "ModuleInstaller.Editor"
+    "InputAssist.Runtime"
   ],
   "includePlatforms": [
     "Editor"

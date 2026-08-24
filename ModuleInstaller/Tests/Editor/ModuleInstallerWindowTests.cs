@@ -67,7 +67,7 @@ namespace ModuleInstaller.Editor.Tests
                 Assert.That(sceneAndUiGuide, Is.Not.Null);
                 Assert.That(sceneAndUiPackages, Is.Not.Null);
                 Assert.That(sceneAndUiInstall, Is.Not.Null);
-                Assert.That(sceneAndUiPackages.text, Does.Contain("Scene Workspace").And.Contain("Scene Switching"));
+                Assert.That(sceneAndUiPackages.text, Does.Contain("Scene Workspace").And.Contain("Play Mode Tuning").And.Contain("Scene Switching"));
                 Assert.That(sceneAndUiCard.childCount, Is.EqualTo(5));
                 Assert.That(sceneAndUiCard.hierarchy.IndexOf(sceneAndUiHeading), Is.EqualTo(0));
                 Assert.That(sceneAndUiCard.hierarchy.IndexOf(sceneAndUiSummary), Is.EqualTo(1));
@@ -116,10 +116,24 @@ namespace ModuleInstaller.Editor.Tests
                 Assert.That(sceneWorkspaceRow.hierarchy.IndexOf(sceneWorkspaceReadmeButton), Is.EqualTo(1));
                 Assert.That(sceneWorkspaceRow.hierarchy.IndexOf(sceneWorkspaceInstallButton), Is.EqualTo(2));
 
+                var playModeTuningRow = window.rootVisualElement.Q<VisualElement>("package-com.studiogaku.play-mode-tuning");
+                Assert.That(playModeTuningRow, Is.Not.Null);
+                var playModeTuningLabel = playModeTuningRow.Q<Label>();
+                var playModeTuningReadmeButton = playModeTuningRow.Q<Button>("readme-package-com.studiogaku.play-mode-tuning");
+                var playModeTuningInstallButton = playModeTuningRow.Q<Button>("install-package-com.studiogaku.play-mode-tuning");
+                Assert.That(playModeTuningLabel.text, Does.Contain("Play Mode Tuning").And.Contain("Play Mode property edits").And.Contain("stale-plan check"));
+                Assert.That(playModeTuningReadmeButton.tooltip, Does.Contain("play-mode-tuning-v1.0.0/PlayModeTuning/README.md"));
+                Assert.That(playModeTuningInstallButton, Is.Not.Null);
+                Assert.That(playModeTuningRow.childCount, Is.EqualTo(3));
+                Assert.That(playModeTuningRow.hierarchy.IndexOf(playModeTuningLabel), Is.EqualTo(0));
+                Assert.That(playModeTuningRow.hierarchy.IndexOf(playModeTuningReadmeButton), Is.EqualTo(1));
+                Assert.That(playModeTuningRow.hierarchy.IndexOf(playModeTuningInstallButton), Is.EqualTo(2));
+
                 var sceneFlowRow = window.rootVisualElement.Q<VisualElement>("package-com.studiogaku.scene-flow");
                 Assert.That(sceneFlowRow, Is.Not.Null);
                 Assert.That(packages.contentContainer.hierarchy.IndexOf(sceneWorkspaceRow), Is.EqualTo(packages.contentContainer.hierarchy.IndexOf(buildAssistantRow) + 1));
-                Assert.That(packages.contentContainer.hierarchy.IndexOf(sceneFlowRow), Is.EqualTo(packages.contentContainer.hierarchy.IndexOf(sceneWorkspaceRow) + 1));
+                Assert.That(packages.contentContainer.hierarchy.IndexOf(playModeTuningRow), Is.EqualTo(packages.contentContainer.hierarchy.IndexOf(sceneWorkspaceRow) + 1));
+                Assert.That(packages.contentContainer.hierarchy.IndexOf(sceneFlowRow), Is.EqualTo(packages.contentContainer.hierarchy.IndexOf(playModeTuningRow) + 1));
             }
             finally
             {
