@@ -44,7 +44,8 @@ namespace ModuleInstaller.Editor
 
             return ModuleInstallPlanner.BuildUpdates(
                 packageNames,
-                Environment.GetInstalledPackageVersions());
+                Environment.GetInstalledPackageVersions(),
+                Environment.GetAssetModuleFolders());
         }
 
         internal static bool TryInstallBundle(string bundleId, out string message)

@@ -38,14 +38,23 @@ namespace ModuleInstaller.Editor
             var folders = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             for (var index = 0; index < ModuleCatalog.Entries.Count; index++)
             {
-                var folderName = ModuleCatalog.Entries[index].FolderName;
-                if (AssetDatabase.IsValidFolder($"Assets/Modules/{folderName}"))
+                var entry = ModuleCatalog.Entries[index];
+                AddIfPresent(folders, entry.FolderName);
+                for (var legacyIndex = 0; legacyIndex < entry.LegacyFolderNames.Count; legacyIndex++)
                 {
-                    folders.Add(folderName);
+                    AddIfPresent(folders, entry.LegacyFolderNames[legacyIndex]);
                 }
             }
 
             return folders;
+        }
+
+        private static void AddIfPresent(ISet<string> folders, string folderName)
+        {
+            if (AssetDatabase.IsValidFolder($"Assets/Modules/{folderName}"))
+            {
+                folders.Add(folderName);
+            }
         }
     }
 }

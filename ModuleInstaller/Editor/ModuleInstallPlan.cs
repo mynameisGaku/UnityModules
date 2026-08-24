@@ -8,7 +8,8 @@ namespace ModuleInstaller.Editor
     internal enum ModuleInstallIssueKind
     {
         UnknownPackage = 0,
-        AssetCopyConflict = 1
+        AssetCopyConflict = 1,
+        LegacyModuleConflict = 2
     }
 
     internal readonly struct ModuleInstallIssue

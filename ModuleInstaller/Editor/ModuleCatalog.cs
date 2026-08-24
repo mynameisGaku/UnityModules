@@ -7,6 +7,126 @@ namespace ModuleInstaller.Editor
 {
     internal static class ModuleCatalog
     {
+        private static readonly string[] InputAssistLegacyPackages =
+        {
+            "com.studiogaku.input-radial-dead-zone",
+            "com.studiogaku.input-vector-response-curve",
+            "com.studiogaku.input-vector-slew-limiter",
+            "com.studiogaku.input-vector-exponential-smoother",
+            "com.studiogaku.input-vector-direction-limiter",
+            "com.studiogaku.input-vector-weighted-mixer",
+            "com.studiogaku.input-direction-quantizer",
+            "com.studiogaku.input-quantizer",
+            "com.studiogaku.input-threshold-classifier",
+            "com.studiogaku.input-press-classifier",
+            "com.studiogaku.input-repeat",
+            "com.studiogaku.input-multi-tap-classifier"
+        };
+
+        private static readonly string[] InputAssistLegacyFolders =
+        {
+            "InputRadialDeadZone",
+            "InputVectorResponseCurve",
+            "InputVectorSlewLimiter",
+            "InputVectorExponentialSmoother",
+            "InputVectorDirectionLimiter",
+            "InputVectorWeightedMixer",
+            "InputDirectionQuantizer",
+            "InputQuantizer",
+            "InputThresholdClassifier",
+            "InputPressClassifier",
+            "InputRepeat",
+            "InputMultiTapClassifier"
+        };
+
+        private static readonly string[] InputCommandLegacyPackages =
+        {
+            "com.studiogaku.input-command-buffer",
+            "com.studiogaku.input-sequence-matcher",
+            "com.studiogaku.input-chord-matcher",
+            "com.studiogaku.input-command-arbiter",
+            "com.studiogaku.input-axis-conflict-resolver",
+            "com.studiogaku.input-stabilizer"
+        };
+
+        private static readonly string[] InputCommandLegacyFolders =
+        {
+            "InputCommandBuffer",
+            "InputSequenceMatcher",
+            "InputChordMatcher",
+            "InputCommandArbiter",
+            "InputAxisConflictResolver",
+            "InputStabilizer"
+        };
+
+        private static readonly string[] GameplayRulesLegacyPackages =
+        {
+            "com.studiogaku.resource-meter",
+            "com.studiogaku.resource-cost-evaluator",
+            "com.studiogaku.stat-modifier-stack",
+            "com.studiogaku.weighted-choice-table",
+            "com.studiogaku.weighted-integer-allocator",
+            "com.studiogaku.piecewise-linear-curve",
+            "com.studiogaku.rolling-sample-window",
+            "com.studiogaku.sample-statistics",
+            "com.studiogaku.linear-trend-estimator",
+            "com.studiogaku.threshold-tier-table",
+            "com.studiogaku.charge-cooldown",
+            "com.studiogaku.periodic-tick-planner",
+            "com.studiogaku.timed-stack-resolver",
+            "com.studiogaku.stack-transfer-planner",
+            "com.studiogaku.numeric-requirement-evaluator",
+            "com.studiogaku.utility-score-evaluator",
+            "com.studiogaku.stable-score-selector",
+            "com.studiogaku.damage-mitigation-evaluator",
+            "com.studiogaku.threat-score-resolver"
+        };
+
+        private static readonly string[] GameplayRulesLegacyFolders =
+        {
+            "ResourceMeter",
+            "ResourceCostEvaluator",
+            "StatModifierStack",
+            "WeightedChoiceTable",
+            "WeightedIntegerAllocator",
+            "PiecewiseLinearCurve",
+            "RollingSampleWindow",
+            "SampleStatistics",
+            "LinearTrendEstimator",
+            "ThresholdTierTable",
+            "ChargeCooldown",
+            "PeriodicTickPlanner",
+            "TimedStackResolver",
+            "StackTransferPlanner",
+            "NumericRequirementEvaluator",
+            "UtilityScoreEvaluator",
+            "StableScoreSelector",
+            "DamageMitigationEvaluator",
+            "ThreatScoreResolver"
+        };
+
+        private static readonly string[] DeterministicSimulationLegacyPackages =
+        {
+            "com.studiogaku.simulation-clock",
+            "com.studiogaku.deterministic-random",
+            "com.studiogaku.state-fingerprint",
+            "com.studiogaku.replay-tape",
+            "com.studiogaku.canonical-payload",
+            "com.studiogaku.fixed-point",
+            "com.studiogaku.generational-handle"
+        };
+
+        private static readonly string[] DeterministicSimulationLegacyFolders =
+        {
+            "SimulationClock",
+            "DeterministicRandom",
+            "StateFingerprint",
+            "ReplayTape",
+            "CanonicalPayload",
+            "FixedPoint",
+            "GenerationalHandle"
+        };
+
         private static readonly ModuleCatalogEntry[] CatalogEntries =
         {
             Entry("com.studiogaku.project-setup", "ProjectSetup", "project-setup-v1.15.0", "Project Setup", "Creates recommended project folders, Runtime and Editor assembly definitions, optional test assembly definitions, and Unity-ready version control files, then previews, backs up, applies, and restores Project Settings, build-target application identifiers, scripting backends, API compatibility levels, managed stripping levels, IL2CPP code generation, code generation defaults, duplicate naming defaults, scripting define symbols, Tags, Layers, Build Scenes, and the Play Mode Start Scene."),
@@ -26,11 +146,19 @@ namespace ModuleInstaller.Editor
             Entry("com.studiogaku.save-system", "SaveSystem", "save-system-v1.0.0", "Save Data", "Provides typed JSON slots, corruption checks, and backup recovery."),
             Entry("com.studiogaku.audio-control", "AudioControl", "audio-control-v1.0.0", "Audio Playback", "Controls pooled voices, limits, priority, handles, and fades."),
             Entry("com.studiogaku.diagnostics-context", "DiagnosticsContext", "diagnostics-context-v1.0.0", "Issue Report Writer", "Writes bounded context, breadcrumbs, and Unity logs to JSON."),
-            Entry("com.studiogaku.input-assist", "InputAssist", "input-assist-v2.0.0", "Input Helpers", "Shapes stick and trigger values with radial dead zones, response curves, rate limits, direction quantization and weighted mixing, and classifies button taps, holds, repeats and multi-taps."),
-            Entry("com.studiogaku.input-command", "InputCommand", "input-command-v1.0.0", "Input Commands", "Buffers, debounces and recognizes tick-based command input as sequences, chords, priority arbitration and opposing-axis resolution."),
+            Entry("com.studiogaku.input-assist", "InputAssist", "input-assist-v2.0.0", "Input Assist", "Shapes stick and trigger values with radial dead zones, response curves, rate limits, direction quantization and weighted mixing, and classifies button taps, holds, repeats and multi-taps.",
+                InputAssistLegacyPackages,
+                InputAssistLegacyFolders),
+            Entry("com.studiogaku.input-command", "InputCommand", "input-command-v1.0.0", "Input Command", "Provides discrete command buffering, tick-based sequence, chord and opposing-axis checks, stateless priority selection, and sample-based stabilization.",
+                InputCommandLegacyPackages,
+                InputCommandLegacyFolders),
             Entry("com.studiogaku.input-gate", "InputGate", "input-gate-v1.0.0", "Input Pause", "Temporarily disables configured Input System action maps."),
-            Entry("com.studiogaku.gameplay-rules", "GameplayRules", "gameplay-rules-v1.0.0", "Gameplay Rules", "Evaluates resources and costs, stat modifiers, weighted selection and allocation, curves and tiers, sample statistics and trends, timed stacks and periodic ticks, requirements, utility and threat scores, and damage mitigation."),
-            Entry("com.studiogaku.deterministic-simulation", "DeterministicSimulation", "deterministic-simulation-v1.0.0", "Deterministic Simulation", "Combines fixed-step clocks, reproducible random state, canonical payload encoding, fixed-point arithmetic, replay tapes, state fingerprints and generational handles into one reproducibility base.")
+            Entry("com.studiogaku.gameplay-rules", "GameplayRules", "gameplay-rules-v1.0.0", "Gameplay Rules", "Evaluates resources and costs, stat modifiers, weighted selection and allocation, curves and tiers, sample statistics and trends, timed stacks and periodic ticks, requirements, utility and threat scores, and damage mitigation.",
+                GameplayRulesLegacyPackages,
+                GameplayRulesLegacyFolders),
+            Entry("com.studiogaku.deterministic-simulation", "DeterministicSimulation", "deterministic-simulation-v1.0.0", "Deterministic Simulation", "Combines fixed-step clocks, reproducible random state, canonical payload encoding, fixed-point arithmetic, replay tapes, state fingerprints and generational handles into one reproducibility base.",
+                DeterministicSimulationLegacyPackages,
+                DeterministicSimulationLegacyFolders)
         };
 
         private static readonly ModuleBundle[] CatalogBundles =
@@ -40,10 +168,10 @@ namespace ModuleInstaller.Editor
                 "Start with Tools > Project Setup > Open, audit textures from Tools > Asset Import Audit > Open, then preview a release plan from Tools > Build Assistant > Open.",
                 "Installation changes Packages only. Project Setup and Asset Import Audit change selected settings only after explicit preview and apply actions. Build Assistant writes new build output and bounded Library history only after review and confirmation.",
                 "com.studiogaku.project-setup", "com.studiogaku.asset-import-audit", "com.studiogaku.inspector", "com.studiogaku.drawing", "com.studiogaku.build-guard", "com.studiogaku.reference-finder", "com.studiogaku.build-assistant"),
-            Bundle("scene-and-ui", "Scene and UI", "Prepare reusable Editor scene workspaces, then build a predictable runtime scene, screen, pause, and startup flow.", ModuleBundleTier.Recommended,
+            Bundle("scene-and-ui", "Scene and UI", "Prepare reusable Editor scene workspaces, carry reviewed Play Mode tuning back into saved Scenes, then build a predictable runtime scene, screen, pause, and startup flow.", ModuleBundleTier.Recommended,
                 "Use this when switching between multi-scene editing setups, carrying Play Mode edits back into saved Scenes, or implementing scene changes, fades, safe areas, pause behavior, or startup order together.",
-                "Start with Tools > Scene Workspace > Open, select or create a profile, configure its ordered scenes, then Preview Changes before switching.",
-                "Installation changes Packages only. Create New Profile creates an asset under Assets. Editing or capturing a setup changes only the selected profile and does not save it automatically. After Preview and confirmation, Switch Workspace changes open Editor Scene order, Loaded state, and Active Scene; it never saves or discards Scene changes. Runtime behavior starts only after components or services are added and configured.",
+                "Start with Tools > Scene Workspace > Open for reusable scene setups. For tuning, open Tools > Play Mode Tuning > Open, select targets before Play, capture manually during Play, then Preview After Play before confirming.",
+                "Installation changes Packages only. Scene Workspace changes Editor Scene order, Loaded state, and Active Scene only after Preview and confirmation, and never saves or discards Scene changes. Play Mode Tuning changes selected values only when the same non-stale reviewed plan is applied once; it marks the Scene dirty without saving it and reports apply and rollback outcomes separately. Runtime behavior starts only after components or services are added and configured.",
                 "com.studiogaku.scene-workspace", "com.studiogaku.play-mode-tuning", "com.studiogaku.scene-flow", "com.studiogaku.screen-transition", "com.studiogaku.adaptive-layout", "com.studiogaku.time-control", "com.studiogaku.startup-flow"),
             Bundle("game-services", "Game Services", "Add save data, controlled audio playback, and manual issue reports.", ModuleBundleTier.Recommended,
                 "Use this when the project needs reusable services for save slots, audio voices, or player-created diagnostic reports.",
@@ -100,9 +228,16 @@ namespace ModuleInstaller.Editor
             return false;
         }
 
-        private static ModuleCatalogEntry Entry(string packageName, string folderName, string tag, string displayName, string summary)
+        private static ModuleCatalogEntry Entry(
+            string packageName,
+            string folderName,
+            string tag,
+            string displayName,
+            string summary,
+            string[] legacyPackageNames = null,
+            string[] legacyFolderNames = null)
         {
-            return new ModuleCatalogEntry(packageName, folderName, tag, displayName, summary);
+            return new ModuleCatalogEntry(packageName, folderName, tag, displayName, summary, legacyPackageNames, legacyFolderNames);
         }
 
         private static ModuleBundle Bundle(
