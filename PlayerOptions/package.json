@@ -1,0 +1,37 @@
+{
+  "name": "com.studiogaku.player-options",
+  "version": "1.0.0",
+  "displayName": "Player Options",
+  "description": "音量、quality、resolution、window mode、refresh rate、target frame rateを型付き設定として扱い、PlayerPrefsへの保存とUnity applicationへの反映を明示的に分離するRuntimeモジュール。破損・未来schemaの保存値は自動上書きせず、vSync変更、key binding、cloud同期、端末ごとの適用保証は含みません。",
+  "unity": "6000.5",
+  "unityRelease": "7f1",
+  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/blob/player-options-v1.0.0/PlayerOptions/Documentation~/index.md",
+  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/player-options-v1.0.0/PlayerOptions/CHANGELOG.md",
+  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/player-options-v1.0.0/PlayerOptions/LICENSE.md",
+  "license": "Refer to LICENSE.md file",
+  "keywords": [
+    "player-options",
+    "settings",
+    "audio",
+    "quality",
+    "resolution",
+    "player-prefs"
+  ],
+  "author": {
+    "name": "StudioGaku",
+    "email": "gaku.fujimoto.business@gmail.com",
+    "url": "https://github.com/mynameisGaku/UnityModules"
+  },
+  "dependencies": {
+    "com.unity.modules.audio": "1.0.0",
+    "com.unity.modules.jsonserialize": "1.0.0",
+    "com.unity.modules.uielements": "1.0.0"
+  },
+  "samples": [
+    {
+      "displayName": "Player Options Basics",
+      "description": "application-owned serviceのLoad→Applyと、Load、Set State、Apply、Saveを分けた操作結果を確認するUI Toolkitサンプル。",
+      "path": "Samples~/Basics"
+    }
+  ]
+}

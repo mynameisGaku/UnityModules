@@ -32,6 +32,7 @@ READMEとモジュール一覧では、日本語で目的を先に示す。Packa
 | 入力の一時停止 | InputGate | Gameplay の入力を一時的に止める。 |
 | プロジェクト不備確認・修復 | BuildGuard | Scene・PrefabのMissing Scriptなどを見つけ、Prefabの構造変更を別flowでreviewする。 |
 | 不具合レポート保存 | DiagnosticsContext | 調査用の状態とログを JSON に残す。 |
+| Player設定 | Player Options | 音量・表示・品質・frame rateの保存とUnityへの適用を分けて扱う。 |
 | 入力補助 | Input Assist | スティック値の補正とbutton gestureをまとめて扱う。 |
 | 入力デバイス表示 | Input Device Display | 最後に実入力したdeviceを表示向けfamilyへ分類する。 |
 | 入力コマンド判定 | Input Command | 先行入力・順序・同時押し・対向軸を明示tickで判定し、優先順位選択と入力安定化も扱う。 |
@@ -71,6 +72,12 @@ manufacturer文字列の推測、入力消費、rebind、pairing、player別追�
 `Assets`と導入済み`Packages`のasmdefをread-onlyで走査し、参照元・assembly・参照先の3列graphと構造上の問題を表示する。
 Project Setupはasmdefの作成までを所有し、このmoduleは作成後の参照関係だけを監査するため、変更責務を分離して独立packageとして維持する。
 未使用参照やcompile時間の推定、asmdefの書換え、build停止は行わない。
+
+### Player設定（Player Options）
+
+音量、quality、resolution、window mode、refresh rate、target frame rateを一つの型付きsnapshotとして扱い、Load・Set・Apply・Saveを別操作にする。
+application bootstrapがserviceを一つ明示所有し、singleton、自動GameObject、static eventは作らない。
+SaveSystemのslot・backup・破損復旧、AudioControlのvoice pool、Input Systemのrebindとは責務を分ける。PlayerPrefsの強い耐久性、key binding、cloud同期、vSync変更は対象外にする。
 
 ### ゲーム判定・計算（Gameplay Rules）
 

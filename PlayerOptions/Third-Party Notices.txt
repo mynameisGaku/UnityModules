@@ -1,0 +1,8 @@
+Third-Party Notices
+===================
+
+このパッケージ本体には、第三者が制作したコード、フォント、音声、画像、映像その他のコンポーネントを同梱していません。
+
+package manifestはUnity組込みAudio module `com.unity.modules.audio` 1.0.0、JSON Serialize module `com.unity.modules.jsonserialize` 1.0.0、同梱Basics sampleのためUnity組込みUI Toolkit module `com.unity.modules.uielements` 1.0.0を依存関係として宣言します。
+
+Unity Editor、UnityEngine、Unity Audio、Unity JSON Serialize、およびUnity UI Toolkit APIは実行環境から利用し、このパッケージ内へ再配布していません。

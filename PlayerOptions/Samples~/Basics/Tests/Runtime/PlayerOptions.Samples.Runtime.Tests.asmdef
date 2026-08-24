@@ -1,0 +1,22 @@
+{
+    "name": "PlayerOptions.Samples.Runtime.Tests",
+    "rootNamespace": "PlayerOptions.Samples.Runtime.Tests",
+    "references": [
+        "PlayerOptions.Runtime",
+        "PlayerOptions.Samples",
+        "UnityEngine.TestRunner"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

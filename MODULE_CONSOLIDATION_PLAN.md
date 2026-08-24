@@ -2,7 +2,7 @@
 
 `dev` に当初存在した 65 パッケージを対象に、重複の実測結果と統合判断、重複しない追加機能候補をまとめる。
 案 A の実施後は 60 パッケージ、案 B・C と Input Assist への吸収後は 24 パッケージとなった。
-案 D・E は追加検討の結果、配布単位の変更としては採用しない。追加機能はProjectSetupのLayer衝突設定、InputDeviceDisplay、AssemblyDependencyAuditから順に実装している。
+案 D・E は追加検討の結果、配布単位の変更としては採用しない。追加機能はProjectSetupのLayer衝突設定、InputDeviceDisplay、AssemblyDependencyAudit、PlayerOptionsから順に実装している。
 判断基準は [モジュール設計・案内ガイド](MODULE_GUIDE.md) の「配布単位の決め方」に従う。
 
 ---
@@ -28,7 +28,7 @@
 | 案 A の Input Command 統合後 | 60 | 6 パッケージを 1 パッケージへ統合 |
 | 案 A〜C 完了後 | 24 | Input Assist への 12 パッケージ吸収、Gameplay Rules と Deterministic Simulation の新設を含む |
 
-現在の `dev` は 26 パッケージ、177 asmdef、Module Installer の catalog は 22 entry である。InputDeviceDisplayとAssemblyDependencyAuditは公開tag作成前のためcatalogへ先行登録していない。
+現在の `dev` は 27 パッケージ、182 asmdef、Module Installer の catalog は 22 entry である。InputDeviceDisplay、AssemblyDependencyAudit、PlayerOptionsは公開tag作成前のためcatalogへ先行登録していない。
 24 パッケージへの到達は案 A〜C の結果であり、案 D・E による削減を含まない。
 
 ### 純粋計算パッケージが全体の 3 分の 2
@@ -158,7 +158,7 @@ assembly 名をもう一度変えて移行負担を増やす。現時点では�
 ### 統合しない方がよいもの
 
 ProjectSetup / BuildAssistant / BuildGuard / AssetImportAudit / ReferenceFinder / ModuleInstaller /
-SceneFlow / ScreenTransition / AdaptiveLayout / TimeControl / StartupFlow / SaveSystem / AudioControl /
+SceneFlow / ScreenTransition / AdaptiveLayout / TimeControl / StartupFlow / SaveSystem / PlayerOptions / AudioControl /
 DiagnosticsContext / InputGate / Inspector / Drawing / Containers。
 
 いずれも所有する Unity API・寿命・導入理由が独立しており、MODULE_GUIDE の 4 条件を単独で満たす。
@@ -236,12 +236,11 @@ Input Systemのglobalな実入力eventを観測し、最後に操作されたdev
 Input Assistの値整形、InputGateのAction Map停止、Input Systemのpairingやrebindを変更せず、利用側UIが所有する文字・glyph・画像・styleを選ぶための状態だけを提供する。
 追跡はapplication全体で1つとし、player別追跡、入力消費、永続化、glyph assetは対象外にした。
 
-**2. ユーザー設定（オプション）の保存（新規モジュール）**
+**2. ユーザー設定（オプション）の保存（PlayerOptions 1.0.0で実装）**
 
-`Screen.SetResolution` 0 件、`Application.targetFrameRate` 0 件、`QualitySettings` は Drawing の色空間判定 1 箇所のみ。
-音量・解像度・リフレッシュレート・品質・キーコンフィグを、型付き default・version migration・変更通知つきで扱う。
-PlayerPrefs を直に使うと毎回 default と migration を書き直すことになる。
-SaveSystem はゲーム進行の slot・破損検出・backup が責務なので重複しない。
+音量・解像度・window mode・refresh rate・target frame rate・品質を一つの型付きsnapshotにし、Load・Set・Apply・Saveを別操作として実装した。
+schema付きの単一JSON文書をPlayerPrefsへ保存し、破損値と未来schemaは自動上書きしない。品質はindexと一意な名前を照合し、Applyの部分結果とrollback失敗もfield maskで返す。
+PlayerPrefsの強い耐久性、key binding、cloud同期、vSync変更は対象外とした。SaveSystemのslot・破損検出・backup、AudioControlのvoice pool、Input Systemのrebindとは責務が重複しない。
 
 **3. 物理レイヤー衝突マトリクスの適用（ProjectSetup 1.16.0で実装）**
 
@@ -254,7 +253,7 @@ backup schema v16は名前のないslotを含む32行matrix全体を保持し、
 
 ProjectSetupがasmdefを作る責務とは分け、`Assets`と導入済み`Packages`のasmdefをread-onlyで走査するEditor専用moduleを追加した。
 参照元・assembly・参照先の3列graph、循環、未解決・曖昧・自己参照、Playerで有効なassembly→Editor専用assemblyの逆参照、platform指定の矛盾を表示する。
-現在の177 asmdefを持つこのrepo自体を最初の利用者とし、未使用参照やcompile時間は推測せず、asmdefの書換えやbuild停止も行わない。
+現在の182 asmdefを持つこのrepo自体を最初の利用者とし、未使用参照やcompile時間は推測せず、asmdefの書換えやbuild停止も行わない。
 
 ### 優先度：中
 

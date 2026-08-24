@@ -1,0 +1,47 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <Style src="PlayerOptionsBasics.uss" />
+    <ui:VisualElement name="player-options-basics-ready" class="player-options-screen">
+        <ui:ScrollView class="player-options-scroll">
+            <ui:VisualElement class="player-options-card">
+                <ui:Label text="Player Options Basics" class="player-options-title" />
+                <ui:Label text="Load、Set State、Apply、Saveは別操作です。起動時だけapplication ownerがLoad成功後にApplyします。" class="player-options-description" />
+
+                <ui:VisualElement class="player-options-section">
+                    <ui:Label text="Display request" class="player-options-section-title" />
+                    <ui:VisualElement class="player-options-field-row">
+                        <ui:IntegerField name="player-options-width" label="Width" value="1920" class="player-options-field" />
+                        <ui:IntegerField name="player-options-height" label="Height" value="1080" class="player-options-field" />
+                    </ui:VisualElement>
+                    <ui:DropdownField name="player-options-full-screen-mode" label="Window Mode" class="player-options-wide-field" />
+                    <ui:VisualElement class="player-options-field-row">
+                        <ui:LongField name="player-options-refresh-numerator" label="Refresh numerator" value="0" class="player-options-field" />
+                        <ui:LongField name="player-options-refresh-denominator" label="Refresh denominator" value="0" class="player-options-field" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+
+                <ui:VisualElement class="player-options-section">
+                    <ui:Label text="Performance and audio" class="player-options-section-title" />
+                    <ui:IntegerField name="player-options-target-frame-rate" label="Target Frame Rate (-1 or positive)" value="-1" class="player-options-wide-field" />
+                    <ui:Slider name="player-options-master-volume" label="Master Volume" low-value="0" high-value="1" value="1" show-input-field="true" class="player-options-wide-field" />
+                    <ui:DropdownField name="player-options-quality" label="Quality" class="player-options-wide-field" />
+                </ui:VisualElement>
+
+                <ui:VisualElement class="player-options-actions">
+                    <ui:Button name="player-options-load" text="Load" class="player-options-button" />
+                    <ui:Button name="player-options-set" text="Set State" class="player-options-button player-options-button-set" />
+                    <ui:Button name="player-options-apply" text="Apply" class="player-options-button player-options-button-apply" />
+                    <ui:Button name="player-options-save" text="Save" class="player-options-button player-options-button-save" />
+                </ui:VisualElement>
+
+                <ui:VisualElement class="player-options-status-card">
+                    <ui:Label name="player-options-state" text="State: initializing" class="player-options-state" />
+                    <ui:Label name="player-options-result" text="Result: waiting" class="player-options-result" />
+                    <ui:Label name="player-options-warning" text="Warnings: None" class="player-options-warning" />
+                    <ui:Label name="player-options-error" text="Error: None" class="player-options-error" />
+                </ui:VisualElement>
+
+                <ui:Label text="SaveだけがPlayerPrefsへ書きます。resolution requestは後続frameで反映されることがあります。" class="player-options-footnote" />
+            </ui:VisualElement>
+        </ui:ScrollView>
+    </ui:VisualElement>
+</ui:UXML>

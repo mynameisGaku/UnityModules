@@ -1,0 +1,16 @@
+{
+    "name": "PlayerOptions.Samples",
+    "rootNamespace": "PlayerOptions.Samples",
+    "references": [
+        "PlayerOptions.Runtime"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

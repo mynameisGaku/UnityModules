@@ -3,7 +3,7 @@
 Unity で繰り返し発生する設定、実装、確認作業を減らすためのモジュール集。
 利用者向けの名前は日本語で目的を示し、フォルダー名・名前空間・UPM 識別子には互換性のため英語の技術名を残している。
 
-対応versionはpackageごとに異なります。25packageは**Unity 6000.5.7f1以降**、Containersは**Unity 6000.0以降**です。
+対応versionはpackageごとに異なります。26packageは**Unity 6000.5.7f1以降**、Containersは**Unity 6000.0以降**です。
 
 ---
 
@@ -23,6 +23,7 @@ Unity で繰り返し発生する設定、実装、確認作業を減らすた�
 | Pause、Slow、Fast を複数機能から安全に使いたい | [ゲーム時間制御（TimeControl）](TimeControl/) | lease を重ねて `Time.timeScale` を競合なく制御する。 |
 | BGM・SE の同時再生数や fade をまとめたい | [音声再生管理（AudioControl）](AudioControl/) | AudioSource pool、優先度、停止 handle、fade を管理する。 |
 | セーブ枠、破損、バックアップを毎回実装したくない | [セーブデータ管理（SaveSystem）](SaveSystem/) | 型付き JSON、複数 slot、破損検出、backup 復旧を使う。 |
+| 音量・quality・resolution・window mode・target frame rateの保存と適用を毎回書きたくない | [Player設定（Player Options）](PlayerOptions/) | 型付きsnapshotをLoad・Set・Apply・Saveに分け、未来schemaや破損値を自動上書きせず扱う。 |
 | SceneやPrefabのMissing Script・削除済み参照を直し、Prefabの構造変更も別flowで確認したい | [プロジェクト不備確認・修復（Build Guard）](BuildGuard/) | build対象Sceneと選択Prefabの壊れた参照を検査し、Missing ScriptはUndo付きで除去する。Prefabの追加・削除GameObject／Componentはbuildを止めないreview windowで確認する。 |
 | Texture Import Settingsを大量のAssetへ一括確認・適用したい | [アセット設定チェック（Asset Import Audit）](AssetImportAudit/) | Assets配下をPreviewし、共通設定とStandalone・Android・iOS別Overrideを選択または全件へ適用する。Preview後の外部変更は拒否する。 |
 | Assetの利用箇所を確認・置換し、複数の名前もまとめて整理したい | [アセット整理・参照管理（Reference Finder）](ReferenceFinder/) | 直接・間接参照の検索、安全な参照置換、GUIDを維持する一括RenameをPreview後に実行する。 |
@@ -62,6 +63,7 @@ Unity で繰り返し発生する設定、実装、確認作業を減らすた�
 | [インスペクター入力補助（Inspector）](Inspector/) | Inspector 拡張の属性 43 種。条件による表示・非表示、グループ化とタブ、入力値の検証、メソッドのボタン化。**Unity 6000.5.7f1以降**。 | なし |
 | [デバッグ描画（Drawing）](Drawing/) | 実行中の線・矢印・箱・球・経路・文字をコード1行で描くデバッグ可視化。Development Build専用呼び出しと持続時間に対応。**Unity 6000.5.7f1以降**。 | なし |
 | [セーブデータ管理（SaveSystem）](SaveSystem/) | 型付きJSON保存、複数スロット、破損検出、可能な環境での原子的置換、1世代バックアップ復旧。依存なし。**Unity 6000.5.7f1以降**。 | なし |
+| [Player設定（Player Options）](PlayerOptions/) | application所有のserviceが音量、quality、resolution、window mode、refresh rate、target frame rateを一つの型付きsnapshotで扱う。Load・Set・Apply・Saveを分離し、未来schema・破損文書は保全する。PlayerPrefsに強い耐久性やtransactionを主張せず、key binding・cloud同期・vSync変更は含めない。**Unity 6000.5.7f1以降**。 | com.unity.modules.audio / jsonserialize / uielements 1.0.0 |
 | [シーン切り替え（SceneFlow）](SceneFlow/) | 完全なSceneパスでSingle・Additive読込、有効Scene切替、Unloadを直列化し、開始前条件と完了後状態を結果で返す。**Unity 6000.5.7f1以降**。 | なし |
 | [画面フェード（ScreenTransition）](ScreenTransition/) | UI Toolkitの全画面オーバーレイでCover・Revealを非スケール時間に実行し、色・時間・補間方法・完了結果を明示する。**Unity 6000.5.7f1以降**。 | com.unity.modules.uielements 1.0.0 |
 | [画面サイズ・ノッチ対応（AdaptiveLayout）](AdaptiveLayout/) | `Screen.safeArea`をUI ToolkitとRectTransformへ適用し、ノッチ、角丸、画面回転、解像度変更に追従する。**Unity 6000.5.7f1以降**。 | com.unity.modules.uielements 1.0.0 |
@@ -177,6 +179,11 @@ Assets/
     │   ├── Runtime/         SaveSystem.Runtime
     │   ├── Tests/           SaveSystem.Tests
     │   └── Samples~/        1 assembly
+    ├── PlayerOptions/
+    │   ├── Runtime/         PlayerOptions.Runtime
+    │   ├── Tests/Editor/    PlayerOptions.Editor.Tests
+    │   ├── Tests/Runtime/   PlayerOptions.Runtime.Tests
+    │   └── Samples~/        2 assemblies
     ├── AudioControl/
     │   ├── Runtime/         AudioControl.Runtime
     │   ├── Tests/           AudioControl.Tests, AudioControl.PlayMode.Tests
