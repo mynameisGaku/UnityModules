@@ -1,0 +1,8 @@
+Third-Party Notices
+===================
+
+このパッケージ本体には、第三者が制作したコード、フォント、音声、画像、映像その他のコンポーネントを同梱していません。
+
+package manifestの依存関係は空です。Unity組込みmoduleへの依存宣言はありません。
+
+Unity EditorおよびUnityEngine APIは実行環境から利用し、このパッケージ内へ再配布していません。

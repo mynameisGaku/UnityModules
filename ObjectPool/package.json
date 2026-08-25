@@ -1,0 +1,32 @@
+{
+  "name": "com.studiogaku.object-pool",
+  "version": "1.0.0",
+  "displayName": "Object Pool",
+  "description": "1つのprefabのinstanceをidleとして保持し再利用することで、InstantiateとDestroyの発生を減らすRuntimeモジュール。spawn、release、preload、trimを明示的なownerが操作し、アクティブ上限、idle上限、Lifo/Fifo再利用順序、統計カウンタとPoolErrorを提供する。singleton、自動生成、自動回収は含まない。",
+  "unity": "6000.5",
+  "unityRelease": "7f1",
+  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/blob/object-pool-v1.0.0/ObjectPool/Documentation~/index.md",
+  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/object-pool-v1.0.0/ObjectPool/CHANGELOG.md",
+  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/object-pool-v1.0.0/ObjectPool/LICENSE.md",
+  "license": "Refer to LICENSE.md file",
+  "keywords": [
+    "object-pool",
+    "pool",
+    "instantiate",
+    "reuse",
+    "performance"
+  ],
+  "author": {
+    "name": "StudioGaku",
+    "email": "gaku.fujimoto.business@gmail.com",
+    "url": "https://github.com/mynameisGaku/UnityModules"
+  },
+  "dependencies": {},
+  "samples": [
+    {
+      "displayName": "Object Pool Basics",
+      "description": "空のSceneで空GameObjectにObjectPoolBasicsControllerを追加してPlayすると、spawn、release、preload、clearと統計をGUIで確認できるサンプル。",
+      "path": "Samples~/Basics"
+    }
+  ]
+}
