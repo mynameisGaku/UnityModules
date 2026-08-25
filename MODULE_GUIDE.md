@@ -26,6 +26,7 @@ READMEとモジュール一覧では、日本語で目的を先に示す。Packa
 | モジュール導入アシスタント | Module Installer | 用途別セットから必要なモジュールをまとめて導入する。 |
 | プロジェクト初期設定 | Project Setup | 新規Projectで繰り返す設定とTag・Layer・Sorting Layer・3D/2D Layer Collisionをprofileからまとめて適用する。 |
 | Assembly依存チェック | Assembly Dependency Audit | asmdefの参照元・参照先、循環、PlayerからEditorへの逆参照などをread-onlyで確認する。 |
+| Localization key監査 | Localization Key Audit | required Localeのdirect coverageとtable integrity、宣言済みscopeの静的参照をread-onlyで確認する。 |
 | シーン切り替え | SceneFlow | Scene の読込・追加・切替・解放を扱う。 |
 | 画面フェード | ScreenTransition | 画面を覆う・戻す演出を扱う。 |
 | ゲーム時間制御 | TimeControl | 一時停止・スロー・倍速を扱う。 |
@@ -75,6 +76,12 @@ manufacturer文字列の推測、入力消費、rebind、pairing、player別追�
 `Assets`と導入済み`Packages`のasmdefをread-onlyで走査し、参照元・assembly・参照先の3列graphと構造上の問題を表示する。
 Project Setupはasmdefの作成までを所有し、このmoduleは作成後の参照関係だけを監査するため、変更責務を分離して独立packageとして維持する。
 未使用参照やcompile時間の推定、asmdefの書換え、build停止は行わない。
+
+### Localization key監査（Localization Key Audit）
+
+Unity LocalizationのShared Table Dataをtyped loadする前にraw serialized representationを検証し、required Localeのdirect table／entry／value、duplicate・orphan integrity、宣言済み`Assets` scopeのGUID＋key ID参照を手動で表示する。
+欠落または空のcollection GUIDをloadするとUnity Localization 1.5.12がassetをdirtyにし得るため、raw preflightに失敗した場合はtyped APIを呼ばず監査全体を停止する。
+fallback後のruntime翻訳可否やkeyの未使用は断定せず、build callback、autofix、entry追加、値の書換え、削除は行わない。
 
 ### Player設定（Player Options）
 

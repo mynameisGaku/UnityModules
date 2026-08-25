@@ -2,7 +2,7 @@
 
 `dev` に当初存在した 65 パッケージを対象に、重複の実測結果と統合判断、重複しない追加機能候補をまとめる。
 案 A の実施後は 60 パッケージ、案 B・C と Input Assist への吸収後は 24 パッケージとなった。
-案 D・E は追加検討の結果、配布単位の変更としては採用しない。追加機能はProjectSetupのLayer衝突設定、InputDeviceDisplay、AssemblyDependencyAudit、PlayerOptionsから順に実装している。
+案 D・E は追加検討の結果、配布単位の変更としては採用しない。追加機能はProjectSetupのLayer衝突設定、InputDeviceDisplay、AssemblyDependencyAudit、PlayerOptions、LocalizationKeyAuditに加え、ObjectPool、Haptics、PerfMeterも実装している。
 判断基準は [モジュール設計・案内ガイド](MODULE_GUIDE.md) の「配布単位の決め方」に従う。
 
 ---
@@ -28,7 +28,7 @@
 | 案 A の Input Command 統合後 | 60 | 6 パッケージを 1 パッケージへ統合 |
 | 案 A〜C 完了後 | 24 | Input Assist への 12 パッケージ吸収、Gameplay Rules と Deterministic Simulation の新設を含む |
 
-現在の `dev` は 27 パッケージ、182 asmdef、Module Installer の catalog は 22 entry である。InputDeviceDisplay、AssemblyDependencyAudit、PlayerOptionsは公開tag作成前のためcatalogへ先行登録していない。
+現在の `dev` は 31 パッケージ、196 asmdef、Module Installer の catalog は 22 entry である。InputDeviceDisplay、AssemblyDependencyAudit、PlayerOptions、LocalizationKeyAudit、ObjectPool、Haptics、PerfMeterは公開tag作成前のためcatalogへ先行登録していない。
 24 パッケージへの到達は案 A〜C の結果であり、案 D・E による削減を含まない。
 
 ### 純粋計算パッケージが全体の 3 分の 2
@@ -158,7 +158,8 @@ assembly 名をもう一度変えて移行負担を増やす。現時点では�
 ### 統合しない方がよいもの
 
 ProjectSetup / BuildAssistant / BuildGuard / AssetImportAudit / ReferenceFinder / ModuleInstaller /
-SceneFlow / ScreenTransition / AdaptiveLayout / TimeControl / StartupFlow / SaveSystem / PlayerOptions / AudioControl /
+SceneFlow / ScreenTransition / AdaptiveLayout / TimeControl / StartupFlow / SaveSystem / PlayerOptions / LocalizationKeyAudit /
+ObjectPool / Haptics / PerfMeter / AudioControl /
 DiagnosticsContext / InputGate / Inspector / Drawing / Containers。
 
 いずれも所有する Unity API・寿命・導入理由が独立しており、MODULE_GUIDE の 4 条件を単独で満たす。
@@ -253,7 +254,7 @@ backup schema v16は名前のないslotを含む32行matrix全体を保持し、
 
 ProjectSetupがasmdefを作る責務とは分け、`Assets`と導入済み`Packages`のasmdefをread-onlyで走査するEditor専用moduleを追加した。
 参照元・assembly・参照先の3列graph、循環、未解決・曖昧・自己参照、Playerで有効なassembly→Editor専用assemblyの逆参照、platform指定の矛盾を表示する。
-現在の182 asmdefを持つこのrepo自体を最初の利用者とし、未使用参照やcompile時間は推測せず、asmdefの書換えやbuild停止も行わない。
+現在の196 asmdefを持つこのrepo自体を最初の利用者とし、未使用参照やcompile時間は推測せず、asmdefの書換えやbuild停止も行わない。
 
 ### 優先度：中
 
@@ -269,10 +270,11 @@ BuildAssistantは通常の`BuildPipeline.BuildPlayer`を呼ぶため、BuildGuar
 BuildAssistantのPreviewへ別moduleの結果を集約すると、package間のhard dependency、staleな重複scan、blockerとadvisoryの混在を招くため追加実装は見送る。
 AssetImportAuditは期待するimport policy、ProjectSetupは利用者が選んだprofileを前提とするmanual Previewとして独立を維持し、Structural Prefab Overrideもbuild blockerへ昇格しない。
 
-**7. 未翻訳・未使用の文字列キー検査（新規 Editor モジュール）**
+**7. Localization keyのdirect coverage／integrity監査（LocalizationKeyAudit 1.0.0で実装）**
 
-Localization 関連の実装は repo 全体で 0 件だが、翻訳の仕組み自体は Unity 公式パッケージがあるので作らない。
-重複しないのは「キーの過不足を build 前に検出する Editor 検査」の側。
+当初案の「未翻訳・未使用keyをbuild前に検出」は、locale fallback、dynamic lookup、Smart String内のnested参照、Addressablesや外部dataを網羅できず、安全に断定できないため採用しなかった。
+代わりにUnity Localization 1.5.12をhard dependencyとするEditor専用moduleを追加し、明示されたrequired Localeのdirect table／entry／value、duplicate・orphan integrity、宣言済み`Assets` scopeで認識できるGUID＋key ID参照だけを手動監査する。
+Shared Table Dataはtyped load前にraw serialized representationを全件preflightし、read-only保証を確立できない場合はtyped APIを呼ばず全体を停止する。結果はadvisoryであり、runtime翻訳可否やkeyの未使用を断定せず、build blocker、autofix、削除を行わない。
 
 ### 見送り
 

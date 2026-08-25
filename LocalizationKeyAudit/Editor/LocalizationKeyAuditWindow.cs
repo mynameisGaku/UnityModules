@@ -1,0 +1,659 @@
+// SPDX-License-Identifier: MIT
+
+using System;
+using System.Collections.Generic;
+using System.Text;
+using UnityEditor;
+using UnityEngine;
+
+namespace LocalizationKeyAudit.Editor
+{
+    /// <summary>
+    /// 必須 Locale の direct entry と宣言済み Assets scope の static reference coverage を手動表示します。
+    /// </summary>
+    internal sealed class LocalizationKeyAuditWindow : EditorWindow
+    {
+        /// <summary>問題一覧へ描画する最大行数です。</summary>
+        internal const int MaximumDisplayedIssues = 500;
+
+        /// <summary>問題種別を用途別に絞り込む表示区分です。</summary>
+        internal enum IssueCategoryFilter
+        {
+            /// <summary>全問題を表示します。</summary>
+            All,
+
+            /// <summary>監査を完了できなかった問題です。</summary>
+            Terminal,
+
+            /// <summary>必須 Locale の direct table/value coverage 問題です。</summary>
+            RequiredLocaleCoverage,
+
+            /// <summary>宣言済み scope の static reference 問題です。</summary>
+            StaticReferences,
+
+            /// <summary>table、entry、Locale identity の整合性問題です。</summary>
+            Integrity
+        }
+
+        /// <summary>カンマまたは改行区切りの必須 Locale identifiers です。</summary>
+        [SerializeField] private string requiredLocalesText = string.Empty;
+
+        /// <summary>改行区切りの Assets-only static-reference scope です。</summary>
+        [SerializeField] private string declaredAssetPathsText = "Assets";
+
+        /// <summary>結果へ残す coverage scope の説明です。</summary>
+        [SerializeField] private string scopeDescription = "Assets text .unity/.prefab/.asset の GUID + key ID direct references";
+
+        /// <summary>問題の検索語です。</summary>
+        [SerializeField] private string searchText = string.Empty;
+
+        /// <summary>問題の表示区分です。</summary>
+        [SerializeField] private IssueCategoryFilter issueCategory = IssueCategoryFilter.All;
+
+        /// <summary>問題一覧の scroll 位置です。</summary>
+        [SerializeField] private Vector2 issueScrollPosition;
+
+        /// <summary>最小Windowで全sectionへ到達する外側のscroll位置です。</summary>
+        [SerializeField] private Vector2 windowScrollPosition;
+
+        /// <summary>詳細欄の scroll 位置です。</summary>
+        [SerializeField] private Vector2 detailScrollPosition;
+
+        /// <summary>最後の手動監査結果です。</summary>
+        private LocalizationKeyAuditResult result;
+
+        /// <summary>filter に一致する問題 index です。</summary>
+        private readonly List<int> visibleIssueIndices = new List<int>();
+
+        /// <summary>現在選択中の問題 index です。</summary>
+        private int selectedIssueIndex = -1;
+
+        /// <summary>Window 操作または予期しない例外の案内です。</summary>
+        private string interactionMessage = string.Empty;
+
+        /// <summary>一覧行へ使う折り返し style です。</summary>
+        private GUIStyle issueRowStyle;
+
+        /// <summary>補足文へ使う折り返し style です。</summary>
+        private GUIStyle wrappedMiniLabelStyle;
+
+        /// <summary>Window を開き、実用上の最小 size を設定します。</summary>
+        internal static void Open()
+        {
+            var window = GetWindow<LocalizationKeyAuditWindow>();
+            window.titleContent = new GUIContent("Localization Key Audit");
+            window.minSize = new Vector2(820f, 640f);
+            window.Show();
+        }
+
+        /// <summary>domain reload 後にも最小 size だけを復元し、自動監査は行いません。</summary>
+        private void OnEnable()
+        {
+            minSize = new Vector2(820f, 640f);
+        }
+
+        /// <summary>設定、手動操作、summary、問題一覧、詳細を順に描画します。</summary>
+        private void OnGUI()
+        {
+            EnsureStyles();
+            windowScrollPosition = EditorGUILayout.BeginScrollView(windowScrollPosition);
+            EditorGUILayout.HelpBox(
+                "Editor-only の手動・読み取り専用・advisory 監査です。必須 Locale の direct value と、宣言済み Assets scope で認識した GUID + key ID 参照だけを扱います。fallback や runtime の最終翻訳を保証せず、参照が見つからない key を『未使用』とは断定しません。",
+                MessageType.Info);
+
+            DrawRequestSettings();
+            DrawToolbar();
+            DrawStatus();
+
+            if (result == null)
+            {
+                EditorGUILayout.HelpBox(
+                    "Required Locales と Assets scope を確認して Audit を押してください。asset は自動変更されず、監査は build を止めません。",
+                    MessageType.None);
+            }
+            else
+            {
+                EnsureSelection();
+                var issueHeight = Mathf.Max(140f, Mathf.Min(280f, position.height * 0.26f));
+                DrawIssues(issueHeight);
+                EditorGUILayout.Space(6f);
+                DrawDetails(Mathf.Max(110f, position.height - issueHeight - 430f));
+            }
+
+            EditorGUILayout.EndScrollView();
+        }
+
+        /// <summary>必須 Locale、scope 説明、Assets-only path を明示入力させます。</summary>
+        private void DrawRequestSettings()
+        {
+            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+            {
+                EditorGUILayout.LabelField("Audit Request", EditorStyles.boldLabel);
+                requiredLocalesText = EditorGUILayout.TextField(
+                    new GUIContent("Required Locales", "例: en, ja。カンマまたは改行で区切ります。"),
+                    requiredLocalesText);
+                scopeDescription = EditorGUILayout.TextField(
+                    new GUIContent("Scope Description", "結果へそのまま残る、人が確認できる走査範囲の説明です。"),
+                    scopeDescription);
+                EditorGUILayout.LabelField(
+                    new GUIContent("Declared Assets Paths", "改行区切り。Assets または Assets/ 配下だけを指定できます。"));
+                declaredAssetPathsText = EditorGUILayout.TextArea(
+                    declaredAssetPathsText,
+                    GUILayout.MinHeight(42f),
+                    GUILayout.MaxHeight(72f));
+            }
+        }
+
+        /// <summary>検索、区分 filter、Audit、Clear を描画します。</summary>
+        private void DrawToolbar()
+        {
+            var filterChanged = false;
+            var auditRequested = false;
+            var clearRequested = false;
+            using (new EditorGUILayout.HorizontalScope(EditorStyles.toolbar))
+            {
+                EditorGUI.BeginChangeCheck();
+                searchText = EditorGUILayout.TextField(
+                    "Search",
+                    searchText,
+                    EditorStyles.toolbarSearchField,
+                    GUILayout.MinWidth(190f));
+                GUILayout.Label("Category", GUILayout.Width(53f));
+                issueCategory = (IssueCategoryFilter)EditorGUILayout.EnumPopup(
+                    issueCategory,
+                    EditorStyles.toolbarPopup,
+                    GUILayout.Width(158f));
+                filterChanged = EditorGUI.EndChangeCheck();
+
+                GUILayout.FlexibleSpace();
+                auditRequested = GUILayout.Button("Audit", EditorStyles.toolbarButton, GUILayout.Width(64f));
+                clearRequested = GUILayout.Button("Clear", EditorStyles.toolbarButton, GUILayout.Width(56f));
+            }
+
+            if (filterChanged)
+            {
+                RebuildVisibleIssues(true);
+            }
+
+            if (auditRequested)
+            {
+                RunAudit();
+            }
+
+            if (clearRequested)
+            {
+                ClearResult();
+            }
+        }
+
+        /// <summary>監査完了性、件数、coverage 境界、表示上限を描画します。</summary>
+        private void DrawStatus()
+        {
+            if (!string.IsNullOrEmpty(interactionMessage))
+            {
+                EditorGUILayout.HelpBox(interactionMessage, MessageType.None);
+            }
+
+            if (result == null)
+            {
+                EditorGUILayout.LabelField($"表示上限: 問題 {MaximumDisplayedIssues} 件", EditorStyles.miniLabel);
+                return;
+            }
+
+            var completion = result.IsComplete ? "Complete" : "Incomplete";
+            EditorGUILayout.LabelField(
+                $"{completion} / Locales {result.LocaleIdentifiers.Count} / Collections {result.Collections.Count} / Orphan Tables {result.OrphanLocaleTables.Count} / Issues {result.Issues.Count} / Edges {result.GraphEdgeCount}",
+                EditorStyles.boldLabel);
+            EditorGUILayout.LabelField(
+                $"Static coverage: {(result.Coverage.IsComplete ? "Complete" : "Incomplete")} / References {result.Coverage.RecognizedReferences.Count} / Declared Paths {result.Coverage.DeclaredAssetPaths.Count} / Filtered Issues {visibleIssueIndices.Count}",
+                wrappedMiniLabelStyle);
+            EditorGUILayout.LabelField(
+                $"Scope: {result.Coverage.ScopeDescription}",
+                wrappedMiniLabelStyle);
+            if (!result.Coverage.IsComplete)
+            {
+                EditorGUILayout.HelpBox(result.Coverage.IncompleteReason, MessageType.Warning);
+            }
+
+            EditorGUILayout.LabelField(
+                $"表示上限: 問題 {MaximumDisplayedIssues} 件。超過分は Search と Category で絞り込んでください。",
+                EditorStyles.miniLabel);
+        }
+
+        /// <summary>決定論的な result 順を維持した問題一覧を最大 500 件描画します。</summary>
+        private void DrawIssues(float height)
+        {
+            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+            {
+                EditorGUILayout.LabelField($"Issues ({visibleIssueIndices.Count})", EditorStyles.boldLabel);
+                issueScrollPosition = EditorGUILayout.BeginScrollView(issueScrollPosition, GUILayout.Height(height));
+                var displayedCount = Math.Min(visibleIssueIndices.Count, MaximumDisplayedIssues);
+                if (displayedCount == 0)
+                {
+                    EditorGUILayout.LabelField("現在の filter に一致する問題はありません。", wrappedMiniLabelStyle);
+                }
+
+                for (var visibleIndex = 0; visibleIndex < displayedCount; visibleIndex++)
+                {
+                    var resultIndex = visibleIssueIndices[visibleIndex];
+                    var issue = result.Issues[resultIndex];
+                    var selected = resultIndex == selectedIssueIndex;
+                    var label = BuildIssueLabel(issue);
+                    if (GUILayout.Toggle(selected, label, issueRowStyle) && !selected)
+                    {
+                        selectedIssueIndex = resultIndex;
+                        detailScrollPosition = Vector2.zero;
+                        interactionMessage = string.Empty;
+                    }
+                }
+
+                if (visibleIssueIndices.Count > MaximumDisplayedIssues)
+                {
+                    EditorGUILayout.HelpBox(
+                        $"先頭 {MaximumDisplayedIssues} 件だけを表示しています。",
+                        MessageType.Warning);
+                }
+
+                EditorGUILayout.EndScrollView();
+            }
+        }
+
+        /// <summary>選択問題の identity と安全な interaction を表示します。</summary>
+        private void DrawDetails(float height)
+        {
+            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+            {
+                EditorGUILayout.LabelField("Details", EditorStyles.boldLabel);
+                if (!IsIssueIndexValid(selectedIssueIndex))
+                {
+                    EditorGUILayout.LabelField("問題を選択してください。", wrappedMiniLabelStyle);
+                    return;
+                }
+
+                var issue = result.Issues[selectedIssueIndex];
+                detailScrollPosition = EditorGUILayout.BeginScrollView(detailScrollPosition, GUILayout.Height(height));
+                DrawDetailRow("Kind", issue.Kind.ToString());
+                DrawDetailRow("Message", issue.Message);
+                DrawDetailRow("Asset", issue.AssetPath);
+                DrawDetailRow("Related", issue.RelatedAssetPath);
+                DrawDetailRow("Collection", issue.CollectionName);
+                DrawDetailRow("Collection GUID", issue.CollectionGuid == Guid.Empty ? string.Empty : issue.CollectionGuid.ToString("D"));
+                DrawDetailRow("Locale", issue.LocaleIdentifier);
+                DrawDetailRow("Entry Key", issue.EntryKey);
+                DrawDetailRow("Entry ID", issue.EntryId == 0 ? string.Empty : issue.EntryId.ToString());
+                EditorGUILayout.EndScrollView();
+
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    using (new EditorGUI.DisabledScope(string.IsNullOrEmpty(issue.AssetPath)))
+                    {
+                        if (GUILayout.Button("Copy Asset Path", GUILayout.Width(112f)))
+                        {
+                            CopyPath(issue.AssetPath);
+                        }
+                    }
+
+                    using (new EditorGUI.DisabledScope(string.IsNullOrEmpty(issue.RelatedAssetPath)))
+                    {
+                        if (GUILayout.Button("Copy Related Path", GUILayout.Width(124f)))
+                        {
+                            CopyPath(issue.RelatedAssetPath);
+                        }
+                    }
+
+                    if (GUILayout.Button("Copy Details", GUILayout.Width(96f)))
+                    {
+                        EditorGUIUtility.systemCopyBuffer = BuildIssueDetails(issue);
+                        interactionMessage = "選択した問題の詳細を clipboard へ copy しました。";
+                    }
+                }
+            }
+        }
+
+        /// <summary>現在の入力から coverage と監査結果を 1 回だけ取得します。</summary>
+        private void RunAudit()
+        {
+            interactionMessage = string.Empty;
+            try
+            {
+                result = LocalizationKeyAuditService.Audit(
+                    ParseRequiredLocales(requiredLocalesText),
+                    scopeDescription,
+                    ParseDeclaredAssetPaths(declaredAssetPathsText));
+                RebuildVisibleIssues(true);
+                issueScrollPosition = Vector2.zero;
+                detailScrollPosition = Vector2.zero;
+            }
+            catch (Exception exception)
+            {
+                result = null;
+                visibleIssueIndices.Clear();
+                selectedIssueIndex = -1;
+                interactionMessage = $"監査を開始できませんでした: {exception.GetType().Name}: {exception.Message}";
+            }
+        }
+
+        /// <summary>入力は維持したまま結果、選択、操作案内だけを消します。</summary>
+        private void ClearResult()
+        {
+            result = null;
+            visibleIssueIndices.Clear();
+            selectedIssueIndex = -1;
+            issueScrollPosition = Vector2.zero;
+            detailScrollPosition = Vector2.zero;
+            windowScrollPosition = Vector2.zero;
+            interactionMessage = string.Empty;
+        }
+
+        /// <summary>必須 Locale のカンマ・semicolon・改行区切りを順序保持で解析します。</summary>
+        internal static IReadOnlyList<string> ParseRequiredLocales(string text)
+        {
+            return ParseTokens(
+                text,
+                new[] { ',', ';', '\r', '\n' },
+                LocalizationKeyAuditLimits.MaximumRequiredLocales,
+                "required Locale");
+        }
+
+        /// <summary>Assets scope の改行区切りを順序保持で解析します。</summary>
+        internal static IReadOnlyList<string> ParseDeclaredAssetPaths(string text)
+        {
+            return ParseTokens(
+                text,
+                new[] { '\r', '\n' },
+                LocalizationKeyAuditLimits.MaximumDeclaredAssetPaths,
+                "declared asset path");
+        }
+
+        /// <summary>検索語と区分 filter が問題へ一致するかを pure に判定します。</summary>
+        internal static bool MatchesFilter(
+            LocalizationKeyAuditIssue issue,
+            string candidateSearchText,
+            IssueCategoryFilter category)
+        {
+            return MatchesNormalizedFilter(issue, NormalizeSearchText(candidateSearchText), category);
+        }
+
+        /// <summary>検索語を1回だけbounded trimし、issue loop内の再allocationを防ぎます。</summary>
+        internal static string NormalizeSearchText(string candidateSearchText)
+        {
+            var value = candidateSearchText ?? string.Empty;
+            if (value.Length > LocalizationKeyAuditLimits.MaximumTextCharacters)
+            {
+                throw new LocalizationKeyAuditLimitException(
+                    $"検索語が文字数上限 {LocalizationKeyAuditLimits.MaximumTextCharacters} を超えています。");
+            }
+
+            return value.Trim();
+        }
+
+        /// <summary>正規化済み検索語と区分filterをallocationなしで照合します。</summary>
+        private static bool MatchesNormalizedFilter(
+            LocalizationKeyAuditIssue issue,
+            string normalizedSearchText,
+            IssueCategoryFilter category)
+        {
+            if (issue == null || !MatchesCategory(issue.Kind, category))
+            {
+                return false;
+            }
+
+            if (normalizedSearchText.Length == 0)
+            {
+                return true;
+            }
+
+            return ContainsOrdinalIgnoreCase(issue.Kind.ToString(), normalizedSearchText) ||
+                ContainsOrdinalIgnoreCase(issue.Message, normalizedSearchText) ||
+                ContainsOrdinalIgnoreCase(issue.AssetPath, normalizedSearchText) ||
+                ContainsOrdinalIgnoreCase(issue.RelatedAssetPath, normalizedSearchText) ||
+                ContainsOrdinalIgnoreCase(issue.CollectionName, normalizedSearchText) ||
+                ContainsOrdinalIgnoreCase(issue.CollectionGuid == Guid.Empty ? string.Empty : issue.CollectionGuid.ToString("D"), normalizedSearchText) ||
+                ContainsOrdinalIgnoreCase(issue.LocaleIdentifier, normalizedSearchText) ||
+                ContainsOrdinalIgnoreCase(issue.EntryKey, normalizedSearchText) ||
+                ContainsOrdinalIgnoreCase(issue.EntryId == 0 ? string.Empty : issue.EntryId.ToString(), normalizedSearchText);
+        }
+
+        /// <summary>現在の filter に一致する問題 index を再構築します。</summary>
+        private void RebuildVisibleIssues(bool resetSelection)
+        {
+            visibleIssueIndices.Clear();
+            string normalizedSearchText;
+            try
+            {
+                normalizedSearchText = NormalizeSearchText(searchText);
+            }
+            catch (LocalizationKeyAuditLimitException exception)
+            {
+                selectedIssueIndex = -1;
+                interactionMessage = exception.Message;
+                return;
+            }
+
+            if (result != null)
+            {
+                for (var index = 0; index < result.Issues.Count; index++)
+                {
+                    if (MatchesNormalizedFilter(result.Issues[index], normalizedSearchText, issueCategory))
+                    {
+                        visibleIssueIndices.Add(index);
+                    }
+                }
+            }
+
+            if (resetSelection || !visibleIssueIndices.Contains(selectedIssueIndex))
+            {
+                selectedIssueIndex = visibleIssueIndices.Count == 0 ? -1 : visibleIssueIndices[0];
+            }
+        }
+
+        /// <summary>選択が現在 result 内かを維持します。</summary>
+        private void EnsureSelection()
+        {
+            if (!IsIssueIndexValid(selectedIssueIndex) || !visibleIssueIndices.Contains(selectedIssueIndex))
+            {
+                selectedIssueIndex = visibleIssueIndices.Count == 0 ? -1 : visibleIssueIndices[0];
+            }
+        }
+
+        /// <summary>問題 kind を表示区分へ割り当てます。</summary>
+        private static bool MatchesCategory(LocalizationKeyAuditIssueKind kind, IssueCategoryFilter category)
+        {
+            if (category == IssueCategoryFilter.All)
+            {
+                return true;
+            }
+
+            if (category == IssueCategoryFilter.Terminal)
+            {
+                return kind == LocalizationKeyAuditIssueKind.ReadOnlyGuaranteeUnavailable ||
+                    kind == LocalizationKeyAuditIssueKind.InvalidConfiguration ||
+                    kind == LocalizationKeyAuditIssueKind.LimitExceeded ||
+                    kind == LocalizationKeyAuditIssueKind.AuditFailed;
+            }
+
+            if (category == IssueCategoryFilter.RequiredLocaleCoverage)
+            {
+                return kind == LocalizationKeyAuditIssueKind.RequiredLocaleNotConfigured ||
+                    kind == LocalizationKeyAuditIssueKind.MissingLocaleTable ||
+                    kind == LocalizationKeyAuditIssueKind.MissingDirectEntry ||
+                    kind == LocalizationKeyAuditIssueKind.EmptyDirectValue;
+            }
+
+            if (category == IssueCategoryFilter.StaticReferences)
+            {
+                return kind == LocalizationKeyAuditIssueKind.DanglingStaticReference ||
+                    kind == LocalizationKeyAuditIssueKind.NoStaticReferenceFoundWithinDeclaredScope ||
+                    kind == LocalizationKeyAuditIssueKind.StaticReferenceCoverageIncomplete;
+            }
+
+            return category == IssueCategoryFilter.Integrity &&
+                (kind == LocalizationKeyAuditIssueKind.DuplicateCollectionName ||
+                 kind == LocalizationKeyAuditIssueKind.DuplicateCollectionGuid ||
+                 kind == LocalizationKeyAuditIssueKind.DuplicateSharedEntryId ||
+                 kind == LocalizationKeyAuditIssueKind.DuplicateSharedEntryKey ||
+                 kind == LocalizationKeyAuditIssueKind.DuplicateLocaleTable ||
+                 kind == LocalizationKeyAuditIssueKind.DuplicateLocalizedEntryId ||
+                 kind == LocalizationKeyAuditIssueKind.OrphanedLocalizedEntry ||
+                 kind == LocalizationKeyAuditIssueKind.OrphanedLocaleTable ||
+                 kind == LocalizationKeyAuditIssueKind.OrphanedSharedTableData ||
+                 kind == LocalizationKeyAuditIssueKind.DuplicateLocaleIdentifier);
+        }
+
+        /// <summary>区切り文字で分け、空白だけの token を除きます。</summary>
+        private static IReadOnlyList<string> ParseTokens(
+            string text,
+            char[] separators,
+            int maximumCount,
+            string valueKind)
+        {
+            var values = new List<string>();
+            var source = text ?? string.Empty;
+            var tokenStart = 0;
+            for (var index = 0; index <= source.Length; index++)
+            {
+                if (index < source.Length && Array.IndexOf(separators, source[index]) < 0)
+                {
+                    continue;
+                }
+
+                var start = tokenStart;
+                var end = index;
+                while (start < end && char.IsWhiteSpace(source[start]))
+                {
+                    start++;
+                }
+
+                while (end > start && char.IsWhiteSpace(source[end - 1]))
+                {
+                    end--;
+                }
+
+                if (end > start)
+                {
+                    if (end - start > LocalizationKeyAuditLimits.MaximumTextCharacters)
+                    {
+                        throw new LocalizationKeyAuditLimitException(
+                            $"{valueKind}が文字数上限 {LocalizationKeyAuditLimits.MaximumTextCharacters} を超えています。");
+                    }
+
+                    if (values.Count >= maximumCount)
+                    {
+                        throw new LocalizationKeyAuditLimitException(
+                            $"{valueKind}数が上限 {maximumCount} 件を超えています。");
+                    }
+
+                    values.Add(source.Substring(start, end - start));
+                }
+
+                tokenStart = index + 1;
+            }
+
+            return values;
+        }
+
+        /// <summary>問題一覧向けの 1 行表示を作ります。</summary>
+        private static string BuildIssueLabel(LocalizationKeyAuditIssue issue)
+        {
+            var identity = !string.IsNullOrEmpty(issue.EntryKey)
+                ? issue.EntryKey
+                : !string.IsNullOrEmpty(issue.CollectionName)
+                    ? issue.CollectionName
+                    : !string.IsNullOrEmpty(issue.LocaleIdentifier)
+                        ? issue.LocaleIdentifier
+                        : !string.IsNullOrEmpty(issue.AssetPath)
+                            ? issue.AssetPath
+                            : issue.RelatedAssetPath;
+            return string.IsNullOrEmpty(identity)
+                ? issue.Kind.ToString()
+                : $"{issue.Kind}  |  {identity}";
+        }
+
+        /// <summary>clipboard 用の全詳細を組み立てます。</summary>
+        private static string BuildIssueDetails(LocalizationKeyAuditIssue issue)
+        {
+            var builder = new StringBuilder();
+            AppendDetail(builder, "Kind", issue.Kind.ToString());
+            AppendDetail(builder, "Message", issue.Message);
+            AppendDetail(builder, "Asset", issue.AssetPath);
+            AppendDetail(builder, "Related", issue.RelatedAssetPath);
+            AppendDetail(builder, "Collection", issue.CollectionName);
+            AppendDetail(builder, "Collection GUID", issue.CollectionGuid == Guid.Empty ? string.Empty : issue.CollectionGuid.ToString("D"));
+            AppendDetail(builder, "Locale", issue.LocaleIdentifier);
+            AppendDetail(builder, "Entry Key", issue.EntryKey);
+            AppendDetail(builder, "Entry ID", issue.EntryId == 0 ? string.Empty : issue.EntryId.ToString());
+            return builder.ToString().TrimEnd();
+        }
+
+        /// <summary>値がある詳細だけを追記します。</summary>
+        private static void AppendDetail(StringBuilder builder, string label, string value)
+        {
+            if (!string.IsNullOrEmpty(value))
+            {
+                builder.Append(label).Append(": ").AppendLine(value);
+            }
+        }
+
+        /// <summary>詳細欄の label/value を折り返して表示します。</summary>
+        private void DrawDetailRow(string label, string value)
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                return;
+            }
+
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                EditorGUILayout.LabelField(label, GUILayout.Width(112f));
+                EditorGUILayout.SelectableLabel(
+                    value,
+                    wrappedMiniLabelStyle,
+                    GUILayout.MinHeight(EditorGUIUtility.singleLineHeight));
+            }
+        }
+
+        /// <summary>assetをloadせずpath文字列だけをclipboardへcopyします。</summary>
+        private void CopyPath(string assetPath)
+        {
+            EditorGUIUtility.systemCopyBuffer = assetPath;
+            interactionMessage = $"asset pathをclipboardへcopyしました: {assetPath}";
+        }
+
+        /// <summary>指定 index が現在 result の問題を指すか調べます。</summary>
+        private bool IsIssueIndexValid(int index)
+        {
+            return result != null && index >= 0 && index < result.Issues.Count;
+        }
+
+        /// <summary>大小文字を無視した ordinal 部分一致です。</summary>
+        private static bool ContainsOrdinalIgnoreCase(string source, string value)
+        {
+            return !string.IsNullOrEmpty(source) &&
+                source.IndexOf(value, StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        /// <summary>一覧と補足に使う style を domain reload 後に作ります。</summary>
+        private void EnsureStyles()
+        {
+            if (issueRowStyle == null)
+            {
+                issueRowStyle = new GUIStyle(EditorStyles.miniButton)
+                {
+                    alignment = TextAnchor.MiddleLeft,
+                    wordWrap = true,
+                    fixedHeight = 0f,
+                    stretchWidth = true
+                };
+            }
+
+            if (wrappedMiniLabelStyle == null)
+            {
+                wrappedMiniLabelStyle = new GUIStyle(EditorStyles.miniLabel)
+                {
+                    wordWrap = true,
+                    stretchWidth = true
+                };
+            }
+        }
+    }
+}

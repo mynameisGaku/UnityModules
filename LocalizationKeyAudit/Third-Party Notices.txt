@@ -1,0 +1,12 @@
+Third-Party Notices
+===================
+
+This package does not redistribute third-party source code or binary content.
+
+The package manifest declares the following direct dependency:
+
+- Unity Localization 1.5.12 (`com.unity.localization`)
+
+Unity Localization and its transitive dependencies are installed separately by
+Unity Package Manager. Their use and distribution are governed by the license
+terms included with those installed packages.

@@ -1,0 +1,27 @@
+{
+  "name": "com.studiogaku.localization-key-audit",
+  "version": "1.0.0",
+  "displayName": "Localization Key Audit",
+  "description": "Editor-only manual audit for required-locale direct coverage and localization table integrity. Reports advisory findings without changing assets, blocking builds, or inferring runtime translation availability or unused keys.",
+  "unity": "6000.5",
+  "unityRelease": "7f1",
+  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/blob/localization-key-audit-v1.0.0/LocalizationKeyAudit/Documentation~/index.md",
+  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/localization-key-audit-v1.0.0/LocalizationKeyAudit/CHANGELOG.md",
+  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/localization-key-audit-v1.0.0/LocalizationKeyAudit/LICENSE.md",
+  "license": "Refer to LICENSE.md file",
+  "keywords": [
+    "localization",
+    "key",
+    "coverage",
+    "audit",
+    "editor"
+  ],
+  "author": {
+    "name": "StudioGaku",
+    "email": "gaku.fujimoto.business@gmail.com",
+    "url": "https://github.com/mynameisGaku/UnityModules"
+  },
+  "dependencies": {
+    "com.unity.localization": "1.5.12"
+  }
+}
