@@ -1,0 +1,6 @@
+Third-Party Notices
+===================
+
+このパッケージ本体には、第三者が制作したコード、フォント、音声、画像、映像その他のコンポーネントを同梱していません。
+
+本packageは実行時にOS提供の振動機能を利用します。Androidでは`android.os.Vibrator`および`android.os.VibrationEffect`をJNI経由で呼び出し、iOSではAudioToolbox frameworkの`AudioServicesPlaySystemSound`(kSystemSoundID_Vibrate)をP/Invoke経由で呼び出します。これらは実行環境から利用するものであり、このパッケージ内へ再配布していません。

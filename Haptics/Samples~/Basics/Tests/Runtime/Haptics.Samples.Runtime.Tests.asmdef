@@ -1,0 +1,22 @@
+{
+    "name": "Haptics.Samples.Runtime.Tests",
+    "rootNamespace": "Haptics.Samples.Runtime.Tests",
+    "references": [
+        "Haptics.Runtime",
+        "Haptics.Samples",
+        "UnityEngine.TestRunner"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -1,0 +1,31 @@
+{
+  "name": "com.studiogaku.haptics",
+  "version": "1.0.0",
+  "displayName": "Haptics",
+  "description": "iOS、Android、Desktopで異なる振動APIの差異を意図ベースの1つのAPIへまとめ、driver capabilityを明示するRuntimeモジュール。amplitude制御を持たないplatformでは0/1へ量子化したpatternを送り、queueやscheduling、ネイティブプラグイン同梱による高精細haptic engine制御は含みません。",
+  "unity": "6000.5",
+  "unityRelease": "7f1",
+  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/blob/haptics-v1.0.0/Haptics/Documentation~/index.md",
+  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/haptics-v1.0.0/Haptics/CHANGELOG.md",
+  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/haptics-v1.0.0/Haptics/LICENSE.md",
+  "license": "Refer to LICENSE.md file",
+  "keywords": [
+    "haptics",
+    "vibration",
+    "android",
+    "ios"
+  ],
+  "author": {
+    "name": "StudioGaku",
+    "email": "gaku.fujimoto.business@gmail.com",
+    "url": "https://github.com/mynameisGaku/UnityModules"
+  },
+  "dependencies": {},
+  "samples": [
+    {
+      "displayName": "Haptics Basics",
+      "description": "空Sceneに配置したcontrollerから各intentと任意patternを再生し、capability表示と実機・Editor差を確認するサンプル。",
+      "path": "Samples~/Basics"
+    }
+  ]
+}
