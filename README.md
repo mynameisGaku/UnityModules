@@ -3,7 +3,7 @@
 Unity で繰り返し発生する設定、実装、確認作業を減らすためのモジュール集。
 利用者向けの名前は日本語で目的を示し、フォルダー名・名前空間・UPM 識別子には互換性のため英語の技術名を残している。
 
-対応versionはpackageごとに異なります。26packageは**Unity 6000.5.7f1以降**、Containersは**Unity 6000.0以降**です。
+対応versionはpackageごとに異なります。29packageは**Unity 6000.5.7f1以降**、Containersは**Unity 6000.0以降**です。
 
 ---
 
@@ -36,6 +36,9 @@ Unity で繰り返し発生する設定、実装、確認作業を減らすた�
 | Gameplay 入力だけ一時的に止めたい | [入力の一時停止（InputGate）](InputGate/) | PlayerInput の Action Map を入れ子で停止・復元する。 |
 | Inspector の表示整理や入力検証を減らしたい | [インスペクター入力補助（Inspector）](Inspector/) | 条件表示、group、tab、検証、button 属性を使う。 |
 | 実行中の位置・範囲・経路を見たい | [デバッグ描画（Drawing）](Drawing/) | 線、矢印、箱、球、経路、文字をコードから描く。 |
+| InstantiateとDestroyの繰り返しをやめてGCスパイクを抑えたい | [オブジェクト再利用（Object Pool）](ObjectPool/) | 1つのprefabを上限付きpoolで再利用し、spawn・release・統計を明示APIで扱う。 |
+| iOS・Androidで異なる振動APIをintent指定の1つの呼び出しにまとめたい | [振動の統一（Haptics）](Haptics/) | capability報告に合わせて劣化再生を行い、未対応platformでは安全に無動作になる。 |
+| フレーム時間や簡易メモリを実行中に数値で確認したい | [実行速度計測（Perf Meter）](PerfMeter/) | 有界windowのframe統計・spike計数・簡易メモリsnapshotをGC確保なしで取る。 |
 
 導入前に「何ができるか」と「最短の使い方」を知りたい場合は、各 README の冒頭から読む。命名・統合・README の基準は [モジュール設計・案内ガイド](MODULE_GUIDE.md) にまとめている。
 
@@ -60,8 +63,10 @@ Unity で繰り返し発生する設定、実装、確認作業を減らすた�
 | [シーン作業セット（Scene Workspace）](SceneWorkspace/) | 複数Sceneの順番・Loaded・ActiveをProfile化し、差分Preview、古くなった計画の拒否、適用後検証、失敗時の復元結果を1つのEditor画面で扱うEditor専用module。**Unity 6000.5.7f1以降**。 | なし |
 | [プレイ中の調整を反映（Play Mode Tuning）](PlayModeTuning/) | 保存済みSceneのMonoBehaviourから残したい最上位serialized propertyを選び、Play Mode中に手動で取り込み、終了後の差分Preview、古くなった計画の拒否、適用後検証、失敗時の復元結果を1つのEditor画面で扱うEditor専用module。**Unity 6000.5.7f1以降**。 | なし |
 | [汎用データ構造（Containers）](Containers/) | コンテナ / データ構造 66 種。GC フリーのコレクション、Inspector に出せるシリアライズ対応型、空間分割、Unity のライフサイクルに耐えるコンテナ。**Unity 6000.0以降**。 | なし |
+| [オブジェクト再利用（Object Pool）](ObjectPool/) | 1つのprefabをidle上限・active上限・reuse順序(Lifo/Fifo)付きで再利用する。spawn・release・preload・trimをTry+error enumで扱い、生成／再利用／破壊の統計を持つ。外部破壊検知と他pool混線拒否を備える。**Unity 6000.5.7f1以降**。 | なし |
 | [インスペクター入力補助（Inspector）](Inspector/) | Inspector 拡張の属性 43 種。条件による表示・非表示、グループ化とタブ、入力値の検証、メソッドのボタン化。**Unity 6000.5.7f1以降**。 | なし |
 | [デバッグ描画（Drawing）](Drawing/) | 実行中の線・矢印・箱・球・経路・文字をコード1行で描くデバッグ可視化。Development Build専用呼び出しと持続時間に対応。**Unity 6000.5.7f1以降**。 | なし |
+| [実行速度計測（Perf Meter）](PerfMeter/) | 有界リングバッファでframe時間を収集し、Average・StandardDeviation・Median・Percentile・spike計数などの統計を決定論的に返す。簡易メモリsnapshot取得とoverlay表示用Componentを含む。**Unity 6000.5.7f1以降**。 | なし |
 | [セーブデータ管理（SaveSystem）](SaveSystem/) | 型付きJSON保存、複数スロット、破損検出、可能な環境での原子的置換、1世代バックアップ復旧。依存なし。**Unity 6000.5.7f1以降**。 | なし |
 | [Player設定（Player Options）](PlayerOptions/) | application所有のserviceが音量、quality、resolution、window mode、refresh rate、target frame rateを一つの型付きsnapshotで扱う。Load・Set・Apply・Saveを分離し、未来schema・破損文書は保全する。PlayerPrefsに強い耐久性やtransactionを主張せず、key binding・cloud同期・vSync変更は含めない。**Unity 6000.5.7f1以降**。 | com.unity.modules.audio / jsonserialize / uielements 1.0.0 |
 | [シーン切り替え（SceneFlow）](SceneFlow/) | 完全なSceneパスでSingle・Additive読込、有効Scene切替、Unloadを直列化し、開始前条件と完了後状態を結果で返す。**Unity 6000.5.7f1以降**。 | なし |
@@ -76,6 +81,7 @@ Unity で繰り返し発生する設定、実装、確認作業を減らすた�
 | [入力デバイス表示（Input Device Display）](InputDeviceDisplay/) | Input Systemのglobalな実入力から最後に操作されたdeviceをKeyboard／Mouse、Xbox、PlayStation、Switch、一般Gamepad、Touchの表示familyへ分類する。厳密layout overrideと明示fallbackを備え、glyph asset、rebind、pairing、player別追跡は扱わない。**Unity 6000.5.7f1以降**。 | com.unity.inputsystem 1.20.0 / com.unity.modules.uielements 1.0.0 |
 | [入力の一時停止（InputGate）](InputGate/) | PlayerInputの実行中Action Mapを入れ子leaseで停止し、最後の解放時にActionごとの有効状態を復元する。**Unity 6000.5.7f1 / Input System 1.20.0以降**。 | com.unity.inputsystem 1.20.0 / com.unity.modules.uielements 1.0.0 |
 | [音声再生管理（AudioControl）](AudioControl/) | owner付きAudioSource poolで再生、voice上限、priority steal、handle停止、非スケールfadeを管理する。**Unity 6000.5.7f1以降**。 | com.unity.modules.audio 1.0.0 / com.unity.modules.uielements 1.0.0 |
+| [振動の統一（Haptics）](Haptics/) | intent指定の振動再生とdriver capability報告を1つのserviceへまとめ、Androidは波形、iOSはシステム振動へ自動劣化させる。ネイティブプラグイン同梱なし。**Unity 6000.5.7f1以降**。 | なし |
 | [起動手順管理（StartupFlow）](StartupFlow/) | 明示した非同期stepをOrderとIdで決定論的に直列実行し、進捗・失敗位置・完了件数・協調cancelを結果として返す。**Unity 6000.5.7f1以降**。 | com.unity.modules.uielements 1.0.0 |
 | [入力コマンド判定（Input Command）](InputCommand/) | 先行入力buffer、順序判定、同時押し、優先順位選択、対向軸解決、チャタリング除去を独立した決定論的部品としてまとめる。tickを使う判定、sample回数で進む安定化、状態を持たない選択から必要なものを選び、異なる入出力を繋ぐadapterは利用側が持つ。**Unity 6000.5.7f1以降**。 | com.unity.modules.uielements 1.0.0 |
 | [ゲーム判定・計算（Gameplay Rules）](GameplayRules/) | リソースとコスト、能力補正、重み付き抽選と整数配分、区間curveとしきい値tier、直近statisticsと傾向推定、時限stackと定期発火、数値条件・行動score・敵対度の評価、ダメージ軽減を用途別namespaceでまとめて提供する決定論的な計算群。**Unity 6000.5.7f1以降**。 | com.unity.modules.uielements 1.0.0 |
@@ -150,10 +156,18 @@ Assets/
     │   ├── Runtime/         Drawing.Runtime
     │   ├── Tests/           Drawing.Tests
     │   └── Samples~/        1 assembly
+    ├── PerfMeter/
+    │   ├── Runtime/         PerfMeter.Runtime
+    │   ├── Tests/Editor/    PerfMeter.Editor.Tests
+    │   └── Samples~/        2 assemblies
     ├── Containers/
     │   ├── Runtime/         Containers.Runtime
     │   ├── Editor/          Containers.Editor
     │   └── Tests/           Containers.Tests
+    ├── ObjectPool/
+    │   ├── Runtime/         ObjectPool.Runtime
+    │   ├── Tests/Editor/    ObjectPool.Editor.Tests
+    │   └── Samples~/        2 assemblies
     ├── SceneFlow/
     │   ├── Runtime/         SceneFlow.Runtime
     │   ├── Editor/          SceneFlow.Editor
@@ -187,6 +201,10 @@ Assets/
     ├── AudioControl/
     │   ├── Runtime/         AudioControl.Runtime
     │   ├── Tests/           AudioControl.Tests, AudioControl.PlayMode.Tests
+    │   └── Samples~/        2 assemblies
+    ├── Haptics/
+    │   ├── Runtime/         Haptics.Runtime
+    │   ├── Tests/Editor/    Haptics.Editor.Tests
     │   └── Samples~/        2 assemblies
     ├── DiagnosticsContext/
     │   ├── Runtime/         DiagnosticsContext.Runtime

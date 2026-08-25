@@ -38,6 +38,9 @@ READMEとモジュール一覧では、日本語で目的を先に示す。Packa
 | 入力コマンド判定 | Input Command | 先行入力・順序・同時押し・対向軸を明示tickで判定し、優先順位選択と入力安定化も扱う。 |
 | ゲーム判定・計算 | Gameplay Rules | ゲームルールから使う決定論的な数値計算をまとめて扱う。 |
 | 再現可能シミュレーション | Deterministic Simulation | 固定刻み・乱数・記録・状態ハッシュで再現性を作る。 |
+| オブジェクト再利用 | Object Pool | prefabの生成をpoolへ集約し、spawn・release・統計を明示APIで扱う。 |
+| 振動の統一 | Haptics | 端末差のある振動APIをintentとcapabilityの背後へ隠す。 |
+| 実行速度計測 | Perf Meter | frame時間と簡易メモリを実行中に数値で計測する。 |
 
 `Control`、`Flow`、`Resolver`、`Evaluator` のような実装上の語だけを表示名にしない。「利用者が何をできるか」を名前にする。
 
@@ -78,6 +81,23 @@ Project Setupはasmdefの作成までを所有し、このmoduleは作成後の�
 音量、quality、resolution、window mode、refresh rate、target frame rateを一つの型付きsnapshotとして扱い、Load・Set・Apply・Saveを別操作にする。
 application bootstrapがserviceを一つ明示所有し、singleton、自動GameObject、static eventは作らない。
 SaveSystemのslot・backup・破損復旧、AudioControlのvoice pool、Input Systemのrebindとは責務を分ける。PlayerPrefsの強い耐久性、key binding、cloud同期、vSync変更は対象外にする。
+
+### オブジェクト再利用（Object Pool）
+
+1つのprefabを上限付きidleとして保持し、spawn・release・preload・trimを明示APIで扱う。
+application ownerがpoolを生成して所有し、singleton、static event、自動GameObjectは作らない。
+AudioControlのAudioSource専用pool、Containersの純粋データ構造、DeterministicSimulationのhandle poolとは所有する対象が異なるため独立packageとする。複数prefabのregistry、非同期load、addressable連携は対象外にする。
+
+### 振動の統一（Haptics）
+
+intent指定の再生要求とdriver capabilityの報告に分け、Android・iOS・Desktopの差をserviceの背後へ隠す。
+ネイティブプラグインを同梱しない実装範囲で動作し、capabilityが無い環境では安全に無動作になる。
+queue、scheduling、Core Haptics波形、デバイスごとの個別調整は対象外にする。
+
+### 実行速度計測（Perf Meter）
+
+有界リングバッファのframe時間統計、spike計数、簡易メモリsnapshotを提供する。
+GameplayRulesのstatistics群は値列だけを受け取る純粋計算であり、このmoduleはframe取得のownershipを持つ点で責務が異なるため独立packageとする。GPU時間、Profiler marker分析、ログ蓄積と出力、alert通知は対象外にする。
 
 ### ゲーム判定・計算（Gameplay Rules）
 
