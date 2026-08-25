@@ -1,0 +1,33 @@
+{
+  "name": "com.studiogaku.perf-meter",
+  "version": "1.0.0",
+  "displayName": "Perf Meter",
+  "description": "フレーム時間、fps、簡易メモリを有界リングバッファへサンプリングし、平均、最小、最大、中央値、母標準偏差、percentileを決定論的な純粋計測classとして返すRuntimeモジュール。AddFrame経路は初回capacity確保を除きGC確保なし。singleton、自動起動、GPU計測、電力推定、長期ログ蓄積は含みません。",
+  "unity": "6000.5",
+  "unityRelease": "7f1",
+  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/blob/perf-meter-v1.0.0/PerfMeter/Documentation~/index.md",
+  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/perf-meter-v1.0.0/PerfMeter/CHANGELOG.md",
+  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/perf-meter-v1.0.0/PerfMeter/LICENSE.md",
+  "license": "Refer to LICENSE.md file",
+  "keywords": [
+    "perf-meter",
+    "fps",
+    "frame-time",
+    "statistics",
+    "profiler",
+    "memory"
+  ],
+  "author": {
+    "name": "StudioGaku",
+    "email": "gaku.fujimoto.business@gmail.com",
+    "url": "https://github.com/mynameisGaku/UnityModules"
+  },
+  "dependencies": {},
+  "samples": [
+    {
+      "displayName": "Perf Meter Basics",
+      "description": "空Sceneの空GameObjectへ追加してfps・frame time・spike・memoryのHUDを確認し、Heavy Frameボタンで人工的なスパイクを発生させるサンプル。",
+      "path": "Samples~/Basics"
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "name": "PerfMeter.Samples",
+  "rootNamespace": "PerfMeter.Samples",
+  "references": [
+    "PerfMeter.Runtime"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}
