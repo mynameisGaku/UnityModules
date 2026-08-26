@@ -11,17 +11,21 @@ using UnityEngine.SceneManagement;
 namespace BuildGuard.Editor
 {
     /// <summary>
-    /// Shows actionable findings from a manual scan of enabled build Scenes.
+    /// Shows actionable findings from enabled build Scenes or captured Scene assets.
     /// </summary>
     internal sealed class BuildGuardScanWindow : EditorWindow
     {
-        private const string MenuPath = "Tools/Build Guard/Scan Build Scenes";
+        private const string ToolMenuPath = "Tools/Build Guard/Scan Build Scenes";
+        private const string AssetMenuPath = "Assets/Build Guard/Scan Selected Scenes";
 
-        private static readonly GUIContent ScanButtonContent = new GUIContent("Scan Build Scenes");
+        private static readonly GUIContent ScanBuildScenesButtonContent = new GUIContent("Scan Build Scenes");
+        private static readonly GUIContent ScanSelectedScenesButtonContent = new GUIContent("Scan Selected Scenes");
         private static readonly GUIContent ClearButtonContent = new GUIContent("Clear");
 
         private readonly List<BuildGuardScanIssue> _issues = new List<BuildGuardScanIssue>();
+        private string[] _selectedScenePaths = Array.Empty<string>();
         private Vector2 _scrollPosition;
+        private bool _scanFailed;
         private string _statusText = "Press Scan Build Scenes to inspect the active Build Profile.";
 
         /// <summary>Gets the current result count for deterministic Editor tests.</summary>
@@ -30,30 +34,56 @@ namespace BuildGuard.Editor
         /// <summary>Gets the current summary for deterministic Editor tests.</summary>
         internal string StatusText => _statusText;
 
+        /// <summary>Gets the captured selected Scene count for deterministic Editor tests.</summary>
+        internal int SelectedSceneCount => _selectedScenePaths.Length;
+
         /// <summary>Opens the manual scan window from the Unity Tools menu.</summary>
-        [MenuItem(MenuPath, priority = 2000)]
-        private static void ShowWindow()
+        [MenuItem(ToolMenuPath, priority = 2000)]
+        private static void ShowFromTools()
+        {
+            ShowWindow();
+        }
+
+        /// <summary>Opens the same window and captures directly selected Scene assets.</summary>
+        [MenuItem(AssetMenuPath, false, 2000)]
+        private static void ShowFromAssets()
+        {
+            var window = ShowWindow();
+            window.CaptureSelectedScenes();
+        }
+
+        /// <summary>Enables the Assets menu only when at least one selected Scene can be captured.</summary>
+        [MenuItem(AssetMenuPath, true)]
+        private static bool ValidateShowFromAssets()
+        {
+            return BuildGuardManualScanner.TryGetSelectedScenePaths(out var paths, out _)
+                && paths.Count > 0;
+        }
+
+        /// <summary>Creates or reuses the Scene scan window.</summary>
+        private static BuildGuardScanWindow ShowWindow()
         {
             var window = GetWindow<BuildGuardScanWindow>();
             window.titleContent = new GUIContent("Build Guard");
             window.minSize = new Vector2(720f, 320f);
             window.Show();
+            return window;
         }
 
         private void OnGUI()
         {
             EditorGUILayout.Space(8f);
-            EditorGUILayout.LabelField("Build Scene Reference Scan", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Build and Selected Scene Reference Scan", EditorStyles.boldLabel);
             EditorGUILayout.LabelField(
-                "Scans enabled Scenes without starting a Player build. Results never modify or save Scene content.",
+                "Scans enabled build Scenes or captured Scene assets. Results never modify or save Scene content.",
                 EditorStyles.wordWrappedLabel);
             EditorGUILayout.Space(6f);
 
             using (new EditorGUILayout.HorizontalScope())
             {
-                if (GUILayout.Button(ScanButtonContent, GUILayout.Height(28f)))
+                if (GUILayout.Button(ScanBuildScenesButtonContent, GUILayout.Height(28f)))
                 {
-                    ScanWithProgress();
+                    ScanBuildScenesWithProgress();
                 }
 
                 using (new EditorGUI.DisabledScope(_issues.Count == 0))
@@ -61,6 +91,23 @@ namespace BuildGuard.Editor
                     if (GUILayout.Button(ClearButtonContent, GUILayout.Width(88f), GUILayout.Height(28f)))
                     {
                         ClearResults();
+                    }
+                }
+            }
+
+            EditorGUILayout.LabelField("Selected Scene Assets", _selectedScenePaths.Length.ToString());
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                if (GUILayout.Button("Use Current Selection", GUILayout.Height(28f)))
+                {
+                    CaptureSelectedScenes();
+                }
+
+                using (new EditorGUI.DisabledScope(_selectedScenePaths.Length == 0))
+                {
+                    if (GUILayout.Button(ScanSelectedScenesButtonContent, GUILayout.Height(28f)))
+                    {
+                        ScanSelectedScenesWithProgress();
                     }
                 }
             }
@@ -110,11 +157,27 @@ namespace BuildGuard.Editor
             }
         }
 
-        private void ScanWithProgress()
+        private void ScanBuildScenesWithProgress()
         {
             try
             {
                 RunScan((index, total, scenePath) => EditorUtility.DisplayCancelableProgressBar(
+                    "Build Guard",
+                    $"Scanning {Path.GetFileNameWithoutExtension(scenePath)} ({index + 1}/{total})",
+                    total == 0 ? 0f : (float)index / total));
+            }
+            finally
+            {
+                EditorUtility.ClearProgressBar();
+            }
+        }
+
+        /// <summary>Scans the captured selected Scenes with the existing cancellable progress UI.</summary>
+        private void ScanSelectedScenesWithProgress()
+        {
+            try
+            {
+                RunSelectedScan((index, total, scenePath) => EditorUtility.DisplayCancelableProgressBar(
                     "Build Guard",
                     $"Scanning {Path.GetFileNameWithoutExtension(scenePath)} ({index + 1}/{total})",
                     total == 0 ? 0f : (float)index / total));
@@ -132,6 +195,7 @@ namespace BuildGuard.Editor
             if (scenePaths.Count == 0)
             {
                 _issues.Clear();
+                _scanFailed = false;
                 _statusText = "No enabled Scenes are configured in the active Build Profile.";
                 Repaint();
                 return;
@@ -140,7 +204,57 @@ namespace BuildGuard.Editor
             var result = BuildGuardManualScanner.Scan(scenePaths, shouldCancel);
             _issues.Clear();
             _issues.AddRange(result.Issues);
+            _scanFailed = false;
             _statusText = FormatStatus(result);
+            Repaint();
+        }
+
+        /// <summary>Captures the current direct Scene asset selection and clears obsolete findings.</summary>
+        internal void CaptureSelectedScenes()
+        {
+            _issues.Clear();
+            _scrollPosition = Vector2.zero;
+            if (!BuildGuardManualScanner.TryGetSelectedScenePaths(out var paths, out var errorMessage))
+            {
+                _selectedScenePaths = Array.Empty<string>();
+                _scanFailed = true;
+                _statusText = errorMessage;
+                Repaint();
+                return;
+            }
+
+            _selectedScenePaths = new string[paths.Count];
+            for (var index = 0; index < paths.Count; index++)
+            {
+                _selectedScenePaths[index] = paths[index];
+            }
+
+            _scanFailed = false;
+            _statusText = _selectedScenePaths.Length == 0
+                ? "Select one or more Scene assets in the Project window. Folders and non-Scene assets are ignored."
+                : $"Captured {_selectedScenePaths.Length} Scene asset(s).";
+            Repaint();
+        }
+
+        /// <summary>Scans the captured Scene snapshot or reports that it became stale.</summary>
+        internal void RunSelectedScan(Func<int, int, string, bool> shouldCancel = null)
+        {
+            _issues.Clear();
+            if (!BuildGuardManualScanner.TryScanSelectedScenes(
+                    _selectedScenePaths,
+                    shouldCancel,
+                    out var result,
+                    out var errorMessage))
+            {
+                _scanFailed = true;
+                _statusText = errorMessage;
+                Repaint();
+                return;
+            }
+
+            _issues.AddRange(result.Issues);
+            _scanFailed = false;
+            _statusText = FormatSelectedStatus(result);
             Repaint();
         }
 
@@ -149,7 +263,8 @@ namespace BuildGuard.Editor
         {
             _issues.Clear();
             _scrollPosition = Vector2.zero;
-            _statusText = "Results cleared. Press Scan Build Scenes to scan again.";
+            _scanFailed = false;
+            _statusText = "Results cleared. Scan build Scenes or the captured Scene assets again.";
             Repaint();
         }
 
@@ -262,9 +377,24 @@ namespace BuildGuard.Editor
                 : $"Scanned {result.ScannedSceneCount} Scene(s). Found {result.Issues.Count} issue(s).";
         }
 
+        /// <summary>Formats selected Scene scan status without changing build Scene wording.</summary>
+        private static string FormatSelectedStatus(BuildGuardManualScanResult result)
+        {
+            if (result.Cancelled)
+            {
+                return $"Selected Scene scan cancelled after {result.ScannedSceneCount} Scene(s). {result.Issues.Count} issue(s) retained.";
+            }
+
+            return result.Issues.Count == 0
+                ? $"Scanned {result.ScannedSceneCount} selected Scene(s). No missing references found."
+                : $"Scanned {result.ScannedSceneCount} selected Scene(s). Found {result.Issues.Count} issue(s).";
+        }
+
         private MessageType GetStatusMessageType()
         {
-            return _issues.Count == 0 ? MessageType.Info : MessageType.Warning;
+            return _scanFailed
+                ? MessageType.Error
+                : _issues.Count == 0 ? MessageType.Info : MessageType.Warning;
         }
 
         private static string FormatKind(BuildGuardIssueKind kind)

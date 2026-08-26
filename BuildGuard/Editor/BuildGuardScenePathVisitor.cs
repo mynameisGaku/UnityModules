@@ -62,7 +62,10 @@ namespace BuildGuard.Editor
                     {
                         if (closeAfterVisit && scene.IsValid() && scene.isLoaded)
                         {
-                            EditorSceneManager.CloseScene(scene, true);
+                            if (!EditorSceneManager.CloseScene(scene, true))
+                            {
+                                throw new InvalidOperationException($"Failed to close inspected Scene: {scenePath}");
+                            }
                         }
                     }
                 }
@@ -71,9 +74,10 @@ namespace BuildGuard.Editor
             {
                 if (originalActiveScene.IsValid()
                     && originalActiveScene.isLoaded
-                    && SceneManager.GetActiveScene() != originalActiveScene)
+                    && SceneManager.GetActiveScene() != originalActiveScene
+                    && !SceneManager.SetActiveScene(originalActiveScene))
                 {
-                    SceneManager.SetActiveScene(originalActiveScene);
+                    throw new InvalidOperationException("Failed to restore the original active Scene.");
                 }
             }
 

@@ -38,7 +38,7 @@ namespace BuildGuard.Tests
             }
 
             EditorBuildSettings.scenes = _originalScenes;
-            Selection.activeObject = null;
+            Selection.objects = Array.Empty<UnityEngine.Object>();
             EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             if (AssetDatabase.IsValidFolder(_temporaryFolder))
             {
@@ -94,6 +94,94 @@ namespace BuildGuard.Tests
             {
                 fixture.TearDown();
             }
+        }
+
+        [Test]
+        public void CaptureSelectedScenes_NoDirectSceneSelection_ShowsSelectionGuidance()
+        {
+            Selection.objects = new UnityEngine.Object[]
+            {
+                AssetDatabase.LoadAssetAtPath<DefaultAsset>(_temporaryFolder)
+            };
+
+            _window.CaptureSelectedScenes();
+
+            Assert.That(_window.SelectedSceneCount, Is.Zero);
+            Assert.That(_window.IssueCount, Is.Zero);
+            Assert.That(_window.StatusText, Does.Contain("Select one or more Scene assets"));
+        }
+
+        [Test]
+        public void CaptureSelectedScenes_TwoSceneAssets_CapturesStableSnapshot()
+        {
+            var zetaPath = CreateSavedScene("Zeta.unity");
+            var alphaPath = CreateSavedScene("Alpha.unity");
+            SelectAssets(zetaPath, alphaPath);
+
+            _window.CaptureSelectedScenes();
+
+            Assert.That(_window.SelectedSceneCount, Is.EqualTo(2));
+            Assert.That(_window.IssueCount, Is.Zero);
+            Assert.That(_window.StatusText, Is.EqualTo("Captured 2 Scene asset(s)."));
+        }
+
+        [Test]
+        public void RunSelectedScan_ValidCapturedScene_ShowsSelectedSuccessStatus()
+        {
+            var scenePath = CreateSavedScene("Selected.unity");
+            SelectAssets(scenePath);
+            _window.CaptureSelectedScenes();
+
+            _window.RunSelectedScan();
+
+            Assert.That(_window.IssueCount, Is.Zero);
+            Assert.That(_window.StatusText, Is.EqualTo(
+                "Scanned 1 selected Scene(s). No missing references found."));
+        }
+
+        [Test]
+        public void RunSelectedScan_CancelAfterFirstScene_ShowsSelectedCancellationStatus()
+        {
+            var alphaPath = CreateSavedScene("Alpha.unity");
+            var zetaPath = CreateSavedScene("Zeta.unity");
+            SelectAssets(zetaPath, alphaPath);
+            _window.CaptureSelectedScenes();
+
+            _window.RunSelectedScan((index, _, _) => index == 1);
+
+            Assert.That(_window.IssueCount, Is.Zero);
+            Assert.That(_window.StatusText, Is.EqualTo(
+                "Selected Scene scan cancelled after 1 Scene(s). 0 issue(s) retained."));
+        }
+
+        [Test]
+        public void RunSelectedScan_CapturedSceneDeleted_ShowsStaleFailureWithoutIssues()
+        {
+            var scenePath = CreateSavedScene("Stale.unity");
+            SelectAssets(scenePath);
+            _window.CaptureSelectedScenes();
+            EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            Assert.That(AssetDatabase.DeleteAsset(scenePath), Is.True);
+
+            _window.RunSelectedScan();
+
+            Assert.That(_window.IssueCount, Is.Zero);
+            Assert.That(_window.StatusText, Does.Contain("Use Current Selection"));
+        }
+
+        [Test]
+        public void ClearResults_AfterSelectedCapture_PreservesCapturedSnapshot()
+        {
+            var scenePath = CreateSavedScene("Captured.unity");
+            SelectAssets(scenePath);
+            _window.CaptureSelectedScenes();
+
+            _window.ClearResults();
+
+            Assert.That(_window.SelectedSceneCount, Is.EqualTo(1));
+            Assert.That(_window.IssueCount, Is.Zero);
+            Assert.That(_window.StatusText, Is.EqualTo(
+                "Results cleared. Scan build Scenes or the captured Scene assets again."));
         }
 
         [Test]
@@ -182,6 +270,27 @@ namespace BuildGuard.Tests
 
             Assert.That(removed, Is.False);
             Assert.That(removedCount, Is.Zero);
+        }
+
+        private string CreateSavedScene(string fileName)
+        {
+            var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            new GameObject(Path.GetFileNameWithoutExtension(fileName));
+            var scenePath = $"{_temporaryFolder}/{fileName}";
+            Assert.That(EditorSceneManager.SaveScene(scene, scenePath), Is.True);
+            return scenePath;
+        }
+
+        private static void SelectAssets(params string[] assetPaths)
+        {
+            var assets = new UnityEngine.Object[assetPaths.Length];
+            for (var index = 0; index < assetPaths.Length; index++)
+            {
+                assets[index] = AssetDatabase.LoadAssetAtPath<SceneAsset>(assetPaths[index]);
+                Assert.That(assets[index], Is.Not.Null, assetPaths[index]);
+            }
+
+            Selection.objects = assets;
         }
     }
 }

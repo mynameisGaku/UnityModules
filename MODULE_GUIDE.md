@@ -31,7 +31,7 @@ READMEとモジュール一覧では、日本語で目的を先に示す。Packa
 | 画面フェード | ScreenTransition | 画面を覆う・戻す演出を扱う。 |
 | ゲーム時間制御 | TimeControl | 一時停止・スロー・倍速を扱う。 |
 | 入力の一時停止 | InputGate | Gameplay の入力を一時的に止める。 |
-| プロジェクト不備確認・修復 | BuildGuard | Scene・PrefabのMissing Scriptなどを見つけ、Prefabの構造変更を別flowでreviewする。 |
+| プロジェクト不備確認・修復 | BuildGuard | build対象・直接選択したSceneと選択PrefabのMissing Scriptなどを見つけ、Prefabの構造変更を別flowでreviewする。 |
 | 不具合レポート保存 | DiagnosticsContext | 調査用の状態とログを JSON に残す。 |
 | Player設定 | Player Options | 音量・表示・品質・frame rateの保存とUnityへの適用を分けて扱う。 |
 | 入力補助 | Input Assist | スティック値の補正とbutton gestureをまとめて扱う。 |

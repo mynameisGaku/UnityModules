@@ -259,11 +259,12 @@ ProjectSetupがasmdefを作る責務とは分け、`Assets`と導入済み`Packa
 
 ### 優先度：中
 
-**5. Prefab override の逸脱検査（BuildGuard 1.5.0で実装）**
+**5. Prefab override の逸脱検査と選択Scene検査（BuildGuard 1.6.0で実装）**
 
 enabled build Sceneのoutermost connected Prefab instanceからAdded／Removed GameObject・Componentだけを抽出し、専用windowで最大1,000件の安定snapshotとしてreviewする。
 Property Modificationは意図を判定しないため除外し、finding選択時は同じscannerでidentityを再確認してstaleな移動を拒否する。
 Missing Script／Missing Object Referenceのbuild blockerとは接続せず、Apply、Revert、自動保存、dirty化、Player build停止を行わないmanual reviewへ限定した。
+1.6.0ではProject windowで直接選択した`Assets/`配下の保存済みSceneをBuild Profileの登録・有効状態に関係なく検査できるmanual flowを追加した。最大4,096件のasset候補から最大256 Sceneをpath順snapshotへ固定し、folder、`Packages/`、非Scene、Hierarchy選択を除外する。loaded Sceneは未保存のcurrent in-memory状態、closed Sceneは保存しないadditive一時読込で検査し、stale時はpartial resultを返さない。build callback、autofix、Prefab overrideの責務は広げない。
 
 **6. build 前チェックの一本化（既存のactual build接続を維持）**
 

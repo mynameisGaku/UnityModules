@@ -1,10 +1,10 @@
-# Build Guard 1.5.0
+# Build Guard 1.6.0
 
-Build Guardは、Player build対象Sceneと選択Prefabの壊れたComponent参照をscanし、build対象SceneのPrefab構造変更を別flowでreviewするEditor専用moduleです。Runtime assembly、設定asset、global singleton、公開APIを持ちません。
+Build Guardは、Player build対象Scene、Project windowで直接選択した保存済みScene、選択Prefabの壊れたComponent参照をscanし、build対象SceneのPrefab構造変更を別flowでreviewするEditor専用moduleです。Runtime assembly、設定asset、global singleton、公開APIを持ちません。
 
 ## 利用者の操作
 
-### 手動scan
+### build Scene scan
 
 **Tools > Build Guard > Scan Build Scenes** は、active Build Profileで有効なSceneを上から順に検査します。結果windowには次を表示します。
 
@@ -16,6 +16,14 @@ Build Guardは、Player build対象Sceneと選択Prefabの壊れたComponent参�
 `Open Scene`は未保存Sceneの保存確認後に対象Sceneを開き、階層pathがまだ一致すればGameObjectを選択します。対象が既に修復・移動されている場合はScene assetを選択します。`Copy`は1件を一行でclipboardへコピーします。
 
 Missing Scriptの`Open and Remove`は、確認後に同じ方法でSceneとGameObjectを特定します。対象GameObjectのmissing MonoBehaviour slotだけを`Undo.RegisterFullObjectHierarchyUndo`へ記録して除去し、Sceneをdirty状態のまま残します。自動保存しないため、利用者がInspectorを確認して保存するかUndoで戻せます。Missing Object Referenceは参照先を推測できないため自動修復しません。
+
+### 選択Scene scan
+
+**Assets > Build Guard > Scan Selected Scenes** は同じ結果windowを開き、Project windowで直接選択した`Assets/`配下の保存済みScene Assetをcaptureします。windowを開いた後は`Use Current Selection`でもcaptureを更新し、`Scan Selected Scenes`で検査します。Build Profileへの登録や有効状態は問いません。
+
+対象は直接選択したSceneだけです。選択folder以下を再帰せず、`Packages/`、Scene以外のAsset、Hierarchy上のGameObjectを除外します。最大4,096件の選択asset候補から最大256件のSceneをpath順へ並べ、重複を除いたsnapshotとして保持します。
+
+capture後にSceneが移動・削除されてpathを解決できなくなった場合は、scan結果を全て破棄して`Use Current Selection`による再選択を案内します。scan中にCancelした場合は完了済みSceneの結果を保持します。検出rule、結果表示、navigation、Missing Scriptの明示修復はbuild Scene scanと同じです。
 
 ### 選択Prefab scan
 
@@ -58,13 +66,15 @@ Sceneにあるoutermost connected Prefab instanceごとにUnityのadded／remove
 
 ## Sceneの扱い
 
-- 既に読み込まれているSceneはそのまま検査します。
+- 既に読み込まれているSceneはcurrent in-memory状態をそのまま検査します。未保存の変更も対象にし、dirty状態を変えません。
 - 閉じているSceneはadditiveで開き、検査後に保存せず閉じます。
 - 検査前のactive Sceneが有効なら、終了時にactive状態を復元します。
 - 同じScene pathが重複している場合は、大小文字を区別せず1回だけ検査します。
 - 空pathやScene assetとして解決できないpathはUnity本体のbuild診断へ委ねます。
 - scanはScene、Prefab instance、GameObject、Componentを変更しません。
 - structural override navigationで一時openしたSceneも必ず閉じ、元のactive／open／dirty状態を維持します。
+
+選択Scene scanはcapture済みpathを開始前に全件再検証します。staleなsnapshotでは走査を始めず、走査中の外部変更で全件完了できなかった場合もpartial resultを返しません。この追加は手動scanだけに閉じており、build callback、build Scene scan、選択Prefab scan、Missing Script修復、Prefab structural override reviewの対象と動作を変更しません。
 
 GameObject名には兄弟indexを付けます。`/`、`\\`、改行、復帰、tabは一行で判別できるようescapeします。このpath生成と解決は手動windowと自動build検査で共通です。
 
@@ -75,7 +85,7 @@ GameObject名には兄弟indexを付けます。`/`、`\\`、改行、復帰、t
 - Missing Object Referenceの自動修復
 - Prefab structural overrideのProperty Modification表示、Apply、Revert、自動修復、build停止
 - 複数Sceneの一括修復と自動保存
-- project内の全Prefab・Scene・ScriptableObjectの常時scan（Prefabは利用者が明示選択した範囲だけ）
+- project内の全Prefab・Scene・ScriptableObjectの常時scan（SceneとPrefabは利用者が明示選択した範囲だけ）
 - Runtimeで後から設定するnull fieldの必須判定
 - Addressables、Resources、AssetBundle contentの一括検査
 - PlayerSettings、Development Build、Profiler、署名、version、secretのpolicy判定
@@ -95,4 +105,4 @@ Package ManagerからSampleをImportすると、次を確認できます。
 
 ## 検証方針
 
-Editor testはinactive階層、Prefab instance、削除済みRenderTexture、path escape、階層pathの逆引き、決定論的message、複数Sceneと選択Prefabの手動scan、cancel、結果window、Scene・Prefab移動、Missing Script除去とUndo、閉じたSceneとPrefab contentsの一時読込を検証します。structural override reviewはnested／Variant／removed override、安定順、1,000件上限、cancel／failureのpartial破棄、stale identity、Scene open／active／dirty状態保全を検証します。配布gateではclean projectへtarballを導入し、有効Sceneと選択Prefabのscan、Missing Script除去後の未保存状態、正常Sceneのbuild成功、2種類の不備Sceneのbuild失敗を実際に確認します。
+Editor testはinactive階層、Prefab instance、削除済みRenderTexture、path escape、階層pathの逆引き、決定論的message、複数Sceneと選択Prefabの手動scan、cancel、結果window、Scene・Prefab移動、Missing Script除去とUndo、閉じたSceneとPrefab contentsの一時読込を検証します。選択SceneはProject選択filter、path順と重複除去、4,096候補／256 Scene上限、build対象外Scene、stale snapshotのpartial破棄、loaded Sceneの未保存状態、closed Sceneの一時読込、active／open／dirty状態保全を検証します。structural override reviewはnested／Variant／removed override、安定順、1,000件上限、cancel／failureのpartial破棄、stale identity、Scene open／active／dirty状態保全を検証します。配布gateではclean projectへtarballを導入し、有効Scene、build対象外の選択Scene、選択Prefabのscan、Missing Script除去後の未保存状態、正常Sceneのbuild成功、2種類の不備Sceneのbuild失敗を実際に確認します。

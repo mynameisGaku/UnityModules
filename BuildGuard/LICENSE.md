@@ -1,3 +1,5 @@
+Build Guard copyright © 2026 StudioGaku
+
 # 利用条件
 
 ## Unity Asset Storeから取得したパッケージ

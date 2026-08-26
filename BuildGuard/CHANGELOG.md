@@ -2,6 +2,19 @@
 
 このパッケージの変更履歴。書式は [Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) に、バージョン番号は [Semantic Versioning](https://semver.org/lang/ja/) に従います。
 
+## [1.6.0] - 2026-08-26
+
+### Added
+
+- Project windowで直接選択した`Assets/`配下の保存済みSceneを、Build Profileへの登録や有効状態に関係なく検査する手動scan。
+- 最大4,096件の選択asset候補から最大256件のSceneをpath順で重複除去し、`Use Current Selection`で固定するsnapshot flow。
+- capture後に移動・削除されたSceneをstaleとして拒否し、partial resultを返さず再選択を案内する安全境界。
+
+### Changed
+
+- loaded Sceneは未保存のcurrent in-memory状態を検査し、closed Sceneはadditiveで一時的に開いて保存せず閉じる既存のScene走査を選択Sceneへ共有。
+- build callback、build Scene scan、Missing Script修復、選択Prefab scan、Prefab structural override reviewの契約は変更せず維持。
+
 ## [1.5.0] - 2026-08-25
 
 ### Added

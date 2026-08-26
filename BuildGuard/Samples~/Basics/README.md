@@ -10,7 +10,18 @@
 
 このSceneはactive rootとinactive childを持ちますが、壊れた参照はありません。Build Guardはbuildを止めません。
 
-## 2. Missing Scriptを安全に確認する
+## 2. build対象外の選択Sceneを確認する
+
+1. `BuildGuardBasics.unity`を`BuildGuardSelectedScene.unity`として複製します。
+2. 複製したSceneをBuild Profilesへ追加せず、Project windowで直接選択します。
+3. 右クリックして **Build Guard > Scan Selected Scenes** を選びます。
+4. `Selected Scene Assets`が`1`であることを確認し、`Scan Selected Scenes`を押します。
+5. `No missing references found.`を確認します。
+6. 確認後は複製したSceneを削除します。
+
+選択Scene scanはBuild Profileへの登録や有効状態に関係なく使えます。folderを再帰せず、直接選択した`Assets/`配下の保存済みSceneだけを検査します。
+
+## 3. Missing Scriptを安全に確認する
 
 `BrokenSceneExample.unity.txt`はMissing Scriptを1件持つScene YAMLです。`.txt`なのでSampleをImportしただけではSceneとして読み込まれません。
 
@@ -23,7 +34,7 @@
 7. 再度除去してSceneを保存すると、manual scanとPlayer buildがMissing Scriptでは止まらなくなることを確認します。
 8. 確認後は複製したSceneを削除します。
 
-## 3. Missing Object Referenceを確認する
+## 4. Missing Object Referenceを確認する
 
 この手順もscratch copyで行ってください。
 
@@ -40,7 +51,7 @@
 
 Build GuardはMissing Scriptだけを明示操作で除去できます。Missing Object Referenceの推測修復、Sceneの自動保存、Asset削除は行いません。`Copy`で1件の修復情報を共有できます。
 
-## 4. PrefabのMissing Scriptを確認する
+## 5. PrefabのMissing Scriptを確認する
 
 `BrokenPrefabExample.prefab.txt`はMissing Scriptを1件持つPrefab YAMLです。`.txt`なのでImportしただけではPrefabとして読み込まれません。
 
