@@ -11,6 +11,7 @@ Localization Key Auditは、String Table Collectionの共有keyについて、�
 3. raw preflightがread-onlyを保証できない場合は、`ReadOnlyGuaranteeUnavailable`として監査全体を停止します。
 4. preflightを通過した場合だけtyped loadを行い、String／Asset Table ownerを分類したうえでrequired localeごとのString direct coverageとintegrityを確認します。
 5. `Audit`を押し、finding、coverage scope、coverage外、incomplete要因を合わせて確認します。自動scanは行いません。
+6. 必要なら`Copy Displayed` buttonで、現在のSearchとCategory filterにより一覧へ実際に表示されているfindingをcopyします。
 
 監査はassetの修正、保存、削除を行いません。autofixも提供しません。
 
@@ -28,6 +29,14 @@ Windowの`Issue Categories (unfiltered result)`は、現在の監査resultに含
 内訳はresult取得後に全findingから1回だけ集計し、Search、Category filter、500件の一覧表示上限から独立して保持します。これはfinding数であり、uniqueなasset数、collection数、key数ではありません。`Clear`はresultと内訳を消し、次の`Audit`は新しいresultから集計します。
 
 resultまたはStatic coverageが`Incomplete`の場合、あるカテゴリが0件でも、安全、問題なし、またはfindingなしを証明しません。`Complete`／`Incomplete`とcoverageの完了状態が引き続き監査の完了性を示します。
+
+## Copy Displayed Issues
+
+`Copy Displayed Issues`が対象にするのは、現在のSearchとCategory filterを適用した`visibleIssueIndices`の先頭`min(filtered, 500)`件、つまり一覧へ実際に描画されるfindingだけです。500件を超えてfilterに一致する表示外findingは含めません。監査resultの順序とduplicate findingを保ちます。resultまたはStatic coverageが`Incomplete`でも利用できますが、copy結果は監査がcompleteであることを示しません。
+
+payload冒頭の`Result`、`Static Coverage`、`Displayed Issues`、`Filtered Issues`、`Total Issues`は、resultとcoverageの完了性、copyした表示slice、filter一致件数、result全件数を示します。Window外でpayloadだけを確認する場合も、Incompleteや500件超の結果を全件copyと誤読しないためのheaderです。
+
+区切りを含むclipboard payload全体の上限は1,048,576 UTF-16 code unitです。exact上限は受理し、1 code unitでも超える場合はtruncateやpartial copyをせず、clipboardを変更しないまま操作全体を拒否します。表示findingが0件、resultまたは表示indexがinvalid／stale、`Clear`後、監査の例外catch後はcopyできません。既存の選択1件用`Copy Details`は内容と動作を変更しません。
 
 ## Finding semantics
 
@@ -96,8 +105,9 @@ coverage外があるため、参照を検出できない結果は`NoStaticRefere
 - public APIは0件です。
 - Runtime assemblyとRuntime APIは0件です。
 - build blocker、build callback、autofix、asset削除はありません。
-- WindowはassetをloadするPing／Openを持たず、findingのlogical pathと詳細をclipboardへcopyするだけです。physical pathはcopyしません。
+- WindowはassetをloadするPing／Openを持たず、findingのlogical pathと詳細、または現在表示中のfindingだけをclipboardへcopyします。physical pathはcopyしません。
 - registered package対応で広がるのはstatic-reference coverageだけです。raw preflight、typed snapshot、direct coverage、integrity、graph、finding taxonomyは変更しません。
+- `Copy Displayed Issues`は既存resultの表示集合だけを読み、Analyzer、Service、model、category summary、build callbackを変更しません。
 - `com.unity.localization` 1.5.12をhard dependencyとします。
 - Addressablesへのdirect dependencyは宣言しません。
 

@@ -2,6 +2,23 @@
 
 All notable changes to this package will be documented in this file.
 
+## [1.3.0] - 2026-08-26
+
+### Added
+
+- Added `Copy Displayed Issues` for exactly the findings currently drawn after Search and Category filtering, capped at the first `min(filtered, 500)` findings.
+- Preserved audit-result order and duplicate findings, and kept the action available when the result or static coverage is `Incomplete`.
+- Prefixed the payload with `Result`, `Static Coverage`, `Displayed Issues`, `Filtered Issues`, and `Total Issues` so incomplete and display-capped snapshots remain explicit outside the window.
+
+### Safety
+
+- Accept the complete clipboard payload at exactly 1,048,576 UTF-16 code units; reject one code unit over atomically without truncation or clipboard mutation.
+- Keep copy unavailable for zero displayed findings and invalid, stale, cleared, or exception-reset result state.
+
+### Boundaries
+
+- Kept the existing single-finding `Copy Details`, unfiltered category summary, Analyzer, Service, model, issue taxonomy, public and Runtime surfaces, and build callback behavior unchanged.
+
 ## [1.2.0] - 2026-08-26
 
 ### Added

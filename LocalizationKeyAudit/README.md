@@ -2,7 +2,7 @@
 
 ## 30秒で分かる説明
 
-Localization Key Auditは、Unity LocalizationのString Table Collectionについて、明示したrequired localeごとのdirect coverageとtable integrityを手動で確認するEditor専用ツールです。静的参照は、1回の監査につき`Assets`または1つのregistered packageのどちらか一方をlogical rootとして、同じroot内に宣言したpathだけを対象にできます。監査結果全体のfindingは4カテゴリ別の件数でも確認できます。結果はadvisory（判断材料）であり、assetを変更せず、buildを停止しません。
+Localization Key Auditは、Unity LocalizationのString Table Collectionについて、明示したrequired localeごとのdirect coverageとtable integrityを手動で確認するEditor専用ツールです。静的参照は、1回の監査につき`Assets`または1つのregistered packageのどちらか一方をlogical rootとして、同じroot内に宣言したpathだけを対象にできます。監査結果全体のfindingは4カテゴリ別の件数でも確認でき、現在のfilterで実際に表示するfindingだけをまとめてcopyできます。結果はadvisory（判断材料）であり、assetを変更せず、buildを停止しません。
 
 ## できること
 
@@ -12,6 +12,7 @@ Localization Key Auditは、Unity LocalizationのString Table Collectionにつ�
 - 1回につきlogical rootを`Assets`または1つの`Packages/<registered-name>`に限定し、そのroot内に宣言された静的参照だけを調べます。見つからない場合は`NoStaticReferenceFoundWithinDeclaredScope`と報告します。
 - findingと一緒にcoverage scope、coverage外、incomplete要因を示します。
 - filter前のfindingを`Terminal`、`Required Locale Coverage`、`Static References`、`Integrity`の4カテゴリ別に集計します。
+- SearchとCategory filter後に一覧へ実際に描画する先頭500件だけを、result順と重複を保って`Copy Displayed` buttonからcopyします。
 
 ## 使わない方がよい場合
 
@@ -28,13 +29,14 @@ Localization Key Auditは、Unity LocalizationのString Table Collectionにつ�
 1. Package Managerの「Add package from git URL...」へ次を入力します。
 
    ```text
-   https://github.com/mynameisGaku/UnityModules.git?path=/LocalizationKeyAudit#localization-key-audit-v1.2.0
+   https://github.com/mynameisGaku/UnityModules.git?path=/LocalizationKeyAudit#localization-key-audit-v1.3.0
    ```
 
 2. Unity Editorの`Tools/Localization Key Audit/Open`からwindowを開きます。
 3. `Required Locales`へカンマまたは改行区切りのLocale identifierを入力します。`Declared Asset Paths`の既定値は`Assets`です。必要なら、同じ`Assets` root内のpath、または1つのregistered package root内のpathだけへ置き換えます。
 4. `Audit`を実行します。監査はbuttonを押したときだけ行われます。
 5. findingだけでなく、表示されたcoverageと完了状態も確認します。
+6. 必要なら`Copy Displayed` buttonで、現在のfilterにより一覧へ実際に表示されているfindingをcopyします。
 
 sample assetは同梱していません。既存projectのLocalization assetに対して手動で実行します。
 
@@ -73,6 +75,14 @@ scope外にも参照があり得るprojectでは、`NoStaticReferenceFoundWithin
 Windowの`Issue Categories (unfiltered result)`は、現在の監査resultに含まれる全findingを`Terminal`、`Required Locale Coverage`、`Static References`、`Integrity`へ1回だけ分類した件数です。Search、Category filter、一覧の500件表示上限を変えても、この内訳は変わりません。件数はfinding数であり、uniqueなasset数、collection数、key数ではありません。`Clear`は結果と内訳を消し、次の`Audit`は新しいresultから集計します。
 
 resultまたはStatic coverageが`Incomplete`の場合、あるカテゴリが0件でも、そのカテゴリに問題がない、安全である、またはfindingが存在しないことの証明にはなりません。内訳より`Complete`／`Incomplete`とcoverageの完了状態を優先してください。
+
+### 表示中findingの一括copy
+
+`Copy Displayed Issues`は、現在のSearchとCategory filterを適用した`visibleIssueIndices`のうち、一覧で実際に描画される先頭`min(filtered, 500)`件だけをcopyします。500件を超えてfilterに一致する表示外findingは含めません。result内の順序とduplicate findingをそのまま保ち、resultまたはStatic coverageが`Incomplete`でも、現在表示できているfindingのcopyは抑止しません。ただし、copyできた内容は監査の完了性を保証しません。
+
+clipboard本文の先頭には`Result`、`Static Coverage`、`Displayed Issues`、`Filtered Issues`、`Total Issues`を記録します。これにより、Window外で本文だけを確認する場合も、Incomplete resultや500件の表示上限を全件結果と誤読しないようにします。
+
+区切りを含むclipboard文字列全体が1,048,576 UTF-16 code unitの場合はexactに受理します。1 code unitでも超える場合は、切り詰めやpartial copyを行わず操作全体を拒否し、既存clipboardを変更しません。表示findingが0件の場合、resultや表示indexがinvalid／staleな場合、`Clear`後、または監査の例外catch後もcopyできず、clipboardを変更しません。既存の選択1件用`Copy Details`の内容と動作は変更しません。
 
 | Finding / status | 意味 | 断定しないこと |
 | --- | --- | --- |
@@ -117,7 +127,7 @@ package scopeには、登録済みpackageのmanifest `name`を使った`Packages
 - Editor専用です。Runtime assemblyとRuntime APIはありません。
 - public APIはありません。
 - 監査はread-onlyです。autofix、entry追加、値の書換え、削除、asset保存を行いません。
-- WindowはassetをloadするPing／Openを提供せず、選択findingのlogical pathと詳細をclipboardへcopyするだけです。Window、監査結果、error、clipboardへphysical pathを露出せず、読取errorはlogical pathとexception typeだけを示します。
+- WindowはassetをloadするPing／Openを提供せず、選択findingのlogical pathと詳細、または現在表示中のfindingだけをclipboardへcopyします。Window、監査結果、error、clipboardへphysical pathを露出せず、読取errorはlogical pathとexception typeだけを示します。
 - 結果は宣言されたrequired localeとcoverage scopeに対する直接的な観測です。fallback後のruntime表示結果や、翻訳が実行時に利用できないことまでは断定しません。
 - registered package対応で広がるのはstatic-reference coverageだけです。raw preflight、typed snapshot、direct coverage、integrity、graph、finding taxonomyは変更しません。
 

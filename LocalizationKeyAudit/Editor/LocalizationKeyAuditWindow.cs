@@ -16,6 +16,9 @@ namespace LocalizationKeyAudit.Editor
         /// <summary>問題一覧へ描画する最大行数です。</summary>
         internal const int MaximumDisplayedIssues = 500;
 
+        /// <summary>表示中の問題を一括copyするときのUTF-16 code unit上限です。</summary>
+        internal const int MaximumDisplayedIssueClipboardCharacters = 1_048_576;
+
         /// <summary>問題種別を用途別に絞り込む表示区分です。</summary>
         internal enum IssueCategoryFilter
         {
@@ -265,9 +268,21 @@ namespace LocalizationKeyAudit.Editor
         {
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
-                EditorGUILayout.LabelField($"Issues ({visibleIssueIndices.Count})", EditorStyles.boldLabel);
-                issueScrollPosition = EditorGUILayout.BeginScrollView(issueScrollPosition, GUILayout.Height(height));
                 var displayedCount = Math.Min(visibleIssueIndices.Count, MaximumDisplayedIssues);
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    EditorGUILayout.LabelField($"Issues ({visibleIssueIndices.Count})", EditorStyles.boldLabel);
+                    GUILayout.FlexibleSpace();
+                    using (new EditorGUI.DisabledScope(displayedCount == 0))
+                    {
+                        if (GUILayout.Button("Copy Displayed", GUILayout.Width(112f)))
+                        {
+                            CopyDisplayedIssues();
+                        }
+                    }
+                }
+
+                issueScrollPosition = EditorGUILayout.BeginScrollView(issueScrollPosition, GUILayout.Height(height));
                 if (displayedCount == 0)
                 {
                     EditorGUILayout.LabelField("現在の filter に一致する問題はありません。", wrappedMiniLabelStyle);
@@ -388,6 +403,24 @@ namespace LocalizationKeyAudit.Editor
             detailScrollPosition = Vector2.zero;
             windowScrollPosition = Vector2.zero;
             interactionMessage = string.Empty;
+        }
+
+        /// <summary>現在のfilterで画面に表示する問題だけを検証後に1回でclipboardへcopyします。</summary>
+        private void CopyDisplayedIssues()
+        {
+            if (!TryBuildDisplayedIssuesClipboardText(
+                    result,
+                    visibleIssueIndices,
+                    out var clipboardText,
+                    out var copiedIssueCount))
+            {
+                interactionMessage =
+                    "表示中の問題をclipboardへcopyできませんでした。監査結果とfilterを再確認してください。";
+                return;
+            }
+
+            EditorGUIUtility.systemCopyBuffer = clipboardText;
+            interactionMessage = $"画面に表示中の問題 {copiedIssueCount} 件をclipboardへcopyしました。";
         }
 
         /// <summary>必須 Locale のカンマ・semicolon・改行区切りを順序保持で解析します。</summary>
@@ -685,6 +718,204 @@ namespace LocalizationKeyAudit.Editor
             AppendDetail(builder, "Entry Key", issue.EntryKey);
             AppendDetail(builder, "Entry ID", issue.EntryId == 0 ? string.Empty : issue.EntryId.ToString());
             return builder.ToString().TrimEnd();
+        }
+
+        /// <summary>
+        /// filter済みindexの先頭500件を、完了状態と件数header付きのbounded clipboard本文へ変換します。
+        /// </summary>
+        internal static bool TryBuildDisplayedIssuesClipboardText(
+            LocalizationKeyAuditResult candidateResult,
+            IReadOnlyList<int> candidateVisibleIssueIndices,
+            out string clipboardText,
+            out int copiedIssueCount)
+        {
+            clipboardText = string.Empty;
+            copiedIssueCount = 0;
+            if (candidateResult == null ||
+                candidateResult.Issues == null ||
+                candidateVisibleIssueIndices == null ||
+                candidateResult.Issues.Count == 0 ||
+                candidateResult.Issues.Count > LocalizationKeyAuditLimits.MaximumIssues ||
+                candidateVisibleIssueIndices.Count == 0 ||
+                candidateVisibleIssueIndices.Count > LocalizationKeyAuditLimits.MaximumIssues)
+            {
+                return false;
+            }
+
+            for (var issueIndex = 0; issueIndex < candidateResult.Issues.Count; issueIndex++)
+            {
+                var issue = candidateResult.Issues[issueIndex];
+                if (issue == null || !IsKnownIssueKind(issue.Kind))
+                {
+                    return false;
+                }
+            }
+
+            var previousResultIndex = -1;
+            for (var visibleIndex = 0; visibleIndex < candidateVisibleIssueIndices.Count; visibleIndex++)
+            {
+                var resultIndex = candidateVisibleIssueIndices[visibleIndex];
+                if (resultIndex < 0 ||
+                    resultIndex >= candidateResult.Issues.Count ||
+                    resultIndex <= previousResultIndex)
+                {
+                    return false;
+                }
+
+                previousResultIndex = resultIndex;
+            }
+
+            var displayedCount = Math.Min(candidateVisibleIssueIndices.Count, MaximumDisplayedIssues);
+            var header = BuildDisplayedIssuesClipboardHeader(
+                candidateResult,
+                displayedCount,
+                candidateVisibleIssueIndices.Count);
+            var blockSeparator = Environment.NewLine + Environment.NewLine;
+            long requiredLength = header.Length;
+            var detailLengths = new int[displayedCount];
+            for (var displayedIndex = 0; displayedIndex < displayedCount; displayedIndex++)
+            {
+                var issue = candidateResult.Issues[candidateVisibleIssueIndices[displayedIndex]];
+                if (!TryGetIssueDetailsLength(issue, out var detailLength))
+                {
+                    return false;
+                }
+
+                detailLengths[displayedIndex] = detailLength;
+                requiredLength += blockSeparator.Length + detailLength;
+                if (requiredLength > MaximumDisplayedIssueClipboardCharacters)
+                {
+                    return false;
+                }
+            }
+
+            var builder = new StringBuilder((int)requiredLength);
+            builder.Append(header);
+            for (var displayedIndex = 0; displayedIndex < displayedCount; displayedIndex++)
+            {
+                var issue = candidateResult.Issues[candidateVisibleIssueIndices[displayedIndex]];
+                var details = BuildIssueDetails(issue);
+                if (details.Length != detailLengths[displayedIndex])
+                {
+                    return false;
+                }
+
+                builder.Append(blockSeparator).Append(details);
+            }
+
+            if (builder.Length != requiredLength)
+            {
+                return false;
+            }
+
+            clipboardText = builder.ToString();
+            copiedIssueCount = displayedCount;
+            return true;
+        }
+
+        /// <summary>一括copy対象がどのsnapshotと表示sliceかを誤読しないheaderを作ります。</summary>
+        private static string BuildDisplayedIssuesClipboardHeader(
+            LocalizationKeyAuditResult candidateResult,
+            int displayedCount,
+            int filteredCount)
+        {
+            var builder = new StringBuilder();
+            builder.AppendLine("Localization Key Audit - Displayed Issues");
+            builder.Append("Result: ").AppendLine(candidateResult.IsComplete ? "Complete" : "Incomplete");
+            builder.Append("Static Coverage: ").AppendLine(
+                candidateResult.Coverage.IsComplete ? "Complete" : "Incomplete");
+            builder.Append("Displayed Issues: ").AppendLine(displayedCount.ToString());
+            builder.Append("Filtered Issues: ").AppendLine(filteredCount.ToString());
+            builder.Append("Total Issues: ").Append(candidateResult.Issues.Count);
+            return builder.ToString();
+        }
+
+        /// <summary>既存の単一issue詳細formatが生成するUTF-16 code unit数をallocation前に求めます。</summary>
+        private static bool TryGetIssueDetailsLength(
+            LocalizationKeyAuditIssue issue,
+            out int detailLength)
+        {
+            detailLength = 0;
+            if (issue == null || !IsKnownIssueKind(issue.Kind))
+            {
+                return false;
+            }
+
+            long length = 0;
+            string lastValue = null;
+            AddDetailLength(ref length, ref lastValue, "Kind", issue.Kind.ToString());
+            AddDetailLength(ref length, ref lastValue, "Message", issue.Message);
+            AddDetailLength(ref length, ref lastValue, "Asset", issue.AssetPath);
+            AddDetailLength(ref length, ref lastValue, "Related", issue.RelatedAssetPath);
+            AddDetailLength(ref length, ref lastValue, "Collection", issue.CollectionName);
+            AddDetailLength(
+                ref length,
+                ref lastValue,
+                "Collection GUID",
+                issue.CollectionGuid == Guid.Empty ? string.Empty : issue.CollectionGuid.ToString("D"));
+            AddDetailLength(ref length, ref lastValue, "Locale", issue.LocaleIdentifier);
+            AddDetailLength(ref length, ref lastValue, "Entry Key", issue.EntryKey);
+            AddDetailLength(
+                ref length,
+                ref lastValue,
+                "Entry ID",
+                issue.EntryId == 0 ? string.Empty : issue.EntryId.ToString());
+
+            if (lastValue == null)
+            {
+                return false;
+            }
+
+            length -= Environment.NewLine.Length;
+            var trailingWhitespace = 0;
+            for (var index = lastValue.Length - 1; index >= 0 && char.IsWhiteSpace(lastValue[index]); index--)
+            {
+                trailingWhitespace++;
+            }
+
+            length -= trailingWhitespace;
+            if (trailingWhitespace == lastValue.Length)
+            {
+                length--;
+            }
+
+            if (length < 0 || length > int.MaxValue)
+            {
+                return false;
+            }
+
+            detailLength = (int)length;
+            return true;
+        }
+
+        /// <summary>空でないdetail行の未trim長と最後の値を蓄積します。</summary>
+        private static void AddDetailLength(
+            ref long length,
+            ref string lastValue,
+            string label,
+            string value)
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                return;
+            }
+
+            length += label.Length + 2L + value.Length + Environment.NewLine.Length;
+            lastValue = value;
+        }
+
+        /// <summary>未知kindを本文へ数値表示せず、既存の単一classifierで検証します。</summary>
+        private static bool IsKnownIssueKind(LocalizationKeyAuditIssueKind kind)
+        {
+            try
+            {
+                ClassifyIssueKind(kind);
+                return true;
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                return false;
+            }
         }
 
         /// <summary>値がある詳細だけを追記します。</summary>

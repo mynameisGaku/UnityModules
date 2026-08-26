@@ -274,12 +274,13 @@ BuildAssistantは通常の`BuildPipeline.BuildPlayer`を呼ぶため、BuildGuar
 BuildAssistantのPreviewへ別moduleの結果を集約すると、package間のhard dependency、staleな重複scan、blockerとadvisoryの混在を招くため追加実装は見送る。
 AssetImportAuditは期待するimport policy、ProjectSetupは利用者が選んだprofileを前提とするmanual Previewとして独立を維持し、Structural Prefab Overrideもbuild blockerへ昇格しない。
 
-**7. Localization keyのdirect coverage／integrity監査（LocalizationKeyAudit 1.2.0で実装）**
+**7. Localization keyのdirect coverage／integrity監査（LocalizationKeyAudit 1.3.0で実装）**
 
 当初案の「未翻訳・未使用keyをbuild前に検出」は、locale fallback、dynamic lookup、Smart String内のnested参照、Addressablesや外部dataを網羅できず、安全に断定できないため採用しなかった。
 代わりにUnity Localization 1.5.12をhard dependencyとするEditor専用moduleを追加し、明示されたrequired Localeのdirect table／entry／value、duplicate・orphan integrity、宣言済み`Assets` scopeで認識できるGUID＋key ID参照だけを手動監査する。
 1.1.0では静的参照coverageを、明示した`Packages/<registered-name>[/...]`へ拡張した。1回の監査は`Assets`または1つのregistered packageというexact 1 logical rootに限定し、同じroot内だけ複数pathを許可する。登録名は`PackageInfo.resolvedPath`へexactに対応付け、physical pathをUI、結果、error、clipboardへ残さない。bare `Packages`、直接指定した`Library/PackageCache`、未登録名、root混在、`~`／colon／dotまたはspaceで終わるsegmentを含む明示pathをfilesystem access前に拒否する。normalized duplicate target、root／ancestor／child reparse、root escapeではfail closedとしてpartial resultを返さず、読取errorはlogical pathとexception typeだけを示す。
 1.2.0では監査result全体のfindingを`Terminal`、`Required Locale Coverage`、`Static References`、`Integrity`へexact 1つずつ分類し、Search、Category filter、500件表示上限に依存しない件数を追加した。件数はunique asset／collection／key数ではなくfinding数であり、resultまたはcoverageがincompleteなら0件も安全や問題なしの証明にはしない。issue taxonomy、read-only、Editor-only、advisory、Runtime／public API 0件の境界は変えない。
+1.3.0ではSearchとCategory filter後に一覧へ実際に描画する先頭500件だけを、result順とduplicateを保ったまま`Copy Displayed Issues`でcopyできるようにした。payload headerへresult／coverageの完了性とDisplayed／Filtered／Total件数を残すため、Incomplete resultや500件超のfilter結果も全件copyと誤読しない。Incompleteでも表示中findingのcopyは許可するが、生成payloadが1,048,576 UTF-16 code unitを1つでも超えた場合はtruncateやpartial copyをせず、既存clipboardを変更しない。既存`Copy Details`、category summary、Analyzer、Service、model、public／Runtime surface、build callbackは変更しない。
 Shared Table Dataはtyped load前にraw serialized representationを全件preflightし、read-only保証を確立できない場合はtyped APIを呼ばず全体を停止する。結果はadvisoryであり、runtime翻訳可否やkeyの未使用を断定せず、build blocker、autofix、削除を行わない。
 
 ### 見送り

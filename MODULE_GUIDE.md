@@ -86,6 +86,7 @@ Unity LocalizationのShared Table Dataをtyped loadする前にraw serialized re
 Package scopeは登録名を`PackageInfo.resolvedPath`へexactに対応付け、logical pathだけを結果へ残す。bare `Packages`、直接指定した`Library/PackageCache`、未登録名、root混在、曖昧なshort-name pathをfilesystem access前に拒否し、normalized duplicate target、root／ancestor／child reparse、root escapeではpartial resultを返さない。physical pathはUI、結果、error、clipboardへ露出せず、読取errorはlogical pathとexception typeだけを示す。
 欠落または空のcollection GUIDをloadするとUnity Localization 1.5.12がassetをdirtyにし得るため、raw preflightに失敗した場合はtyped APIを呼ばず監査全体を停止する。
 監査result全体のfindingを`Terminal`、`Required Locale Coverage`、`Static References`、`Integrity`へexact 1つずつ分類し、Search、Category filter、500件表示上限に依存しない件数として示す。resultまたはcoverageがincompleteなら、0件のカテゴリも安全や問題なしの証明には使わない。
+`Copy Displayed Issues`はSearchとCategory filter後に実際に描画する先頭500件だけをresult順・重複保持でcopyし、result／coverageの完了性とDisplayed／Filtered／Total件数をheaderへ残す。Incompleteでも利用できるが、1,048,576 UTF-16 code unitを1つでも超える場合はtruncateせず全体を拒否し、clipboardを変更しない。
 fallback後のruntime翻訳可否やkeyの未使用は断定せず、build callback、autofix、entry追加、値の書換え、削除は行わない。
 Asset Tableのentryやlocalized assetはdirect coverageせず、Asset Tableだけが所有するShared Table DataをString key findingへ混在させない。
 
