@@ -104,6 +104,9 @@ namespace AssemblyDependencyAudit.Editor
         /// <summary>選択asmdefの宣言参照一覧で表示する0始まりpageです。</summary>
         [SerializeField] private int _declaredReferencePage;
 
+        /// <summary>選択asmdefのcycle component member一覧で表示する0始まりpageです。</summary>
+        [SerializeField] private int _cycleComponentPage;
+
         /// <summary>詳細欄の縦方向位置です。</summary>
         [SerializeField] private Vector2 _detailsScrollPosition;
 
@@ -118,6 +121,9 @@ namespace AssemblyDependencyAudit.Editor
 
         /// <summary>現在のsearch・scope・issue filterに一致するasmref target indexです。</summary>
         private readonly List<int> _visibleAssemblyReferenceIndices = new List<int>();
+
+        /// <summary>選択asmdefが属する検証済みcycle componentのlogical asset pathです。</summary>
+        private readonly List<string> _selectedCycleComponentMemberPaths = new List<string>();
 
         /// <summary>問題へ直接または関連先として含まれる path です。</summary>
         private readonly HashSet<string> _issuePaths = new HashSet<string>(StringComparer.Ordinal);
@@ -136,6 +142,9 @@ namespace AssemblyDependencyAudit.Editor
 
         /// <summary>監査に失敗した理由です。</summary>
         private string _auditErrorMessage = string.Empty;
+
+        /// <summary>cycle component resultが不正でmemberを表示できない理由です。</summary>
+        private string _cycleComponentErrorMessage = string.Empty;
 
         /// <summary>Ping、Open、Copy の実行結果です。</summary>
         private string _interactionMessage = string.Empty;
@@ -559,10 +568,83 @@ namespace AssemblyDependencyAudit.Editor
 
                 if (target == null && node != null)
                 {
+                    DrawCycleComponentMembers();
                     DrawDeclaredReferences(node);
                 }
 
                 EditorGUILayout.EndScrollView();
+            }
+        }
+
+        /// <summary>選択asmdefが属するSCCのmemberをasset path順で500件単位に描画します。</summary>
+        private void DrawCycleComponentMembers()
+        {
+            if (_selectedCycleComponentMemberPaths.Count == 0 &&
+                string.IsNullOrEmpty(_cycleComponentErrorMessage))
+            {
+                return;
+            }
+
+            EditorGUILayout.Space(6f);
+            EditorGUILayout.LabelField(
+                $"Cycle Component Members ({_selectedCycleComponentMemberPaths.Count})",
+                EditorStyles.boldLabel);
+            if (!string.IsNullOrEmpty(_cycleComponentErrorMessage))
+            {
+                EditorGUILayout.HelpBox(_cycleComponentErrorMessage, MessageType.Error);
+                return;
+            }
+
+            EditorGUILayout.LabelField(
+                "asset path順のSCC member集合です。循環を通る順序ではありません。",
+                _wrappedMiniLabelStyle);
+            DrawCycleComponentPageControls();
+            var pageStart = GetCycleComponentPageStart(
+                _cycleComponentPage,
+                _selectedCycleComponentMemberPaths.Count);
+            var pageEnd = Math.Min(
+                pageStart + MaximumDisplayedRows,
+                _selectedCycleComponentMemberPaths.Count);
+            for (var memberIndex = pageStart; memberIndex < pageEnd; memberIndex++)
+            {
+                EditorGUILayout.LabelField(
+                    FormatCycleComponentMemberRow(
+                        _selectedCycleComponentMemberPaths[memberIndex],
+                        memberIndex),
+                    _wrappedMiniLabelStyle,
+                    GUILayout.ExpandWidth(true));
+            }
+        }
+
+        /// <summary>cycle component member一覧のPrev・page番号・Nextを描画します。</summary>
+        private void DrawCycleComponentPageControls()
+        {
+            var pageCount = GetCycleComponentPageCount(_selectedCycleComponentMemberPaths.Count);
+            _cycleComponentPage = ClampCycleComponentPage(_cycleComponentPage, pageCount);
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                using (new EditorGUI.DisabledScope(_cycleComponentPage <= 0))
+                {
+                    if (GUILayout.Button("Prev", GUILayout.Width(48f)))
+                    {
+                        SetCycleComponentPage(_cycleComponentPage - 1);
+                    }
+                }
+
+                GUILayout.FlexibleSpace();
+                EditorGUILayout.LabelField(
+                    $"Page {_cycleComponentPage + 1} / {pageCount}",
+                    EditorStyles.miniLabel,
+                    GUILayout.Width(82f));
+                GUILayout.FlexibleSpace();
+
+                using (new EditorGUI.DisabledScope(_cycleComponentPage + 1 >= pageCount))
+                {
+                    if (GUILayout.Button("Next", GUILayout.Width(48f)))
+                    {
+                        SetCycleComponentPage(_cycleComponentPage + 1);
+                    }
+                }
             }
         }
 
@@ -700,6 +782,9 @@ namespace AssemblyDependencyAudit.Editor
             _selectedAssemblyReferenceIndex = -1;
             _assemblyReferencePage = 0;
             _declaredReferencePage = 0;
+            _cycleComponentPage = 0;
+            _selectedCycleComponentMemberPaths.Clear();
+            _cycleComponentErrorMessage = string.Empty;
             _detailsScrollPosition = Vector2.zero;
             _referenceCount = 0;
         }
@@ -1114,6 +1199,8 @@ namespace AssemblyDependencyAudit.Editor
             _selectedAssemblyIndex = IsAssemblyIndexValid(assemblyIndex) ? assemblyIndex : -1;
             _selectedAssemblyReferenceIndex = -1;
             _declaredReferencePage = 0;
+            _cycleComponentPage = 0;
+            RebuildSelectedCycleComponent();
             _detailsScrollPosition = Vector2.zero;
             var issueIndices = GetSelectedIssueIndices();
             _selectedIssueIndex = issueIndices.Count == 0 ? -1 : issueIndices[0];
@@ -1127,10 +1214,56 @@ namespace AssemblyDependencyAudit.Editor
                 ? assemblyReferenceIndex
                 : -1;
             _declaredReferencePage = 0;
+            _cycleComponentPage = 0;
+            if (_selectedAssemblyReferenceIndex >= 0)
+            {
+                _selectedCycleComponentMemberPaths.Clear();
+                _cycleComponentErrorMessage = string.Empty;
+            }
+            else
+            {
+                RebuildSelectedCycleComponent();
+            }
             _detailsScrollPosition = Vector2.zero;
             var issueIndices = GetSelectedIssueIndices();
             _selectedIssueIndex = issueIndices.Count == 0 ? -1 : issueIndices[0];
             _interactionMessage = string.Empty;
+        }
+
+        /// <summary>選択asmdefのcycle component member cacheを完全な検証結果だけへ置き換えます。</summary>
+        private void RebuildSelectedCycleComponent()
+        {
+            _selectedCycleComponentMemberPaths.Clear();
+            _cycleComponentErrorMessage = string.Empty;
+            if (_result == null || !IsAssemblyIndexValid(_selectedAssemblyIndex))
+            {
+                return;
+            }
+
+            if (!TryGetCycleComponentMemberPaths(
+                    _result,
+                    _selectedAssemblyIndex,
+                    out var memberPaths,
+                    out var errorMessage))
+            {
+                _cycleComponentErrorMessage = errorMessage;
+                return;
+            }
+
+            for (var index = 0; index < memberPaths.Count; index++)
+            {
+                _selectedCycleComponentMemberPaths.Add(memberPaths[index]);
+            }
+        }
+
+        /// <summary>選択asmdefのcycle component pageを有効範囲へ変更します。</summary>
+        private void SetCycleComponentPage(int page)
+        {
+            _cycleComponentPage = ClampCycleComponentPage(
+                page,
+                GetCycleComponentPageCount(_selectedCycleComponentMemberPaths.Count));
+            _interactionMessage = string.Empty;
+            Repaint();
         }
 
         /// <summary>選択asmdefの宣言参照pageを有効範囲へ変更します。</summary>
@@ -1409,6 +1542,157 @@ namespace AssemblyDependencyAudit.Editor
         {
             var pageCount = GetDeclaredReferencePageCount(referenceCount);
             return ClampDeclaredReferencePage(page, pageCount) * MaximumDisplayedRows;
+        }
+
+        /// <summary>cycle component member件数から500件単位のpage数を返します。</summary>
+        internal static int GetCycleComponentPageCount(int memberCount)
+        {
+            return memberCount <= 0
+                ? 1
+                : ((memberCount - 1) / MaximumDisplayedRows) + 1;
+        }
+
+        /// <summary>cycle component pageを有効範囲へ制限します。</summary>
+        internal static int ClampCycleComponentPage(int page, int pageCount)
+        {
+            var safePageCount = Math.Max(1, pageCount);
+            return Math.Max(0, Math.Min(page, safePageCount - 1));
+        }
+
+        /// <summary>指定pageがcycle component member一覧で開始するindexを返します。</summary>
+        internal static int GetCycleComponentPageStart(int page, int memberCount)
+        {
+            var pageCount = GetCycleComponentPageCount(memberCount);
+            return ClampCycleComponentPage(page, pageCount) * MaximumDisplayedRows;
+        }
+
+        /// <summary>cycle result全体を検証し、選択asmdefが属するSCCのlogical pathだけを返します。</summary>
+        internal static bool TryGetCycleComponentMemberPaths(
+            AssemblyDependencyAuditResult result,
+            int selectedAssemblyIndex,
+            out IReadOnlyList<string> memberPaths,
+            out string errorMessage)
+        {
+            memberPaths = Array.Empty<string>();
+            errorMessage = string.Empty;
+            if (result == null ||
+                result.Assemblies == null ||
+                result.Cycles == null ||
+                selectedAssemblyIndex < 0 ||
+                selectedAssemblyIndex >= result.Assemblies.Count ||
+                result.Assemblies.Count > AssemblyDependencyAnalyzer.MaximumAssemblyDefinitions ||
+                !IsValidCycleMemberNode(result.Assemblies[selectedAssemblyIndex]))
+            {
+                errorMessage = "Cycle component result が不正なためmemberを表示できません。";
+                return false;
+            }
+
+            var assemblyCount = result.Assemblies.Count;
+            if (result.Cycles.Count > assemblyCount / 2)
+            {
+                errorMessage = "Cycle component result が不正なためmemberを表示できません。";
+                return false;
+            }
+
+            var componentByAssembly = new int[assemblyCount];
+            for (var index = 0; index < componentByAssembly.Length; index++)
+            {
+                componentByAssembly[index] = -1;
+            }
+
+            var cycleMemberPaths = new HashSet<string>(StringComparer.Ordinal);
+            for (var componentIndex = 0; componentIndex < result.Cycles.Count; componentIndex++)
+            {
+                var component = result.Cycles[componentIndex];
+                if (component == null || component.Count < 2 || component.Count > assemblyCount)
+                {
+                    errorMessage = "Cycle component result が不正なためmemberを表示できません。";
+                    return false;
+                }
+
+                for (var memberIndex = 0; memberIndex < component.Count; memberIndex++)
+                {
+                    var assemblyIndex = component[memberIndex];
+                    if (assemblyIndex < 0 ||
+                        assemblyIndex >= assemblyCount ||
+                        componentByAssembly[assemblyIndex] >= 0 ||
+                        !IsValidCycleMemberNode(result.Assemblies[assemblyIndex]) ||
+                        !cycleMemberPaths.Add(result.Assemblies[assemblyIndex].AssetPath))
+                    {
+                        errorMessage = "Cycle component result が不正なためmemberを表示できません。";
+                        return false;
+                    }
+
+                    componentByAssembly[assemblyIndex] = componentIndex;
+                }
+            }
+
+            var selectedComponentIndex = componentByAssembly[selectedAssemblyIndex];
+            if (selectedComponentIndex < 0)
+            {
+                return true;
+            }
+
+            var selectedComponent = result.Cycles[selectedComponentIndex];
+            var selectedPaths = new string[selectedComponent.Count];
+            for (var memberIndex = 0; memberIndex < selectedComponent.Count; memberIndex++)
+            {
+                selectedPaths[memberIndex] = result.Assemblies[selectedComponent[memberIndex]].AssetPath;
+            }
+
+            Array.Sort(selectedPaths, StringComparer.Ordinal);
+            memberPaths = Array.AsReadOnly(selectedPaths);
+            return true;
+        }
+
+        /// <summary>cycle component memberのlogical asmdef pathを上限付きの1行rowへ整形します。</summary>
+        internal static string FormatCycleComponentMemberRow(string assetPath, int memberIndex)
+        {
+            var ordinal = memberIndex < 0 ? "?" : (memberIndex + 1).ToString();
+            var value = IsSafeCycleMemberAssetPath(assetPath)
+                ? LimitDeclaredReferenceRowValue(assetPath)
+                : "(invalid)";
+            return $"#{ordinal} | {value}";
+        }
+
+        /// <summary>cycle componentへ表示できるcanonicalなlogical asmdef nodeかを返します。</summary>
+        private static bool IsValidCycleMemberNode(AssemblyDependencyNode node)
+        {
+            return node != null && IsSafeCycleMemberAssetPath(node.AssetPath);
+        }
+
+        /// <summary>control文字やseparator変形を含まない監査対象asmdef pathかを返します。</summary>
+        private static bool IsSafeCycleMemberAssetPath(string assetPath)
+        {
+            if (string.IsNullOrEmpty(assetPath) ||
+                assetPath.Length > MaximumDisplayedTextCharacters ||
+                !string.Equals(
+                    assetPath,
+                    AssemblyDefinitionSourcePathUtility.NormalizeAssetPath(assetPath),
+                    StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            for (var index = 0; index < assetPath.Length; index++)
+            {
+                var character = assetPath[index];
+                if (char.IsControl(character) ||
+                    character == ':' ||
+                    (character == '/' &&
+                        index > 0 &&
+                        (assetPath[index - 1] == '.' || assetPath[index - 1] == ' ')))
+                {
+                    return false;
+                }
+            }
+
+            var lastCharacter = assetPath[assetPath.Length - 1];
+            return lastCharacter != '.' &&
+                lastCharacter != ' ' &&
+                (!assetPath.StartsWith("Packages/", StringComparison.Ordinal) ||
+                    assetPath.IndexOf('/', "Packages/".Length) >= 0) &&
+                AssemblyDefinitionSourcePathUtility.IsIncludedAssetPath(assetPath);
         }
 
         /// <summary>宣言参照の表記、解決状態、解決先を安全な3行rowへ整形します。</summary>

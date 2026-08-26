@@ -25,7 +25,7 @@ READMEとモジュール一覧では、日本語で目的を先に示す。Packa
 |---|---|---|
 | モジュール導入アシスタント | Module Installer | 用途別セットから必要なモジュールをまとめて導入する。 |
 | プロジェクト初期設定 | Project Setup | 新規Projectで繰り返す設定とTag・Layer・Sorting Layer・3D/2D Layer Collisionをprofileからまとめて適用する。 |
-| Assembly依存チェック | Assembly Dependency Audit | asmdefの参照元・参照先と宣言単位のName／GUID解決、循環、PlayerからEditorへの逆参照、asmref target整合性、同じfolderのassembly owner候補競合をread-onlyで確認する。 |
+| Assembly依存チェック | Assembly Dependency Audit | asmdefの参照元・参照先、循環component member、宣言単位のName／GUID解決、PlayerからEditorへの逆参照、asmref target整合性、同じfolderのassembly owner候補競合をread-onlyで確認する。 |
 | Localization key監査 | Localization Key Audit | required Localeのdirect coverageとtable integrity、宣言済みscopeの静的参照をread-onlyで確認する。 |
 | シーン切り替え | SceneFlow | Scene の読込・追加・切替・解放を扱う。 |
 | 画面フェード | ScreenTransition | 画面を覆う・戻す演出を扱う。 |
@@ -74,6 +74,7 @@ manufacturer文字列の推測、入力消費、rebind、pairing、player別追�
 ### Assembly依存チェック（Assembly Dependency Audit）
 
 `Assets`と導入済み`Packages`のasmdefをread-onlyで走査し、参照元・assembly・参照先の3列graphと構造上の問題を表示する。
+選択asmdefが循環へ属する場合はstrongly connected componentの全memberをasset path順で500件ずつ、asmdef上限10,000件に対応する最大20 pageまで表示する。この順序はcycle pathやedge順を表さず、単独の自己参照は既存issueで確認する。
 選択asmdefの宣言参照は元の順序と重複を保ち、Name／GUIDのraw valueと一意な解決先を500件ずつ既存上限4,096件まで表示する。graphは同じ解決先へのedgeを1本にまとめ、`Not uniquely resolved`の未解決／曖昧は既存Issue Detailsで区別する。
 asmrefは別一覧で不正JSON、欠落・未解決・曖昧なtargetを検査し、同じfolderのasmdef／asmref owner候補競合は各assetへ報告する。asmdef依存graphへ推測したedgeは追加しない。
 Project Setupはasmdefの作成までを所有し、このmoduleは作成後の参照関係だけを監査するため、変更責務を分離して独立packageとして維持する。

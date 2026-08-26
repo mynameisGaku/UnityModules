@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.0] - 2026-08-26
+
+- Added a paged `Cycle Component Members` section for the selected `.asmdef`, showing the complete strongly connected component in ordinal asset-path order without presenting that order as a cycle path.
+- Added 500-row pages across the existing 10,000-asmdef limit, allowing all members to be reached in at most 20 pages while keeping self-references in their existing issue flow.
+- Added fail-visible, all-or-nothing validation for null, out-of-range, duplicate, multiply assigned, or unsafe logical-path data before any cycle-component member is shown.
+- Kept the analyzer, model, dependency graph, issue taxonomy, existing clipboard output, 1.3 declared-reference details, public surface, Runtime surface, and build behavior unchanged.
+
 ## [1.3.0] - 2026-08-26
 
 - Added paged declared-reference details for the selected `.asmdef`, preserving declaration order and duplicate entries while showing each raw Name/GUID reference and its uniquely resolved target.

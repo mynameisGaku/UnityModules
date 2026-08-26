@@ -2,12 +2,13 @@
 
 ## 30秒で分かる説明
 
-`Assets`と`Packages`にあるAssembly Definition（`.asmdef`）の参照関係を3列でたどり、選択した`.asmdef`では宣言順と重複を保ったName／GUID参照の解決詳細も確認できます。循環参照やPlayer向けAssemblyからEditor専用Assemblyへの参照を見つけ、Assembly Definition Reference（`.asmref`）は別一覧でtargetの整合性を検査し、同じfolderに複数ある`.asmdef`／`.asmref` owner候補も報告します。Projectのfileは変更せず、現在の構成を読み取って表示します。
+`Assets`と`Packages`にあるAssembly Definition（`.asmdef`）の参照関係を3列でたどり、選択した`.asmdef`では所属する循環componentのmember集合と、宣言順・重複を保ったName／GUID参照の解決詳細を確認できます。循環参照やPlayer向けAssemblyからEditor専用Assemblyへの参照を見つけ、Assembly Definition Reference（`.asmref`）は別一覧でtargetの整合性を検査し、同じfolderに複数ある`.asmdef`／`.asmref` owner候補も報告します。Projectのfileは変更せず、現在の構成を読み取って表示します。
 
 ## できること
 
 - `Assets`と`Packages`から見つかった`.asmdef`を決定論的なpath順で検査する。
 - `Referenced By`、`Assemblies`、`Depends On`の3列で、選択Assemblyの参照元と参照先を同時に確認する。
+- 選択した`.asmdef`が循環componentに属する場合、そのstrongly connected componentの全memberをasset path順で確認する。
 - 選択した`.asmdef`の宣言参照を元の順序と重複のまま表示し、Name／GUID、raw declaration、一意に解決したAssembly名とpathを確認する。
 - 検索と問題filterで、大きなProjectの対象を絞り込む。
 - 循環参照と自己参照を報告する。
@@ -29,20 +30,25 @@
 1. Package Managerの`Add package from git URL...`へ次を入力します。
 
    ```text
-   https://github.com/mynameisGaku/UnityModules.git?path=/AssemblyDependencyAudit#assembly-dependency-audit-v1.3.0
+   https://github.com/mynameisGaku/UnityModules.git?path=/AssemblyDependencyAudit#assembly-dependency-audit-v1.4.0
    ```
 
 2. `Tools > Assembly Dependency Audit > Open`を開きます。
 3. `Refresh`を押して、`Assets`と`Packages`のAssembly Definitionを読み取ります。
 4. 中央の`Assemblies`列からAssemblyを選びます。
 5. 左の`Referenced By`で参照元、右の`Depends On`で直接の参照先を確認します。
-6. `Details`の`Declared References`で、選択した`.asmdef`が記録している個々のName／GUID参照と解決先を確認します。
-7. `Assembly References`で`.asmref`の元path、reference、解決先を確認します。
-8. 問題がある場合は問題filterで絞り、表示されたpathと内容を確認してから元の`.asmdef`または`.asmref`を編集します。
+6. 循環問題がある場合は`Details`の`Cycle Component Members`で、選択した`.asmdef`と同じcomponentに属するmemberを確認します。
+7. `Details`の`Declared References`で、選択した`.asmdef`が記録している個々のName／GUID参照と解決先を確認します。
+8. `Assembly References`で`.asmref`の元path、reference、解決先を確認します。
+9. 問題がある場合は問題filterで絞り、表示されたpathと内容を確認してから元の`.asmdef`または`.asmref`を編集します。
 
 ## 実行するとどうなるか
 
-Refresh結果はasset pathのOrdinal順、同一pathではGUIDのOrdinal順で安定して表示されます。中央で選択したAssemblyに対して、直接参照しているAssemblyを左列、直接参照するAssemblyを右列へ表示します。このgraphは同じ解決先へのedgeを1本へまとめますが、`Declared References`は`.asmdef`に記録された順序と重複をそのまま保ち、Name／GUIDのraw declarationと一意な解決先を個別に表示します。循環参照は循環へ含まれるAssemblyを問題としてまとめ、その他の構成不備は該当する`.asmdef`と参照値を示します。`.asmref`は独立した一覧へ元path、referenceの指定方法、解決先を表示し、不正・未解決・曖昧な項目も選択して詳細を確認できます。同じfolderのowner候補は各`.asmdef`／`.asmref`から問題詳細へ到達できます。
+Refresh結果はasset pathのOrdinal順、同一pathではGUIDのOrdinal順で安定して表示されます。中央で選択したAssemblyに対して、直接参照しているAssemblyを左列、直接参照するAssemblyを右列へ表示します。このgraphは同じ解決先へのedgeを1本へまとめますが、`Declared References`は`.asmdef`に記録された順序と重複をそのまま保ち、Name／GUIDのraw declarationと一意な解決先を個別に表示します。循環参照は循環へ含まれるAssemblyを問題としてまとめ、選択`.asmdef`の`Cycle Component Members`には同じstrongly connected componentのmember集合を表示します。`.asmref`は独立した一覧へ元path、referenceの指定方法、解決先を表示し、不正・未解決・曖昧な項目も選択して詳細を確認できます。同じfolderのowner候補は各`.asmdef`／`.asmref`から問題詳細へ到達できます。
+
+`Cycle Component Members`は`Issue Details`の後、`Declared References`の前に表示されます。memberはasset pathのOrdinal順ですが、この順序は循環を通る経路や参照順を表しません。500件ごとの`Prev`／`Next`で、asmdefの既存上限10,000件、最大20 pageまで全memberへ到達できます。単独の自己参照はmulti-assembly componentへ含めず、既存の自己参照issueで確認します。`.asmref`の選択中はsectionを隠し、Assembly選択、Refresh、結果clearでpageを先頭へ戻します。
+
+cycle resultにnull、範囲外index、重複member、複数componentへの所属、または安全に表示できないlogical asmdef pathがある場合は、memberを部分表示せずgeneric errorを示します。4,096文字を超えるpath、backslash、control文字、colon、末尾dot／spaceのsegment、`Assets/...`または`Packages/<package-name>/...`以外、`.asmdef`以外、Unityのignored segmentはinvalid resultとして扱います。
 
 `Declared References`は500件ごとの`Prev`／`Next`で、1 Assemblyあたりの既存上限4,096件まで全pageへ移動できます。解決結果が`Not uniquely resolved`の場合、その行だけでは未解決と曖昧を決めず、対応する`Issue Details`で区別します。null reference、未知のkind、範囲外indexなど内部resultの不整合も別の参照へ推測せず、invalid rowとして表示します。`.asmref`を選択した場合、直前の`.asmdef`の宣言参照は表示しません。
 
@@ -84,6 +90,7 @@ Assembly名は大小文字を区別せずProject内で一意である必要が�
 
 - 読み取り対象は、UnityのAsset Databaseが認識した`.asmdef`／`.asmref`と、`Assets`および導入済み`Packages`の物理rootから見つかった同fileの和集合です。dot始まり、末尾`~`、`cvs`、Hidden属性、reparse pointのdirectoryは物理列挙で降りず、Unityが無視するfile名も候補へ含めません。Asset Databaseがreparse point配下のassembly assetを認識した場合は、そのtyped assetを黙って除外せず、安全に読めないことを明示してRefresh全体を停止します。
 - `.asmref`はtarget整合性だけを検査します。precompiled plugin、C# sourceの型利用、AddressablesやAsset参照と同様、asmdef依存graphへは含めません。
+- 選択`.asmdef`の循環componentは最大500件ずつ、asmdef上限10,000件に対応する最大20 pageまで表示します。これはstrongly connected componentのmember集合であり、cycle pathや走査順ではありません。
 - 選択`.asmdef`の宣言参照は最大500件ずつpage表示し、1 Assemblyあたりの解析上限4,096件まで到達できます。宣言順と重複は表示でも維持し、graphだけが一意な解決先ごとにedgeをまとめます。
 - 同じfolderのowner候補はJSON、Assembly名、reference、targetの有効性に関係なくpath単位で報告し、不正JSONなどの問題と併記します。この配置検査だけでactual compile所属は判断しません。
 - RefreshはProject fileとUnity設定を変更しません。問題を直すには、表示内容を確認した利用者が対象`.asmdef`または`.asmref`を編集する必要があります。
