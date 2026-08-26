@@ -35,6 +35,38 @@ namespace LocalizationKeyAudit.Editor
             Integrity
         }
 
+        /// <summary>filter前の監査結果へ発行された問題件数を4区分で保持します。</summary>
+        internal readonly struct IssueCategoryCounts
+        {
+            /// <summary>4区分の件数を固定します。</summary>
+            internal IssueCategoryCounts(
+                int terminal,
+                int requiredLocaleCoverage,
+                int staticReferences,
+                int integrity)
+            {
+                Terminal = terminal;
+                RequiredLocaleCoverage = requiredLocaleCoverage;
+                StaticReferences = staticReferences;
+                Integrity = integrity;
+            }
+
+            /// <summary>監査を完了できなかった問題件数です。</summary>
+            internal int Terminal { get; }
+
+            /// <summary>必須Locale coverageの問題件数です。</summary>
+            internal int RequiredLocaleCoverage { get; }
+
+            /// <summary>static referenceの問題件数です。</summary>
+            internal int StaticReferences { get; }
+
+            /// <summary>table、entry、Locale identityの整合性問題件数です。</summary>
+            internal int Integrity { get; }
+
+            /// <summary>4区分の合計件数です。</summary>
+            internal int Total => Terminal + RequiredLocaleCoverage + StaticReferences + Integrity;
+        }
+
         /// <summary>カンマまたは改行区切りの必須 Locale identifiers です。</summary>
         [SerializeField] private string requiredLocalesText = string.Empty;
 
@@ -61,6 +93,9 @@ namespace LocalizationKeyAudit.Editor
 
         /// <summary>最後の手動監査結果です。</summary>
         private LocalizationKeyAuditResult result;
+
+        /// <summary>最後の監査結果全体から1回だけ集計したfilter前の問題件数です。</summary>
+        private IssueCategoryCounts issueCategoryCounts;
 
         /// <summary>filter に一致する問題 index です。</summary>
         private readonly List<int> visibleIssueIndices = new List<int>();
@@ -207,6 +242,9 @@ namespace LocalizationKeyAudit.Editor
                 $"{completion} / Locales {result.LocaleIdentifiers.Count} / Collections {result.Collections.Count} / Orphan Tables {result.OrphanLocaleTables.Count} / Issues {result.Issues.Count} / Edges {result.GraphEdgeCount}",
                 EditorStyles.boldLabel);
             EditorGUILayout.LabelField(
+                $"Issue Categories (unfiltered result): Terminal {issueCategoryCounts.Terminal} / Required Locale Coverage {issueCategoryCounts.RequiredLocaleCoverage} / Static References {issueCategoryCounts.StaticReferences} / Integrity {issueCategoryCounts.Integrity}",
+                wrappedMiniLabelStyle);
+            EditorGUILayout.LabelField(
                 $"Static coverage: {(result.Coverage.IsComplete ? "Complete" : "Incomplete")} / References {result.Coverage.RecognizedReferences.Count} / Declared Paths {result.Coverage.DeclaredAssetPaths.Count} / Filtered Issues {visibleIssueIndices.Count}",
                 wrappedMiniLabelStyle);
             EditorGUILayout.LabelField(
@@ -318,10 +356,13 @@ namespace LocalizationKeyAudit.Editor
             interactionMessage = string.Empty;
             try
             {
-                result = LocalizationKeyAuditService.Audit(
+                var nextResult = LocalizationKeyAuditService.Audit(
                     ParseRequiredLocales(requiredLocalesText),
                     scopeDescription,
                     ParseDeclaredAssetPaths(declaredAssetPathsText));
+                var nextIssueCategoryCounts = CountIssueCategories(nextResult.Issues);
+                result = nextResult;
+                issueCategoryCounts = nextIssueCategoryCounts;
                 RebuildVisibleIssues(true);
                 issueScrollPosition = Vector2.zero;
                 detailScrollPosition = Vector2.zero;
@@ -329,6 +370,7 @@ namespace LocalizationKeyAudit.Editor
             catch (Exception exception)
             {
                 result = null;
+                issueCategoryCounts = default;
                 visibleIssueIndices.Clear();
                 selectedIssueIndex = -1;
                 interactionMessage = $"監査を開始できませんでした: {exception.GetType().Name}";
@@ -339,6 +381,7 @@ namespace LocalizationKeyAudit.Editor
         private void ClearResult()
         {
             result = null;
+            issueCategoryCounts = default;
             visibleIssueIndices.Clear();
             selectedIssueIndex = -1;
             issueScrollPosition = Vector2.zero;
@@ -460,48 +503,94 @@ namespace LocalizationKeyAudit.Editor
             }
         }
 
-        /// <summary>問題 kind を表示区分へ割り当てます。</summary>
+        /// <summary>filter前の問題一覧を1回だけ走査し、4区分の件数を返します。</summary>
+        internal static IssueCategoryCounts CountIssueCategories(
+            IReadOnlyList<LocalizationKeyAuditIssue> issues)
+        {
+            if (issues == null)
+            {
+                throw new ArgumentNullException(nameof(issues));
+            }
+
+            var terminal = 0;
+            var requiredLocaleCoverage = 0;
+            var staticReferences = 0;
+            var integrity = 0;
+            for (var index = 0; index < issues.Count; index++)
+            {
+                var issue = issues[index];
+                if (issue == null)
+                {
+                    throw new ArgumentException("問題一覧にnull要素が含まれています。", nameof(issues));
+                }
+
+                switch (ClassifyIssueKind(issue.Kind))
+                {
+                    case IssueCategoryFilter.Terminal:
+                        terminal++;
+                        break;
+                    case IssueCategoryFilter.RequiredLocaleCoverage:
+                        requiredLocaleCoverage++;
+                        break;
+                    case IssueCategoryFilter.StaticReferences:
+                        staticReferences++;
+                        break;
+                    case IssueCategoryFilter.Integrity:
+                        integrity++;
+                        break;
+                    default:
+                        throw new InvalidOperationException("問題区分を集計できませんでした。");
+                }
+            }
+
+            return new IssueCategoryCounts(
+                terminal,
+                requiredLocaleCoverage,
+                staticReferences,
+                integrity);
+        }
+
+        /// <summary>問題kindをfilterと集計で共用する1つの表示区分へ割り当てます。</summary>
+        internal static IssueCategoryFilter ClassifyIssueKind(LocalizationKeyAuditIssueKind kind)
+        {
+            switch (kind)
+            {
+                case LocalizationKeyAuditIssueKind.ReadOnlyGuaranteeUnavailable:
+                case LocalizationKeyAuditIssueKind.InvalidConfiguration:
+                case LocalizationKeyAuditIssueKind.LimitExceeded:
+                case LocalizationKeyAuditIssueKind.AuditFailed:
+                    return IssueCategoryFilter.Terminal;
+                case LocalizationKeyAuditIssueKind.RequiredLocaleNotConfigured:
+                case LocalizationKeyAuditIssueKind.MissingLocaleTable:
+                case LocalizationKeyAuditIssueKind.MissingDirectEntry:
+                case LocalizationKeyAuditIssueKind.EmptyDirectValue:
+                    return IssueCategoryFilter.RequiredLocaleCoverage;
+                case LocalizationKeyAuditIssueKind.DanglingStaticReference:
+                case LocalizationKeyAuditIssueKind.NoStaticReferenceFoundWithinDeclaredScope:
+                case LocalizationKeyAuditIssueKind.StaticReferenceCoverageIncomplete:
+                    return IssueCategoryFilter.StaticReferences;
+                case LocalizationKeyAuditIssueKind.DuplicateCollectionName:
+                case LocalizationKeyAuditIssueKind.DuplicateCollectionGuid:
+                case LocalizationKeyAuditIssueKind.DuplicateSharedEntryId:
+                case LocalizationKeyAuditIssueKind.DuplicateSharedEntryKey:
+                case LocalizationKeyAuditIssueKind.DuplicateLocaleTable:
+                case LocalizationKeyAuditIssueKind.DuplicateLocalizedEntryId:
+                case LocalizationKeyAuditIssueKind.OrphanedLocalizedEntry:
+                case LocalizationKeyAuditIssueKind.OrphanedLocaleTable:
+                case LocalizationKeyAuditIssueKind.OrphanedSharedTableData:
+                case LocalizationKeyAuditIssueKind.DuplicateLocaleIdentifier:
+                    return IssueCategoryFilter.Integrity;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(kind), kind, "未分類の問題kindです。");
+            }
+        }
+
+        /// <summary>問題kindが指定した表示区分へ一致するかを判定します。</summary>
         private static bool MatchesCategory(LocalizationKeyAuditIssueKind kind, IssueCategoryFilter category)
         {
-            if (category == IssueCategoryFilter.All)
-            {
-                return true;
-            }
+            var issueCategory = ClassifyIssueKind(kind);
 
-            if (category == IssueCategoryFilter.Terminal)
-            {
-                return kind == LocalizationKeyAuditIssueKind.ReadOnlyGuaranteeUnavailable ||
-                    kind == LocalizationKeyAuditIssueKind.InvalidConfiguration ||
-                    kind == LocalizationKeyAuditIssueKind.LimitExceeded ||
-                    kind == LocalizationKeyAuditIssueKind.AuditFailed;
-            }
-
-            if (category == IssueCategoryFilter.RequiredLocaleCoverage)
-            {
-                return kind == LocalizationKeyAuditIssueKind.RequiredLocaleNotConfigured ||
-                    kind == LocalizationKeyAuditIssueKind.MissingLocaleTable ||
-                    kind == LocalizationKeyAuditIssueKind.MissingDirectEntry ||
-                    kind == LocalizationKeyAuditIssueKind.EmptyDirectValue;
-            }
-
-            if (category == IssueCategoryFilter.StaticReferences)
-            {
-                return kind == LocalizationKeyAuditIssueKind.DanglingStaticReference ||
-                    kind == LocalizationKeyAuditIssueKind.NoStaticReferenceFoundWithinDeclaredScope ||
-                    kind == LocalizationKeyAuditIssueKind.StaticReferenceCoverageIncomplete;
-            }
-
-            return category == IssueCategoryFilter.Integrity &&
-                (kind == LocalizationKeyAuditIssueKind.DuplicateCollectionName ||
-                 kind == LocalizationKeyAuditIssueKind.DuplicateCollectionGuid ||
-                 kind == LocalizationKeyAuditIssueKind.DuplicateSharedEntryId ||
-                 kind == LocalizationKeyAuditIssueKind.DuplicateSharedEntryKey ||
-                 kind == LocalizationKeyAuditIssueKind.DuplicateLocaleTable ||
-                 kind == LocalizationKeyAuditIssueKind.DuplicateLocalizedEntryId ||
-                 kind == LocalizationKeyAuditIssueKind.OrphanedLocalizedEntry ||
-                 kind == LocalizationKeyAuditIssueKind.OrphanedLocaleTable ||
-                 kind == LocalizationKeyAuditIssueKind.OrphanedSharedTableData ||
-                 kind == LocalizationKeyAuditIssueKind.DuplicateLocaleIdentifier);
+            return category == IssueCategoryFilter.All || category == issueCategory;
         }
 
         /// <summary>区切り文字で分け、空白だけの token を除きます。</summary>

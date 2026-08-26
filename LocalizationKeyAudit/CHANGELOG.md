@@ -2,6 +2,18 @@
 
 All notable changes to this package will be documented in this file.
 
+## [1.2.0] - 2026-08-26
+
+### Added
+
+- Added unfiltered finding counts for `Terminal`, `Required Locale Coverage`, `Static References`, and `Integrity`, with every existing issue kind assigned to exactly one category.
+- Counted the complete result snapshot independently of Search, Category, and the 500-row display cap.
+
+### Boundaries
+
+- Kept `Complete`／`Incomplete` and static coverage completion authoritative; a zero category count in an incomplete result is not proof that the category is safe or absent.
+- Kept the issue taxonomy, read-only Editor-only behavior, advisory scope, and zero Runtime or public API surface unchanged.
+
 ## [1.1.0] - 2026-08-26
 
 ### Added

@@ -14,6 +14,21 @@ Localization Key Auditは、String Table Collectionの共有keyについて、�
 
 監査はassetの修正、保存、削除を行いません。autofixも提供しません。
 
+## Issue category counts
+
+Windowの`Issue Categories (unfiltered result)`は、現在の監査resultに含まれる全findingを次の4カテゴリへexact 1つずつ分類した件数です。
+
+| Category | Issue kinds |
+| --- | --- |
+| `Terminal` | `ReadOnlyGuaranteeUnavailable`、`InvalidConfiguration`、`LimitExceeded`、`AuditFailed` |
+| `Required Locale Coverage` | `RequiredLocaleNotConfigured`、`MissingLocaleTable`、`MissingDirectEntry`、`EmptyDirectValue` |
+| `Static References` | `DanglingStaticReference`、`NoStaticReferenceFoundWithinDeclaredScope`、`StaticReferenceCoverageIncomplete` |
+| `Integrity` | `DuplicateCollectionName`、`DuplicateCollectionGuid`、`DuplicateSharedEntryId`、`DuplicateSharedEntryKey`、`DuplicateLocaleTable`、`DuplicateLocalizedEntryId`、`OrphanedLocalizedEntry`、`OrphanedLocaleTable`、`OrphanedSharedTableData`、`DuplicateLocaleIdentifier` |
+
+内訳はresult取得後に全findingから1回だけ集計し、Search、Category filter、500件の一覧表示上限から独立して保持します。これはfinding数であり、uniqueなasset数、collection数、key数ではありません。`Clear`はresultと内訳を消し、次の`Audit`は新しいresultから集計します。
+
+resultまたはStatic coverageが`Incomplete`の場合、あるカテゴリが0件でも、安全、問題なし、またはfindingなしを証明しません。`Complete`／`Incomplete`とcoverageの完了状態が引き続き監査の完了性を示します。
+
 ## Finding semantics
 
 ### `MissingLocaleTable`

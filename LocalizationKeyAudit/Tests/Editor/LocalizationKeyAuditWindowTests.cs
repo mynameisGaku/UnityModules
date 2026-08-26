@@ -9,7 +9,7 @@ using AuditEditor = LocalizationKeyAudit.Editor;
 namespace LocalizationKeyAudit.Tests
 {
     /// <summary>
-    /// Window の入力 parser、pure issue filter、表示上限を GUI なしで検証します。
+    /// Window の入力 parser、pure issue filter、4区分集計、表示上限を GUI なしで検証します。
     /// </summary>
     internal sealed class LocalizationKeyAuditWindowTests
     {
@@ -126,6 +126,10 @@ namespace LocalizationKeyAudit.Tests
                     "issueCategory",
                     AuditEditor.LocalizationKeyAuditWindow.IssueCategoryFilter.StaticReferences);
                 SetField(window, "result", CreateEmptyResult());
+                SetField(
+                    window,
+                    "issueCategoryCounts",
+                    new AuditEditor.LocalizationKeyAuditWindow.IssueCategoryCounts(7, 6, 5, 4));
                 GetField<List<int>>(window, "visibleIssueIndices").Add(0);
                 SetField(window, "selectedIssueIndex", 0);
                 SetField(window, "interactionMessage", "old status");
@@ -145,6 +149,14 @@ namespace LocalizationKeyAudit.Tests
                     GetField<AuditEditor.LocalizationKeyAuditWindow.IssueCategoryFilter>(window, "issueCategory"),
                     Is.EqualTo(AuditEditor.LocalizationKeyAuditWindow.IssueCategoryFilter.StaticReferences));
                 Assert.That(GetField<AuditEditor.LocalizationKeyAuditResult>(window, "result"), Is.Null);
+                AssertCounts(
+                    GetField<AuditEditor.LocalizationKeyAuditWindow.IssueCategoryCounts>(
+                        window,
+                        "issueCategoryCounts"),
+                    0,
+                    0,
+                    0,
+                    0);
                 Assert.That(GetField<List<int>>(window, "visibleIssueIndices"), Is.Empty);
                 Assert.That(GetField<int>(window, "selectedIssueIndex"), Is.EqualTo(-1));
                 Assert.That(GetField<string>(window, "interactionMessage"), Is.Empty);
@@ -257,7 +269,7 @@ namespace LocalizationKeyAudit.Tests
         /// 全 IssueKind を terminal、required coverage、static reference、integrity の一つだけへ割り当てます。
         /// </summary>
         [Test]
-        public void MatchesFilter_AssignsEveryIssueKindToExactlyOneCategory()
+        public void ClassifyIssueKind_AssignsEveryIssueKindToExactlyOneCategory()
         {
             var expectedCategories = new Dictionary<AuditEditor.LocalizationKeyAuditIssueKind, AuditEditor.LocalizationKeyAuditWindow.IssueCategoryFilter>
             {
@@ -290,11 +302,17 @@ namespace LocalizationKeyAudit.Tests
                 AuditEditor.LocalizationKeyAuditWindow.IssueCategoryFilter.StaticReferences,
                 AuditEditor.LocalizationKeyAuditWindow.IssueCategoryFilter.Integrity
             };
+            var kinds = (AuditEditor.LocalizationKeyAuditIssueKind[])Enum.GetValues(
+                typeof(AuditEditor.LocalizationKeyAuditIssueKind));
 
-            foreach (AuditEditor.LocalizationKeyAuditIssueKind kind in Enum.GetValues(
-                         typeof(AuditEditor.LocalizationKeyAuditIssueKind)))
+            Assert.That(kinds, Is.EquivalentTo(expectedCategories.Keys));
+            foreach (var kind in kinds)
             {
                 var issue = CreateIssue(kind);
+                Assert.That(
+                    AuditEditor.LocalizationKeyAuditWindow.ClassifyIssueKind(kind),
+                    Is.EqualTo(expectedCategories[kind]),
+                    kind.ToString());
                 Assert.That(
                     AuditEditor.LocalizationKeyAuditWindow.MatchesFilter(
                         issue,
@@ -309,6 +327,263 @@ namespace LocalizationKeyAudit.Tests
                         Is.EqualTo(category == expectedCategories[kind]),
                         $"{kind} -> {category}");
                 }
+            }
+
+            AssertCounts(
+                AuditEditor.LocalizationKeyAuditWindow.CountIssueCategories(
+                    kinds.Select(CreateIssue).ToArray()),
+                4,
+                4,
+                3,
+                10);
+        }
+
+        /// <summary>集計はkindの種類数ではなく、各区分に発行されたissue頻度を数えます。</summary>
+        [Test]
+        public void CountIssueCategories_CountsEveryIssueOccurrence()
+        {
+            var issues = Enumerable.Repeat(
+                    CreateIssue(AuditEditor.LocalizationKeyAuditIssueKind.InvalidConfiguration),
+                    2)
+                .Concat(Enumerable.Repeat(
+                    CreateIssue(AuditEditor.LocalizationKeyAuditIssueKind.MissingDirectEntry),
+                    3))
+                .Concat(Enumerable.Repeat(
+                    CreateIssue(AuditEditor.LocalizationKeyAuditIssueKind.DanglingStaticReference),
+                    4))
+                .Concat(Enumerable.Repeat(
+                    CreateIssue(AuditEditor.LocalizationKeyAuditIssueKind.DuplicateLocaleIdentifier),
+                    5))
+                .ToArray();
+
+            AssertCounts(
+                AuditEditor.LocalizationKeyAuditWindow.CountIssueCategories(issues),
+                2,
+                3,
+                4,
+                5);
+        }
+
+        /// <summary>null一覧・null要素・未知kindは部分集計を返さず、空一覧だけを0件にします。</summary>
+        [Test]
+        public void CountIssueCategories_NullAndInvalidInputsFailClosed()
+        {
+            Assert.Throws<ArgumentNullException>(() =>
+                AuditEditor.LocalizationKeyAuditWindow.CountIssueCategories(null));
+            AssertCounts(
+                AuditEditor.LocalizationKeyAuditWindow.CountIssueCategories(
+                    Array.Empty<AuditEditor.LocalizationKeyAuditIssue>()),
+                0,
+                0,
+                0,
+                0);
+            Assert.Throws<ArgumentException>(() =>
+                AuditEditor.LocalizationKeyAuditWindow.CountIssueCategories(
+                    new AuditEditor.LocalizationKeyAuditIssue[] { null }));
+
+            var invalidKind = (AuditEditor.LocalizationKeyAuditIssueKind)int.MaxValue;
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
+                AuditEditor.LocalizationKeyAuditWindow.ClassifyIssueKind(invalidKind));
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
+                AuditEditor.LocalizationKeyAuditWindow.MatchesFilter(
+                    CreateIssue(invalidKind),
+                    string.Empty,
+                    AuditEditor.LocalizationKeyAuditWindow.IssueCategoryFilter.All));
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
+                AuditEditor.LocalizationKeyAuditWindow.CountIssueCategories(
+                    new[] { CreateIssue(invalidKind) }));
+        }
+
+        /// <summary>表示capを超える501件とmodel上限exact 100000件も省略せず集計します。</summary>
+        [Test]
+        public void CountIssueCategories_CountsBeyondDisplayCapAndAtModelLimit()
+        {
+            var issue = CreateIssue(AuditEditor.LocalizationKeyAuditIssueKind.DanglingStaticReference);
+            var beyondDisplayCap = Enumerable.Repeat(
+                issue,
+                AuditEditor.LocalizationKeyAuditWindow.MaximumDisplayedIssues + 1).ToArray();
+            var atModelLimit = Enumerable.Repeat(
+                issue,
+                AuditEditor.LocalizationKeyAuditLimits.MaximumIssues).ToArray();
+
+            Assert.That(beyondDisplayCap, Has.Length.EqualTo(501));
+            AssertCounts(
+                AuditEditor.LocalizationKeyAuditWindow.CountIssueCategories(beyondDisplayCap),
+                0,
+                0,
+                501,
+                0);
+            Assert.That(atModelLimit, Has.Length.EqualTo(100000));
+            AssertCounts(
+                AuditEditor.LocalizationKeyAuditWindow.CountIssueCategories(atModelLimit),
+                0,
+                0,
+                100000,
+                0);
+        }
+
+        /// <summary>Incomplete結果の内訳はsearch/categoryで表示一覧が変わってもfilter前のままです。</summary>
+        [Test]
+        public void IncompleteResult_CategoryCountsRemainUnfilteredWhenFiltersChange()
+        {
+            var issues = new[]
+            {
+                CreateIssue(AuditEditor.LocalizationKeyAuditIssueKind.AuditFailed),
+                CreateIssue(AuditEditor.LocalizationKeyAuditIssueKind.MissingDirectEntry),
+                CreateIssue(AuditEditor.LocalizationKeyAuditIssueKind.DanglingStaticReference),
+                CreateIssue(AuditEditor.LocalizationKeyAuditIssueKind.DuplicateLocaleIdentifier)
+            };
+            var result = CreateResult(false, issues, false);
+            var counts = AuditEditor.LocalizationKeyAuditWindow.CountIssueCategories(result.Issues);
+            var window = ScriptableObject.CreateInstance<AuditEditor.LocalizationKeyAuditWindow>();
+            try
+            {
+                SetField(window, "result", result);
+                SetField(window, "issueCategoryCounts", counts);
+                SetField(window, "searchText", string.Empty);
+                SetField(
+                    window,
+                    "issueCategory",
+                    AuditEditor.LocalizationKeyAuditWindow.IssueCategoryFilter.All);
+
+                Invoke(window, "RebuildVisibleIssues", true);
+
+                Assert.That(result.IsComplete, Is.False);
+                Assert.That(result.Coverage.IsComplete, Is.False);
+                Assert.That(GetField<List<int>>(window, "visibleIssueIndices"),
+                    Is.EqualTo(new[] { 0, 1, 2, 3 }));
+                AssertCounts(
+                    GetField<AuditEditor.LocalizationKeyAuditWindow.IssueCategoryCounts>(
+                        window,
+                        "issueCategoryCounts"),
+                    1,
+                    1,
+                    1,
+                    1);
+
+                SetField(window, "searchText", "MissingDirectEntry");
+                Invoke(window, "RebuildVisibleIssues", true);
+
+                Assert.That(GetField<List<int>>(window, "visibleIssueIndices"), Is.EqualTo(new[] { 1 }));
+                AssertCounts(
+                    GetField<AuditEditor.LocalizationKeyAuditWindow.IssueCategoryCounts>(
+                        window,
+                        "issueCategoryCounts"),
+                    1,
+                    1,
+                    1,
+                    1);
+
+                SetField(window, "searchText", string.Empty);
+                SetField(
+                    window,
+                    "issueCategory",
+                    AuditEditor.LocalizationKeyAuditWindow.IssueCategoryFilter.Integrity);
+                Invoke(window, "RebuildVisibleIssues", true);
+
+                Assert.That(GetField<List<int>>(window, "visibleIssueIndices"), Is.EqualTo(new[] { 3 }));
+                AssertCounts(
+                    GetField<AuditEditor.LocalizationKeyAuditWindow.IssueCategoryCounts>(
+                        window,
+                        "issueCategoryCounts"),
+                    1,
+                    1,
+                    1,
+                    1);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(window);
+            }
+        }
+
+        /// <summary>成功したIncomplete監査は旧cacheを新しいresultの内訳へ置き換えます。</summary>
+        [Test]
+        public void RunAudit_IncompleteResultReplacesStaleCategoryCounts()
+        {
+            var window = ScriptableObject.CreateInstance<AuditEditor.LocalizationKeyAuditWindow>();
+            try
+            {
+                SetField(window, "result", CreateEmptyResult());
+                SetField(
+                    window,
+                    "issueCategoryCounts",
+                    new AuditEditor.LocalizationKeyAuditWindow.IssueCategoryCounts(9, 8, 7, 6));
+                SetField(window, "requiredLocalesText", "en");
+                SetField(window, "declaredAssetPathsText", "Packages/com.example/Runtime\nAssets/Scenes");
+                SetField(window, "scopeDescription", "Mixed roots");
+                SetField(window, "searchText", string.Empty);
+                SetField(
+                    window,
+                    "issueCategory",
+                    AuditEditor.LocalizationKeyAuditWindow.IssueCategoryFilter.All);
+
+                Invoke(window, "RunAudit");
+
+                var result = GetField<AuditEditor.LocalizationKeyAuditResult>(window, "result");
+                Assert.That(result, Is.Not.Null);
+                Assert.That(result.IsComplete, Is.False);
+                Assert.That(result.Issues, Has.Count.EqualTo(1));
+                Assert.That(
+                    result.Issues[0].Kind,
+                    Is.EqualTo(AuditEditor.LocalizationKeyAuditIssueKind.InvalidConfiguration));
+                AssertCounts(
+                    GetField<AuditEditor.LocalizationKeyAuditWindow.IssueCategoryCounts>(
+                        window,
+                        "issueCategoryCounts"),
+                    1,
+                    0,
+                    0,
+                    0);
+                Assert.That(GetField<List<int>>(window, "visibleIssueIndices"), Is.EqualTo(new[] { 0 }));
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(window);
+            }
+        }
+
+        /// <summary>監査開始時の例外は旧resultと4区分cacheを同時に破棄します。</summary>
+        [Test]
+        public void RunAudit_InputExceptionClearsStaleCategoryCounts()
+        {
+            var window = ScriptableObject.CreateInstance<AuditEditor.LocalizationKeyAuditWindow>();
+            try
+            {
+                SetField(window, "result", CreateResult(
+                    true,
+                    new[] { CreateIssue(AuditEditor.LocalizationKeyAuditIssueKind.DuplicateCollectionName) }));
+                SetField(
+                    window,
+                    "issueCategoryCounts",
+                    new AuditEditor.LocalizationKeyAuditWindow.IssueCategoryCounts(4, 3, 2, 1));
+                GetField<List<int>>(window, "visibleIssueIndices").Add(0);
+                SetField(window, "selectedIssueIndex", 0);
+                SetField(
+                    window,
+                    "requiredLocalesText",
+                    new string('x', AuditEditor.LocalizationKeyAuditLimits.MaximumTextCharacters + 1));
+
+                Invoke(window, "RunAudit");
+
+                Assert.That(GetField<AuditEditor.LocalizationKeyAuditResult>(window, "result"), Is.Null);
+                AssertCounts(
+                    GetField<AuditEditor.LocalizationKeyAuditWindow.IssueCategoryCounts>(
+                        window,
+                        "issueCategoryCounts"),
+                    0,
+                    0,
+                    0,
+                    0);
+                Assert.That(GetField<List<int>>(window, "visibleIssueIndices"), Is.Empty);
+                Assert.That(GetField<int>(window, "selectedIssueIndex"), Is.EqualTo(-1));
+                Assert.That(
+                    GetField<string>(window, "interactionMessage"),
+                    Is.EqualTo("監査を開始できませんでした: LocalizationKeyAuditLimitException"));
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(window);
             }
         }
 
@@ -331,18 +606,46 @@ namespace LocalizationKeyAudit.Tests
         /// <summary>Clear前状態へ入れる最小complete resultを作ります。</summary>
         private static AuditEditor.LocalizationKeyAuditResult CreateEmptyResult()
         {
-            return new AuditEditor.LocalizationKeyAuditResult(
+            return CreateResult(
                 true,
+                Array.Empty<AuditEditor.LocalizationKeyAuditIssue>());
+        }
+
+        /// <summary>Window状態へ入れる最小resultを作ります。</summary>
+        private static AuditEditor.LocalizationKeyAuditResult CreateResult(
+            bool isComplete,
+            IReadOnlyList<AuditEditor.LocalizationKeyAuditIssue> issues,
+            bool isCoverageComplete = true)
+        {
+            return new AuditEditor.LocalizationKeyAuditResult(
+                isComplete,
                 new AuditEditor.LocalizationKeyAuditCoverage(
                     "Assets",
                     new[] { "Assets" },
                     Array.Empty<AuditEditor.LocalizationKeyAuditStaticReference>(),
-                    true,
-                    string.Empty),
+                    isCoverageComplete,
+                    isCoverageComplete ? string.Empty : "Coverage incomplete"),
                 Array.Empty<string>(),
                 Array.Empty<AuditEditor.LocalizationKeyAuditCollectionSnapshot>(),
-                Array.Empty<AuditEditor.LocalizationKeyAuditIssue>(),
+                issues,
                 0);
+        }
+
+        /// <summary>4区分と合計のexact件数を検証します。</summary>
+        private static void AssertCounts(
+            AuditEditor.LocalizationKeyAuditWindow.IssueCategoryCounts actual,
+            int terminal,
+            int requiredLocaleCoverage,
+            int staticReferences,
+            int integrity)
+        {
+            Assert.That(actual.Terminal, Is.EqualTo(terminal));
+            Assert.That(actual.RequiredLocaleCoverage, Is.EqualTo(requiredLocaleCoverage));
+            Assert.That(actual.StaticReferences, Is.EqualTo(staticReferences));
+            Assert.That(actual.Integrity, Is.EqualTo(integrity));
+            Assert.That(
+                actual.Total,
+                Is.EqualTo(terminal + requiredLocaleCoverage + staticReferences + integrity));
         }
 
         /// <summary>必須private fieldを取得します。</summary>
@@ -371,14 +674,17 @@ namespace LocalizationKeyAudit.Tests
             return field;
         }
 
-        /// <summary>引数なしprivate methodを呼び出します。</summary>
-        private static void Invoke(AuditEditor.LocalizationKeyAuditWindow window, string methodName)
+        /// <summary>private methodを指定引数で呼び出します。</summary>
+        private static void Invoke(
+            AuditEditor.LocalizationKeyAuditWindow window,
+            string methodName,
+            params object[] arguments)
         {
             var method = typeof(AuditEditor.LocalizationKeyAuditWindow).GetMethod(
                 methodName,
                 BindingFlags.Instance | BindingFlags.NonPublic);
             Assert.That(method, Is.Not.Null, methodName);
-            method.Invoke(window, null);
+            method.Invoke(window, arguments);
         }
     }
 }

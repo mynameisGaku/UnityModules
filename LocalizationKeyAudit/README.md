@@ -2,7 +2,7 @@
 
 ## 30秒で分かる説明
 
-Localization Key Auditは、Unity LocalizationのString Table Collectionについて、明示したrequired localeごとのdirect coverageとtable integrityを手動で確認するEditor専用ツールです。静的参照は、1回の監査につき`Assets`または1つのregistered packageのどちらか一方をlogical rootとして、同じroot内に宣言したpathだけを対象にできます。結果はadvisory（判断材料）であり、assetを変更せず、buildを停止しません。
+Localization Key Auditは、Unity LocalizationのString Table Collectionについて、明示したrequired localeごとのdirect coverageとtable integrityを手動で確認するEditor専用ツールです。静的参照は、1回の監査につき`Assets`または1つのregistered packageのどちらか一方をlogical rootとして、同じroot内に宣言したpathだけを対象にできます。監査結果全体のfindingは4カテゴリ別の件数でも確認できます。結果はadvisory（判断材料）であり、assetを変更せず、buildを停止しません。
 
 ## できること
 
@@ -11,6 +11,7 @@ Localization Key Auditは、Unity LocalizationのString Table Collectionにつ�
 - `MissingLocaleTable`、`MissingDirectEntry`、`EmptyDirectValue`を別々に報告します。
 - 1回につきlogical rootを`Assets`または1つの`Packages/<registered-name>`に限定し、そのroot内に宣言された静的参照だけを調べます。見つからない場合は`NoStaticReferenceFoundWithinDeclaredScope`と報告します。
 - findingと一緒にcoverage scope、coverage外、incomplete要因を示します。
+- filter前のfindingを`Terminal`、`Required Locale Coverage`、`Static References`、`Integrity`の4カテゴリ別に集計します。
 
 ## 使わない方がよい場合
 
@@ -27,7 +28,7 @@ Localization Key Auditは、Unity LocalizationのString Table Collectionにつ�
 1. Package Managerの「Add package from git URL...」へ次を入力します。
 
    ```text
-   https://github.com/mynameisGaku/UnityModules.git?path=/LocalizationKeyAudit#localization-key-audit-v1.1.0
+   https://github.com/mynameisGaku/UnityModules.git?path=/LocalizationKeyAudit#localization-key-audit-v1.2.0
    ```
 
 2. Unity Editorの`Tools/Localization Key Audit/Open`からwindowを開きます。
@@ -68,6 +69,10 @@ Packages/com.yourcompany.localization-content/Content
 scope外にも参照があり得るprojectでは、`NoStaticReferenceFoundWithinDeclaredScope`を削除判断へ使わないでください。
 
 ## 実行結果
+
+Windowの`Issue Categories (unfiltered result)`は、現在の監査resultに含まれる全findingを`Terminal`、`Required Locale Coverage`、`Static References`、`Integrity`へ1回だけ分類した件数です。Search、Category filter、一覧の500件表示上限を変えても、この内訳は変わりません。件数はfinding数であり、uniqueなasset数、collection数、key数ではありません。`Clear`は結果と内訳を消し、次の`Audit`は新しいresultから集計します。
+
+resultまたはStatic coverageが`Incomplete`の場合、あるカテゴリが0件でも、そのカテゴリに問題がない、安全である、またはfindingが存在しないことの証明にはなりません。内訳より`Complete`／`Incomplete`とcoverageの完了状態を優先してください。
 
 | Finding / status | 意味 | 断定しないこと |
 | --- | --- | --- |
