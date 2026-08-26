@@ -31,6 +31,44 @@ namespace LocalizationKeyAudit.Tests
         }
 
         /// <summary>
+        /// 同一packageのroot、nested folder、direct fileを同じrequestで受理します。
+        /// </summary>
+        [Test]
+        public void TryValidateRequest_AcceptsSamePackageDeclaredScopes()
+        {
+            var request = CreateRequest(
+                declaredPaths: new[]
+                {
+                    "Packages/com.example/Runtime/Direct.asset",
+                    "Packages/com.example/Runtime",
+                    "Packages/com.example"
+                },
+                references: new[]
+                {
+                    CreateReference("Packages/com.example/Runtime/Nested.prefab", entryId: 30),
+                    CreateReference("Packages/com.example/Runtime/Direct.asset", entryId: 20),
+                    CreateReference("Packages/com.example/Root.prefab", entryId: 10)
+                });
+
+            var succeeded = AuditEditor.LocalizationKeyAuditAnalyzer.TryValidateRequest(request, out var failure);
+
+            Assert.That(succeeded, Is.True, failure?.Message);
+            Assert.That(failure, Is.Null);
+        }
+
+        /// <summary>Assetsとpackage、または異なるpackageの混在をInvalidConfigurationにします。</summary>
+        [TestCase("Assets", "Packages/com.example")]
+        [TestCase("Packages/com.alpha", "Packages/com.beta")]
+        public void TryValidateRequest_RejectsMixedLogicalRoots(
+            string firstDeclaredPath,
+            string secondDeclaredPath)
+        {
+            AssertInvalid(
+                CreateRequest(declaredPaths: new[] { firstDeclaredPath, secondDeclaredPath }),
+                "logical root");
+        }
+
+        /// <summary>
         /// null request、null coverage、空 required Locale を InvalidConfiguration にします。
         /// </summary>
         [Test]
@@ -135,10 +173,25 @@ namespace LocalizationKeyAudit.Tests
         {
             AssertInvalid(CreateRequest(declaredPaths: Array.Empty<string>()), "1 件以上");
             AssertInvalid(CreateRequest(declaredPaths: new[] { "Assets/Scenes", "Assets/Scenes" }), "重複");
+            AssertInvalid(
+                CreateRequest(declaredPaths: new[] { "Packages/com.example", "Packages/com.example" }),
+                "重複");
             AssertInvalid(CreateRequest(declaredPaths: new[] { "Assets/../Scenes" }), "不正");
             AssertInvalid(CreateRequest(declaredPaths: new[] { "Assets\\Scenes" }), "不正");
-            AssertInvalid(CreateRequest(declaredPaths: new[] { "Library/Scenes" }), "不正");
-            AssertInvalid(CreateRequest(declaredPaths: new[] { "Packages/com.example" }), "不正");
+            AssertInvalid(CreateRequest(declaredPaths: new[] { "Packages" }), "不正");
+            AssertInvalid(CreateRequest(declaredPaths: new[] { "Library/PackageCache/com.example/A.asset" }), "不正");
+            AssertInvalid(CreateRequest(declaredPaths: new[] { "Packages/com.example/../A.asset" }), "不正");
+            AssertInvalid(CreateRequest(declaredPaths: new[] { "Packages\\com.example\\A.asset" }), "不正");
+        }
+
+        /// <summary>package declared pathの予約文字と末尾dot/space segmentを拒否します。</summary>
+        [TestCase("Packages/com.example/Generated~/A.asset")]
+        [TestCase("Packages/com.example/Bad:Name/A.asset")]
+        [TestCase("Packages/com.example/Trailing./A.asset")]
+        [TestCase("Packages/com.example/Trailing /A.asset")]
+        public void TryValidateRequest_RejectsUnsafeDeclaredPackageSegments(string declaredPath)
+        {
+            AssertInvalid(CreateRequest(declaredPaths: new[] { declaredPath }), "不正");
         }
 
         /// <summary>
@@ -151,15 +204,21 @@ namespace LocalizationKeyAudit.Tests
             AssertInvalid(CreateRequest(references: new[] { CreateReference("Assets/Scenes/Main.unity", Guid.Empty) }), "static reference");
             AssertInvalid(CreateRequest(references: new[] { CreateReference("Assets/Scenes/Main.unity", entryId: 0) }), "static reference");
             AssertInvalid(CreateRequest(references: new AuditEditor.LocalizationKeyAuditStaticReference[] { null }), "static reference");
-            var packageCoverage = new AuditEditor.LocalizationKeyAuditCoverage(
-                "Packages",
-                new[] { "Packages/com.example" },
-                new[] { CreateReference("Packages/com.example/Prefab.prefab") },
-                true,
-                string.Empty);
             AssertInvalid(
-                new AuditEditor.LocalizationKeyAuditRequest(new[] { "en" }, packageCoverage),
-                "declared asset path");
+                CreateRequest(
+                    declaredPaths: new[] { "Packages/com.example" },
+                    references: new[] { CreateReference("Packages/com.example") }),
+                "static reference");
+            AssertInvalid(
+                CreateRequest(
+                    declaredPaths: new[] { "Packages/com.example" },
+                    references: new[] { CreateReference("Packages/com.other/Prefab.prefab") }),
+                "static reference");
+            AssertInvalid(
+                CreateRequest(
+                    declaredPaths: new[] { "Packages/com.example" },
+                    references: new[] { CreateReference("Packages\\com.example\\Prefab.prefab") }),
+                "static reference");
         }
 
         /// <summary>

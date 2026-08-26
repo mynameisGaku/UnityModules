@@ -65,7 +65,7 @@ namespace LocalizationKeyAudit.Editor
             }
             catch (Exception exception)
             {
-                failureMessage = $"raw SharedTableData の全件収集に失敗しました: {exception.GetType().Name}: {exception.Message}";
+                failureMessage = $"raw SharedTableData の全件収集に失敗しました: {exception.GetType().Name}";
                 return false;
             }
 
@@ -87,9 +87,13 @@ namespace LocalizationKeyAudit.Editor
                     return false;
                 }
 
+                if (!TryValidatePath(asset.AssetPath, false, out failureMessage))
+                {
+                    return false;
+                }
+
                 failureAssetPath = asset.AssetPath;
-                if (!TryValidatePath(asset.AssetPath, false, out failureMessage) ||
-                    !TryValidatePath(asset.PhysicalPath, true, out failureMessage))
+                if (!TryValidatePath(asset.PhysicalPath, true, out failureMessage))
                 {
                     return false;
                 }
@@ -126,7 +130,7 @@ namespace LocalizationKeyAudit.Editor
 
                 if (!string.IsNullOrEmpty(asset.ReadError))
                 {
-                    failureMessage = $"SharedTableData physical file を読み取れません: {asset.ReadError}";
+                    failureMessage = $"SharedTableData physical file を読み取れません: {GetSafeReadErrorCode(asset.ReadError)}";
                     return false;
                 }
 
@@ -149,6 +153,29 @@ namespace LocalizationKeyAudit.Editor
             failureMessage = string.Empty;
             identities = new ReadOnlyCollection<LocalizationKeyAuditRawIdentity>(validated.ToArray());
             return true;
+        }
+
+        /// <summary>opaqueなraw source error本文を結果へ出さず安全な型名だけにします。</summary>
+        private static string GetSafeReadErrorCode(string readError)
+        {
+            if (string.IsNullOrEmpty(readError) || readError.Length > 128)
+            {
+                return "present";
+            }
+
+            for (var index = 0; index < readError.Length; index++)
+            {
+                var character = readError[index];
+                var isAsciiLetter = character >= 'A' && character <= 'Z' ||
+                    character >= 'a' && character <= 'z';
+                if (!isAsciiLetter && !(character >= '0' && character <= '9') &&
+                    character != '_' && character != '.')
+                {
+                    return "present";
+                }
+            }
+
+            return readError;
         }
 
         /// <summary>

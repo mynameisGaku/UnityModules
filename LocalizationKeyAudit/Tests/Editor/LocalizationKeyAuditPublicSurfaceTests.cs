@@ -10,7 +10,7 @@ namespace LocalizationKeyAudit.Tests
     internal sealed class LocalizationKeyAuditPublicSurfaceTests
     {
         /// <summary>
-        /// v1.0.0 の機能は internal に閉じ、利用者向け型を公開しません。
+        /// package coverageを含む機能はinternalに閉じ、利用者向け型を公開しません。
         /// </summary>
         [Test]
         public void EditorAssembly_ExportsNoPublicTypes()
@@ -28,8 +28,10 @@ namespace LocalizationKeyAudit.Tests
         {
             var callbackInterfaceNames = new[]
             {
+                "UnityEditor.Build.IOrderedCallback",
                 "UnityEditor.Build.IPreprocessBuildWithReport",
-                "UnityEditor.Build.IPostprocessBuildWithReport"
+                "UnityEditor.Build.IPostprocessBuildWithReport",
+                "UnityEditor.Build.IProcessSceneWithReport"
             };
             var callbackTypes = FindEditorAssembly()
                 .GetTypes()
@@ -38,6 +40,23 @@ namespace LocalizationKeyAudit.Tests
                 .ToArray();
 
             Assert.That(callbackTypes, Is.Empty);
+        }
+
+        /// <summary>
+        /// test assemblyを除くLocalizationKeyAudit assemblyはEditor専用の一件だけに固定します。
+        /// </summary>
+        [Test]
+        public void LoadedProductAssemblies_ContainNoRuntimeAssembly()
+        {
+            var productAssemblyNames = AppDomain.CurrentDomain.GetAssemblies()
+                .Select(assembly => assembly.GetName().Name)
+                .Where(name => name != null &&
+                    name.StartsWith("LocalizationKeyAudit.", StringComparison.Ordinal) &&
+                    !name.EndsWith(".Tests", StringComparison.Ordinal))
+                .OrderBy(name => name, StringComparer.Ordinal)
+                .ToArray();
+
+            Assert.That(productAssemblyNames, Is.EqualTo(new[] { "LocalizationKeyAudit.Editor" }));
         }
 
         /// <summary>読み込み済み assembly から監査 Editor assembly を一件だけ取得します。</summary>

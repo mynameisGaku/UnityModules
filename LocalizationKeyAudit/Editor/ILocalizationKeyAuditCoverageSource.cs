@@ -5,7 +5,7 @@ using System.Collections.Generic;
 namespace LocalizationKeyAudit.Editor
 {
     /// <summary>
-    /// 宣言済み Assets scope の physical files を static-reference parser へ渡します。
+    /// 宣言済み Assets または registered Packages scope の physical files を parser へ渡します。
     /// </summary>
     internal interface ILocalizationKeyAuditCoverageSource
     {

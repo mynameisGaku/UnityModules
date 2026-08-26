@@ -2,6 +2,24 @@
 
 All notable changes to this package will be documented in this file.
 
+## [1.1.0] - 2026-08-26
+
+### Added
+
+- Added static-reference coverage for explicitly declared `Assets[/...]` or `Packages/<registered-name>[/...]` paths, using exactly one logical root per audit and allowing multiple paths only within that root.
+- Added exact registered package-name resolution through `PackageInfo.resolvedPath` while keeping physical paths out of the window, audit result, errors, and clipboard; read errors expose only logical paths and exception types.
+
+### Safety
+
+- Reject bare `Packages`, direct `Library/PackageCache` paths, unregistered package names, mixed Assets/package roots, multiple package roots, and explicit paths with `~`, `:`, or a segment ending in dot or space before filesystem access.
+- Apply discovery, file, byte, reference, and issue limits audit-wide across all declared paths under the single logical root.
+- Fail closed without partial coverage results for normalized duplicate targets, reparse points on the root, any root ancestor, or a selected child path, and root escape.
+
+### Boundaries
+
+- Kept the raw preflight, typed snapshot, graph, and issue taxonomy unchanged.
+- Kept the audit read-only, Editor-only, advisory, and free of Runtime or public API additions.
+
 ## [1.0.0] - 2026-08-25
 
 ### Added

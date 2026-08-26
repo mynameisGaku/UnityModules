@@ -129,6 +129,42 @@ namespace LocalizationKeyAudit.Tests
                 Throws.TypeOf<AuditEditor.LocalizationKeyAuditLimitException>());
         }
 
+        /// <summary>physical path由来の例外本文をRawAssetへ入れず、安全な型名だけを保持します。</summary>
+        [Test]
+        public void ReadCandidate_PhysicalFailureStoresOnlyExceptionType()
+        {
+            var physicalCanary = Path.Combine(
+                Path.GetTempPath(),
+                "LocalizationKeyAuditRawSourcePhysicalCanary_" + System.Guid.NewGuid().ToString("N") + ".asset");
+            File.WriteAllBytes(physicalCanary, new byte[] { 1 });
+            try
+            {
+                var method = typeof(AuditEditor.UnityLocalizationKeyAuditRawSource).GetMethod(
+                    "ReadCandidate",
+                    System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);
+                Assert.That(method, Is.Not.Null);
+                var arguments = new object[]
+                {
+                    "Assets/Localization/UI Shared Data.asset",
+                    physicalCanary,
+                    0L
+                };
+
+                var asset = (AuditEditor.LocalizationKeyAuditRawAsset)method.Invoke(null, arguments);
+
+                Assert.That(asset, Is.Not.Null);
+                Assert.That(asset.ReadError, Is.EqualTo("InvalidDataException"));
+                StringAssert.DoesNotContain(physicalCanary, asset.ReadError);
+            }
+            finally
+            {
+                if (File.Exists(physicalCanary))
+                {
+                    File.Delete(physicalCanary);
+                }
+            }
+        }
+
         /// <summary>CR-only Unity YAMLでも後続target script行をphysical fallback候補として検出します。</summary>
         [Test]
         public void ContainsSharedTableDataScriptGuid_RecognizesCarriageReturnOnlyLines()

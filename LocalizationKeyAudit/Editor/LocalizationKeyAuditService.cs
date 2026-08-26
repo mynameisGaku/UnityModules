@@ -10,7 +10,7 @@ namespace LocalizationKeyAudit.Editor
     /// </summary>
     internal static class LocalizationKeyAuditService
     {
-        /// <summary>default Assets coverage source で request を構築します。</summary>
+        /// <summary>default Assetsまたはregistered Package coverage sourceでrequestを構築します。</summary>
         internal static LocalizationKeyAuditRequest CreateRequest(
             IReadOnlyList<string> requiredLocaleIdentifiers,
             string scopeDescription,
@@ -23,7 +23,7 @@ namespace LocalizationKeyAudit.Editor
                 new UnityLocalizationKeyAuditCoverageSource());
         }
 
-        /// <summary>Assets-only scope を走査して default source で audit します。</summary>
+        /// <summary>宣言済みAssetsまたはregistered Package scopeを走査してauditします。</summary>
         internal static LocalizationKeyAuditResult Audit(
             IReadOnlyList<string> requiredLocaleIdentifiers,
             string scopeDescription,
@@ -54,12 +54,12 @@ namespace LocalizationKeyAudit.Editor
                         string.Empty,
                         string.Empty,
                         0,
-                        $"監査入力を snapshot 化できません: {exception.GetType().Name}: {exception.Message}"));
+                        $"監査入力を snapshot 化できません: {exception.GetType().Name}"));
             }
 
             if (!LocalizationKeyAuditAnalyzer.TryValidateRequest(provisionalRequest, out var requestFailure))
             {
-                return CreateFailure(provisionalRequest.Coverage, requestFailure);
+                return CreateFailure(null, requestFailure);
             }
 
             return Audit(CreateRequest(
@@ -104,7 +104,7 @@ namespace LocalizationKeyAudit.Editor
         {
             if (!LocalizationKeyAuditAnalyzer.TryValidateRequest(request, out var requestFailure))
             {
-                return CreateFailure(request?.Coverage, requestFailure);
+                return CreateFailure(null, requestFailure);
             }
 
             if (!LocalizationKeyAuditRawPreflight.TryRun(
@@ -156,7 +156,7 @@ namespace LocalizationKeyAudit.Editor
             {
                 return CreateAuditFailure(
                     request.Coverage,
-                    $"typed Localization 監査に失敗しました: {exception.GetType().Name}: {exception.Message}");
+                    $"typed Localization 監査に失敗しました: {exception.GetType().Name}");
             }
         }
 

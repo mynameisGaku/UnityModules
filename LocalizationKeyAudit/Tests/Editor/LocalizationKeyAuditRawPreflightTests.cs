@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using NUnit.Framework;
 using AuditEditor = LocalizationKeyAudit.Editor;
@@ -318,7 +319,7 @@ namespace LocalizationKeyAudit.Tests
         [TestCase("missing", "存在しません")]
         [TestCase("reparse", "reparse point")]
         [TestCase("oversize", "1 file 上限")]
-        [TestCase("read-error", "access denied")]
+        [TestCase("read-error", "IOException")]
         public void TryRun_UnsafePhysicalStateFailsClosed(string state, string expectedMessagePart)
         {
             var validBytes = LocalizationKeyAuditTestData.CreateYamlBytes(LocalizationKeyAuditTestData.CollectionGuid);
@@ -328,9 +329,32 @@ namespace LocalizationKeyAudit.Tests
                 exists: state != "missing",
                 hasReparsePoint: state == "reparse",
                 isOversize: state == "oversize",
-                readError: state == "read-error" ? "access denied" : string.Empty);
+                readError: state == "read-error" ? "IOException" : string.Empty);
 
             AssertPreflightFailure(SourceWith(asset), asset.AssetPath, expectedMessagePart);
+        }
+
+        /// <summary>記号を含むopaqueなraw ReadErrorをpresentへ潰し、本文を公開しません。</summary>
+        [Test]
+        public void TryRun_OpaqueReadErrorDoesNotExposePhysicalCanary()
+        {
+            const string physicalCanary = "C:\\private\\raw-read-error-canary";
+            var asset = LocalizationKeyAuditTestData.CreateRawAsset(
+                "Assets/Localization/UI Shared Data.asset",
+                LocalizationKeyAuditTestData.CreateYamlBytes(LocalizationKeyAuditTestData.CollectionGuid),
+                readError: physicalCanary);
+
+            var succeeded = AuditEditor.LocalizationKeyAuditRawPreflight.TryRun(
+                SourceWith(asset),
+                out var identities,
+                out var failureAssetPath,
+                out var failureMessage);
+
+            Assert.That(succeeded, Is.False);
+            Assert.That(identities, Is.Empty);
+            Assert.That(failureAssetPath, Is.EqualTo(asset.AssetPath));
+            StringAssert.Contains("present", failureMessage);
+            StringAssert.DoesNotContain(physicalCanary, failureMessage);
         }
 
         /// <summary>
@@ -340,14 +364,24 @@ namespace LocalizationKeyAudit.Tests
         public void TryRun_SourceFailuresAreIsolated()
         {
             var nullResult = new FakeLocalizationKeyAuditRawSource { Assets = null };
+            const string physicalCanary = "C:\\private\\raw-throw-canary";
             var throwing = new FakeLocalizationKeyAuditRawSource
             {
-                Exception = new InvalidOperationException("boom")
+                Exception = new InvalidOperationException(physicalCanary)
             };
 
             AssertPreflightFailure(null, string.Empty, "source がありません");
             AssertPreflightFailure(nullResult, string.Empty, "null を返しました");
-            AssertPreflightFailure(throwing, string.Empty, "InvalidOperationException: boom");
+            var succeeded = AuditEditor.LocalizationKeyAuditRawPreflight.TryRun(
+                throwing,
+                out var identities,
+                out var failureAssetPath,
+                out var failureMessage);
+            Assert.That(succeeded, Is.False);
+            Assert.That(identities, Is.Empty);
+            Assert.That(failureAssetPath, Is.Empty);
+            StringAssert.Contains("InvalidOperationException", failureMessage);
+            StringAssert.DoesNotContain(physicalCanary, failureMessage);
             Assert.That(nullResult.ReadCallCount, Is.EqualTo(1));
             Assert.That(throwing.ReadCallCount, Is.EqualTo(1));
         }
@@ -446,7 +480,33 @@ namespace LocalizationKeyAudit.Tests
                 LocalizationKeyAuditTestData.CreateYamlBytes(LocalizationKeyAuditTestData.CollectionGuid),
                 physicalPath ?? LocalizationKeyAuditTestData.CreatePhysicalPath(assetPath));
 
-            AssertPreflightFailure(SourceWith(asset), assetPath, expectedMessagePart);
+            AssertPreflightFailure(
+                SourceWith(asset),
+                physicalPath == null ? string.Empty : assetPath,
+                expectedMessagePart);
+        }
+
+        /// <summary>absolute physical canaryを装うinvalid AssetPathをpath/messageへ公開しません。</summary>
+        [Test]
+        public void TryRun_InvalidAssetPathDoesNotExposePhysicalCanary()
+        {
+            const string physicalCanary = "C:\\private\\invalid-raw-asset-canary.asset";
+            var asset = LocalizationKeyAuditTestData.CreateRawAsset(
+                physicalCanary,
+                LocalizationKeyAuditTestData.CreateYamlBytes(LocalizationKeyAuditTestData.CollectionGuid),
+                Path.GetFullPath("C:/Project/Localization/UI Shared Data.asset"));
+
+            var succeeded = AuditEditor.LocalizationKeyAuditRawPreflight.TryRun(
+                SourceWith(asset),
+                out var identities,
+                out var failureAssetPath,
+                out var failureMessage);
+
+            Assert.That(succeeded, Is.False);
+            Assert.That(identities, Is.Empty);
+            Assert.That(failureAssetPath, Is.Empty);
+            StringAssert.DoesNotContain(physicalCanary, failureMessage);
+            StringAssert.Contains("Unity relative path", failureMessage);
         }
 
         /// <summary>

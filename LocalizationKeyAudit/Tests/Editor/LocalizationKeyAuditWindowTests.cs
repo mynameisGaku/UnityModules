@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using NUnit.Framework;
+using UnityEngine;
 using AuditEditor = LocalizationKeyAudit.Editor;
 
 namespace LocalizationKeyAudit.Tests
@@ -35,21 +37,125 @@ namespace LocalizationKeyAudit.Tests
         }
 
         /// <summary>
-        /// declared Assets path は改行だけで分け、各 token を trim して入力順を保ちます。
+        /// declared Assets/Packages pathは改行だけで分け、非空行の原文と入力順を保ちます。
         /// </summary>
         [Test]
-        public void ParseDeclaredAssetPaths_ParsesLinesAndDropsEmptyTokens()
+        public void ParseDeclaredAssetPaths_PreservesNonEmptyLinesAndDropsWhitespaceOnlyLines()
         {
             var paths = AuditEditor.LocalizationKeyAuditWindow.ParseDeclaredAssetPaths(
-                " Assets/Scenes \r\n\nAssets/Prefabs\n Assets/UI ");
+                " Packages/com.zeta/Runtime \r\n \nAssets/Scenes\nPackages/com.alpha/UI ");
 
             Assert.That(paths, Is.EqualTo(new[]
             {
+                " Packages/com.zeta/Runtime ",
                 "Assets/Scenes",
-                "Assets/Prefabs",
-                "Assets/UI"
+                "Packages/com.alpha/UI "
             }));
             Assert.That(AuditEditor.LocalizationKeyAuditWindow.ParseDeclaredAssetPaths(null), Is.Empty);
+        }
+
+        /// <summary>declared pathの前後空白をparserで保持し、service validationで設定不正にします。</summary>
+        [TestCase("Assets/Foo ")]
+        [TestCase(" Assets/Foo")]
+        public void Audit_RejectsDeclaredPathWhitespacePreservedByParser(string line)
+        {
+            var paths = AuditEditor.LocalizationKeyAuditWindow.ParseDeclaredAssetPaths(line);
+
+            Assert.That(paths, Is.EqualTo(new[] { line }));
+            var result = AuditEditor.LocalizationKeyAuditService.Audit(
+                new[] { "en" },
+                "Whitespace path",
+                paths);
+
+            Assert.That(result.IsComplete, Is.False);
+            Assert.That(result.Coverage.RecognizedReferences, Is.Empty);
+            Assert.That(result.Issues, Has.Count.EqualTo(1));
+            Assert.That(
+                result.Issues[0].Kind,
+                Is.EqualTo(AuditEditor.LocalizationKeyAuditIssueKind.InvalidConfiguration));
+            StringAssert.Contains("declared asset path", result.Issues[0].Message);
+        }
+
+        /// <summary>parserはmixed rootの順序を保ち、serviceはcoverage scan前に設定不正として拒否します。</summary>
+        [Test]
+        public void Audit_RejectsMixedParsedLogicalRoots()
+        {
+            var paths = AuditEditor.LocalizationKeyAuditWindow.ParseDeclaredAssetPaths(
+                "Packages/com.example/Runtime\nAssets/Scenes");
+
+            Assert.That(paths, Is.EqualTo(new[]
+            {
+                "Packages/com.example/Runtime",
+                "Assets/Scenes"
+            }));
+
+            var result = AuditEditor.LocalizationKeyAuditService.Audit(
+                new[] { "en" },
+                "Mixed roots",
+                paths);
+
+            Assert.That(result.IsComplete, Is.False);
+            Assert.That(result.Coverage.RecognizedReferences, Is.Empty);
+            Assert.That(result.Issues, Has.Count.EqualTo(1));
+            Assert.That(
+                result.Issues[0].Kind,
+                Is.EqualTo(AuditEditor.LocalizationKeyAuditIssueKind.InvalidConfiguration));
+            StringAssert.Contains("logical root", result.Issues[0].Message);
+        }
+
+        /// <summary>
+        /// frozen defaultを固定し、Clearがrequest/filter入力を残してtransient resultだけを消すことを確認します。
+        /// </summary>
+        [Test]
+        public void DefaultsAndClear_PreserveInputsAndResetTransientState()
+        {
+            var window = ScriptableObject.CreateInstance<AuditEditor.LocalizationKeyAuditWindow>();
+            try
+            {
+                Assert.That(GetField<string>(window, "declaredAssetPathsText"), Is.EqualTo("Assets"));
+                Assert.That(
+                    GetField<string>(window, "scopeDescription"),
+                    Is.EqualTo("Assets text .unity/.prefab/.asset の GUID + key ID direct references"));
+
+                SetField(window, "requiredLocalesText", "en, ja");
+                SetField(window, "declaredAssetPathsText", "Packages/com.example\nAssets");
+                SetField(window, "scopeDescription", "Frozen scope");
+                SetField(window, "searchText", "package");
+                SetField(
+                    window,
+                    "issueCategory",
+                    AuditEditor.LocalizationKeyAuditWindow.IssueCategoryFilter.StaticReferences);
+                SetField(window, "result", CreateEmptyResult());
+                GetField<List<int>>(window, "visibleIssueIndices").Add(0);
+                SetField(window, "selectedIssueIndex", 0);
+                SetField(window, "interactionMessage", "old status");
+                SetField(window, "issueScrollPosition", new Vector2(1f, 2f));
+                SetField(window, "detailScrollPosition", new Vector2(3f, 4f));
+                SetField(window, "windowScrollPosition", new Vector2(5f, 6f));
+
+                Invoke(window, "ClearResult");
+
+                Assert.That(GetField<string>(window, "requiredLocalesText"), Is.EqualTo("en, ja"));
+                Assert.That(
+                    GetField<string>(window, "declaredAssetPathsText"),
+                    Is.EqualTo("Packages/com.example\nAssets"));
+                Assert.That(GetField<string>(window, "scopeDescription"), Is.EqualTo("Frozen scope"));
+                Assert.That(GetField<string>(window, "searchText"), Is.EqualTo("package"));
+                Assert.That(
+                    GetField<AuditEditor.LocalizationKeyAuditWindow.IssueCategoryFilter>(window, "issueCategory"),
+                    Is.EqualTo(AuditEditor.LocalizationKeyAuditWindow.IssueCategoryFilter.StaticReferences));
+                Assert.That(GetField<AuditEditor.LocalizationKeyAuditResult>(window, "result"), Is.Null);
+                Assert.That(GetField<List<int>>(window, "visibleIssueIndices"), Is.Empty);
+                Assert.That(GetField<int>(window, "selectedIssueIndex"), Is.EqualTo(-1));
+                Assert.That(GetField<string>(window, "interactionMessage"), Is.Empty);
+                Assert.That(GetField<Vector2>(window, "issueScrollPosition"), Is.EqualTo(Vector2.zero));
+                Assert.That(GetField<Vector2>(window, "detailScrollPosition"), Is.EqualTo(Vector2.zero));
+                Assert.That(GetField<Vector2>(window, "windowScrollPosition"), Is.EqualTo(Vector2.zero));
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(window);
+            }
         }
 
         /// <summary>UI token parserはmax+1 tokenと保持前の長大tokenを即時拒否します。</summary>
@@ -220,6 +326,59 @@ namespace LocalizationKeyAudit.Tests
                 "Entry Key",
                 123456,
                 "Unique Message");
+        }
+
+        /// <summary>Clear前状態へ入れる最小complete resultを作ります。</summary>
+        private static AuditEditor.LocalizationKeyAuditResult CreateEmptyResult()
+        {
+            return new AuditEditor.LocalizationKeyAuditResult(
+                true,
+                new AuditEditor.LocalizationKeyAuditCoverage(
+                    "Assets",
+                    new[] { "Assets" },
+                    Array.Empty<AuditEditor.LocalizationKeyAuditStaticReference>(),
+                    true,
+                    string.Empty),
+                Array.Empty<string>(),
+                Array.Empty<AuditEditor.LocalizationKeyAuditCollectionSnapshot>(),
+                Array.Empty<AuditEditor.LocalizationKeyAuditIssue>(),
+                0);
+        }
+
+        /// <summary>必須private fieldを取得します。</summary>
+        private static T GetField<T>(AuditEditor.LocalizationKeyAuditWindow window, string fieldName)
+        {
+            var field = GetFieldInfo(fieldName);
+            return (T)field.GetValue(window);
+        }
+
+        /// <summary>必須private fieldへ値を設定します。</summary>
+        private static void SetField<T>(
+            AuditEditor.LocalizationKeyAuditWindow window,
+            string fieldName,
+            T value)
+        {
+            GetFieldInfo(fieldName).SetValue(window, value);
+        }
+
+        /// <summary>必須private field metadataを取得します。</summary>
+        private static FieldInfo GetFieldInfo(string fieldName)
+        {
+            var field = typeof(AuditEditor.LocalizationKeyAuditWindow).GetField(
+                fieldName,
+                BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.That(field, Is.Not.Null, fieldName);
+            return field;
+        }
+
+        /// <summary>引数なしprivate methodを呼び出します。</summary>
+        private static void Invoke(AuditEditor.LocalizationKeyAuditWindow window, string methodName)
+        {
+            var method = typeof(AuditEditor.LocalizationKeyAuditWindow).GetMethod(
+                methodName,
+                BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.That(method, Is.Not.Null, methodName);
+            method.Invoke(window, null);
         }
     }
 }

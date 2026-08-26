@@ -1,4 +1,7 @@
 using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using NUnit.Framework;
 using AuditEditor = LocalizationKeyAudit.Editor;
@@ -24,6 +27,55 @@ namespace LocalizationKeyAudit.Tests
             AssertTerminalFailure(result, AuditEditor.LocalizationKeyAuditIssueKind.InvalidConfiguration);
             Assert.That(raw.ReadCallCount, Is.Zero);
             Assert.That(typed.ReadCallCount, Is.Zero);
+        }
+
+        /// <summary>mixed logical root requestをsource呼出前に拒否し、元coverageのpath/referenceも返しません。</summary>
+        [Test]
+        public void Audit_MixedRootRequestCallsNeitherSourceAndDiscardsCoverage()
+        {
+            var coverage = new AuditEditor.LocalizationKeyAuditCoverage(
+                "Mixed roots",
+                new[] { "Assets", "Packages/com.example" },
+                new[]
+                {
+                    new AuditEditor.LocalizationKeyAuditStaticReference(
+                        "Assets/Scenes/Main.unity",
+                        LocalizationKeyAuditTestData.CollectionGuid,
+                        10,
+                        "UI",
+                        "Start")
+                },
+                true,
+                string.Empty);
+            var request = new AuditEditor.LocalizationKeyAuditRequest(new[] { "en" }, coverage);
+            var raw = new FakeLocalizationKeyAuditRawSource();
+            var typed = new FakeLocalizationKeyAuditTypedSource();
+
+            var result = AuditEditor.LocalizationKeyAuditService.Audit(request, raw, typed);
+
+            AssertTerminalFailure(result, AuditEditor.LocalizationKeyAuditIssueKind.InvalidConfiguration);
+            Assert.That(result.Coverage.DeclaredAssetPaths, Is.Empty);
+            Assert.That(result.Coverage.RecognizedReferences, Is.Empty);
+            Assert.That(raw.ReadCallCount, Is.Zero);
+            Assert.That(typed.ReadCallCount, Is.Zero);
+        }
+
+        /// <summary>input snapshot例外は型名だけを返し、opaque本文とcoverageを公開しません。</summary>
+        [Test]
+        public void Audit_InputSnapshotExceptionDoesNotExposeOpaqueDetails()
+        {
+            const string physicalCanary = "C:\\private\\input-snapshot-canary";
+
+            var result = AuditEditor.LocalizationKeyAuditService.Audit(
+                new ThrowingStringList(physicalCanary),
+                "Assets",
+                new[] { "Assets" });
+
+            AssertTerminalFailure(result, AuditEditor.LocalizationKeyAuditIssueKind.InvalidConfiguration);
+            Assert.That(result.Coverage.DeclaredAssetPaths, Is.Empty);
+            Assert.That(result.Coverage.RecognizedReferences, Is.Empty);
+            StringAssert.Contains("InvalidOperationException", result.Issues[0].Message);
+            AssertIssueDoesNotExpose(result.Issues[0], physicalCanary);
         }
 
         /// <summary>
@@ -55,6 +107,33 @@ namespace LocalizationKeyAudit.Tests
             AssertTerminalFailure(result, AuditEditor.LocalizationKeyAuditIssueKind.ReadOnlyGuaranteeUnavailable);
             Assert.That(result.Issues[0].AssetPath, Is.EqualTo("Assets/Localization/Z Shared Data.asset"));
             Assert.That(result.Coverage.ScopeDescription, Is.EqualTo("Scenes"));
+            Assert.That(raw.ReadCallCount, Is.EqualTo(1));
+            Assert.That(typed.ReadCallCount, Is.Zero);
+        }
+
+        /// <summary>invalid raw AssetPathをissue fieldやcoverageへ移さずtyped load前に停止します。</summary>
+        [Test]
+        public void Audit_InvalidRawAssetPathDoesNotExposePhysicalCanary()
+        {
+            const string physicalCanary = "C:\\private\\raw-asset-path-canary.asset";
+            var raw = new FakeLocalizationKeyAuditRawSource
+            {
+                Assets = new[]
+                {
+                    LocalizationKeyAuditTestData.CreateRawAsset(
+                        physicalCanary,
+                        LocalizationKeyAuditTestData.CreateYamlBytes(LocalizationKeyAuditTestData.CollectionGuid),
+                        Path.GetFullPath("C:/Project/Localization/UI Shared Data.asset"))
+                }
+            };
+            var typed = new FakeLocalizationKeyAuditTypedSource();
+
+            var result = AuditEditor.LocalizationKeyAuditService.Audit(CreateRequest(), raw, typed);
+
+            AssertTerminalFailure(result, AuditEditor.LocalizationKeyAuditIssueKind.ReadOnlyGuaranteeUnavailable);
+            Assert.That(result.Coverage.RecognizedReferences, Has.Count.EqualTo(1));
+            Assert.That(result.Issues[0].AssetPath, Is.Empty);
+            AssertIssueDoesNotExpose(result.Issues[0], physicalCanary);
             Assert.That(raw.ReadCallCount, Is.EqualTo(1));
             Assert.That(typed.ReadCallCount, Is.Zero);
         }
@@ -107,16 +186,18 @@ namespace LocalizationKeyAudit.Tests
         [Test]
         public void Audit_RawSourceExceptionIsIsolatedBeforeTypedLoad()
         {
+            const string physicalCanary = "C:\\private\\raw-source-canary";
             var raw = new FakeLocalizationKeyAuditRawSource
             {
-                Exception = new InvalidOperationException("raw boom")
+                Exception = new InvalidOperationException(physicalCanary)
             };
             var typed = new FakeLocalizationKeyAuditTypedSource();
 
             var result = AuditEditor.LocalizationKeyAuditService.Audit(CreateRequest(), raw, typed);
 
             AssertTerminalFailure(result, AuditEditor.LocalizationKeyAuditIssueKind.ReadOnlyGuaranteeUnavailable);
-            StringAssert.Contains("InvalidOperationException: raw boom", result.Issues[0].Message);
+            StringAssert.Contains("InvalidOperationException", result.Issues[0].Message);
+            AssertIssueDoesNotExpose(result.Issues[0], physicalCanary);
             Assert.That(raw.ReadCallCount, Is.EqualTo(1));
             Assert.That(typed.ReadCallCount, Is.Zero);
         }
@@ -141,16 +222,18 @@ namespace LocalizationKeyAudit.Tests
             AssertTerminalFailure(nullResult, AuditEditor.LocalizationKeyAuditIssueKind.AuditFailed);
             Assert.That(nullSnapshot.ReadCallCount, Is.EqualTo(1));
 
+            const string physicalCanary = "C:\\private\\typed-source-canary";
             var throwing = new FakeLocalizationKeyAuditTypedSource
             {
-                Exception = new InvalidOperationException("typed boom")
+                Exception = new InvalidOperationException(physicalCanary)
             };
             var exceptionResult = AuditEditor.LocalizationKeyAuditService.Audit(
                 CreateRequest(),
                 CreateValidRawSource(),
                 throwing);
             AssertTerminalFailure(exceptionResult, AuditEditor.LocalizationKeyAuditIssueKind.AuditFailed);
-            StringAssert.Contains("InvalidOperationException: typed boom", exceptionResult.Issues[0].Message);
+            StringAssert.Contains("InvalidOperationException", exceptionResult.Issues[0].Message);
+            AssertIssueDoesNotExpose(exceptionResult.Issues[0], physicalCanary);
             Assert.That(throwing.ReadCallCount, Is.EqualTo(1));
         }
 
@@ -315,6 +398,54 @@ namespace LocalizationKeyAudit.Tests
             Assert.That(result.GraphEdgeCount, Is.Zero);
             Assert.That(result.Issues, Has.Count.EqualTo(1));
             Assert.That(result.Issues[0].Kind, Is.EqualTo(expectedKind));
+        }
+
+        /// <summary>Window表示・copyに使うissue文字列へcanaryがないことを確認します。</summary>
+        private static void AssertIssueDoesNotExpose(
+            AuditEditor.LocalizationKeyAuditIssue issue,
+            string canary)
+        {
+            var displayedAndCopiedText = string.Join("\n", new[]
+            {
+                issue.Message,
+                issue.AssetPath,
+                issue.RelatedAssetPath,
+                issue.CollectionName,
+                issue.LocaleIdentifier,
+                issue.EntryKey
+            });
+            StringAssert.DoesNotContain(canary, displayedAndCopiedText);
+        }
+
+        /// <summary>index accessで指定例外を送出するinput一覧です。</summary>
+        private sealed class ThrowingStringList : IReadOnlyList<string>
+        {
+            /// <summary>opaque例外本文を保持します。</summary>
+            internal ThrowingStringList(string message)
+            {
+                m_Message = message;
+            }
+
+            /// <summary>copyを開始させる一件を報告します。</summary>
+            public int Count => 1;
+
+            /// <summary>snapshot中の入力失敗を再現します。</summary>
+            public string this[int index] => throw new InvalidOperationException(m_Message);
+
+            /// <summary>enumeration中の入力失敗を再現します。</summary>
+            public IEnumerator<string> GetEnumerator()
+            {
+                throw new InvalidOperationException(m_Message);
+            }
+
+            /// <summary>非generic enumerationを同じ失敗へ揃えます。</summary>
+            IEnumerator IEnumerable.GetEnumerator()
+            {
+                return GetEnumerator();
+            }
+
+            /// <summary>外部へ出してはいけない例外本文です。</summary>
+            private readonly string m_Message;
         }
     }
 }

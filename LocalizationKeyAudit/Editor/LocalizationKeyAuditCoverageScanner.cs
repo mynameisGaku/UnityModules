@@ -72,7 +72,7 @@ namespace LocalizationKeyAudit.Editor
                 return CreateIncomplete(
                     scopeDescription,
                     declaredPaths,
-                    $"coverage 全件収集に失敗しました: {exception.GetType().Name}: {exception.Message}");
+                    $"coverage 全件収集に失敗しました: {exception.GetType().Name}");
             }
 
             assets.Sort(CompareAssets);
@@ -98,7 +98,7 @@ namespace LocalizationKeyAudit.Editor
                     return CreateIncomplete(
                         scopeDescription,
                         declaredPaths,
-                        $"{asset.AssetPath} を安全に読み取れません: exists={asset.Exists}, reparse={asset.HasReparsePoint}, oversize={asset.IsOversize}, error={asset.ReadError}");
+                        $"{asset.AssetPath} を安全に読み取れません: exists={asset.Exists}, reparse={asset.HasReparsePoint}, oversize={asset.IsOversize}, error={GetSafeReadErrorCode(asset.ReadError)}");
                 }
 
                 totalBytes += asset.ByteCount;
@@ -838,20 +838,25 @@ namespace LocalizationKeyAudit.Editor
             return value;
         }
 
-        /// <summary>scanner 対象の Assets path かを調べます。</summary>
+        /// <summary>scanner対象のUnity asset file pathかを調べます。</summary>
         private static bool IsProjectAssetPath(string path)
         {
-            return path != "Assets" && IsDeclaredProjectPath(path);
+            if (!IsDeclaredProjectPath(path) || path == "Assets")
+            {
+                return false;
+            }
+
+            var segments = path.Split('/');
+            return segments[0] != "Packages" || segments.Length >= 3;
         }
 
-        /// <summary>root を含む安全な Assets declared path かを調べます。</summary>
+        /// <summary>rootを含む安全なAssets/Packages declared pathかを調べます。</summary>
         private static bool IsDeclaredProjectPath(string path)
         {
             if (string.IsNullOrWhiteSpace(path) ||
                 path.Length > LocalizationKeyAuditLimits.MaximumTextCharacters ||
                 path.IndexOf('\\') >= 0 ||
-                path.IndexOf('\0') >= 0 ||
-                (path != "Assets" && !path.StartsWith("Assets/", StringComparison.Ordinal)))
+                path.IndexOf('\0') >= 0)
             {
                 return false;
             }
@@ -859,13 +864,17 @@ namespace LocalizationKeyAudit.Editor
             var segments = path.Split('/');
             for (var index = 0; index < segments.Length; index++)
             {
-                if (segments[index].Length == 0 || segments[index] == "." || segments[index] == "..")
+                if (segments[index].Length == 0 || segments[index] == "." || segments[index] == ".." ||
+                    segments[index].IndexOf('~') >= 0 || segments[index].IndexOf(':') >= 0 ||
+                    segments[index].EndsWith(".", StringComparison.Ordinal) ||
+                    segments[index].EndsWith(" ", StringComparison.Ordinal))
                 {
                     return false;
                 }
             }
 
-            return true;
+            return segments[0] == "Assets" ||
+                (segments[0] == "Packages" && segments.Length >= 2);
         }
 
         /// <summary>source asset が宣言済み asset または folder の内側かを調べます。</summary>
@@ -898,7 +907,7 @@ namespace LocalizationKeyAudit.Editor
                 reason);
         }
 
-        /// <summary>filesystem access 前に Assets-only path を bounded snapshot にします。</summary>
+        /// <summary>filesystem access前にAssets/Packages pathをbounded snapshotにします。</summary>
         private static IReadOnlyList<string> CopyAndValidateDeclaredPaths(
             IReadOnlyList<string> source,
             out string failure)
@@ -906,7 +915,7 @@ namespace LocalizationKeyAudit.Editor
             failure = string.Empty;
             if (source == null || source.Count == 0)
             {
-                failure = "static reference の Assets scope path を 1 件以上宣言してください。";
+                failure = "static reference の asset scope path を 1 件以上宣言してください。";
                 return Array.Empty<string>();
             }
 
@@ -918,12 +927,24 @@ namespace LocalizationKeyAudit.Editor
 
             var paths = new List<string>(source.Count);
             var unique = new HashSet<string>(StringComparer.Ordinal);
+            var logicalRoot = string.Empty;
             for (var index = 0; index < source.Count; index++)
             {
                 var path = source[index];
                 if (!IsDeclaredProjectPath(path) || !unique.Add(path))
                 {
-                    failure = "declared asset path が不正、重複、または Assets 外です。";
+                    failure = "declared asset path が不正、重複、または対応scope外です。";
+                    return Array.Empty<string>();
+                }
+
+                var candidateRoot = GetLogicalRoot(path);
+                if (logicalRoot.Length == 0)
+                {
+                    logicalRoot = candidateRoot;
+                }
+                else if (!string.Equals(logicalRoot, candidateRoot, StringComparison.Ordinal))
+                {
+                    failure = "1 回の監査で宣言できるlogical rootはAssetsまたは1つのregistered packageだけです。";
                     return Array.Empty<string>();
                 }
 
@@ -932,6 +953,46 @@ namespace LocalizationKeyAudit.Editor
 
             paths.Sort(StringComparer.Ordinal);
             return new ReadOnlyCollection<string>(paths.ToArray());
+        }
+
+        /// <summary>opaqueなsource error本文を結果へ出さず、安全な状態codeだけにします。</summary>
+        private static string GetSafeReadErrorCode(string readError)
+        {
+            if (string.IsNullOrEmpty(readError))
+            {
+                return "none";
+            }
+
+            if (readError.Length > 128)
+            {
+                return "present";
+            }
+
+            for (var index = 0; index < readError.Length; index++)
+            {
+                var character = readError[index];
+                var isAsciiLetter = character >= 'A' && character <= 'Z' ||
+                    character >= 'a' && character <= 'z';
+                if (!isAsciiLetter && !(character >= '0' && character <= '9') &&
+                    character != '_' && character != '.')
+                {
+                    return "present";
+                }
+            }
+
+            return readError;
+        }
+
+        /// <summary>declared pathをAssetsまたはPackages/package-name rootへ正規化します。</summary>
+        private static string GetLogicalRoot(string path)
+        {
+            if (path == "Assets" || path.StartsWith("Assets/", StringComparison.Ordinal))
+            {
+                return "Assets";
+            }
+
+            var separator = path.IndexOf('/', "Packages/".Length);
+            return separator < 0 ? path : path.Substring(0, separator);
         }
 
         /// <summary>asset path で決定論的に並べます。</summary>

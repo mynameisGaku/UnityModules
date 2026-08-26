@@ -80,7 +80,8 @@ Project Setupはasmdefの作成までを所有し、このmoduleは作成後の�
 
 ### Localization key監査（Localization Key Audit）
 
-Unity LocalizationのShared Table Dataをtyped loadする前にraw serialized representationを検証し、String／Asset Table ownerを分類してからrequired LocaleのString direct table／entry／value、duplicate・orphan integrity、宣言済み`Assets` scopeのGUID＋key ID参照を手動で表示する。
+Unity LocalizationのShared Table Dataをtyped loadする前にraw serialized representationを検証し、String／Asset Table ownerを分類してからrequired LocaleのString direct table／entry／value、duplicate・orphan integrity、1回につき宣言済み`Assets`または1つのregistered packageだけをrootとするGUID＋key ID参照を手動で表示する。同じroot内では複数pathを宣言できる。
+Package scopeは登録名を`PackageInfo.resolvedPath`へexactに対応付け、logical pathだけを結果へ残す。bare `Packages`、直接指定した`Library/PackageCache`、未登録名、root混在、曖昧なshort-name pathをfilesystem access前に拒否し、normalized duplicate target、root／ancestor／child reparse、root escapeではpartial resultを返さない。physical pathはUI、結果、error、clipboardへ露出せず、読取errorはlogical pathとexception typeだけを示す。
 欠落または空のcollection GUIDをloadするとUnity Localization 1.5.12がassetをdirtyにし得るため、raw preflightに失敗した場合はtyped APIを呼ばず監査全体を停止する。
 fallback後のruntime翻訳可否やkeyの未使用は断定せず、build callback、autofix、entry追加、値の書換え、削除は行わない。
 Asset Tableのentryやlocalized assetはdirect coverageせず、Asset Tableだけが所有するShared Table DataをString key findingへ混在させない。

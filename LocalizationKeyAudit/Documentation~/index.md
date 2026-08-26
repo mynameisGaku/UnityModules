@@ -6,7 +6,7 @@ Localization Key Auditは、String Table Collectionの共有keyについて、�
 
 ## Audit flow
 
-1. `Tools/Localization Key Audit/Open`からwindowを開き、required localeと`Assets`内の静的参照coverage scopeを明示します。
+1. `Tools/Localization Key Audit/Open`からwindowを開き、required localeと静的参照coverage scopeを明示します。既定scopeは`Assets`です。1回の監査ではlogical rootを`Assets`または1つの`Packages/<registered-name>`のどちらか一方に限定し、全ての宣言pathをそのroot配下に置きます。
 2. typed objectをloadする前に、Shared Table Dataのraw serialized dataをpreflightします。
 3. raw preflightがread-onlyを保証できない場合は、`ReadOnlyGuaranteeUnavailable`として監査全体を停止します。
 4. preflightを通過した場合だけtyped loadを行い、String／Asset Table ownerを分類したうえでrequired localeごとのString direct coverageとintegrityを確認します。
@@ -52,11 +52,19 @@ Unity Localization 1.5.12の`SharedTableData.OnAfterDeserialize()`は、保存�
 
 ## Static-reference coverage
 
-結果には、検索したasset scopeを明示します。v1.0.0は宣言された`Assets` scope内のtext serialized `.unity`、`.prefab`、`.asset`だけをfolder走査し、隣接するtable GUID＋key ID pairを認識します。未対応fileの直接指定、binary、非UTF-8、未知のserialized表現は部分参照を採用せずincompleteにします。次はv1.0.0のcoverage外です。
+結果には、検索した論理asset scopeを明示します。v1.1.0が1回の監査で受け付けるlogical rootは、`Assets`または1つの`Packages/<registered-name>`のexact 1つです。同じroot配下なら複数pathを宣言できます。bare `Packages`を起点とする全package走査は行いません。
+
+`registered-name`は登録済みpackageのmanifest `name`とexactに照合し、`PackageInfo.resolvedPath`をそのpackageのphysical rootとして使います。bare `Packages`、直接指定した`Library/PackageCache`、未登録package名は拒否します。`Assets`とpackage、または異なる複数packageのrootを混在させた場合はfilesystem access前にincompleteとし、認識済みreferences／edgesをpartial coverageとして返しません。
+
+明示pathに`~`、`:`、またはdot／spaceで終わるsegmentがある場合はshort-nameなどの曖昧性を避けるため拒否します。解決後のnormalized targetが重複する場合、physical root自身またはその全ancestorや選択したchild pathにreparse pointがある場合、root外へescapeする場合もfail closedとし、先に認識できた参照をpartial coverageとして返しません。同じlogical root内で複数pathを宣言しても、asset候補、directory、file、byte、reference、issueを含む全ての安全上限は監査全体で適用します。
+
+Window、監査結果、error、clipboardには`Assets[/...]`または`Packages/<registered-name>[/...]`というlogical pathだけを残し、package cache、local package、resolved root、exception messageを含むphysical pathを露出しません。読取errorはlogical pathとexception typeだけを示します。
+
+安全に解決したscope内のtext serialized `.unity`、`.prefab`、`.asset`だけをfolder走査し、隣接するtable GUID＋key ID pairを認識します。未対応fileの直接指定、binary、非UTF-8、未知のserialized表現は部分参照を採用せずincompleteにします。次はv1.1.0のcoverage外です。
 
 | Coverage外 | 理由 |
 | --- | --- |
-| `Packages/`、`Library/PackageCache/` | package所有assetをproject assetの検索結果へ混在させません。 |
+| bare `Packages`、直接指定した`Library/PackageCache`、未登録または未宣言のpackage | package所有assetは、登録名を使って明示した論理scopeだけを対象にします。 |
 | C# source code | literal、constructor、生成文字列、reflectionなどを網羅するcode解析は行いません。 |
 | Dynamic lookup | 実行時生成keyや外部入力からのlookupは静的に確定できません。 |
 | Smart Stringの内部 | placeholder、selector、nested `LocalizedString`をkey参照として完全には展開しません。 |
@@ -73,7 +81,8 @@ coverage外があるため、参照を検出できない結果は`NoStaticRefere
 - public APIは0件です。
 - Runtime assemblyとRuntime APIは0件です。
 - build blocker、build callback、autofix、asset削除はありません。
-- WindowはassetをloadするPing／Openを持たず、findingのpathと詳細をclipboardへcopyするだけです。
+- WindowはassetをloadするPing／Openを持たず、findingのlogical pathと詳細をclipboardへcopyするだけです。physical pathはcopyしません。
+- registered package対応で広がるのはstatic-reference coverageだけです。raw preflight、typed snapshot、direct coverage、integrity、graph、finding taxonomyは変更しません。
 - `com.unity.localization` 1.5.12をhard dependencyとします。
 - Addressablesへのdirect dependencyは宣言しません。
 

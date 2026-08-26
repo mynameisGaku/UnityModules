@@ -272,10 +272,11 @@ BuildAssistantは通常の`BuildPipeline.BuildPlayer`を呼ぶため、BuildGuar
 BuildAssistantのPreviewへ別moduleの結果を集約すると、package間のhard dependency、staleな重複scan、blockerとadvisoryの混在を招くため追加実装は見送る。
 AssetImportAuditは期待するimport policy、ProjectSetupは利用者が選んだprofileを前提とするmanual Previewとして独立を維持し、Structural Prefab Overrideもbuild blockerへ昇格しない。
 
-**7. Localization keyのdirect coverage／integrity監査（LocalizationKeyAudit 1.0.0で実装）**
+**7. Localization keyのdirect coverage／integrity監査（LocalizationKeyAudit 1.1.0で実装）**
 
 当初案の「未翻訳・未使用keyをbuild前に検出」は、locale fallback、dynamic lookup、Smart String内のnested参照、Addressablesや外部dataを網羅できず、安全に断定できないため採用しなかった。
 代わりにUnity Localization 1.5.12をhard dependencyとするEditor専用moduleを追加し、明示されたrequired Localeのdirect table／entry／value、duplicate・orphan integrity、宣言済み`Assets` scopeで認識できるGUID＋key ID参照だけを手動監査する。
+1.1.0では静的参照coverageを、明示した`Packages/<registered-name>[/...]`へ拡張した。1回の監査は`Assets`または1つのregistered packageというexact 1 logical rootに限定し、同じroot内だけ複数pathを許可する。登録名は`PackageInfo.resolvedPath`へexactに対応付け、physical pathをUI、結果、error、clipboardへ残さない。bare `Packages`、直接指定した`Library/PackageCache`、未登録名、root混在、`~`／colon／dotまたはspaceで終わるsegmentを含む明示pathをfilesystem access前に拒否する。normalized duplicate target、root／ancestor／child reparse、root escapeではfail closedとしてpartial resultを返さず、読取errorはlogical pathとexception typeだけを示す。
 Shared Table Dataはtyped load前にraw serialized representationを全件preflightし、read-only保証を確立できない場合はtyped APIを呼ばず全体を停止する。結果はadvisoryであり、runtime翻訳可否やkeyの未使用を断定せず、build blocker、autofix、削除を行わない。
 
 ### 見送り

@@ -118,12 +118,12 @@ namespace LocalizationKeyAudit.Editor
         {
             if (!Directory.Exists(root.PhysicalRoot))
             {
-                throw new DirectoryNotFoundException($"physical discovery root がありません: {root.PhysicalRoot}");
+                throw new DirectoryNotFoundException($"physical discovery root がありません: {root.AssetPrefix}");
             }
 
             if (HasReparsePoint(root.PhysicalRoot))
             {
-                throw new IOException($"physical discovery root が reparse point です: {root.PhysicalRoot}");
+                throw new IOException($"physical discovery root が reparse point です: {root.AssetPrefix}");
             }
 
             if (uniquePhysicalRoots.Add(root.PhysicalRoot))
@@ -186,7 +186,7 @@ namespace LocalizationKeyAudit.Editor
                 catch (Exception exception)
                 {
                     throw new IOException(
-                        $"physical discovery directory を列挙できません: {directory}",
+                        $"physical discovery directory を列挙できません: {root.AssetPrefix} ({exception.GetType().Name})",
                         exception);
                 }
 
@@ -201,7 +201,7 @@ namespace LocalizationKeyAudit.Editor
 
                     if (HasReparsePoint(child))
                     {
-                        throw new IOException($"physical discovery path に reparse point があります: {child}");
+                        throw new IOException($"physical discovery path に reparse point があります: {root.AssetPrefix}");
                     }
 
                     stack.Push(child);
@@ -218,7 +218,7 @@ namespace LocalizationKeyAudit.Editor
 
                     if (HasReparsePoint(file))
                     {
-                        throw new IOException($"physical .asset file が reparse point です: {file}");
+                        throw new IOException($"physical .asset file が reparse point です: {root.AssetPrefix}");
                     }
 
                     var length = new FileInfo(file).Length;
@@ -301,7 +301,7 @@ namespace LocalizationKeyAudit.Editor
                             if (IsTruncatedScriptLineIndeterminate(prefix, prefixLength, lineTruncated))
                             {
                                 throw new InvalidDataException(
-                                    $"physical .asset の m_Script line が {DiscoveryLinePrefixBytes} bytesを超え、SharedTableData候補か確定できません: {physicalPath}");
+                                    $"physical .asset の m_Script line が {DiscoveryLinePrefixBytes} bytesを超え、SharedTableData候補か確定できません。");
                             }
 
                             prefixLength = 0;
@@ -328,7 +328,7 @@ namespace LocalizationKeyAudit.Editor
             if (IsTruncatedScriptLineIndeterminate(prefix, prefixLength, lineTruncated))
             {
                 throw new InvalidDataException(
-                    $"physical .asset の m_Script line が {DiscoveryLinePrefixBytes} bytesを超え、SharedTableData候補か確定できません: {physicalPath}");
+                    $"physical .asset の m_Script line が {DiscoveryLinePrefixBytes} bytesを超え、SharedTableData候補か確定できません。");
             }
 
             return false;
@@ -507,7 +507,7 @@ namespace LocalizationKeyAudit.Editor
                     physicalPath,
                     Array.Empty<byte>(),
                     exists: File.Exists(physicalPath),
-                    readError: exception.GetType().Name + ": " + exception.Message);
+                    readError: exception.GetType().Name);
             }
         }
 

@@ -2,21 +2,21 @@
 
 ## 30秒で分かる説明
 
-Localization Key Auditは、Unity LocalizationのString Table Collectionについて、明示したrequired localeごとのdirect coverageとtable integrityを手動で確認するEditor専用ツールです。結果はadvisory（判断材料）であり、assetを変更せず、buildを停止しません。
+Localization Key Auditは、Unity LocalizationのString Table Collectionについて、明示したrequired localeごとのdirect coverageとtable integrityを手動で確認するEditor専用ツールです。静的参照は、1回の監査につき`Assets`または1つのregistered packageのどちらか一方をlogical rootとして、同じroot内に宣言したpathだけを対象にできます。結果はadvisory（判断材料）であり、assetを変更せず、buildを停止しません。
 
 ## できること
 
 - required localeのtableがあるかを確認します。
 - 共有keyごとに、required localeのdirect entryとdirect valueを確認します。
 - `MissingLocaleTable`、`MissingDirectEntry`、`EmptyDirectValue`を別々に報告します。
-- 宣言されたcoverage scope内の静的参照だけを調べ、見つからない場合は`NoStaticReferenceFoundWithinDeclaredScope`と報告します。
+- 1回につきlogical rootを`Assets`または1つの`Packages/<registered-name>`に限定し、そのroot内に宣言された静的参照だけを調べます。見つからない場合は`NoStaticReferenceFoundWithinDeclaredScope`と報告します。
 - findingと一緒にcoverage scope、coverage外、incomplete要因を示します。
 
 ## 使わない方がよい場合
 
 - locale fallbackを含むruntimeの最終表示可否を確定したい場合
 - C# source code、dynamic lookup、Smart String内のnested参照を網羅したい場合
-- Packages、Addressables、remote content、外部dataまで到達可能性を解析したい場合
+- `Packages`全体、未登録package、Addressables、remote content、外部dataまで到達可能性を自動解析したい場合
 - buildを自動で失敗させたい場合
 - entryの自動修正や削除を行いたい場合
 
@@ -27,11 +27,11 @@ Localization Key Auditは、Unity LocalizationのString Table Collectionにつ�
 1. Package Managerの「Add package from git URL...」へ次を入力します。
 
    ```text
-   https://github.com/mynameisGaku/UnityModules.git?path=/LocalizationKeyAudit#localization-key-audit-v1.0.0
+   https://github.com/mynameisGaku/UnityModules.git?path=/LocalizationKeyAudit#localization-key-audit-v1.1.0
    ```
 
 2. Unity Editorの`Tools/Localization Key Audit/Open`からwindowを開きます。
-3. `Required Locales`へカンマまたは改行区切りのLocale identifier、`Declared Assets Paths`へ改行区切りの`Assets` scopeを入力します。
+3. `Required Locales`へカンマまたは改行区切りのLocale identifierを入力します。`Declared Asset Paths`の既定値は`Assets`です。必要なら、同じ`Assets` root内のpath、または1つのregistered package root内のpathだけへ置き換えます。
 4. `Audit`を実行します。監査はbuttonを押したときだけ行われます。
 5. findingだけでなく、表示されたcoverageと完了状態も確認します。
 
@@ -39,13 +39,26 @@ sample assetは同梱していません。既存projectのLocalization assetに�
 
 ## 最小のEditor操作例
 
-次のように対象を明示してから監査します。
+通常は、既定のAssets-only scopeを同じ`Assets` root内で絞り込んで監査します。
 
 ```text
 Required locales: en, ja
-Declared Assets Paths:
+Declared Asset Paths:
 Assets/Game
 Assets/UI
+
+1. Audit
+2. Completion statusとStatic coverageを確認
+3. Issuesを選択してDetailsを確認
+```
+
+registered packageだけを監査する場合は別のauditとして実行します。次の`com.yourcompany.localization-content`はplaceholderです。実際に登録されているpackageのmanifest `name`へ置き換え、`Assets`や別packageのpathを同じ入力へ混在させないでください。
+
+```text
+Required locales: en, ja
+Declared Asset Paths:
+Packages/com.yourcompany.localization-content/Runtime
+Packages/com.yourcompany.localization-content/Content
 
 1. Audit
 2. Completion statusとStatic coverageを確認
@@ -85,7 +98,11 @@ locale fallback、個別参照のfallback設定、Locale override、culture fall
 
 ### 結果がincompleteになる
 
-上限到達、読取失敗、scope外path、未対応serialized表現がある場合、結果はincompleteです。問題なしの完全な結果として扱わないでください。
+上限到達、読取失敗、scope外path、未対応serialized表現がある場合、結果はincompleteです。normalized duplicate target、rootまたはその全ancestorや選択したchild pathのreparse point、rootからのescapeもfail closedとし、認識済み参照のpartial resultを返しません。問題なしの完全な結果として扱わないでください。
+
+### Package scopeが拒否される
+
+package scopeには、登録済みpackageのmanifest `name`を使った`Packages/<registered-name>`またはその配下を指定します。bare `Packages`、直接指定した`Library/PackageCache`、未登録package名は受け付けません。`Assets`とpackage、または異なる複数packageを混在させた入力は、filesystem access前にincompleteとしてpartial coverage 0件で拒否します。short-nameなどの曖昧性を避けるため、`~`、`:`、またはdot／spaceで終わるsegmentを含む明示pathも拒否します。packageが登録済みかをPackage Managerで確認し、表示名やphysical folder名ではなくpackage名を指定してください。
 
 ## 詳しい契約
 
@@ -95,8 +112,9 @@ locale fallback、個別参照のfallback設定、Locale override、culture fall
 - Editor専用です。Runtime assemblyとRuntime APIはありません。
 - public APIはありません。
 - 監査はread-onlyです。autofix、entry追加、値の書換え、削除、asset保存を行いません。
-- WindowはassetをloadするPing／Openを提供せず、選択findingのpathと詳細をclipboardへcopyするだけです。
+- WindowはassetをloadするPing／Openを提供せず、選択findingのlogical pathと詳細をclipboardへcopyするだけです。Window、監査結果、error、clipboardへphysical pathを露出せず、読取errorはlogical pathとexception typeだけを示します。
 - 結果は宣言されたrequired localeとcoverage scopeに対する直接的な観測です。fallback後のruntime表示結果や、翻訳が実行時に利用できないことまでは断定しません。
+- registered package対応で広がるのはstatic-reference coverageだけです。raw preflight、typed snapshot、direct coverage、integrity、graph、finding taxonomyは変更しません。
 
 ### Read-only preflight
 
@@ -110,9 +128,15 @@ Shared Table Dataをrawに読めない、期待するserialized表現を確認�
 
 ### Coverage scope
 
-静的参照の確認範囲は実行時に明示し、結果にも表示します。v1.0.0は宣言された`Assets` scope内にあるtext serialized Unity YAMLの`.unity`、`.prefab`、`.asset`から、隣接するtable GUID＋key ID pairとして直接確認できる参照だけを対象にします。folder指定では他の拡張子を対象外とし、未対応fileを直接指定した場合やbinary／非UTF-8／未知のserialized表現はincompleteにします。次の領域や参照形態はcoverage外です。
+静的参照の確認範囲は実行時に明示し、結果にも表示します。既定scopeはAssets-onlyです。1回の監査が受け付けるlogical rootは、`Assets`または1つの`Packages/<registered-name>`のexact 1つです。同じroot配下なら複数pathを宣言できます。package名は登録済みpackageのmanifest `name`とexactに照合し、対応する`PackageInfo.resolvedPath`を内部のphysical rootとして使います。
 
-- `Packages/`と`Library/PackageCache/`内のpackage asset
+bare `Packages`、直接指定した`Library/PackageCache`、未登録package名は拒否します。`Assets`とpackage、または異なる複数packageのrootを混在させた場合はfilesystem access前にincompleteとし、認識済みreferences／edgesをpartial coverageとして返しません。登録済みpackageを検索する場合も、必ず`Packages/<registered-name>[/...]`として明示します。
+
+明示pathに`~`、`:`、またはdot／spaceで終わるsegmentがある場合はshort-nameなどの曖昧性を避けるため拒否します。解決後のnormalized targetが重複する場合、physical root自身またはその全ancestorや選択したchild pathにreparse pointがある場合、root外へescapeする場合もfail closedとし、partial resultを返しません。Window、監査結果、error、clipboardには宣言したlogical pathだけを残し、physical rootやexception messageを露出しません。読取errorはlogical pathとexception typeだけを示します。
+
+対象scope内にあるtext serialized Unity YAMLの`.unity`、`.prefab`、`.asset`から、隣接するtable GUID＋key ID pairとして直接確認できる参照だけを対象にします。folder指定では他の拡張子を対象外とし、未対応fileを直接指定した場合やbinary／非UTF-8／未知のserialized表現はincompleteにします。同じlogical root内で複数pathを宣言しても、asset候補、directory、file、byte、reference、issueを含む全ての安全上限は監査全体で適用します。次の領域や参照形態はcoverage外です。
+
+- bare `Packages`、直接指定した`Library/PackageCache`、未登録package、および未宣言のregistered package asset
 - C# source code、実行時に組み立てる文字列、reflectionなどのdynamic lookup
 - Smart String内部のplaceholderやselector、およびSmart String内にnestedされた`LocalizedString`
 - Addressables catalog、remote content、外部data、実行時load経路と到達可能性

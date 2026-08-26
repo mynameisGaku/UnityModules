@@ -78,12 +78,25 @@ namespace LocalizationKeyAudit.Editor
             }
 
             var declaredPaths = new HashSet<string>(StringComparer.Ordinal);
+            var declaredRoot = string.Empty;
             for (var index = 0; index < coverage.DeclaredAssetPaths.Count; index++)
             {
                 var path = coverage.DeclaredAssetPaths[index];
                 if (!IsProjectAssetPath(path, true) || !declaredPaths.Add(path))
                 {
                     failure = CreateConfigurationFailure("declared asset path が不正または重複しています。");
+                    return false;
+                }
+
+                var candidateRoot = GetCoverageRoot(path);
+                if (declaredRoot.Length == 0)
+                {
+                    declaredRoot = candidateRoot;
+                }
+                else if (!string.Equals(declaredRoot, candidateRoot, StringComparison.Ordinal))
+                {
+                    failure = CreateConfigurationFailure(
+                        "1 回の監査で宣言できるlogical rootはAssetsまたは1つのregistered packageだけです。");
                     return false;
                 }
             }
@@ -1517,11 +1530,54 @@ namespace LocalizationKeyAudit.Editor
             return true;
         }
 
-        /// <summary>v1 static reference coverage が対応する Assets 内 path かを調べます。</summary>
+        /// <summary>static reference coverageが対応するAssets/Packages pathかを調べます。</summary>
         private static bool IsProjectAssetPath(string path, bool allowRoot)
         {
-            return IsUnityAssetPath(path, allowRoot) &&
-                (path == "Assets" || path.StartsWith("Assets/", StringComparison.Ordinal));
+            if (!IsUnityAssetPath(path, allowRoot))
+            {
+                return false;
+            }
+
+            var segments = path.Split('/');
+            for (var index = 0; index < segments.Length; index++)
+            {
+                if (segments[index].IndexOf('~') >= 0 || segments[index].IndexOf(':') >= 0 ||
+                    segments[index].EndsWith(".", StringComparison.Ordinal) ||
+                    segments[index].EndsWith(" ", StringComparison.Ordinal))
+                {
+                    return false;
+                }
+            }
+
+            if (path == "Assets" || path.StartsWith("Assets/", StringComparison.Ordinal))
+            {
+                return true;
+            }
+
+            if (!path.StartsWith("Packages/", StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            var minimumSegments = allowRoot ? 2 : 3;
+            if (segments.Length < minimumSegments)
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>coverage pathをAssetsまたはPackages/package-name rootへ正規化します。</summary>
+        private static string GetCoverageRoot(string path)
+        {
+            if (path == "Assets" || path.StartsWith("Assets/", StringComparison.Ordinal))
+            {
+                return "Assets";
+            }
+
+            var separator = path.IndexOf('/', "Packages/".Length);
+            return separator < 0 ? path : path.Substring(0, separator);
         }
 
         /// <summary>source path が宣言済み asset または folder の内側かを調べます。</summary>

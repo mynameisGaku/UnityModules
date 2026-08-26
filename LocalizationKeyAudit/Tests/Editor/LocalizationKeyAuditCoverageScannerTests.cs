@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
 using NUnit.Framework;
@@ -8,7 +10,7 @@ using AuditEditor = LocalizationKeyAudit.Editor;
 namespace LocalizationKeyAudit.Tests
 {
     /// <summary>
-    /// Assets-only Unity YAML から direct GUID/key-ID reference を保守的に抽出する契約を検証します。
+    /// Assetsとregistered PackagesのUnity YAMLからdirect GUID/key-ID referenceを保守的に抽出する契約を検証します。
     /// </summary>
     internal sealed class LocalizationKeyAuditCoverageScannerTests
     {
@@ -57,6 +59,146 @@ namespace LocalizationKeyAudit.Tests
             Assert.That(
                 coverage.RecognizedReferences.Select(reference => reference.EntryId),
                 Is.EqualTo(new long[] { 10, 20 }));
+        }
+
+        /// <summary>Assetsとpackage、または異なるpackageの混在をsource呼出前に拒否します。</summary>
+        [TestCase("Assets", "Packages/com.example")]
+        [TestCase("Packages/com.alpha", "Packages/com.beta")]
+        public void Scan_MixedLogicalRootsRejectWithoutReadingSourceOrPartialData(
+            string firstDeclaredPath,
+            string secondDeclaredPath)
+        {
+            var source = SourceWith(Asset(
+                "Packages/com.example/A.asset",
+                ReferenceYaml(LocalizationKeyAuditTestData.CollectionGuid, 10)));
+
+            var coverage = AuditEditor.LocalizationKeyAuditCoverageScanner.Scan(
+                "Mixed roots",
+                new[] { firstDeclaredPath, secondDeclaredPath },
+                source);
+
+            Assert.That(coverage.IsComplete, Is.False);
+            Assert.That(coverage.DeclaredAssetPaths, Is.Empty);
+            Assert.That(coverage.RecognizedReferences, Is.Empty);
+            Assert.That(source.ReadCallCount, Is.Zero);
+            StringAssert.Contains("logical root", coverage.IncompleteReason);
+        }
+
+        /// <summary>
+        /// 同一packageのroot、nested folder、direct fileを受理し、参照をsource pathのOrdinal順へ固定します。
+        /// </summary>
+        [Test]
+        public void Scan_SamePackageScopesReturnOrdinalCompleteCoverage()
+        {
+            var source = SourceWith(
+                Asset(
+                    "Packages/com.example/Runtime/Z.asset",
+                    ReferenceYaml(LocalizationKeyAuditTestData.CollectionGuid, 30)),
+                Asset(
+                    "Packages/com.example/A.prefab",
+                    ReferenceYaml(LocalizationKeyAuditTestData.CollectionGuid, 10)),
+                Asset(
+                    "Packages/com.example/Runtime/A.asset",
+                    ReferenceYaml(LocalizationKeyAuditTestData.CollectionGuid, 20)));
+
+            var coverage = AuditEditor.LocalizationKeyAuditCoverageScanner.Scan(
+                "Package scope",
+                new[]
+                {
+                    "Packages/com.example/Runtime/Z.asset",
+                    "Packages/com.example",
+                    "Packages/com.example/Runtime"
+                },
+                source);
+
+            Assert.That(coverage.IsComplete, Is.True, coverage.IncompleteReason);
+            Assert.That(coverage.DeclaredAssetPaths, Is.EqualTo(new[]
+            {
+                "Packages/com.example",
+                "Packages/com.example/Runtime",
+                "Packages/com.example/Runtime/Z.asset"
+            }));
+            Assert.That(source.LastDeclaredAssetPaths, Is.EqualTo(coverage.DeclaredAssetPaths));
+            Assert.That(
+                coverage.RecognizedReferences.Select(reference => reference.SourceAssetPath),
+                Is.EqualTo(new[]
+                {
+                    "Packages/com.example/A.prefab",
+                    "Packages/com.example/Runtime/A.asset",
+                    "Packages/com.example/Runtime/Z.asset"
+                }));
+            Assert.That(
+                coverage.RecognizedReferences.Select(reference => reference.EntryId),
+                Is.EqualTo(new long[] { 10, 20, 30 }));
+        }
+
+        /// <summary>bare Packages、PackageCache、unsafe segment、backslashをsource呼出前に拒否します。</summary>
+        [TestCase("Packages")]
+        [TestCase("Library/PackageCache/com.example/A.asset")]
+        [TestCase("Packages/com.example/../A.asset")]
+        [TestCase("Packages/com.example//A.asset")]
+        [TestCase("Packages/com.example/Generated~/A.asset")]
+        [TestCase("Packages/com.example/Bad:Name/A.asset")]
+        [TestCase("Packages/com.example/Trailing./A.asset")]
+        [TestCase("Packages/com.example/Trailing /A.asset")]
+        [TestCase("Packages\\com.example\\A.asset")]
+        public void Scan_InvalidDeclaredPackagePathRejectsWithoutPartialData(string declaredPath)
+        {
+            var source = SourceWith(Asset(
+                "Packages/com.example/A.asset",
+                ReferenceYaml(LocalizationKeyAuditTestData.CollectionGuid, 10)));
+
+            var coverage = AuditEditor.LocalizationKeyAuditCoverageScanner.Scan(
+                "Package scope",
+                new[] { declaredPath },
+                source);
+
+            Assert.That(coverage.IsComplete, Is.False);
+            Assert.That(coverage.RecognizedReferences, Is.Empty);
+            Assert.That(source.ReadCallCount, Is.Zero);
+            StringAssert.Contains("declared asset path", coverage.IncompleteReason);
+        }
+
+        /// <summary>同じpackage declared pathの重複をsource呼出前に拒否します。</summary>
+        [Test]
+        public void Scan_DuplicatePackageDeclaredPathRejectsWithoutPartialData()
+        {
+            var source = SourceWith(Asset(
+                "Packages/com.example/A.asset",
+                ReferenceYaml(LocalizationKeyAuditTestData.CollectionGuid, 10)));
+
+            var coverage = AuditEditor.LocalizationKeyAuditCoverageScanner.Scan(
+                "Package scope",
+                new[] { "Packages/com.example", "Packages/com.example" },
+                source);
+
+            Assert.That(coverage.IsComplete, Is.False);
+            Assert.That(coverage.RecognizedReferences, Is.Empty);
+            Assert.That(source.ReadCallCount, Is.Zero);
+            StringAssert.Contains("重複", coverage.IncompleteReason);
+        }
+
+        /// <summary>package source failureをincompleteへ隔離し、opaqueなphysical detailを公開しません。</summary>
+        [Test]
+        public void Scan_PackageSourceFailureReturnsNoPartialDataOrOpaqueDetails()
+        {
+            const string physicalCanary = "C:\\private\\registered-package-canary";
+            var source = new FakeLocalizationKeyAuditCoverageSource
+            {
+                Exception = new System.IO.InvalidDataException(
+                    "registered package root を解決できません: " + physicalCanary)
+            };
+
+            var coverage = AuditEditor.LocalizationKeyAuditCoverageScanner.Scan(
+                "Package scope",
+                new[] { "Packages/com.missing" },
+                source);
+
+            Assert.That(coverage.IsComplete, Is.False);
+            Assert.That(coverage.RecognizedReferences, Is.Empty);
+            Assert.That(source.ReadCallCount, Is.EqualTo(1));
+            StringAssert.Contains("InvalidDataException", coverage.IncompleteReason);
+            StringAssert.DoesNotContain(physicalCanary, coverage.IncompleteReason);
         }
 
         /// <summary>CR-only Unity YAMLもLF/CRLFと同じdirect referenceとして解析します。</summary>
@@ -630,28 +772,50 @@ namespace LocalizationKeyAudit.Tests
         }
 
         /// <summary>
-        /// 後半 asset の失敗時は前半から抽出済みの参照を全て破棄します。
+        /// 同一package内の後半asset失敗時は前半から抽出済みの参照を全て破棄します。
         /// </summary>
         [Test]
-        public void Scan_LaterFailureDiscardsEarlierReferences()
+        public void Scan_LaterPackageFailureDiscardsEarlierPackageReferences()
         {
             var source = new FakeLocalizationKeyAuditCoverageSource
             {
                 Assets = new[]
                 {
-                    Asset("Assets/A.prefab", ReferenceYaml(LocalizationKeyAuditTestData.CollectionGuid, 10)),
-                    Asset("Assets/Z.asset", Encoding.UTF8.GetBytes("not yaml"))
+                    Asset(
+                        "Packages/com.example/A.prefab",
+                        ReferenceYaml(LocalizationKeyAuditTestData.CollectionGuid, 10)),
+                    Asset("Packages/com.example/Z.asset", Encoding.UTF8.GetBytes("not yaml"))
                 }
             };
 
             var coverage = AuditEditor.LocalizationKeyAuditCoverageScanner.Scan(
-                "Assets",
-                new[] { "Assets" },
+                "Package scope",
+                new[] { "Packages/com.example" },
                 source);
 
             Assert.That(coverage.IsComplete, Is.False);
             Assert.That(coverage.RecognizedReferences, Is.Empty);
-            StringAssert.Contains("Assets/Z.asset", coverage.IncompleteReason);
+            StringAssert.Contains("Packages/com.example/Z.asset", coverage.IncompleteReason);
+        }
+
+        /// <summary>同一packageの後半にunsafe segmentが現れても先行referenceを返しません。</summary>
+        [Test]
+        public void Scan_LaterAmbiguousPackagePathDiscardsEarlierPackageReferences()
+        {
+            var coverage = AuditEditor.LocalizationKeyAuditCoverageScanner.Scan(
+                "Package scope",
+                new[] { "Packages/com.example" },
+                SourceWith(
+                    Asset(
+                        "Packages/com.example/A.prefab",
+                        ReferenceYaml(LocalizationKeyAuditTestData.CollectionGuid, 10)),
+                    Asset(
+                        "Packages/com.example/Z~.asset",
+                        ReferenceYaml(LocalizationKeyAuditTestData.CollectionGuid, 20))));
+
+            Assert.That(coverage.IsComplete, Is.False);
+            Assert.That(coverage.RecognizedReferences, Is.Empty);
+            StringAssert.Contains("coverage asset path", coverage.IncompleteReason);
         }
 
         /// <summary>
@@ -664,16 +828,23 @@ namespace LocalizationKeyAudit.Tests
             AssertIncomplete(
                 new FakeLocalizationKeyAuditCoverageSource { Assets = null },
                 "null を返しました");
-            AssertIncomplete(
+            const string physicalCanary = "C:\\private\\source-exception-canary";
+            var exceptionCoverage = AuditEditor.LocalizationKeyAuditCoverageScanner.Scan(
+                "Assets",
+                new[] { "Assets" },
                 new FakeLocalizationKeyAuditCoverageSource
                 {
-                    Exception = new InvalidOperationException("coverage boom")
-                },
-                "InvalidOperationException: coverage boom");
+                    Exception = new InvalidOperationException(physicalCanary)
+                });
+
+            Assert.That(exceptionCoverage.IsComplete, Is.False);
+            Assert.That(exceptionCoverage.RecognizedReferences, Is.Empty);
+            StringAssert.Contains("InvalidOperationException", exceptionCoverage.IncompleteReason);
+            StringAssert.DoesNotContain(physicalCanary, exceptionCoverage.IncompleteReason);
         }
 
         /// <summary>
-        /// null/Packages/重複 path を含む asset 一覧を partial result なしで拒否します。
+        /// null、対応root外、重複pathを含むasset一覧をpartial resultなしで拒否します。
         /// </summary>
         [Test]
         public void Scan_InvalidAndDuplicateAssetPathsFailClosed()
@@ -686,7 +857,7 @@ namespace LocalizationKeyAudit.Tests
                 "path");
             AssertIncomplete(
                 SourceWith(Asset(
-                    "Packages/com.example/A.asset",
+                    "Library/PackageCache/com.example/A.asset",
                     ReferenceYaml(LocalizationKeyAuditTestData.CollectionGuid, 10))),
                 "path");
             var asset = Asset(
@@ -706,12 +877,32 @@ namespace LocalizationKeyAudit.Tests
         }
 
         /// <summary>
+        /// package root自体、別package、prefixだけが似たpackageのsource assetをpartialなしで拒否します。
+        /// </summary>
+        [TestCase("Packages/com.example")]
+        [TestCase("Packages/com.other/A.asset")]
+        [TestCase("Packages/com.examples/A.asset")]
+        public void Scan_InvalidOrOutOfScopePackageSourcePathReturnsNoPartialData(string sourcePath)
+        {
+            var coverage = AuditEditor.LocalizationKeyAuditCoverageScanner.Scan(
+                "Package scope",
+                new[] { "Packages/com.example" },
+                SourceWith(Asset(
+                    sourcePath,
+                    ReferenceYaml(LocalizationKeyAuditTestData.CollectionGuid, 10))));
+
+            Assert.That(coverage.IsComplete, Is.False);
+            Assert.That(coverage.RecognizedReferences, Is.Empty);
+            StringAssert.Contains("coverage asset path", coverage.IncompleteReason);
+        }
+
+        /// <summary>
         /// missing、reparse、oversize、read error を complete coverage にしません。
         /// </summary>
         [TestCase("missing", "exists=False")]
         [TestCase("reparse", "reparse=True")]
         [TestCase("oversize", "oversize=True")]
-        [TestCase("read-error", "access denied")]
+        [TestCase("read-error", "error=IOException")]
         public void Scan_UnsafeAssetStateIsIncomplete(string state, string expectedReasonPart)
         {
             var asset = new AuditEditor.LocalizationKeyAuditCoverageAsset(
@@ -720,9 +911,37 @@ namespace LocalizationKeyAudit.Tests
                 exists: state != "missing",
                 hasReparsePoint: state == "reparse",
                 isOversize: state == "oversize",
-                readError: state == "read-error" ? "access denied" : string.Empty);
+                readError: state == "read-error" ? "IOException" : string.Empty);
 
-            AssertIncomplete(SourceWith(asset), expectedReasonPart);
+            var coverage = AuditEditor.LocalizationKeyAuditCoverageScanner.Scan(
+                "Assets",
+                new[] { "Assets" },
+                SourceWith(asset));
+
+            Assert.That(coverage.IsComplete, Is.False);
+            Assert.That(coverage.RecognizedReferences, Is.Empty);
+            StringAssert.Contains(expectedReasonPart, coverage.IncompleteReason);
+        }
+
+        /// <summary>記号を含むopaqueなReadError本文をpresentへ潰し、physical canaryを公開しません。</summary>
+        [Test]
+        public void Scan_OpaqueReadErrorDoesNotExposePhysicalCanary()
+        {
+            const string physicalCanary = "C:\\private\\read-error-canary";
+            var asset = new AuditEditor.LocalizationKeyAuditCoverageAsset(
+                "Assets/A.asset",
+                ReferenceYaml(LocalizationKeyAuditTestData.CollectionGuid, 10),
+                readError: physicalCanary);
+
+            var coverage = AuditEditor.LocalizationKeyAuditCoverageScanner.Scan(
+                "Assets",
+                new[] { "Assets" },
+                SourceWith(asset));
+
+            Assert.That(coverage.IsComplete, Is.False);
+            Assert.That(coverage.RecognizedReferences, Is.Empty);
+            StringAssert.Contains("error=present", coverage.IncompleteReason);
+            StringAssert.DoesNotContain(physicalCanary, coverage.IncompleteReason);
         }
 
         /// <summary>
@@ -918,6 +1137,107 @@ namespace LocalizationKeyAudit.Tests
                 new[] { false, false, true, false });
 
             Assert.That(selected, Is.EqualTo(new[] { 0, 3 }));
+        }
+
+        /// <summary>dot segment正規化後に同じphysical targetとなるdeclared pathを拒否します。</summary>
+        [Test]
+        public void CoverageSource_NormalizedDuplicateDeclaredTargetsAreRejected()
+        {
+            var root = Path.GetFullPath("C:/Project/Packages/com.example");
+            var direct = Path.Combine(root, "A.asset");
+            var normalizedDuplicate = Path.Combine(root, "Nested", "..", "A.asset");
+            var method = typeof(AuditEditor.UnityLocalizationKeyAuditCoverageSource).GetMethod(
+                "EnsureDistinctDeclaredTargets",
+                System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);
+
+            Assert.That(method, Is.Not.Null);
+            var exception = Assert.Throws<System.Reflection.TargetInvocationException>(() => method.Invoke(
+                null,
+                new object[]
+                {
+                    new[] { direct, normalizedDuplicate },
+                    new[] { "Packages/com.example/A.asset", "Packages/com.example/Nested/../A.asset" }
+                }));
+
+            Assert.That(exception.InnerException, Is.TypeOf<InvalidDataException>());
+            StringAssert.Contains("同じ physical target", exception.InnerException.Message);
+        }
+
+        /// <summary>missing leafでも既存ancestorのjunctionをrootまで検査して拒否します。</summary>
+        [Test]
+        public void CoverageSource_MissingTargetUnderWindowsJunctionIsRejected()
+        {
+            if (Environment.OSVersion.Platform != PlatformID.Win32NT)
+            {
+                Assert.Ignore("Windows reparse point専用の検証です。");
+            }
+
+            var temporaryRoot = Path.Combine(
+                Path.GetTempPath(),
+                "LocalizationKeyAuditCoverageSourceTests_" + Guid.NewGuid().ToString("N"));
+            var registeredRoot = Path.Combine(temporaryRoot, "Registered");
+            var target = Path.Combine(temporaryRoot, "Target");
+            var junction = Path.Combine(registeredRoot, "Linked");
+            Directory.CreateDirectory(registeredRoot);
+            Directory.CreateDirectory(target);
+            try
+            {
+                var startInfo = new ProcessStartInfo
+                {
+                    FileName = "cmd.exe",
+                    Arguments = $"/d /c mklink /J \"{junction}\" \"{target}\"",
+                    CreateNoWindow = true,
+                    UseShellExecute = false
+                };
+                using (var process = Process.Start(startInfo))
+                {
+                    if (process == null)
+                    {
+                        Assert.Ignore("junction作成processを開始できませんでした。");
+                    }
+
+                    process.WaitForExit();
+                    if (process.ExitCode != 0)
+                    {
+                        Assert.Ignore("この環境ではjunctionを作成できませんでした。");
+                    }
+                }
+
+                var method = typeof(AuditEditor.UnityLocalizationKeyAuditCoverageSource).GetMethod(
+                    "EnsureNoReparsePoint",
+                    System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);
+                Assert.That(method, Is.Not.Null);
+                var missingTarget = Path.Combine(junction, "Missing", "Never.asset");
+
+                var exception = Assert.Throws<System.Reflection.TargetInvocationException>(() => method.Invoke(
+                    null,
+                    new object[] { registeredRoot, missingTarget }));
+
+                Assert.That(exception.InnerException, Is.TypeOf<InvalidDataException>());
+                StringAssert.Contains("reparse point", exception.InnerException.Message);
+            }
+            finally
+            {
+                if (Directory.Exists(junction))
+                {
+                    Directory.Delete(junction);
+                }
+
+                if (Directory.Exists(registeredRoot))
+                {
+                    Directory.Delete(registeredRoot);
+                }
+
+                if (Directory.Exists(target))
+                {
+                    Directory.Delete(target);
+                }
+
+                if (Directory.Exists(temporaryRoot))
+                {
+                    Directory.Delete(temporaryRoot);
+                }
+            }
         }
 
         /// <summary>指定 asset だけを返す coverage source を作ります。</summary>

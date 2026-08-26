@@ -9,7 +9,7 @@ using UnityEngine;
 namespace LocalizationKeyAudit.Editor
 {
     /// <summary>
-    /// 必須 Locale の direct entry と宣言済み Assets scope の static reference coverage を手動表示します。
+    /// 必須 Locale の direct entry と宣言済み asset scope の static reference coverage を手動表示します。
     /// </summary>
     internal sealed class LocalizationKeyAuditWindow : EditorWindow
     {
@@ -38,7 +38,7 @@ namespace LocalizationKeyAudit.Editor
         /// <summary>カンマまたは改行区切りの必須 Locale identifiers です。</summary>
         [SerializeField] private string requiredLocalesText = string.Empty;
 
-        /// <summary>改行区切りの Assets-only static-reference scope です。</summary>
+        /// <summary>改行区切りのAssetsまたは1 registered Package static-reference scopeです。</summary>
         [SerializeField] private string declaredAssetPathsText = "Assets";
 
         /// <summary>結果へ残す coverage scope の説明です。</summary>
@@ -98,7 +98,7 @@ namespace LocalizationKeyAudit.Editor
             EnsureStyles();
             windowScrollPosition = EditorGUILayout.BeginScrollView(windowScrollPosition);
             EditorGUILayout.HelpBox(
-                "Editor-only の手動・読み取り専用・advisory 監査です。必須 Locale の direct value と、宣言済み Assets scope で認識した GUID + key ID 参照だけを扱います。fallback や runtime の最終翻訳を保証せず、参照が見つからない key を『未使用』とは断定しません。",
+                "Editor-only の手動・読み取り専用・advisory 監査です。必須 Locale の direct value と、宣言済み Assets または1つのregistered Package scope で認識した GUID + key ID 参照だけを扱います。fallback や runtime の最終翻訳を保証せず、参照が見つからない key を『未使用』とは断定しません。",
                 MessageType.Info);
 
             DrawRequestSettings();
@@ -108,7 +108,7 @@ namespace LocalizationKeyAudit.Editor
             if (result == null)
             {
                 EditorGUILayout.HelpBox(
-                    "Required Locales と Assets scope を確認して Audit を押してください。asset は自動変更されず、監査は build を止めません。",
+                    "Required Locales と asset scope を確認して Audit を押してください。asset は自動変更されず、監査は build を止めません。",
                     MessageType.None);
             }
             else
@@ -123,7 +123,7 @@ namespace LocalizationKeyAudit.Editor
             EditorGUILayout.EndScrollView();
         }
 
-        /// <summary>必須 Locale、scope 説明、Assets-only path を明示入力させます。</summary>
+        /// <summary>必須Locale、scope説明、Assets/Packages pathを明示入力させます。</summary>
         private void DrawRequestSettings()
         {
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
@@ -136,7 +136,9 @@ namespace LocalizationKeyAudit.Editor
                     new GUIContent("Scope Description", "結果へそのまま残る、人が確認できる走査範囲の説明です。"),
                     scopeDescription);
                 EditorGUILayout.LabelField(
-                    new GUIContent("Declared Assets Paths", "改行区切り。Assets または Assets/ 配下だけを指定できます。"));
+                    new GUIContent(
+                        "Declared Asset Paths",
+                        "改行区切り。同じroot内で複数指定できます。1回の監査ではAssets、または1つのPackages/<registered-package-name>だけをrootにします。"));
                 declaredAssetPathsText = EditorGUILayout.TextArea(
                     declaredAssetPathsText,
                     GUILayout.MinHeight(42f),
@@ -329,7 +331,7 @@ namespace LocalizationKeyAudit.Editor
                 result = null;
                 visibleIssueIndices.Clear();
                 selectedIssueIndex = -1;
-                interactionMessage = $"監査を開始できませんでした: {exception.GetType().Name}: {exception.Message}";
+                interactionMessage = $"監査を開始できませんでした: {exception.GetType().Name}";
             }
         }
 
@@ -352,17 +354,19 @@ namespace LocalizationKeyAudit.Editor
                 text,
                 new[] { ',', ';', '\r', '\n' },
                 LocalizationKeyAuditLimits.MaximumRequiredLocales,
-                "required Locale");
+                "required Locale",
+                true);
         }
 
-        /// <summary>Assets scope の改行区切りを順序保持で解析します。</summary>
+        /// <summary>asset scopeの改行区切りを順序保持で解析します。</summary>
         internal static IReadOnlyList<string> ParseDeclaredAssetPaths(string text)
         {
             return ParseTokens(
                 text,
                 new[] { '\r', '\n' },
                 LocalizationKeyAuditLimits.MaximumDeclaredAssetPaths,
-                "declared asset path");
+                "declared asset path",
+                false);
         }
 
         /// <summary>検索語と区分 filter が問題へ一致するかを pure に判定します。</summary>
@@ -505,7 +509,8 @@ namespace LocalizationKeyAudit.Editor
             string text,
             char[] separators,
             int maximumCount,
-            string valueKind)
+            string valueKind,
+            bool trimTokens)
         {
             var values = new List<string>();
             var source = text ?? string.Empty;
@@ -517,8 +522,10 @@ namespace LocalizationKeyAudit.Editor
                     continue;
                 }
 
-                var start = tokenStart;
-                var end = index;
+                var rawStart = tokenStart;
+                var rawEnd = index;
+                var start = rawStart;
+                var end = rawEnd;
                 while (start < end && char.IsWhiteSpace(source[start]))
                 {
                     start++;
@@ -531,6 +538,12 @@ namespace LocalizationKeyAudit.Editor
 
                 if (end > start)
                 {
+                    if (!trimTokens)
+                    {
+                        start = rawStart;
+                        end = rawEnd;
+                    }
+
                     if (end - start > LocalizationKeyAuditLimits.MaximumTextCharacters)
                     {
                         throw new LocalizationKeyAuditLimitException(
