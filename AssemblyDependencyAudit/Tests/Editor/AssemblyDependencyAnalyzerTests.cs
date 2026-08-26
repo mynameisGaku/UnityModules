@@ -51,6 +51,51 @@ namespace AssemblyDependencyAudit.Tests
         }
 
         /// <summary>
+        /// 宣言参照は元の順序と重複頻度を保持し、graph edgeだけを参照先index順へ重複除去します。
+        /// </summary>
+        [Test]
+        public void TryAnalyze_PreservesDeclaredReferenceOrderAndDuplicatesWhileGraphDeduplicates()
+        {
+            var sources = new[]
+            {
+                AssemblyDependencyTestData.CreateSource("Assets/Alpha.asmdef", "Alpha", "guid-alpha"),
+                AssemblyDependencyTestData.CreateSource("Assets/Beta.asmdef", "Beta", "guid-beta"),
+                AssemblyDependencyTestData.CreateSource(
+                    "Assets/Consumer.asmdef",
+                    "Consumer",
+                    "guid-consumer",
+                    new[] { "Beta", "Alpha", "Beta", "GUID:guid-alpha" })
+            };
+
+            var succeeded = AuditEditor.AssemblyDependencyAnalyzer.TryAnalyze(
+                sources,
+                new FakeAssemblyDependencySourceAdapter(),
+                out var result,
+                out var error,
+                out var errorMessage);
+
+            Assert.That(succeeded, Is.True, errorMessage);
+            Assert.That(error, Is.EqualTo(AuditEditor.AssemblyDependencyAuditError.None));
+            Assert.That(result.Assemblies.Select(node => node.Name), Is.EqualTo(new[] { "Alpha", "Beta", "Consumer" }));
+            Assert.That(
+                result.Assemblies[2].References.Select(reference => reference.Value),
+                Is.EqualTo(new[] { "Beta", "Alpha", "Beta", "GUID:guid-alpha" }));
+            Assert.That(
+                result.Assemblies[2].References.Select(reference => reference.ResolvedAssemblyIndex),
+                Is.EqualTo(new[] { 1, 0, 1, 0 }));
+            Assert.That(
+                result.Assemblies[2].References.Select(reference => reference.Kind),
+                Is.EqualTo(new[]
+                {
+                    AuditEditor.AssemblyDependencyReferenceKind.Name,
+                    AuditEditor.AssemblyDependencyReferenceKind.Name,
+                    AuditEditor.AssemblyDependencyReferenceKind.Name,
+                    AuditEditor.AssemblyDependencyReferenceKind.Guid
+                }));
+            Assert.That(result.Dependencies[2], Is.EqualTo(new[] { 0, 1 }));
+        }
+
+        /// <summary>
         /// 重複 name/GUID は曖昧参照として扱い、未解決と自己参照も区別します。
         /// </summary>
         [Test]

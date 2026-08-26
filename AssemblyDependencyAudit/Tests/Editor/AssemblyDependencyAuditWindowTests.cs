@@ -30,6 +30,9 @@ namespace AssemblyDependencyAudit.Tests
         {
             Assert.That(AuditEditor.AssemblyDependencyAuditWindow.MaximumSearchCharacters, Is.EqualTo(512));
             Assert.That(AuditEditor.AssemblyDependencyAuditWindow.MaximumDisplayedTextCharacters, Is.EqualTo(4096));
+            Assert.That(
+                AuditEditor.AssemblyDependencyAuditWindow.MaximumDeclaredReferenceRowValueCharacters,
+                Is.EqualTo(160));
         }
 
         /// <summary>
@@ -309,6 +312,236 @@ namespace AssemblyDependencyAudit.Tests
         }
 
         /// <summary>
+        /// 宣言参照は0、500、501、analyzer上限4096件を500件単位のpageへ正確に分割します。
+        /// </summary>
+        [Test]
+        public void DeclaredReferencePaging_HandlesZeroExactOverflowAndAnalyzerMaximum()
+        {
+            Assert.That(AuditEditor.AssemblyDependencyAuditWindow.GetDeclaredReferencePageCount(0), Is.EqualTo(1));
+            Assert.That(AuditEditor.AssemblyDependencyAuditWindow.GetDeclaredReferencePageCount(500), Is.EqualTo(1));
+            Assert.That(AuditEditor.AssemblyDependencyAuditWindow.GetDeclaredReferencePageCount(501), Is.EqualTo(2));
+            Assert.That(AuditEditor.AssemblyDependencyAuditWindow.GetDeclaredReferencePageCount(4096), Is.EqualTo(9));
+            Assert.That(AuditEditor.AssemblyDependencyAuditWindow.ClampDeclaredReferencePage(-1, 9), Is.Zero);
+            Assert.That(AuditEditor.AssemblyDependencyAuditWindow.ClampDeclaredReferencePage(9, 9), Is.EqualTo(8));
+            Assert.That(AuditEditor.AssemblyDependencyAuditWindow.GetDeclaredReferencePageStart(0, 0), Is.Zero);
+            Assert.That(AuditEditor.AssemblyDependencyAuditWindow.GetDeclaredReferencePageStart(0, 500), Is.Zero);
+            Assert.That(AuditEditor.AssemblyDependencyAuditWindow.GetDeclaredReferencePageStart(1, 501), Is.EqualTo(500));
+            Assert.That(AuditEditor.AssemblyDependencyAuditWindow.GetDeclaredReferencePageStart(99, 4096), Is.EqualTo(4000));
+
+            var reference = new AuditEditor.AssemblyDependencyReference(
+                "Missing",
+                AuditEditor.AssemblyDependencyReferenceKind.Name,
+                -1);
+            Assert.That(
+                AuditEditor.AssemblyDependencyAuditWindow.FormatDeclaredReferenceRow(
+                    reference,
+                    Array.Empty<AuditEditor.AssemblyDependencyNode>(),
+                    499),
+                Does.StartWith("#500 |"));
+            Assert.That(
+                AuditEditor.AssemblyDependencyAuditWindow.FormatDeclaredReferenceRow(
+                    reference,
+                    Array.Empty<AuditEditor.AssemblyDependencyNode>(),
+                    500),
+                Does.StartWith("#501 |"));
+            Assert.That(
+                AuditEditor.AssemblyDependencyAuditWindow.FormatDeclaredReferenceRow(
+                    reference,
+                    Array.Empty<AuditEditor.AssemblyDependencyNode>(),
+                    4095),
+                Does.StartWith("#4096 |"));
+        }
+
+        /// <summary>
+        /// Name、GUID、未一意解決を宣言順の3行rowへ変換し、同じ宣言も出現回数を保持します。
+        /// </summary>
+        [Test]
+        public void FormatDeclaredReferenceRow_PreservesOrderDuplicatesAndResolutionKinds()
+        {
+            var assemblies = new[]
+            {
+                CreateNode("Alpha", "Assets/Alpha.asmdef", "guid-alpha", false),
+                CreateNode("Beta", "Packages/com.example/Beta.asmdef", "guid-beta", false)
+            };
+            var references = new[]
+            {
+                new AuditEditor.AssemblyDependencyReference(
+                    "Beta",
+                    AuditEditor.AssemblyDependencyReferenceKind.Name,
+                    1),
+                new AuditEditor.AssemblyDependencyReference(
+                    "GUID:guid-alpha",
+                    AuditEditor.AssemblyDependencyReferenceKind.Guid,
+                    0),
+                new AuditEditor.AssemblyDependencyReference(
+                    "Missing",
+                    AuditEditor.AssemblyDependencyReferenceKind.Name,
+                    -1),
+                new AuditEditor.AssemblyDependencyReference(
+                    "Beta",
+                    AuditEditor.AssemblyDependencyReferenceKind.Name,
+                    1)
+            };
+
+            var rows = references
+                .Select((reference, index) => AuditEditor.AssemblyDependencyAuditWindow.FormatDeclaredReferenceRow(
+                    reference,
+                    assemblies,
+                    index))
+                .ToArray();
+
+            Assert.That(rows, Is.EqualTo(new[]
+            {
+                "#1 | Kind: Name | Status: Resolved\n" +
+                    "Declared: Beta\n" +
+                    "Target: Beta | Packages/com.example/Beta.asmdef",
+                "#2 | Kind: GUID | Status: Resolved\n" +
+                    "Declared: GUID:guid-alpha\n" +
+                    "Target: Alpha | Assets/Alpha.asmdef",
+                "#3 | Kind: Name | Status: Not uniquely resolved\n" +
+                    "Declared: Missing\n" +
+                    "Target: (not uniquely resolved)",
+                "#4 | Kind: Name | Status: Resolved\n" +
+                    "Declared: Beta\n" +
+                    "Target: Beta | Packages/com.example/Beta.asmdef"
+            }));
+        }
+
+        /// <summary>
+        /// null、未知kind、不正index、null targetを例外や偽の解決表示へ変換せず明示します。
+        /// </summary>
+        [Test]
+        public void FormatDeclaredReferenceRow_InvalidInputsFailClosed()
+        {
+            var target = CreateNode("Target", "Assets/Target.asmdef", "guid-target", false);
+            var unknownKind = new AuditEditor.AssemblyDependencyReference(
+                "Mystery",
+                (AuditEditor.AssemblyDependencyReferenceKind)int.MaxValue,
+                0);
+            var negativeIndex = new AuditEditor.AssemblyDependencyReference(
+                "Negative",
+                AuditEditor.AssemblyDependencyReferenceKind.Name,
+                -2);
+            var outOfRange = new AuditEditor.AssemblyDependencyReference(
+                "OutOfRange",
+                AuditEditor.AssemblyDependencyReferenceKind.Guid,
+                1);
+            var nullTarget = new AuditEditor.AssemblyDependencyReference(
+                "NullTarget",
+                AuditEditor.AssemblyDependencyReferenceKind.Name,
+                0);
+
+            Assert.That(
+                AuditEditor.AssemblyDependencyAuditWindow.FormatDeclaredReferenceRow(null, new[] { target }, -1),
+                Is.EqualTo("#? | Kind: (invalid) | Status: Invalid reference\n" +
+                    "Declared: (invalid)\n" +
+                    "Target: (invalid)"));
+            Assert.That(
+                AuditEditor.AssemblyDependencyAuditWindow.FormatDeclaredReferenceRow(unknownKind, new[] { target }, 4),
+                Is.EqualTo("#5 | Kind: (invalid) | Status: Invalid kind\n" +
+                    "Declared: Mystery\n" +
+                    "Target: (invalid)"));
+            Assert.That(
+                AuditEditor.AssemblyDependencyAuditWindow.FormatDeclaredReferenceRow(negativeIndex, new[] { target }, 0),
+                Is.EqualTo("#1 | Kind: Name | Status: Invalid result index\n" +
+                    "Declared: Negative\n" +
+                    "Target: (invalid)"));
+            Assert.That(
+                AuditEditor.AssemblyDependencyAuditWindow.FormatDeclaredReferenceRow(outOfRange, new[] { target }, 1),
+                Is.EqualTo("#2 | Kind: GUID | Status: Invalid result index\n" +
+                    "Declared: OutOfRange\n" +
+                    "Target: (invalid)"));
+            Assert.That(
+                AuditEditor.AssemblyDependencyAuditWindow.FormatDeclaredReferenceRow(outOfRange, null, 1),
+                Does.Contain("Status: Invalid result index"));
+            Assert.That(
+                AuditEditor.AssemblyDependencyAuditWindow.FormatDeclaredReferenceRow(
+                    nullTarget,
+                    new AuditEditor.AssemblyDependencyNode[] { null },
+                    2),
+                Is.EqualTo("#3 | Kind: Name | Status: Invalid target node\n" +
+                    "Declared: NullTarget\n" +
+                    "Target: (invalid)"));
+        }
+
+        /// <summary>
+        /// 宣言値と解決先は各160 UTF-16 unit以内へ省略し、surrogate pairを分断しません。
+        /// </summary>
+        [Test]
+        public void FormatDeclaredReferenceRow_BoundsValuesAndPreservesSurrogatePairs()
+        {
+            var maximum = AuditEditor.AssemblyDependencyAuditWindow.MaximumDeclaredReferenceRowValueCharacters;
+            var exactValue = new string('e', maximum);
+            var exactRow = AuditEditor.AssemblyDependencyAuditWindow.FormatDeclaredReferenceRow(
+                new AuditEditor.AssemblyDependencyReference(
+                    exactValue,
+                    AuditEditor.AssemblyDependencyReferenceKind.Name,
+                    -1),
+                Array.Empty<AuditEditor.AssemblyDependencyNode>(),
+                0);
+            var boundaryValue = new string('v', maximum - 1) + "\uD83D\uDE00tail";
+            var longTarget = CreateNode(
+                new string('t', maximum - 1) + "\uD83D\uDE00tail",
+                "Assets/Target.asmdef",
+                "guid-target",
+                false);
+            var limitedRow = AuditEditor.AssemblyDependencyAuditWindow.FormatDeclaredReferenceRow(
+                new AuditEditor.AssemblyDependencyReference(
+                    boundaryValue,
+                    AuditEditor.AssemblyDependencyReferenceKind.Guid,
+                    0),
+                new[] { longTarget },
+                1);
+            var exactLines = exactRow.Split('\n');
+            var limitedLines = limitedRow.Split('\n');
+            var exactDeclared = exactLines[1].Substring("Declared: ".Length);
+            var limitedDeclared = limitedLines[1].Substring("Declared: ".Length);
+            var limitedTarget = limitedLines[2].Substring("Target: ".Length);
+
+            Assert.That(exactDeclared, Is.EqualTo(exactValue));
+            Assert.That(limitedDeclared, Has.Length.EqualTo(maximum));
+            Assert.That(limitedDeclared.EndsWith("…", StringComparison.Ordinal), Is.True);
+            Assert.That(limitedTarget, Has.Length.EqualTo(maximum));
+            Assert.That(limitedTarget.EndsWith("…", StringComparison.Ordinal), Is.True);
+            Assert.That(ContainsUnpairedSurrogate(limitedDeclared), Is.False);
+            Assert.That(ContainsUnpairedSurrogate(limitedTarget), Is.False);
+        }
+
+        /// <summary>
+        /// 宣言参照rowは改行などのcontrol文字をspaceへ置換し、surrogate境界でも常にexactly 3行です。
+        /// </summary>
+        [Test]
+        public void FormatDeclaredReferenceRow_SanitizesControlsAndRemainsExactlyThreeLines()
+        {
+            var maximum = AuditEditor.AssemblyDependencyAuditWindow.MaximumDeclaredReferenceRowValueCharacters;
+            var boundaryValue = new string('b', maximum - 6) + "\r\n\t\u0001\uD83D\uDE00tail";
+            var sanitizedBoundary = AuditEditor.AssemblyDependencyAuditWindow.LimitDeclaredReferenceRowValue(
+                boundaryValue);
+            var target = CreateNode(
+                "Target\r\n\t\u0001",
+                "Assets/Target.asmdef",
+                "guid-target",
+                false);
+            var row = AuditEditor.AssemblyDependencyAuditWindow.FormatDeclaredReferenceRow(
+                new AuditEditor.AssemblyDependencyReference(
+                    "Name\r\n\t\u0001Value",
+                    AuditEditor.AssemblyDependencyReferenceKind.Name,
+                    0),
+                new[] { target },
+                0);
+            var lines = row.Split('\n');
+
+            Assert.That(sanitizedBoundary, Is.EqualTo(new string('b', maximum - 6) + "    …"));
+            Assert.That(sanitizedBoundary.Length, Is.LessThanOrEqualTo(maximum));
+            Assert.That(sanitizedBoundary.Any(char.IsControl), Is.False);
+            Assert.That(ContainsUnpairedSurrogate(sanitizedBoundary), Is.False);
+            Assert.That(lines, Has.Length.EqualTo(3));
+            Assert.That(lines[1], Is.EqualTo("Declared: Name    Value"));
+            Assert.That(lines[2], Is.EqualTo("Target: Target     | Assets/Target.asmdef"));
+            Assert.That(lines.All(line => !line.Any(char.IsControl)), Is.True);
+        }
+
+        /// <summary>
         /// 表示文字列はexact上限を保持し、max+1では末尾ellipsisを付けてsurrogate pairを分断しません。
         /// </summary>
         [Test]
@@ -576,6 +809,133 @@ namespace AssemblyDependencyAudit.Tests
         }
 
         /// <summary>
+        /// asmdef、asmrefの切替とClearは宣言参照pageとDetails scrollを初期化し、旧選択を残しません。
+        /// </summary>
+        [Test]
+        public void DeclaredReferenceSelectionTransitions_ResetPageScrollAndStaleTargets()
+        {
+            var references = new[]
+            {
+                new AuditEditor.AssemblyDependencyReference(
+                    "Missing",
+                    AuditEditor.AssemblyDependencyReferenceKind.Name,
+                    -1)
+            };
+            var node = CreateNode("Consumer", "Assets/Consumer.asmdef", "guid-consumer", false, references);
+            var target = new AuditEditor.AssemblyReferenceTarget(
+                "Assets/Consumer.asmref",
+                "Consumer",
+                AuditEditor.AssemblyReferenceTargetKind.Name,
+                node.AssetPath);
+            var result = CreateResult(
+                new[] { node },
+                Array.Empty<AuditEditor.AssemblyDependencyIssue>(),
+                new[] { target });
+            var window = ScriptableObject.CreateInstance<AuditEditor.AssemblyDependencyAuditWindow>();
+            try
+            {
+                InitializeWindow(window, result);
+                SetField(window, "_declaredReferencePage", 7);
+                SetField(window, "_detailsScrollPosition", new Vector2(12f, 34f));
+
+                InvokeInstance(window, "SelectAssembly", 0);
+
+                Assert.That(GetField<int>(window, "_selectedAssemblyIndex"), Is.Zero);
+                Assert.That(GetField<int>(window, "_selectedAssemblyReferenceIndex"), Is.EqualTo(-1));
+                Assert.That(InvokeInstance(window, "GetSelectedAssemblyReference"), Is.Null);
+                Assert.That(GetField<int>(window, "_declaredReferencePage"), Is.Zero);
+                Assert.That(GetField<Vector2>(window, "_detailsScrollPosition"), Is.EqualTo(Vector2.zero));
+
+                SetField(window, "_declaredReferencePage", 8);
+                SetField(window, "_detailsScrollPosition", new Vector2(56f, 78f));
+                InvokeInstance(window, "SelectAssemblyReference", 0);
+
+                Assert.That(GetField<int>(window, "_selectedAssemblyReferenceIndex"), Is.Zero);
+                Assert.That(ReferenceEquals(InvokeInstance(window, "GetSelectedAssemblyReference"), target), Is.True);
+                Assert.That(GetField<int>(window, "_declaredReferencePage"), Is.Zero);
+                Assert.That(GetField<Vector2>(window, "_detailsScrollPosition"), Is.EqualTo(Vector2.zero));
+
+                SetField(window, "_declaredReferencePage", 8);
+                SetField(window, "_detailsScrollPosition", new Vector2(90f, 123f));
+                InvokeInstance(window, "SelectAssembly", 0);
+
+                Assert.That(GetField<int>(window, "_selectedAssemblyReferenceIndex"), Is.EqualTo(-1));
+                Assert.That(GetField<int>(window, "_declaredReferencePage"), Is.Zero);
+                Assert.That(GetField<Vector2>(window, "_detailsScrollPosition"), Is.EqualTo(Vector2.zero));
+
+                SetField(window, "_declaredReferencePage", 8);
+                SetField(window, "_detailsScrollPosition", new Vector2(145f, 167f));
+                InvokeInstance(window, "ClearAuditResult");
+
+                Assert.That(GetField<AuditEditor.AssemblyDependencyAuditResult>(window, "_result"), Is.Null);
+                Assert.That(GetField<int>(window, "_selectedAssemblyIndex"), Is.EqualTo(-1));
+                Assert.That(GetField<int>(window, "_selectedAssemblyReferenceIndex"), Is.EqualTo(-1));
+                Assert.That(GetField<int>(window, "_declaredReferencePage"), Is.Zero);
+                Assert.That(GetField<Vector2>(window, "_detailsScrollPosition"), Is.EqualTo(Vector2.zero));
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(window);
+            }
+        }
+
+        /// <summary>
+        /// 宣言参照rowを追加しても既存Assembly Copyの6行と全文値を変更しません。
+        /// </summary>
+        [Test]
+        public void CopySelectedAssembly_WithDeclaredReferences_PreservesLegacyClipboardExactly()
+        {
+            var rawReference = new string('r',
+                AuditEditor.AssemblyDependencyAuditWindow.MaximumDeclaredReferenceRowValueCharacters + 1);
+            var node = CreateNode(
+                "Consumer",
+                "Assets/Consumer.asmdef",
+                "guid-consumer",
+                false,
+                new[]
+                {
+                    new AuditEditor.AssemblyDependencyReference(
+                        rawReference,
+                        AuditEditor.AssemblyDependencyReferenceKind.Name,
+                        -1)
+                });
+            var result = CreateResult(
+                new[] { node },
+                Array.Empty<AuditEditor.AssemblyDependencyIssue>(),
+                Array.Empty<AuditEditor.AssemblyReferenceTarget>());
+            var expected = string.Join(Environment.NewLine, new[]
+            {
+                "Name: Consumer",
+                "Path: Assets/Consumer.asmdef",
+                "GUID: guid-consumer",
+                "Platform: Player Capable",
+                "Referenced By: 0",
+                "Depends On: 0"
+            });
+            var previousClipboard = UnityEditor.EditorGUIUtility.systemCopyBuffer;
+            var window = ScriptableObject.CreateInstance<AuditEditor.AssemblyDependencyAuditWindow>();
+            try
+            {
+                InitializeWindow(window, result);
+                InvokeInstance(window, "SelectAssembly", 0);
+
+                InvokeInstance(window, "CopySelectedAssembly");
+
+                Assert.That(UnityEditor.EditorGUIUtility.systemCopyBuffer, Is.EqualTo(expected));
+                Assert.That(UnityEditor.EditorGUIUtility.systemCopyBuffer, Does.Not.Contain(rawReference));
+                Assert.That(UnityEditor.EditorGUIUtility.systemCopyBuffer, Does.Not.Contain("Declared Refs"));
+                Assert.That(
+                    GetField<string>(window, "_interactionMessage"),
+                    Is.EqualTo("Assembly details を clipboard へ copy しました。"));
+            }
+            finally
+            {
+                UnityEditor.EditorGUIUtility.systemCopyBuffer = previousClipboard;
+                UnityEngine.Object.DestroyImmediate(window);
+            }
+        }
+
+        /// <summary>
         /// 画面表示上限を超えるasmref・findingでもCopyはmodel全文を改変せずclipboardへ返します。
         /// </summary>
         [Test]
@@ -830,7 +1190,8 @@ namespace AssemblyDependencyAudit.Tests
             string name,
             string assetPath,
             string guid,
-            bool editorOnly)
+            bool editorOnly,
+            IReadOnlyList<AuditEditor.AssemblyDependencyReference> references = null)
         {
             return new AuditEditor.AssemblyDependencyNode(
                 name,
@@ -839,7 +1200,7 @@ namespace AssemblyDependencyAudit.Tests
                 true,
                 editorOnly ? new[] { "Editor" } : Array.Empty<string>(),
                 Array.Empty<string>(),
-                Array.Empty<AuditEditor.AssemblyDependencyReference>());
+                references ?? Array.Empty<AuditEditor.AssemblyDependencyReference>());
         }
     }
 }

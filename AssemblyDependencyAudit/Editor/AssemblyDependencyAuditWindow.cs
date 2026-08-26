@@ -29,6 +29,9 @@ namespace AssemblyDependencyAudit.Editor
         /// <summary>固定高のissue rowへ表示する説明の最大文字数です。</summary>
         private const int MaximumIssueRowMessageCharacters = 160;
 
+        /// <summary>宣言参照rowの値と解決先へ表示する最大文字数です。</summary>
+        internal const int MaximumDeclaredReferenceRowValueCharacters = 160;
+
         /// <summary>監査対象 path の範囲です。</summary>
         internal enum ScopeFilter
         {
@@ -97,6 +100,9 @@ namespace AssemblyDependencyAudit.Editor
 
         /// <summary>filtered asmref target一覧で表示する0始まりpageです。</summary>
         [SerializeField] private int _assemblyReferencePage;
+
+        /// <summary>選択asmdefの宣言参照一覧で表示する0始まりpageです。</summary>
+        [SerializeField] private int _declaredReferencePage;
 
         /// <summary>詳細欄の縦方向位置です。</summary>
         [SerializeField] private Vector2 _detailsScrollPosition;
@@ -551,7 +557,75 @@ namespace AssemblyDependencyAudit.Editor
                     }
                 }
 
+                if (target == null && node != null)
+                {
+                    DrawDeclaredReferences(node);
+                }
+
                 EditorGUILayout.EndScrollView();
+            }
+        }
+
+        /// <summary>選択asmdefの宣言参照を宣言順のまま500件単位で描画します。</summary>
+        private void DrawDeclaredReferences(AssemblyDependencyNode node)
+        {
+            var referenceCount = node.References.Count;
+            EditorGUILayout.Space(6f);
+            EditorGUILayout.LabelField($"Declared References ({referenceCount})", EditorStyles.boldLabel);
+            DrawDeclaredReferencePageControls(referenceCount);
+            if (referenceCount == 0)
+            {
+                EditorGUILayout.LabelField("宣言参照はありません。", _wrappedMiniLabelStyle);
+                return;
+            }
+
+            var pageStart = GetDeclaredReferencePageStart(_declaredReferencePage, referenceCount);
+            var pageEnd = Math.Min(pageStart + MaximumDisplayedRows, referenceCount);
+            for (var referenceIndex = pageStart; referenceIndex < pageEnd; referenceIndex++)
+            {
+                EditorGUILayout.LabelField(
+                    FormatDeclaredReferenceRow(
+                        node.References[referenceIndex],
+                        _result.Assemblies,
+                        referenceIndex),
+                    _wrappedMiniLabelStyle,
+                    GUILayout.ExpandWidth(true));
+                if (referenceIndex + 1 < pageEnd)
+                {
+                    EditorGUILayout.Space(2f);
+                }
+            }
+        }
+
+        /// <summary>宣言参照一覧のPrev・page番号・Nextを描画します。</summary>
+        private void DrawDeclaredReferencePageControls(int referenceCount)
+        {
+            var pageCount = GetDeclaredReferencePageCount(referenceCount);
+            _declaredReferencePage = ClampDeclaredReferencePage(_declaredReferencePage, pageCount);
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                using (new EditorGUI.DisabledScope(_declaredReferencePage <= 0))
+                {
+                    if (GUILayout.Button("Prev", GUILayout.Width(48f)))
+                    {
+                        SetDeclaredReferencePage(_declaredReferencePage - 1, referenceCount);
+                    }
+                }
+
+                GUILayout.FlexibleSpace();
+                EditorGUILayout.LabelField(
+                    $"Page {_declaredReferencePage + 1} / {pageCount}",
+                    EditorStyles.miniLabel,
+                    GUILayout.Width(82f));
+                GUILayout.FlexibleSpace();
+
+                using (new EditorGUI.DisabledScope(_declaredReferencePage + 1 >= pageCount))
+                {
+                    if (GUILayout.Button("Next", GUILayout.Width(48f)))
+                    {
+                        SetDeclaredReferencePage(_declaredReferencePage + 1, referenceCount);
+                    }
+                }
             }
         }
 
@@ -625,6 +699,8 @@ namespace AssemblyDependencyAudit.Editor
             _selectedIssueIndex = -1;
             _selectedAssemblyReferenceIndex = -1;
             _assemblyReferencePage = 0;
+            _declaredReferencePage = 0;
+            _detailsScrollPosition = Vector2.zero;
             _referenceCount = 0;
         }
 
@@ -1037,6 +1113,8 @@ namespace AssemblyDependencyAudit.Editor
         {
             _selectedAssemblyIndex = IsAssemblyIndexValid(assemblyIndex) ? assemblyIndex : -1;
             _selectedAssemblyReferenceIndex = -1;
+            _declaredReferencePage = 0;
+            _detailsScrollPosition = Vector2.zero;
             var issueIndices = GetSelectedIssueIndices();
             _selectedIssueIndex = issueIndices.Count == 0 ? -1 : issueIndices[0];
             _interactionMessage = string.Empty;
@@ -1048,9 +1126,21 @@ namespace AssemblyDependencyAudit.Editor
             _selectedAssemblyReferenceIndex = IsAssemblyReferenceIndexValid(assemblyReferenceIndex)
                 ? assemblyReferenceIndex
                 : -1;
+            _declaredReferencePage = 0;
+            _detailsScrollPosition = Vector2.zero;
             var issueIndices = GetSelectedIssueIndices();
             _selectedIssueIndex = issueIndices.Count == 0 ? -1 : issueIndices[0];
             _interactionMessage = string.Empty;
+        }
+
+        /// <summary>選択asmdefの宣言参照pageを有効範囲へ変更します。</summary>
+        private void SetDeclaredReferencePage(int page, int referenceCount)
+        {
+            _declaredReferencePage = ClampDeclaredReferencePage(
+                page,
+                GetDeclaredReferencePageCount(referenceCount));
+            _interactionMessage = string.Empty;
+            Repaint();
         }
 
         /// <summary>asmref pageを変更し、非表示になったasmref選択とissue選択を同期します。</summary>
@@ -1297,6 +1387,111 @@ namespace AssemblyDependencyAudit.Editor
         {
             var pageCount = GetAssemblyReferencePageCount(visibleCount);
             return ClampAssemblyReferencePage(page, pageCount) * MaximumDisplayedRows;
+        }
+
+        /// <summary>宣言参照件数から500件単位のpage数を返します。</summary>
+        internal static int GetDeclaredReferencePageCount(int referenceCount)
+        {
+            return referenceCount <= 0
+                ? 1
+                : ((referenceCount - 1) / MaximumDisplayedRows) + 1;
+        }
+
+        /// <summary>宣言参照pageを有効範囲へ制限します。</summary>
+        internal static int ClampDeclaredReferencePage(int page, int pageCount)
+        {
+            var safePageCount = Math.Max(1, pageCount);
+            return Math.Max(0, Math.Min(page, safePageCount - 1));
+        }
+
+        /// <summary>指定pageが宣言参照一覧で開始するindexを返します。</summary>
+        internal static int GetDeclaredReferencePageStart(int page, int referenceCount)
+        {
+            var pageCount = GetDeclaredReferencePageCount(referenceCount);
+            return ClampDeclaredReferencePage(page, pageCount) * MaximumDisplayedRows;
+        }
+
+        /// <summary>宣言参照の表記、解決状態、解決先を安全な3行rowへ整形します。</summary>
+        internal static string FormatDeclaredReferenceRow(
+            AssemblyDependencyReference reference,
+            IReadOnlyList<AssemblyDependencyNode> assemblies,
+            int referenceIndex)
+        {
+            var ordinal = referenceIndex < 0 ? "?" : (referenceIndex + 1).ToString();
+            if (reference == null)
+            {
+                return $"#{ordinal} | Kind: (invalid) | Status: Invalid reference\n" +
+                    "Declared: (invalid)\n" +
+                    "Target: (invalid)";
+            }
+
+            string kind;
+            switch (reference.Kind)
+            {
+                case AssemblyDependencyReferenceKind.Name:
+                    kind = "Name";
+                    break;
+                case AssemblyDependencyReferenceKind.Guid:
+                    kind = "GUID";
+                    break;
+                default:
+                    return $"#{ordinal} | Kind: (invalid) | Status: Invalid kind\n" +
+                        $"Declared: {LimitDeclaredReferenceRowValue(EmptyAsNone(reference.Value))}\n" +
+                        "Target: (invalid)";
+            }
+
+            var declaredValue = LimitDeclaredReferenceRowValue(EmptyAsNone(reference.Value));
+            if (reference.ResolvedAssemblyIndex == -1)
+            {
+                return $"#{ordinal} | Kind: {kind} | Status: Not uniquely resolved\n" +
+                    $"Declared: {declaredValue}\n" +
+                    "Target: (not uniquely resolved)";
+            }
+
+            if (reference.ResolvedAssemblyIndex < -1 ||
+                assemblies == null ||
+                reference.ResolvedAssemblyIndex >= assemblies.Count)
+            {
+                return $"#{ordinal} | Kind: {kind} | Status: Invalid result index\n" +
+                    $"Declared: {declaredValue}\n" +
+                    "Target: (invalid)";
+            }
+
+            var target = assemblies[reference.ResolvedAssemblyIndex];
+            if (target == null)
+            {
+                return $"#{ordinal} | Kind: {kind} | Status: Invalid target node\n" +
+                    $"Declared: {declaredValue}\n" +
+                    "Target: (invalid)";
+            }
+
+            var targetValue = LimitDeclaredReferenceRowValue($"{DisplayName(target)} | {target.AssetPath}");
+            return $"#{ordinal} | Kind: {kind} | Status: Resolved\n" +
+                $"Declared: {declaredValue}\n" +
+                $"Target: {targetValue}";
+        }
+
+        /// <summary>宣言参照rowの値を160文字へ制限し、layoutを増やすcontrol文字をspaceへ置換します。</summary>
+        internal static string LimitDeclaredReferenceRowValue(string value)
+        {
+            var limited = LimitText(value, MaximumDeclaredReferenceRowValueCharacters);
+            StringBuilder sanitized = null;
+            for (var index = 0; index < limited.Length; index++)
+            {
+                if (!char.IsControl(limited[index]))
+                {
+                    continue;
+                }
+
+                if (sanitized == null)
+                {
+                    sanitized = new StringBuilder(limited);
+                }
+
+                sanitized[index] = ' ';
+            }
+
+            return sanitized == null ? limited : sanitized.ToString();
         }
 
         /// <summary>

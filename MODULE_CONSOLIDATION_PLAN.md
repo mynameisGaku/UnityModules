@@ -250,11 +250,12 @@ Physics・Physics2Dを別々の名前付きpair ruleとしてprofileへ追加し
 backup schema v16は名前のないslotを含む32行matrix全体を保持し、rollbackとRestoreで正確に戻す。
 新規packageは増やさず、ProjectSetupのsetting keyとして責務を維持した。
 
-**4. asmdef依存・asmref target・folder owner候補の監査（AssemblyDependencyAudit 1.2.0で実装）**
+**4. asmdef依存・asmref target・folder owner候補の監査（AssemblyDependencyAudit 1.3.0で実装）**
 
 ProjectSetupがasmdefを作る責務とは分け、`Assets`と導入済み`Packages`のasmdefをread-onlyで走査するEditor専用moduleを追加した。
 参照元・assembly・参照先の3列graph、循環、未解決・曖昧・自己参照、Playerで有効なassembly→Editor専用assemblyの逆参照、platform指定の矛盾を表示する。
 1.1.0では`.asmref`を別一覧へ追加し、不正JSON、欠落・未解決・曖昧なtargetを検査した。1.2.0では同じfolderの`.asmdef`／`.asmref` owner候補をJSONやtargetの有効性に関係なく各assetへ報告する。`.asmref`はscriptの所属を指定するassetであり、asmdef依存graphへedgeを追加しない。
+1.3.0では選択asmdefの宣言参照を宣言順・重複保持のまま500件ずつ既存上限4,096件まで表示し、Name／GUIDのraw declarationと一意な解決先を確認できるようにした。graphは同じ解決先へのedgeを従来どおり1本へまとめ、`Not uniquely resolved`の未解決／曖昧は既存Issue Detailsで区別する。Analyzer、model、issue taxonomy、既存Copy、公開API、Runtime、build callbackは変更しない。
 現在の196 asmdefを持つこのrepo自体を最初の利用者とし、未使用参照やcompile時間は推測せず、asmdef／asmrefの書換えやbuild停止も行わない。
 
 ### 優先度：中

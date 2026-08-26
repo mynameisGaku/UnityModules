@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0] - 2026-08-26
+
+- Added paged declared-reference details for the selected `.asmdef`, preserving declaration order and duplicate entries while showing each raw Name/GUID reference and its uniquely resolved target.
+- Added 500-row pages across the existing 4,096-reference-per-assembly limit, with surrogate-safe 160-character values and explicit fail-visible rows for null, unknown, or invalid result data.
+- Kept `-1` resolution non-conclusive as `Not uniquely resolved`; existing issue details continue to distinguish unresolved and ambiguous references.
+- Kept the analyzer, model, deduplicated dependency graph, asmref selection, existing clipboard output, public surface, and Runtime surface unchanged.
+
 ## [1.2.0] - 2026-08-26
 
 - Added a path-level finding for every `.asmdef` or `.asmref` that shares its exact parent folder with another assembly owner candidate.
