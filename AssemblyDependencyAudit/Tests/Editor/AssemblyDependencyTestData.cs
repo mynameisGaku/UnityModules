@@ -4,7 +4,7 @@ using UnityEngine;
 namespace AssemblyDependencyAudit.Tests
 {
     /// <summary>
-    /// 壊れた asmdef asset を project へ置かず、memory 上だけで監査入力を作ります。
+    /// 壊れた asmdef・asmref asset を project へ置かず、memory 上だけで監査入力を作ります。
     /// </summary>
     internal static class AssemblyDependencyTestData
     {
@@ -28,6 +28,30 @@ namespace AssemblyDependencyAudit.Tests
             };
 
             return new Editor.AssemblyDefinitionSource(assetPath, guid, JsonUtility.ToJson(definition));
+        }
+
+        /// <summary>
+        /// 指定した target 表記を JSON 化した asmref source を作ります。
+        /// </summary>
+        internal static Editor.AssemblyReferenceSource CreateAssemblyReferenceSource(
+            string assetPath,
+            string guid,
+            string reference)
+        {
+            var definition = new AssemblyReferenceJson
+            {
+                reference = reference
+            };
+
+            return new Editor.AssemblyReferenceSource(assetPath, guid, JsonUtility.ToJson(definition));
+        }
+
+        /// <summary>test 用 asmref JSON の直下 field を保持します。</summary>
+        [Serializable]
+        private sealed class AssemblyReferenceJson
+        {
+            /// <summary>target asmdef の assembly 名または GUID 表記です。</summary>
+            public string reference = string.Empty;
         }
     }
 }

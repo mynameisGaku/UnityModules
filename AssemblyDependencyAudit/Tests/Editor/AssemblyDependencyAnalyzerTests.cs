@@ -25,7 +25,7 @@ namespace AssemblyDependencyAudit.Tests
                     "Assets/Consumer.asmdef",
                     "Consumer",
                     "guid-consumer",
-                    new[] { "Alpha", "GUID:GUID-ALPHA", "CompilerAlias" }),
+                    new[] { "alpha", "GUID:GUID-ALPHA", "CompilerAlias" }),
                 AssemblyDependencyTestData.CreateSource("Assets/Alpha.asmdef", "Alpha", "guid-alpha")
             };
 
@@ -59,14 +59,14 @@ namespace AssemblyDependencyAudit.Tests
             var sources = new[]
             {
                 AssemblyDependencyTestData.CreateSource("Assets/DupA.asmdef", "Duplicate", "guid-a"),
-                AssemblyDependencyTestData.CreateSource("Assets/DupB.asmdef", "Duplicate", "guid-b"),
+                AssemblyDependencyTestData.CreateSource("Assets/DupB.asmdef", "duplicate", "guid-b"),
                 AssemblyDependencyTestData.CreateSource("Assets/GuidA.asmdef", "GuidA", "same-guid"),
                 AssemblyDependencyTestData.CreateSource("Assets/GuidB.asmdef", "GuidB", "SAME-GUID"),
                 AssemblyDependencyTestData.CreateSource(
                     "Assets/Consumer.asmdef",
                     "Consumer",
                     "guid-consumer",
-                    new[] { "Duplicate", "GUID:same-guid", "Missing" }),
+                    new[] { "DUPLICATE", "GUID:same-guid", "Missing" }),
                 AssemblyDependencyTestData.CreateSource("Assets/Self.asmdef", "Self", "guid-self", new[] { "Self" })
             };
 

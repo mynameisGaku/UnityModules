@@ -1,7 +1,7 @@
 namespace AssemblyDependencyAudit.Editor
 {
     /// <summary>
-    /// asmdef 監査で検出する問題の種類を表します。
+    /// assembly asset監査で検出する問題の種類を表します。
     /// </summary>
     internal enum AssemblyDependencyIssueKind
     {
@@ -36,6 +36,18 @@ namespace AssemblyDependencyAudit.Editor
         IncludeAndExcludePlatforms,
 
         /// <summary>複数の assembly が循環参照しています。</summary>
-        DependencyCycle
+        DependencyCycle,
+
+        /// <summary>asmref JSON の構文または reference の型が不正です。</summary>
+        InvalidAssemblyReferenceJson,
+
+        /// <summary>asmref に有効な reference がありません。</summary>
+        MissingAssemblyReference,
+
+        /// <summary>asmref の target asmdef が見つかりません。</summary>
+        UnresolvedAssemblyReference,
+
+        /// <summary>asmref の target asmdef を一意に決められません。</summary>
+        AmbiguousAssemblyReference
     }
 }

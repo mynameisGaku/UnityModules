@@ -10,7 +10,10 @@ namespace AssemblyDependencyAudit.Editor
         /// <summary>
         /// 全 asmdef を読み取ります。1 件でも読めない場合は false を返します。
         /// </summary>
-        bool TryReadAll(out IReadOnlyList<AssemblyDefinitionSource> sources, out string errorMessage);
+        bool TryReadAll(
+            out IReadOnlyList<AssemblyDefinitionSource> sources,
+            out AssemblyDependencyAuditError error,
+            out string errorMessage);
 
         /// <summary>
         /// Unity compiler と同じ規則で参照表記から asmdef path を取得します。

@@ -4,7 +4,7 @@ using System.Collections.ObjectModel;
 namespace AssemblyDependencyAudit.Editor
 {
     /// <summary>
-    /// 全 asmdef の依存関係、逆参照、問題、循環 component を保持します。
+    /// 全 asmdef graph、asmref target、問題、循環 component を保持します。
     /// </summary>
     internal sealed class AssemblyDependencyAuditResult
     {
@@ -16,13 +16,15 @@ namespace AssemblyDependencyAudit.Editor
             IReadOnlyList<AssemblyDependencyIssue> issues,
             IReadOnlyList<IReadOnlyList<int>> dependencies,
             IReadOnlyList<IReadOnlyList<int>> dependents,
-            IReadOnlyList<IReadOnlyList<int>> cycles)
+            IReadOnlyList<IReadOnlyList<int>> cycles,
+            IReadOnlyList<AssemblyReferenceTarget> assemblyReferences = null)
         {
             Assemblies = CopyItems(assemblies);
             Issues = CopyItems(issues);
             Dependencies = CopyNested(dependencies);
             Dependents = CopyNested(dependents);
             Cycles = CopyNested(cycles);
+            AssemblyReferences = CopyItems(assemblyReferences);
         }
 
         /// <summary>asset path 順に並ぶ全 asmdef です。</summary>
@@ -39,6 +41,9 @@ namespace AssemblyDependencyAudit.Editor
 
         /// <summary>2 件以上で構成される循環参照 component です。</summary>
         internal IReadOnlyList<IReadOnlyList<int>> Cycles { get; }
+
+        /// <summary>asset path 順に並ぶ全 asmref の target 解決結果です。</summary>
+        internal IReadOnlyList<AssemblyReferenceTarget> AssemblyReferences { get; }
 
         /// <summary>
         /// 一次元一覧を読み取り専用 copy にします。

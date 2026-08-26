@@ -8,7 +8,7 @@ using AuditEditor = AssemblyDependencyAudit.Editor;
 namespace AssemblyDependencyAudit.Tests
 {
     /// <summary>
-    /// asmdef の論理 path、物理 path、raw meta GUID の安全な境界を検証します。
+    /// asmdef・asmref の論理 path、物理 path、raw meta GUID の安全な境界を検証します。
     /// </summary>
     internal sealed class AssemblyDefinitionSourcePathUtilityTests
     {
@@ -58,6 +58,103 @@ namespace AssemblyDependencyAudit.Tests
             Assert.That(AuditEditor.AssemblyDefinitionSourcePathUtility.MergeAssetPaths(
                 Array.Empty<string>(),
                 Array.Empty<string>()), Is.Empty);
+        }
+
+        /// <summary>
+        /// asmref 候補だけを正規化し、ignored directory と異なる拡張子を除いて Ordinal 順へまとめます。
+        /// </summary>
+        [Test]
+        public void MergeAssemblyReferenceAssetPaths_FiltersDeduplicatesAndSortsOrdinal()
+        {
+            var merged = AuditEditor.AssemblyDefinitionSourcePathUtility.MergeAssemblyReferenceAssetPaths(
+                new[]
+                {
+                    "Packages/zeta/Z.asmref",
+                    "Assets\\B.asmref",
+                    "Assets/A.asmref",
+                    "Assets/A.asmdef"
+                },
+                new[]
+                {
+                    "Assets/B.asmref",
+                    "Assets/a.ASMREF",
+                    "Assets/.hidden.asmref",
+                    "Assets/CvS/Skipped.asmref",
+                    "Assets/name.asmref~",
+                    "Assets/name.tmp",
+                    "Assets/Samples~/Skipped.asmref",
+                    "Packages/zeta/Z.asmref"
+                });
+
+            Assert.That(merged, Is.EqualTo(new[]
+            {
+                "Assets/A.asmref",
+                "Assets/B.asmref",
+                "Assets/a.ASMREF",
+                "Packages/zeta/Z.asmref"
+            }));
+            Assert.Throws<NotSupportedException>(() => ((IList<string>)merged).Add("Assets/C.asmref"));
+        }
+
+        /// <summary>
+        /// asmref は Assets・Packages 配下だけを許可し、asmdef と ignored directory を混入させません。
+        /// </summary>
+        [TestCase("Assets/A.asmref", true)]
+        [TestCase("Packages/com.example/Editor/A.ASMREF", true)]
+        [TestCase("Assets/A.asmdef", false)]
+        [TestCase("ProjectSettings/A.asmref", false)]
+        [TestCase("Assets/.hidden/A.asmref", false)]
+        [TestCase("Assets/.hidden.asmref", false)]
+        [TestCase("Packages/x/.hidden.asmref", false)]
+        [TestCase("Assets/CVS/A.asmref", false)]
+        [TestCase("Packages/x/cVs/A.asmref", false)]
+        [TestCase("Assets/name.asmref~", false)]
+        [TestCase("Assets/name.tmp", false)]
+        [TestCase("Packages/com.example/Samples~/A.asmref", false)]
+        public void IsIncludedAssemblyReferenceAssetPath_UsesAsmrefSpecificBoundary(
+            string assetPath,
+            bool expected)
+        {
+            Assert.That(
+                AuditEditor.AssemblyDefinitionSourcePathUtility.IsIncludedAssemblyReferenceAssetPath(assetPath),
+                Is.EqualTo(expected));
+        }
+
+        /// <summary>
+        /// directoryのdot・tilde・CVS予約名だけを大小文字規則どおり除外します。
+        /// </summary>
+        [TestCase(null, false)]
+        [TestCase("", false)]
+        [TestCase("Normal", false)]
+        [TestCase("name.tmp", false)]
+        [TestCase(".hidden", true)]
+        [TestCase("Generated~", true)]
+        [TestCase("CVS", true)]
+        [TestCase("cVs", true)]
+        public void IsIgnoredDirectoryName_UsesUnityHiddenAssetContract(string directoryName, bool expected)
+        {
+            Assert.That(
+                AuditEditor.AssemblyDefinitionSourcePathUtility.IsIgnoredDirectoryName(directoryName),
+                Is.EqualTo(expected));
+        }
+
+        /// <summary>
+        /// fileのdot・tilde・CVS予約名とtmp拡張子を除外し、通常asmrefは受理します。
+        /// </summary>
+        [TestCase(null, false)]
+        [TestCase("", false)]
+        [TestCase("Normal.asmref", false)]
+        [TestCase(".hidden.asmref", true)]
+        [TestCase("name.asmref~", true)]
+        [TestCase("name.tmp", true)]
+        [TestCase("NAME.TMP", true)]
+        [TestCase("CVS", true)]
+        [TestCase("cVs", true)]
+        public void IsIgnoredFileName_UsesUnityHiddenAssetContract(string fileName, bool expected)
+        {
+            Assert.That(
+                AuditEditor.AssemblyDefinitionSourcePathUtility.IsIgnoredFileName(fileName),
+                Is.EqualTo(expected));
         }
 
         /// <summary>
@@ -168,6 +265,34 @@ namespace AssemblyDependencyAudit.Tests
         }
 
         /// <summary>
+        /// asmref 専用 mapping は Assets 配下の論理 path と物理 file を双方向に同一へ固定します。
+        /// </summary>
+        [Test]
+        public void AssemblyReferencePathMapping_RoundTripsPhysicalAndAssetPaths()
+        {
+            var root = CreatePhysicalPath("AssemblyReferenceRoot");
+            var file = Path.Combine(root, "Nested", "A.asmref");
+
+            var mappedToAsset =
+                AuditEditor.AssemblyDefinitionSourcePathUtility.TryMapPhysicalAssemblyReferenceFileToAssetPath(
+                    "Assets",
+                    root,
+                    file,
+                    out var assetPath);
+            var mappedToPhysical =
+                AuditEditor.AssemblyDefinitionSourcePathUtility.TryMapAssemblyReferenceAssetPathToPhysicalFile(
+                    "Assets",
+                    root,
+                    assetPath,
+                    out var physicalPath);
+
+            Assert.That(mappedToAsset, Is.True);
+            Assert.That(assetPath, Is.EqualTo("Assets/Nested/A.asmref"));
+            Assert.That(mappedToPhysical, Is.True);
+            Assert.That(physicalPath, Is.EqualTo(Path.GetFullPath(file)));
+        }
+
+        /// <summary>
         /// root 外、root 自体、無視 directory、asmdef 以外の物理 path を拒否します。
         /// </summary>
         [Test]
@@ -253,6 +378,39 @@ namespace AssemblyDependencyAudit.Tests
 
             Assert.That(succeeded, Is.False);
             Assert.That(guid, Is.Empty);
+        }
+
+        /// <summary>
+        /// asmdef と asmref の meta は共に top-level の有効な GUID field exactly one だけを受理します。
+        /// </summary>
+        [TestCase("asmdef", "fileFormatVersion: 2\nguid: 0123456789abcdef0123456789abcdef\n", true,
+            "0123456789abcdef0123456789abcdef")]
+        [TestCase("asmdef", "fileFormatVersion: 2\n", false, "")]
+        [TestCase("asmdef", "guid: invalid\n", false, "")]
+        [TestCase("asmdef",
+            "guid: 0123456789abcdef0123456789abcdef\nguid: fedcba9876543210fedcba9876543210\n",
+            false,
+            "")]
+        [TestCase("asmref", "fileFormatVersion: 2\nguid: ABCDEF0123456789ABCDEF0123456789\n", true,
+            "ABCDEF0123456789ABCDEF0123456789")]
+        [TestCase("asmref", "fileFormatVersion: 2\n", false, "")]
+        [TestCase("asmref", "guid: invalid\n", false, "")]
+        [TestCase("asmref",
+            "guid: 0123456789abcdef0123456789abcdef\nguid: 0123456789abcdef0123456789abcdef\n",
+            false,
+            "")]
+        public void TryExtractExactlyOneGuidFromMeta_RequiresStrictGuidForAsmdefAndAsmref(
+            string assetKind,
+            string metaText,
+            bool expectedSucceeded,
+            string expectedGuid)
+        {
+            var succeeded = AuditEditor.AssemblyDefinitionSourcePathUtility.TryExtractExactlyOneGuidFromMeta(
+                metaText,
+                out var guid);
+
+            Assert.That(succeeded, Is.EqualTo(expectedSucceeded), assetKind);
+            Assert.That(guid, Is.EqualTo(expectedGuid), assetKind);
         }
 
         /// <summary>

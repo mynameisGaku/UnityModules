@@ -106,7 +106,7 @@ namespace AssemblyDependencyAudit.Editor
                 parsedSources.Add(parsed);
             }
 
-            var names = BuildIndex(parsedSources, parsed => parsed.Name, StringComparer.Ordinal, false);
+            var names = BuildIndex(parsedSources, parsed => parsed.Name, StringComparer.OrdinalIgnoreCase, false);
             var guids = BuildIndex(parsedSources, parsed => parsed.Source.Guid, StringComparer.OrdinalIgnoreCase, false);
             var paths = BuildIndex(parsedSources, parsed => parsed.Source.AssetPath, StringComparer.Ordinal, false);
 

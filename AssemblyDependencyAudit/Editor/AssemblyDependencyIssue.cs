@@ -25,7 +25,7 @@ namespace AssemblyDependencyAudit.Editor
         /// <summary>検出した問題の種類です。</summary>
         internal AssemblyDependencyIssueKind Kind { get; }
 
-        /// <summary>問題がある asmdef の asset path です。</summary>
+        /// <summary>問題がある asmdef または asmref の asset path です。</summary>
         internal string AssetPath { get; }
 
         /// <summary>参照先など関連する asmdef の asset path です。</summary>
