@@ -6,7 +6,7 @@ using System.Collections.ObjectModel;
 namespace LocalizationKeyAudit.Editor
 {
     /// <summary>
-    /// 公式 Localization API から読み取った Locale と StringTableCollection の snapshot です。
+    /// 公式 Localization API から読み取ったString audit dataとAsset Table所有境界のsnapshotです。
     /// </summary>
     internal sealed class LocalizationKeyAuditTypedSnapshot
     {
@@ -14,7 +14,8 @@ namespace LocalizationKeyAudit.Editor
         internal LocalizationKeyAuditTypedSnapshot(
             IReadOnlyList<string> localeIdentifiers,
             IReadOnlyList<LocalizationKeyAuditCollectionSnapshot> collections,
-            IReadOnlyList<LocalizationKeyAuditOrphanLocaleTableSnapshot> orphanLocaleTables = null)
+            IReadOnlyList<LocalizationKeyAuditOrphanLocaleTableSnapshot> orphanLocaleTables = null,
+            IReadOnlyList<LocalizationKeyAuditNonStringSharedDataIdentity> nonStringSharedDataIdentities = null)
         {
             var locales = new string[localeIdentifiers?.Count ?? 0];
             for (var index = 0; index < locales.Length; index++)
@@ -52,6 +53,21 @@ namespace LocalizationKeyAudit.Editor
             }
 
             OrphanLocaleTables = new ReadOnlyCollection<LocalizationKeyAuditOrphanLocaleTableSnapshot>(orphanCopy);
+
+            var nonStringCopy = new LocalizationKeyAuditNonStringSharedDataIdentity[
+                nonStringSharedDataIdentities?.Count ?? 0];
+            for (var index = 0; index < nonStringCopy.Length; index++)
+            {
+                var identity = nonStringSharedDataIdentities[index];
+                nonStringCopy[index] = identity == null
+                    ? null
+                    : new LocalizationKeyAuditNonStringSharedDataIdentity(
+                        identity.AssetPath,
+                        identity.CollectionGuid);
+            }
+
+            NonStringSharedDataIdentities =
+                new ReadOnlyCollection<LocalizationKeyAuditNonStringSharedDataIdentity>(nonStringCopy);
         }
 
         /// <summary>Localization Settings に登録済みの Locale identifiers です。</summary>
@@ -62,5 +78,8 @@ namespace LocalizationKeyAudit.Editor
 
         /// <summary>どの StringTableCollection にも対応しなかった direct StringTable です。</summary>
         internal IReadOnlyList<LocalizationKeyAuditOrphanLocaleTableSnapshot> OrphanLocaleTables { get; }
+
+        /// <summary>Asset Table owner が参照し、String key の direct coverage から除外する SharedTableData です。</summary>
+        internal IReadOnlyList<LocalizationKeyAuditNonStringSharedDataIdentity> NonStringSharedDataIdentities { get; }
     }
 }

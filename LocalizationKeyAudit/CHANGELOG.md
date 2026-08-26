@@ -12,6 +12,7 @@ All notable changes to this package will be documented in this file.
 - Added `NoStaticReferenceFoundWithinDeclaredScope` with explicit static-reference coverage instead of an unused-key conclusion.
 - Added raw Shared Table Data preflight and terminal `ReadOnlyGuaranteeUnavailable` handling before typed loading.
 - Added duplicate and orphan integrity findings without automatic repair or deletion.
+- Added String and Asset Table owner classification so Asset-only Shared Table Data does not become a String key finding; cross-type GUID collisions fail closed.
 - Documented excluded package, source-code, dynamic, Smart String nested, Addressables, external-data, and out-of-scope asset references.
 - Declared Unity Localization 1.5.12 as the only direct package dependency.
 

@@ -64,7 +64,7 @@ namespace LocalizationKeyAudit.Editor
         /// <summary>StringTableCollection に属さない typed StringTable があります。</summary>
         OrphanedLocaleTable,
 
-        /// <summary>typed collection や table に対応しない valid SharedTableData があります。</summary>
+        /// <summary>typed String/Asset Table owner に対応しない valid SharedTableData があります。</summary>
         OrphanedSharedTableData,
 
         /// <summary>Localization Settings に同じ Locale identifier が複数あります。</summary>

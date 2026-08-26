@@ -176,7 +176,7 @@ namespace LocalizationKeyAudit.Tests
         }
 
         /// <summary>
-        /// typed collection または orphan table の path/GUID が raw identity と違えば terminal failure にします。
+        /// typed collection、orphan table、Asset Table ownerのpath/GUIDがraw identityと違えばterminal failureにします。
         /// </summary>
         [Test]
         public void Audit_TypedAndRawIdentityMismatchDiscardsTypedSnapshot()
@@ -218,8 +218,27 @@ namespace LocalizationKeyAudit.Tests
                 CreateValidRawSource(),
                 orphanTyped);
             AssertTerminalFailure(orphanResult, AuditEditor.LocalizationKeyAuditIssueKind.AuditFailed);
+
+            var assetTyped = new FakeLocalizationKeyAuditTypedSource
+            {
+                Snapshot = new AuditEditor.LocalizationKeyAuditTypedSnapshot(
+                    new[] { "en" },
+                    Array.Empty<AuditEditor.LocalizationKeyAuditCollectionSnapshot>(),
+                    nonStringSharedDataIdentities: new[]
+                    {
+                        new AuditEditor.LocalizationKeyAuditNonStringSharedDataIdentity(
+                            "Assets/Localization/Asset Shared Data.asset",
+                            LocalizationKeyAuditTestData.CollectionGuid)
+                    })
+            };
+            var assetResult = AuditEditor.LocalizationKeyAuditService.Audit(
+                CreateRequest(),
+                CreateValidRawSource(),
+                assetTyped);
+            AssertTerminalFailure(assetResult, AuditEditor.LocalizationKeyAuditIssueKind.AuditFailed);
             Assert.That(collectionTyped.ReadCallCount, Is.EqualTo(1));
             Assert.That(orphanTyped.ReadCallCount, Is.EqualTo(1));
+            Assert.That(assetTyped.ReadCallCount, Is.EqualTo(1));
         }
 
         /// <summary>

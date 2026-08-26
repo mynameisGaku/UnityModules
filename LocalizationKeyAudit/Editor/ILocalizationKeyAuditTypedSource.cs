@@ -3,7 +3,7 @@
 namespace LocalizationKeyAudit.Editor
 {
     /// <summary>
-    /// raw preflight 通過後に限り Locale と StringTableCollection を読み取る境界です。
+    /// raw preflight 通過後に限り String audit snapshot と Asset Table 所有境界を読み取る境界です。
     /// </summary>
     internal interface ILocalizationKeyAuditTypedSource
     {
@@ -13,4 +13,3 @@ namespace LocalizationKeyAudit.Editor
         LocalizationKeyAuditTypedSnapshot ReadSnapshot();
     }
 }
-

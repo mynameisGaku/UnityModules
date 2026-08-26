@@ -117,13 +117,24 @@ namespace LocalizationKeyAudit.Tests
                 tables);
             var locales = new List<string> { "ja" };
             var collections = new List<AuditEditor.LocalizationKeyAuditCollectionSnapshot> { collection };
-            var snapshot = new AuditEditor.LocalizationKeyAuditTypedSnapshot(locales, collections);
+            var nonStringIdentity = new AuditEditor.LocalizationKeyAuditNonStringSharedDataIdentity(
+                "Assets/Localization/Asset Shared Data.asset",
+                Guid.Parse("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"));
+            var nonStringIdentities = new List<AuditEditor.LocalizationKeyAuditNonStringSharedDataIdentity>
+            {
+                nonStringIdentity
+            };
+            var snapshot = new AuditEditor.LocalizationKeyAuditTypedSnapshot(
+                locales,
+                collections,
+                nonStringSharedDataIdentities: nonStringIdentities);
 
             localizedEntries.Clear();
             sharedEntries.Clear();
             tables.Clear();
             locales.Clear();
             collections.Clear();
+            nonStringIdentities.Clear();
 
             Assert.That(snapshot.LocaleIdentifiers, Is.EqualTo(new[] { "ja" }));
             Assert.That(snapshot.Collections, Has.Count.EqualTo(1));
@@ -133,12 +144,20 @@ namespace LocalizationKeyAudit.Tests
             Assert.That(snapshot.Collections[0].LocaleTables[0], Is.Not.SameAs(table));
             Assert.That(snapshot.Collections[0].LocaleTables[0].Entries, Has.Count.EqualTo(1));
             Assert.That(snapshot.Collections[0].LocaleTables[0].Entries[0].Value, Is.Null);
+            Assert.That(snapshot.NonStringSharedDataIdentities, Has.Count.EqualTo(1));
+            Assert.That(snapshot.NonStringSharedDataIdentities[0], Is.Not.SameAs(nonStringIdentity));
+            Assert.That(
+                snapshot.NonStringSharedDataIdentities[0].AssetPath,
+                Is.EqualTo("Assets/Localization/Asset Shared Data.asset"));
             Assert.Throws<NotSupportedException>(() => ((IList<string>)snapshot.LocaleIdentifiers).Clear());
             Assert.Throws<NotSupportedException>(
                 () => ((IList<AuditEditor.LocalizationKeyAuditCollectionSnapshot>)snapshot.Collections).Clear());
             Assert.Throws<NotSupportedException>(
                 () => ((IList<AuditEditor.LocalizationKeyAuditLocalizedEntrySnapshot>)
                     snapshot.Collections[0].LocaleTables[0].Entries).Clear());
+            Assert.Throws<NotSupportedException>(
+                () => ((IList<AuditEditor.LocalizationKeyAuditNonStringSharedDataIdentity>)
+                    snapshot.NonStringSharedDataIdentities).Clear());
         }
 
         /// <summary>

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using NUnit.Framework;
 using AuditEditor = LocalizationKeyAudit.Editor;
@@ -260,6 +261,131 @@ namespace LocalizationKeyAudit.Tests
         }
 
         /// <summary>
+        /// Asset Tableだけが所有するSharedTableDataはStringのorphan/duplicate/static danglingへ混ぜません。
+        /// </summary>
+        [Test]
+        public void Analyze_ExcludesAssetOnlySharedDataFromAllStringIdentityFindings()
+        {
+            var collection = CompleteCollectionWithEntries(10);
+            var assetGuid = Guid.Parse("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
+            var assetSharedData = new[]
+            {
+                new AuditEditor.LocalizationKeyAuditNonStringSharedDataIdentity(
+                    "Assets/Localization/Asset A Shared Data.asset",
+                    assetGuid),
+                new AuditEditor.LocalizationKeyAuditNonStringSharedDataIdentity(
+                    "Assets/Localization/Asset B Shared Data.asset",
+                    assetGuid)
+            };
+
+            var result = Analyze(
+                new[] { collection },
+                new[] { "en" },
+                new[] { "en" },
+                new[] { Reference(collection.CollectionGuid, 10) },
+                nonStringSharedDataIdentities: assetSharedData);
+
+            Assert.That(result.IsComplete, Is.True);
+            AssertIssueCount(result, AuditEditor.LocalizationKeyAuditIssueKind.OrphanedSharedTableData, 0);
+            AssertIssueCount(result, AuditEditor.LocalizationKeyAuditIssueKind.DuplicateCollectionGuid, 0);
+            AssertIssueCount(result, AuditEditor.LocalizationKeyAuditIssueKind.DanglingStaticReference, 0);
+            AssertIssueCount(result, AuditEditor.LocalizationKeyAuditIssueKind.NoStaticReferenceFoundWithinDeclaredScope, 0);
+        }
+
+        /// <summary>String/Asset間の同一collection GUIDはraw YAML reference typeを断定せずfail-closedにします。</summary>
+        [Test]
+        public void Analyze_RejectsCrossTypeCollectionGuidCollision()
+        {
+            var collection = CompleteCollectionWithEntries(10);
+            var assetPath = "Assets/Localization/Asset Shared Data.asset";
+            var request = new AuditEditor.LocalizationKeyAuditRequest(
+                new[] { "en" },
+                new AuditEditor.LocalizationKeyAuditCoverage(
+                    "Scenes",
+                    new[] { "Assets/Scenes" },
+                    Array.Empty<AuditEditor.LocalizationKeyAuditStaticReference>(),
+                    true,
+                    string.Empty));
+            var snapshot = new AuditEditor.LocalizationKeyAuditTypedSnapshot(
+                new[] { "en" },
+                new[] { collection },
+                nonStringSharedDataIdentities: new[]
+                {
+                    new AuditEditor.LocalizationKeyAuditNonStringSharedDataIdentity(
+                        assetPath,
+                        collection.CollectionGuid)
+                });
+            var rawIdentities = new[]
+            {
+                new AuditEditor.LocalizationKeyAuditRawIdentity(
+                    collection.SharedDataAssetPath,
+                    collection.CollectionGuid),
+                new AuditEditor.LocalizationKeyAuditRawIdentity(assetPath, collection.CollectionGuid)
+            };
+
+            var exception = Assert.Throws<InvalidDataException>(() =>
+                AuditEditor.LocalizationKeyAuditAnalyzer.Analyze(request, snapshot, rawIdentities));
+
+            Assert.That(exception.Message, Does.Contain("static reference typeを一意に判定できません"));
+        }
+
+        /// <summary>Asset Tableだけに解決できるraw YAML referenceをStringのdanglingとは断定しません。</summary>
+        [Test]
+        public void Analyze_DoesNotClassifyAssetOnlyReferenceAsDanglingStringReference()
+        {
+            var assetGuid = Guid.Parse("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
+            var assetSharedData = new[]
+            {
+                new AuditEditor.LocalizationKeyAuditNonStringSharedDataIdentity(
+                    "Assets/Localization/Asset Shared Data.asset",
+                    assetGuid)
+            };
+
+            var result = Analyze(
+                Array.Empty<AuditEditor.LocalizationKeyAuditCollectionSnapshot>(),
+                new[] { "en" },
+                new[] { "en" },
+                new[] { Reference(assetGuid, 10) },
+                nonStringSharedDataIdentities: assetSharedData);
+
+            Assert.That(result.IsComplete, Is.True);
+            Assert.That(result.Issues, Is.Empty);
+        }
+
+        /// <summary>Asset Table identityもraw preflightのpath/GUIDと完全一致しなければ通常結果を返しません。</summary>
+        [Test]
+        public void Analyze_RejectsAssetTableIdentityThatDoesNotMatchRawPreflight()
+        {
+            var assetPath = "Assets/Localization/Asset Shared Data.asset";
+            var typedGuid = Guid.Parse("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
+            var rawGuid = Guid.Parse("11111111-2222-3333-4444-555555555555");
+            var request = new AuditEditor.LocalizationKeyAuditRequest(
+                Array.Empty<string>(),
+                new AuditEditor.LocalizationKeyAuditCoverage(
+                    "Scenes",
+                    new[] { "Assets/Scenes" },
+                    Array.Empty<AuditEditor.LocalizationKeyAuditStaticReference>(),
+                    true,
+                    string.Empty));
+            var snapshot = new AuditEditor.LocalizationKeyAuditTypedSnapshot(
+                Array.Empty<string>(),
+                Array.Empty<AuditEditor.LocalizationKeyAuditCollectionSnapshot>(),
+                Array.Empty<AuditEditor.LocalizationKeyAuditOrphanLocaleTableSnapshot>(),
+                new[]
+                {
+                    new AuditEditor.LocalizationKeyAuditNonStringSharedDataIdentity(assetPath, typedGuid)
+                });
+
+            var exception = Assert.Throws<InvalidDataException>(() =>
+                AuditEditor.LocalizationKeyAuditAnalyzer.Analyze(
+                    request,
+                    snapshot,
+                    new[] { new AuditEditor.LocalizationKeyAuditRawIdentity(assetPath, rawGuid) }));
+
+            Assert.That(exception.Message, Does.Contain("raw preflight と一致しません"));
+        }
+
+        /// <summary>
         /// 3 path 以上の raw GUID 重複でも related path と issue 順を raw 入力順から独立させます。
         /// </summary>
         [Test]
@@ -480,7 +606,8 @@ namespace LocalizationKeyAudit.Tests
             string incompleteReason = "",
             AuditEditor.LocalizationKeyAuditOrphanLocaleTableSnapshot[] orphanLocaleTables = null,
             AuditEditor.LocalizationKeyAuditRawIdentity[] additionalRawIdentities = null,
-            string[] declaredAssetPaths = null)
+            string[] declaredAssetPaths = null,
+            AuditEditor.LocalizationKeyAuditNonStringSharedDataIdentity[] nonStringSharedDataIdentities = null)
         {
             var coverage = new AuditEditor.LocalizationKeyAuditCoverage(
                 "Scenes",
@@ -490,7 +617,13 @@ namespace LocalizationKeyAudit.Tests
                 incompleteReason);
             var request = new AuditEditor.LocalizationKeyAuditRequest(requiredLocales, coverage);
             var orphans = orphanLocaleTables ?? Array.Empty<AuditEditor.LocalizationKeyAuditOrphanLocaleTableSnapshot>();
-            var snapshot = new AuditEditor.LocalizationKeyAuditTypedSnapshot(configuredLocales, collections, orphans);
+            var nonString = nonStringSharedDataIdentities ??
+                Array.Empty<AuditEditor.LocalizationKeyAuditNonStringSharedDataIdentity>();
+            var snapshot = new AuditEditor.LocalizationKeyAuditTypedSnapshot(
+                configuredLocales,
+                collections,
+                orphans,
+                nonString);
             var collectionRawIdentities = collections
                 .Select(collection => new AuditEditor.LocalizationKeyAuditRawIdentity(
                     collection.SharedDataAssetPath,
@@ -503,6 +636,20 @@ namespace LocalizationKeyAudit.Tests
                     group.First().CollectionGuid)));
             collectionRawIdentities.AddRange(
                 additionalRawIdentities ?? Array.Empty<AuditEditor.LocalizationKeyAuditRawIdentity>());
+            for (var index = 0; index < nonString.Length; index++)
+            {
+                var identity = nonString[index];
+                if (collectionRawIdentities.Any(raw =>
+                        string.Equals(raw.AssetPath, identity.AssetPath, StringComparison.Ordinal)))
+                {
+                    continue;
+                }
+
+                collectionRawIdentities.Add(new AuditEditor.LocalizationKeyAuditRawIdentity(
+                    identity.AssetPath,
+                    identity.CollectionGuid));
+            }
+
             return AuditEditor.LocalizationKeyAuditAnalyzer.Analyze(request, snapshot, collectionRawIdentities);
         }
 

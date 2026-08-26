@@ -1,3 +1,5 @@
+Localization Key Audit copyright © 2026 StudioGaku
+
 MIT License
 
 Copyright (c) 2026 StudioGaku

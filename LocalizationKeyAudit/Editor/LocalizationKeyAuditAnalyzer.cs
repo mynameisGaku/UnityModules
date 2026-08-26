@@ -137,18 +137,34 @@ namespace LocalizationKeyAudit.Editor
             var locales = NormalizeLocales(snapshot.LocaleIdentifiers);
             var collections = NormalizeCollections(snapshot.Collections);
             var orphanLocaleTables = NormalizeOrphanLocaleTables(snapshot.OrphanLocaleTables);
+            var nonStringSharedDataIdentities = NormalizeNonStringSharedDataIdentities(
+                snapshot.NonStringSharedDataIdentities);
             var normalizedRawIdentities = NormalizeRawIdentities(rawIdentities);
             ValidateAggregateTableLimits(collections, orphanLocaleTables);
-            ValidateRawIdentities(collections, orphanLocaleTables, normalizedRawIdentities);
+            ValidateRawIdentities(
+                collections,
+                orphanLocaleTables,
+                nonStringSharedDataIdentities,
+                normalizedRawIdentities);
+            var stringRelevantRawIdentities = FilterStringRelevantRawIdentities(
+                collections,
+                orphanLocaleTables,
+                nonStringSharedDataIdentities,
+                normalizedRawIdentities);
             var graphEdgeCount = CountGraphEdges(request, collections, orphanLocaleTables);
             var issues = new List<LocalizationKeyAuditIssue>();
 
             AddLocaleIssues(request, locales, issues);
-            AddCollectionIntegrityIssues(collections, normalizedRawIdentities, issues);
-            AddRawGuidIntegrityIssues(normalizedRawIdentities, issues);
-            AddOrphanIssues(collections, orphanLocaleTables, normalizedRawIdentities, issues);
+            AddCollectionIntegrityIssues(collections, stringRelevantRawIdentities, issues);
+            AddRawGuidIntegrityIssues(stringRelevantRawIdentities, issues);
+            AddOrphanIssues(collections, orphanLocaleTables, stringRelevantRawIdentities, issues);
             AddDirectCoverageIssues(request, collections, issues);
-            AddStaticReferenceIssues(request.Coverage, collections, normalizedRawIdentities, issues);
+            AddStaticReferenceIssues(
+                request.Coverage,
+                collections,
+                nonStringSharedDataIdentities,
+                stringRelevantRawIdentities,
+                issues);
             issues.Sort(CompareIssues);
 
             return new LocalizationKeyAuditResult(
@@ -175,6 +191,42 @@ namespace LocalizationKeyAudit.Editor
             }
 
             normalized.Sort(CompareRawIdentities);
+            return normalized;
+        }
+
+        /// <summary>Asset Table owner の SharedTableData identity を独立copyにして決定論的に並べます。</summary>
+        private static List<LocalizationKeyAuditNonStringSharedDataIdentity>
+            NormalizeNonStringSharedDataIdentities(
+                IReadOnlyList<LocalizationKeyAuditNonStringSharedDataIdentity> source)
+        {
+            if (source == null)
+            {
+                throw new InvalidDataException("typed Asset Table SharedTableData identity 一覧が null です。");
+            }
+
+            if (source.Count > LocalizationKeyAuditLimits.MaximumSharedTableDataAssets)
+            {
+                throw new LocalizationKeyAuditLimitException(
+                    $"Asset Table SharedTableData identity 数が上限 {LocalizationKeyAuditLimits.MaximumSharedTableDataAssets} 件を超えています。");
+            }
+
+            var normalized = new List<LocalizationKeyAuditNonStringSharedDataIdentity>(source.Count);
+            for (var index = 0; index < source.Count; index++)
+            {
+                var identity = source[index];
+                if (identity == null ||
+                    !IsUnityAssetPath(identity.AssetPath, false) ||
+                    identity.CollectionGuid == Guid.Empty)
+                {
+                    throw new InvalidDataException("typed Asset Table SharedTableData identity が null または不正です。");
+                }
+
+                normalized.Add(new LocalizationKeyAuditNonStringSharedDataIdentity(
+                    identity.AssetPath,
+                    identity.CollectionGuid));
+            }
+
+            normalized.Sort(CompareNonStringSharedDataIdentities);
             return normalized;
         }
 
@@ -408,6 +460,7 @@ namespace LocalizationKeyAudit.Editor
         private static void ValidateRawIdentities(
             IReadOnlyList<LocalizationKeyAuditCollectionSnapshot> collections,
             IReadOnlyList<LocalizationKeyAuditOrphanLocaleTableSnapshot> orphanLocaleTables,
+            IReadOnlyList<LocalizationKeyAuditNonStringSharedDataIdentity> nonStringSharedDataIdentities,
             IReadOnlyList<LocalizationKeyAuditRawIdentity> rawIdentities)
         {
             if (rawIdentities.Count > LocalizationKeyAuditLimits.MaximumSharedTableDataAssets)
@@ -464,6 +517,86 @@ namespace LocalizationKeyAudit.Editor
                 }
             }
 
+            var stringOwnedGuids = new HashSet<Guid>();
+            for (var index = 0; index < collections.Count; index++)
+            {
+                stringOwnedGuids.Add(collections[index].CollectionGuid);
+            }
+
+            for (var index = 0; index < orphanLocaleTables.Count; index++)
+            {
+                stringOwnedGuids.Add(orphanLocaleTables[index].CollectionGuid);
+            }
+
+            var nonStringPaths = new HashSet<string>(StringComparer.Ordinal);
+            for (var index = 0; index < nonStringSharedDataIdentities.Count; index++)
+            {
+                var nonString = nonStringSharedDataIdentities[index];
+                if (!nonStringPaths.Add(nonString.AssetPath))
+                {
+                    throw new InvalidDataException(
+                        $"typed Asset Table SharedTableData identity の asset path が重複しています: {nonString.AssetPath}");
+                }
+
+                if (!byPath.TryGetValue(nonString.AssetPath, out var identity) ||
+                    identity.CollectionGuid != nonString.CollectionGuid)
+                {
+                    throw new InvalidDataException(
+                        $"typed Asset Table SharedTableData identity が raw preflight と一致しません: {nonString.AssetPath}");
+                }
+
+                if (stringOwnedGuids.Contains(nonString.CollectionGuid))
+                {
+                    throw new InvalidDataException(
+                        $"String Table と Asset Table が同じ collection GUID を使用しているためstatic reference typeを一意に判定できません: {nonString.CollectionGuid:N}");
+                }
+            }
+
+        }
+
+        /// <summary>
+        /// Asset Table owner だけが確認された raw identity をString keyの重複・orphan・static解決から除外します。
+        /// owner不明のraw identityは保守的に残し、String/Asset共用GUIDはこの処理より前にfail-closedにします。
+        /// </summary>
+        private static List<LocalizationKeyAuditRawIdentity> FilterStringRelevantRawIdentities(
+            IReadOnlyList<LocalizationKeyAuditCollectionSnapshot> collections,
+            IReadOnlyList<LocalizationKeyAuditOrphanLocaleTableSnapshot> orphanLocaleTables,
+            IReadOnlyList<LocalizationKeyAuditNonStringSharedDataIdentity> nonStringSharedDataIdentities,
+            IReadOnlyList<LocalizationKeyAuditRawIdentity> rawIdentities)
+        {
+            var stringOwnedPaths = new HashSet<string>(StringComparer.Ordinal);
+            for (var index = 0; index < collections.Count; index++)
+            {
+                stringOwnedPaths.Add(collections[index].SharedDataAssetPath);
+            }
+
+            for (var index = 0; index < orphanLocaleTables.Count; index++)
+            {
+                stringOwnedPaths.Add(orphanLocaleTables[index].SharedDataAssetPath);
+            }
+
+            var nonStringOwnedPaths = new HashSet<string>(StringComparer.Ordinal);
+            for (var index = 0; index < nonStringSharedDataIdentities.Count; index++)
+            {
+                nonStringOwnedPaths.Add(nonStringSharedDataIdentities[index].AssetPath);
+            }
+
+            var relevant = new List<LocalizationKeyAuditRawIdentity>(rawIdentities.Count);
+            for (var index = 0; index < rawIdentities.Count; index++)
+            {
+                var identity = rawIdentities[index];
+                if (nonStringOwnedPaths.Contains(identity.AssetPath) &&
+                    !stringOwnedPaths.Contains(identity.AssetPath))
+                {
+                    continue;
+                }
+
+                relevant.Add(new LocalizationKeyAuditRawIdentity(
+                    identity.AssetPath,
+                    identity.CollectionGuid));
+            }
+
+            return relevant;
         }
 
         /// <summary>direct coverage、table membership、static reference の edge 数を上限内で数えます。</summary>
@@ -877,6 +1010,7 @@ namespace LocalizationKeyAudit.Editor
         private static void AddStaticReferenceIssues(
             LocalizationKeyAuditCoverage coverage,
             IReadOnlyList<LocalizationKeyAuditCollectionSnapshot> collections,
+            IReadOnlyList<LocalizationKeyAuditNonStringSharedDataIdentity> nonStringSharedDataIdentities,
             IReadOnlyList<LocalizationKeyAuditRawIdentity> rawIdentities,
             List<LocalizationKeyAuditIssue> issues)
         {
@@ -897,6 +1031,12 @@ namespace LocalizationKeyAudit.Editor
             }
             var collectionsByGuid = BuildCollectionGuidIndex(collections);
             var rawByGuid = BuildRawGuidIndex(rawIdentities);
+            var nonStringGuids = new HashSet<Guid>();
+            for (var index = 0; index < nonStringSharedDataIdentities.Count; index++)
+            {
+                nonStringGuids.Add(nonStringSharedDataIdentities[index].CollectionGuid);
+            }
+
             var sharedIdsByCollection = new Dictionary<long, List<int>>[collections.Count];
             for (var collectionIndex = 0; collectionIndex < collections.Count; collectionIndex++)
             {
@@ -914,6 +1054,11 @@ namespace LocalizationKeyAudit.Editor
                 }
 
                 referencedIds.Add(reference.EntryId);
+                if (nonStringGuids.Contains(reference.CollectionGuid))
+                {
+                    continue;
+                }
+
                 if (!collectionsByGuid.TryGetValue(reference.CollectionGuid, out var collectionIndices) ||
                     collectionIndices.Count != 1 ||
                     !rawByGuid.TryGetValue(reference.CollectionGuid, out var rawIndices) ||
@@ -1232,6 +1377,15 @@ namespace LocalizationKeyAudit.Editor
                 return 1;
             }
 
+            var comparison = string.Compare(left.AssetPath, right.AssetPath, StringComparison.Ordinal);
+            return comparison != 0 ? comparison : left.CollectionGuid.CompareTo(right.CollectionGuid);
+        }
+
+        /// <summary>Asset Table SharedData identity をasset path、GUIDの順に並べます。</summary>
+        private static int CompareNonStringSharedDataIdentities(
+            LocalizationKeyAuditNonStringSharedDataIdentity left,
+            LocalizationKeyAuditNonStringSharedDataIdentity right)
+        {
             var comparison = string.Compare(left.AssetPath, right.AssetPath, StringComparison.Ordinal);
             return comparison != 0 ? comparison : left.CollectionGuid.CompareTo(right.CollectionGuid);
         }

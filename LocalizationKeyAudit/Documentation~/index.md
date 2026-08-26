@@ -9,7 +9,7 @@ Localization Key Auditは、String Table Collectionの共有keyについて、�
 1. `Tools/Localization Key Audit/Open`からwindowを開き、required localeと`Assets`内の静的参照coverage scopeを明示します。
 2. typed objectをloadする前に、Shared Table Dataのraw serialized dataをpreflightします。
 3. raw preflightがread-onlyを保証できない場合は、`ReadOnlyGuaranteeUnavailable`として監査全体を停止します。
-4. preflightを通過した場合だけtyped loadを行い、required localeごとのdirect coverageとintegrityを確認します。
+4. preflightを通過した場合だけtyped loadを行い、String／Asset Table ownerを分類したうえでrequired localeごとのString direct coverageとintegrityを確認します。
 5. `Audit`を押し、finding、coverage scope、coverage外、incomplete要因を合わせて確認します。自動scanは行いません。
 
 監査はassetの修正、保存、削除を行いません。autofixも提供しません。
@@ -38,13 +38,13 @@ raw preflightでtyped loadのread-only性を証明できなかったterminal sta
 
 ### Integrity findings
 
-duplicate collection／entry／Locale identity、collectionに属さない`OrphanedLocaleTable`、typed collectionやtableに対応しないvalid raw assetの`OrphanedSharedTableData`を区別して報告します。重複identityがある場合はstatic referenceを一意解決せず、参照なしの断定も抑止します。findingはassetの自動修復や削除を行いません。
+duplicate String collection／entry／Locale identity、collectionに属さない`OrphanedLocaleTable`、typed String／Asset Table ownerに対応しないvalid raw assetの`OrphanedSharedTableData`を区別して報告します。Asset Tableだけが所有するShared Table DataはString keyのduplicate、orphan、static-reference判定から除外します。StringとAssetで同じcollection GUIDが使われる場合はreference typeをraw YAMLだけで断定できないため、terminal `AuditFailed`として部分結果を破棄します。findingはassetの自動修復や削除を行いません。
 
 ## Why raw preflight is required
 
 Unity Localization 1.5.12の`SharedTableData.OnAfterDeserialize()`は、保存されたcollection GUID文字列を処理します。GUIDが欠落または空の場合、公式実装は`delayCall`でasset GUIDを代入し、`EditorUtility.SetDirty`でassetをdirtyにします。一方、非空のGUIDがmalformedな場合は、先に`Guid.Parse`が例外を送出し、この自動修復経路には入りません。typed deserializeを安全に完了できない状態です。
 
-監査は最初にraw serialized representationを読み、collection GUIDが存在し、空でなく、期待する形式として検証可能であることを確認します。raw dataを読めない場合、形式を安全に認識できない場合、値が欠落・空・malformedの場合は`ReadOnlyGuaranteeUnavailable`で停止します。binaryや将来の未知のserialization表現も、安全だと推測してtyped loadしません。preflight失敗時のtyped adapter呼出回数は0です。
+監査は最初にraw serialized representationを読み、collection GUIDが存在し、空でなく、期待する形式として検証可能であることを確認します。String TableとAsset Tableは同じ`SharedTableData`型を使うため、raw preflightは両方を対象にし、成功後だけtyped ownerを分類します。Asset Tableのentryやlocalized assetはdirect coverage対象外です。raw dataを読めない場合、形式を安全に認識できない場合、値が欠落・空・malformedの場合は`ReadOnlyGuaranteeUnavailable`で停止します。binaryや将来の未知のserialization表現も、安全だと推測してtyped loadしません。preflight失敗時のtyped adapter呼出回数は0です。
 
 ## Direct coverage and runtime behavior
 
@@ -64,6 +64,8 @@ Unity Localization 1.5.12の`SharedTableData.OnAfterDeserialize()`は、保存�
 | 宣言scope外のasset | scene、prefab、ScriptableObjectを含め、未宣言範囲は検索しません。 |
 
 coverage外があるため、参照を検出できない結果は`NoStaticReferenceFoundWithinDeclaredScope`とだけ報告します。読取失敗、scope外path、上限到達、未対応serialized表現がある場合はincompleteを明示し、cleanな完全結果にしません。
+
+`References`と`Edges`はraw YAMLで認識したGUID＋entry ID pairを数える観測metricです。Asset Tableだけに解決できるpairもmetricには残しますが、String keyのdangling／参照あり判定からは除外します。
 
 ## Package boundaries
 

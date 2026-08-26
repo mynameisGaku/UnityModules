@@ -63,7 +63,8 @@ scope外にも参照があり得るprojectでは、`NoStaticReferenceFoundWithin
 | `EmptyDirectValue` | direct entryはありますが、そのdirect valueが空です。 | 空値が意図的かどうか、runtimeで別の値が得られるかは断定しません。 |
 | `NoStaticReferenceFoundWithinDeclaredScope` | 宣言されたcoverage scope内で、対象keyへの静的参照を検出できませんでした。 | keyが未使用であるとは判定せず、削除候補にも変換しません。 |
 | `StaticReferenceCoverageIncomplete` | scope内に未対応形式、読取失敗、上限超過などがあり、参照走査を完了できませんでした。 | 認識済みの部分だけから参照なしとは判定しません。 |
-| `OrphanedLocaleTable` / `OrphanedSharedTableData` | typed tableまたはvalid raw Shared Table Dataの対応先が見つかりませんでした。 | assetを自動修復・削除しません。 |
+| `OrphanedLocaleTable` | typed String Tableに対応するString Table Collectionが見つかりませんでした。 | assetを自動修復・削除しません。 |
+| `OrphanedSharedTableData` | valid raw Shared Table Dataに対応するtyped String／Asset Table ownerが見つかりませんでした。 | String用のassetだとは断定せず、assetを自動修復・削除しません。 |
 | `ReadOnlyGuaranteeUnavailable` | raw preflightで、typed loadをread-onlyのまま実行できると証明できませんでした。 | 不完全な結果を通常の監査完了として扱いません。 |
 
 `MissingLocaleTable`、`MissingDirectEntry`、`EmptyDirectValue`は互いに別の状態です。ひとつの「未翻訳」判定へまとめません。
@@ -101,7 +102,11 @@ locale fallback、個別参照のfallback設定、Locale override、culture fall
 
 Unity Localization 1.5.12では、`SharedTableData.OnAfterDeserialize()`が保存されたcollection GUID文字列を処理します。GUIDが欠落または空の場合、公式実装は`delayCall`でasset GUIDを代入し、`EditorUtility.SetDirty`を呼ぶため、読み込みだけのつもりでもassetをdirtyにし得ます。一方、非空のGUIDがmalformedな場合は、先に`Guid.Parse`が例外を送出し、この自動修復経路には入りません。typed deserializeを安全に完了できない状態として扱う必要があります。
 
-このため、監査はtyped loadより先にraw serialized dataを検査します。Shared Table Dataをrawに読めない、期待するserialized表現を確認できない、またはcollection GUIDが欠落・空・malformedである場合は、監査全体を`ReadOnlyGuaranteeUnavailable`で停止します。その状態ではtyped adapterを1回も呼ばず、部分的に取得できたfindingも通常の完了結果として公開しません。
+このため、監査はtyped loadより先にraw serialized dataを検査します。String TableとAsset Tableは同じ`SharedTableData`型を使うため、raw preflightは両方を対象にします。通過後だけtyped String／Asset Table ownerを読み、Asset Tableだけが所有するidentityをString keyのduplicate、orphan、static-reference判定から除外します。Asset Tableのentryやlocalized asset自体はdirect coverage対象にしません。
+
+String TableとAsset Tableが同じcollection GUIDを使う場合、raw YAMLのGUID＋entry IDだけではreference typeを一意に判定できません。この状態はcleanな完全結果へ推測で畳まず、terminal `AuditFailed`として部分結果を破棄します。
+
+Shared Table Dataをrawに読めない、期待するserialized表現を確認できない、またはcollection GUIDが欠落・空・malformedである場合は、監査全体を`ReadOnlyGuaranteeUnavailable`で停止します。その状態ではtyped adapterを1回も呼ばず、部分的に取得できたfindingも通常の完了結果として公開しません。
 
 ### Coverage scope
 
@@ -115,6 +120,8 @@ Unity Localization 1.5.12では、`SharedTableData.OnAfterDeserialize()`が保�
 - locale fallback chain、project設定のfallback、各参照のfallback設定やLocale override、culture fallbackによるruntime解決
 
 coverage外があるため、`NoStaticReferenceFoundWithinDeclaredScope`を「unused」と言い換えません。上限到達、読取失敗、scope外path、未対応serialized表現がある場合はincompleteとして扱い、問題なしの完全な結果にはしません。
+
+結果の`References`と`Edges`はraw YAMLで認識したGUID＋entry ID pairを数える観測metricです。Asset Tableだけに解決できるpairもmetricには含みますが、String keyのdangling／参照あり判定には使用しません。
 
 ### Dependency and documents
 
