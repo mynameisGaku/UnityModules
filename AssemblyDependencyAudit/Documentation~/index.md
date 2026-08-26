@@ -1,8 +1,8 @@
-# Assembly依存チェック 1.1.0
+# Assembly依存チェック 1.2.0
 
 ## 目的
 
-`Assets`と導入済み`Packages`のAssembly Definition（`.asmdef`）を読み取り、参照関係と構成上の問題を1つのEditorWindowで確認します。Assembly Definition Reference（`.asmref`）は別一覧でtargetの整合性を検査します。read-onlyの検査に限定し、Project fileは変更しません。
+`Assets`と導入済み`Packages`のAssembly Definition（`.asmdef`）を読み取り、参照関係と構成上の問題を1つのEditorWindowで確認します。Assembly Definition Reference（`.asmref`）は別一覧でtargetの整合性を検査し、同じfolderに複数あるassembly owner候補も報告します。read-onlyの検査に限定し、Project fileは変更しません。
 
 ## 操作順
 
@@ -32,7 +32,11 @@ GUIDが一意でも、対応する`.asmdef`のJSONまたはAssembly名が有効�
 
 長いpath、reference、messageはEditorの描画負荷を抑えるため画面上だけ省略します。選択後の`Copy Reference`または`Copy Issue`は省略前の全文をclipboardへ入れます。
 
-`.asmref`は同じfolder以下のscriptを既存Assemblyへ所属させるassetであり、asmdef同士の依存を追加するfileではありません。このツールも`.asmref`を`Dependencies`、`Dependents`、循環検出へ追加しません。複数の`.asmref`が同じ一意なtargetを指すことは問題として扱いません。
+`.asmref`は同じfolder以下のscriptを既存Assemblyへ所属させるassetであり、asmdef同士の依存を追加するfileではありません。このツールも`.asmref`を`Dependencies`、`Dependents`、循環検出へ追加しません。別folderにある複数の`.asmref`が同じ一意なtargetを指すことは問題として扱いません。
+
+## 同じfolderのowner候補
+
+同じ正規化済みparent folderに2件以上の`.asmdef`／`.asmref`がある場合、各assetへ`MultipleAssemblyOwnersInFolder`を1件ずつ報告します。targetが同じ`.asmref`同士でも重複を消しません。JSON、Assembly名、reference、targetの有効性に関係なく配置を検査するため、不正JSONや未importの物理fileも候補へ含め、既存の構文・target問題と併記します。これはowner候補のpath配置を確認する検査であり、現在どのAssemblyへcompileされたかを断定するものではありません。子folderまたは別folderは競合しません。
 
 ## 報告する問題
 
@@ -51,6 +55,7 @@ GUIDが一意でも、対応する`.asmdef`のJSONまたはAssembly名が有効�
 - `.asmref`の空または欠落した`reference`
 - `.asmref`の未解決target
 - `.asmref`の曖昧なtarget
+- 同じfolderに複数ある`.asmdef`／`.asmref` owner候補
 
 循環検出はgraph全体を調べます。3列viewは選択Assemblyの直接参照だけを表示するため、循環の全経路は問題一覧に含まれるAssemblyを順に選んで確認してください。
 
@@ -60,7 +65,7 @@ GUIDが一意でも、対応する`.asmdef`のJSONまたはAssembly名が有効�
 
 ## 検査範囲と上限
 
-このツールが判断するのは`.asmdef`に明示された参照とplatform設定、および`.asmref`のJSONとtarget整合性です。C# sourceが実際に参照先の型を使用しているか、`.asmref`配下のscriptが意図したAssemblyへ入るか、参照を削除してもcompileできるか、compile時間へどの程度影響するかは判断しません。precompiled plugin、型単位とAsset単位の依存も検査対象外です。
+このツールが判断するのは`.asmdef`に明示された参照とplatform設定、`.asmref`のJSONとtarget整合性、およびassembly owner候補のpath配置です。C# sourceが実際に参照先の型を使用しているか、scriptがactual compileでどのAssemblyへ入るか、参照を削除してもcompileできるか、compile時間へどの程度影響するかは判断しません。precompiled plugin、型単位とAsset単位の依存も検査対象外です。
 
 Asset Databaseの型検索と`Assets`・登録済み`Packages`の物理rootを和集合にし、未importまたは不正な`.asmref`も見落とさないようにします。dot始まり、末尾`~`、`cvs`、Hidden属性、reparse pointのdirectoryは物理探索で降りず、Unityが無視するfile名も候補へ含めません。Asset Databaseがreparse point配下のassembly assetを認識した場合は、そのtyped assetを黙って除外せず、安全に読めないことを明示してRefresh全体を停止します。directory数、file entry数、`.asmdef`／`.asmref`件数、1 fileのbyte数、asmdef phaseとasmref phaseそれぞれの読取総量、問題数には安全上限があります。1件でも読めない場合や上限を超えた場合は監査全体を停止し、部分結果を表示しません。
 

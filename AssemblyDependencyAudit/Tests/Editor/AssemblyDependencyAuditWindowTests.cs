@@ -452,6 +452,43 @@ namespace AssemblyDependencyAudit.Tests
         }
 
         /// <summary>
+        /// 同folder owner問題はasmdef側とasmref側のどちらを選んでも詳細へ到達できます。
+        /// </summary>
+        [Test]
+        public void MultipleAssemblyOwnersIssue_IsReachableFromBothOwnerPaths()
+        {
+            const string assemblyPath = "Assets/Feature/A.asmdef";
+            const string assemblyReferencePath = "Assets/Feature/B.asmref";
+            var node = CreateNode("A", assemblyPath, "guid-a", false);
+            var target = new AuditEditor.AssemblyReferenceTarget(
+                assemblyReferencePath,
+                "A",
+                AuditEditor.AssemblyReferenceTargetKind.Name,
+                assemblyPath);
+            var issue = CreateIssue(
+                AuditEditor.AssemblyDependencyIssueKind.MultipleAssemblyOwnersInFolder,
+                assemblyPath,
+                assemblyReferencePath,
+                "Assets/Feature");
+            var result = CreateResult(new[] { node }, new[] { issue }, new[] { target });
+            var window = ScriptableObject.CreateInstance<AuditEditor.AssemblyDependencyAuditWindow>();
+            try
+            {
+                InitializeWindow(window, result);
+
+                InvokeInstance(window, "SelectAssembly", 0);
+                Assert.That(ReferenceEquals(InvokeInstance(window, "GetSelectedIssue"), issue), Is.True);
+
+                InvokeInstance(window, "SelectAssemblyReference", 0);
+                Assert.That(ReferenceEquals(InvokeInstance(window, "GetSelectedIssue"), issue), Is.True);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(window);
+            }
+        }
+
+        /// <summary>
         /// 選択asmrefがfilter外になったら旧asmref findingを破棄し、visible asmdefのfindingまたはnoneへ同期します。
         /// </summary>
         [TestCase(false)]

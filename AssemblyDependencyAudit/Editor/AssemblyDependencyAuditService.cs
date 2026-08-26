@@ -80,8 +80,11 @@ namespace AssemblyDependencyAudit.Editor
 
             if (_assemblyReferenceSourceAdapter == null)
             {
-                result = assemblyResult;
-                return true;
+                return AssemblyOwnershipAnalyzer.TryAnalyze(
+                    assemblyResult,
+                    out result,
+                    out error,
+                    out errorMessage);
             }
 
             if (!_assemblyReferenceSourceAdapter.TryReadAllAssemblyReferences(
@@ -98,9 +101,18 @@ namespace AssemblyDependencyAudit.Editor
                 return false;
             }
 
-            return AssemblyReferenceAnalyzer.TryAnalyze(
-                assemblyReferenceSources,
-                assemblyResult,
+            if (!AssemblyReferenceAnalyzer.TryAnalyze(
+                    assemblyReferenceSources,
+                    assemblyResult,
+                    out var assemblyReferenceResult,
+                    out error,
+                    out errorMessage))
+            {
+                return false;
+            }
+
+            return AssemblyOwnershipAnalyzer.TryAnalyze(
+                assemblyReferenceResult,
                 out result,
                 out error,
                 out errorMessage);

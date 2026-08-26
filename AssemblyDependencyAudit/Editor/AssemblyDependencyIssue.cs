@@ -28,7 +28,7 @@ namespace AssemblyDependencyAudit.Editor
         /// <summary>問題がある asmdef または asmref の asset path です。</summary>
         internal string AssetPath { get; }
 
-        /// <summary>参照先など関連する asmdef の asset path です。</summary>
+        /// <summary>参照先または競合ownerなど関連するassembly asset pathです。</summary>
         internal string RelatedAssetPath { get; }
 
         /// <summary>問題に関係する元の参照表記です。</summary>

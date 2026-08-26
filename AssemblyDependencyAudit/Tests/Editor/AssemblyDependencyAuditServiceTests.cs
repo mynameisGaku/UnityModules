@@ -149,6 +149,77 @@ namespace AssemblyDependencyAudit.Tests
         }
 
         /// <summary>
+        /// asmref adapterなしでも同じfolderのasmdefだけによるowner競合を検出します。
+        /// </summary>
+        [Test]
+        public void TryAudit_NullAssemblyReferenceAdapterDetectsAssemblyDefinitionOwners()
+        {
+            var adapter = new FakeAssemblyDependencySourceAdapter
+            {
+                Sources = new[]
+                {
+                    AssemblyDependencyTestData.CreateSource("Assets/Feature/A.asmdef", "A", "guid-a"),
+                    AssemblyDependencyTestData.CreateSource("Assets/Feature/B.asmdef", "B", "guid-b")
+                }
+            };
+            var service = new AuditEditor.AssemblyDependencyAuditService(adapter, null);
+
+            var succeeded = service.TryAudit(out var result, out var error, out var errorMessage);
+
+            Assert.That(succeeded, Is.True, errorMessage);
+            Assert.That(error, Is.EqualTo(AuditEditor.AssemblyDependencyAuditError.None));
+            Assert.That(result.Issues.Select(issue => issue.Kind), Is.EqualTo(new[]
+            {
+                AuditEditor.AssemblyDependencyIssueKind.MultipleAssemblyOwnersInFolder,
+                AuditEditor.AssemblyDependencyIssueKind.MultipleAssemblyOwnersInFolder
+            }));
+            Assert.That(result.Issues.Select(issue => issue.AssetPath), Is.EqualTo(new[]
+            {
+                "Assets/Feature/A.asmdef",
+                "Assets/Feature/B.asmdef"
+            }));
+            Assert.That(adapter.AssemblyReferenceReadCallCount, Is.Zero);
+        }
+
+        /// <summary>
+        /// asmdefとasmrefを同じfolderに置いたcross-kind owner競合を完全監査で検出します。
+        /// </summary>
+        [Test]
+        public void TryAudit_CombinedAdapterDetectsCrossKindOwners()
+        {
+            var adapter = new FakeAssemblyDependencySourceAdapter
+            {
+                Sources = new[]
+                {
+                    AssemblyDependencyTestData.CreateSource("Assets/Feature/A.asmdef", "A", "guid-a")
+                },
+                AssemblyReferenceSources = new[]
+                {
+                    AssemblyDependencyTestData.CreateAssemblyReferenceSource(
+                        "Assets/Feature/B.asmref",
+                        "11111111111111111111111111111111",
+                        "A")
+                }
+            };
+            var service = new AuditEditor.AssemblyDependencyAuditService(adapter);
+
+            var succeeded = service.TryAudit(out var result, out var error, out var errorMessage);
+
+            Assert.That(succeeded, Is.True, errorMessage);
+            Assert.That(error, Is.EqualTo(AuditEditor.AssemblyDependencyAuditError.None));
+            Assert.That(result.AssemblyReferences.Single().ResolvedTargetAssetPath,
+                Is.EqualTo("Assets/Feature/A.asmdef"));
+            Assert.That(result.Issues.Select(issue => issue.AssetPath), Is.EqualTo(new[]
+            {
+                "Assets/Feature/A.asmdef",
+                "Assets/Feature/B.asmref"
+            }));
+            Assert.That(result.Issues.All(issue =>
+                issue.Kind == AuditEditor.AssemblyDependencyIssueKind.MultipleAssemblyOwnersInFolder), Is.True);
+            Assert.That(adapter.AssemblyReferenceReadCallCount, Is.EqualTo(1));
+        }
+
+        /// <summary>
         /// null adapter は source へ触れず SourceUnavailable を返します。
         /// </summary>
         [Test]

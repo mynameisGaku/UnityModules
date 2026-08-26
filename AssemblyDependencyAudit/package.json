@@ -1,13 +1,13 @@
 {
   "name": "com.studiogaku.assembly-dependency-audit",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "displayName": "Assembly Dependency Audit",
-  "description": "Visualizes asmdef dependencies and audits asmref target integrity under Assets and Packages without modifying project files.",
+  "description": "Visualizes asmdef dependencies, audits asmref targets, and reports conflicting assembly owners under Assets and Packages without modifying project files.",
   "unity": "6000.5",
   "unityRelease": "7f1",
-  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/blob/assembly-dependency-audit-v1.1.0/AssemblyDependencyAudit/Documentation~/index.md",
-  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/assembly-dependency-audit-v1.1.0/AssemblyDependencyAudit/CHANGELOG.md",
-  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/assembly-dependency-audit-v1.1.0/AssemblyDependencyAudit/LICENSE.md",
+  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/blob/assembly-dependency-audit-v1.2.0/AssemblyDependencyAudit/Documentation~/index.md",
+  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/assembly-dependency-audit-v1.2.0/AssemblyDependencyAudit/CHANGELOG.md",
+  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/assembly-dependency-audit-v1.2.0/AssemblyDependencyAudit/LICENSE.md",
   "license": "Refer to LICENSE.md file",
   "keywords": ["assembly-definition", "asmref", "dependency", "audit", "editor"],
   "author": {

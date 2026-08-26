@@ -48,6 +48,9 @@ namespace AssemblyDependencyAudit.Editor
         UnresolvedAssemblyReference,
 
         /// <summary>asmref の target asmdef を一意に決められません。</summary>
-        AmbiguousAssemblyReference
+        AmbiguousAssemblyReference,
+
+        /// <summary>同じfolderに複数のasmdefまたはasmrefがあります。</summary>
+        MultipleAssemblyOwnersInFolder
     }
 }

@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.2.0] - 2026-08-26
+
+- Added a path-level finding for every `.asmdef` or `.asmref` that shares its exact parent folder with another assembly owner candidate.
+- Kept malformed and physical-only assembly assets visible in folder ownership checks while preserving their existing JSON and target findings.
+- Preserved the dependency graph and asmref target resolution when reporting folder ownership conflicts.
+
 ## [1.1.0] - 2026-08-26
 
 - Added a separate read-only list for every `.asmref` under Assets and registered Packages.
