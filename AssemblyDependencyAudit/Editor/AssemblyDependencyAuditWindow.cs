@@ -107,6 +107,9 @@ namespace AssemblyDependencyAudit.Editor
         /// <summary>選択asmdefのcycle component member一覧で表示する0始まりpageです。</summary>
         [SerializeField] private int _cycleComponentPage;
 
+        /// <summary>選択asmdefまたはasmrefに関係するissue一覧で表示する0始まりpageです。</summary>
+        [SerializeField] private int _selectedIssuePage;
+
         /// <summary>詳細欄の縦方向位置です。</summary>
         [SerializeField] private Vector2 _detailsScrollPosition;
 
@@ -124,6 +127,9 @@ namespace AssemblyDependencyAudit.Editor
 
         /// <summary>選択asmdefが属する検証済みcycle componentのlogical asset pathです。</summary>
         private readonly List<string> _selectedCycleComponentMemberPaths = new List<string>();
+
+        /// <summary>選択asmdefまたはasmrefに関係する検証済みissue indexです。</summary>
+        private readonly List<int> _selectedIssueIndices = new List<int>();
 
         /// <summary>問題へ直接または関連先として含まれる path です。</summary>
         private readonly HashSet<string> _issuePaths = new HashSet<string>(StringComparer.Ordinal);
@@ -145,6 +151,9 @@ namespace AssemblyDependencyAudit.Editor
 
         /// <summary>cycle component resultが不正でmemberを表示できない理由です。</summary>
         private string _cycleComponentErrorMessage = string.Empty;
+
+        /// <summary>関連issue resultが不正で一覧を表示できない理由です。</summary>
+        private string _selectedIssueErrorMessage = string.Empty;
 
         /// <summary>Ping、Open、Copy の実行結果です。</summary>
         private string _interactionMessage = string.Empty;
@@ -364,12 +373,23 @@ namespace AssemblyDependencyAudit.Editor
         /// </summary>
         private void DrawIssueList(float height)
         {
-            var issueIndices = GetSelectedIssueIndices();
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox, GUILayout.Width(position.width * 0.29f)))
             {
-                EditorGUILayout.LabelField($"Issues ({issueIndices.Count})", EditorStyles.boldLabel);
+                EditorGUILayout.LabelField($"Issues ({_selectedIssueIndices.Count})", EditorStyles.boldLabel);
+                if (!string.IsNullOrEmpty(_selectedIssueErrorMessage))
+                {
+                    EditorGUILayout.HelpBox(_selectedIssueErrorMessage, MessageType.Error);
+                    return;
+                }
+
+                DrawSelectedIssuePageControls();
                 _issuesScrollPosition = EditorGUILayout.BeginScrollView(_issuesScrollPosition, GUILayout.Height(height));
-                var displayedCount = Math.Min(issueIndices.Count, MaximumDisplayedRows);
+                var pageStart = GetSelectedIssuePageStart(
+                    _selectedIssuePage,
+                    _selectedIssueIndices.Count);
+                var displayedCount = Math.Min(
+                    _selectedIssueIndices.Count - pageStart,
+                    MaximumDisplayedRows);
                 if (displayedCount == 0)
                 {
                     EditorGUILayout.LabelField("選択対象に関係する問題はありません。", _wrappedMiniLabelStyle);
@@ -377,12 +397,7 @@ namespace AssemblyDependencyAudit.Editor
 
                 for (var rowIndex = 0; rowIndex < displayedCount; rowIndex++)
                 {
-                    var issueIndex = issueIndices[rowIndex];
-                    if (issueIndex < 0 || issueIndex >= _result.Issues.Count)
-                    {
-                        continue;
-                    }
-
+                    var issueIndex = _selectedIssueIndices[pageStart + rowIndex];
                     var issue = _result.Issues[issueIndex];
                     var selected = issueIndex == _selectedIssueIndex;
                     var content = new GUIContent(
@@ -393,15 +408,50 @@ namespace AssemblyDependencyAudit.Editor
                     {
                         _selectedIssueIndex = issueIndex;
                         _interactionMessage = string.Empty;
+                        _detailsScrollPosition = Vector2.zero;
                     }
                 }
 
-                if (issueIndices.Count > MaximumDisplayedRows)
+                if (_selectedIssueIndices.Count > MaximumDisplayedRows)
                 {
-                    EditorGUILayout.HelpBox($"先頭 {MaximumDisplayedRows} / {issueIndices.Count} 件を表示しています。", MessageType.Warning);
+                    EditorGUILayout.HelpBox(
+                        $"{pageStart + 1}-{pageStart + displayedCount} / {_selectedIssueIndices.Count} 件を表示しています。",
+                        MessageType.Warning);
                 }
 
                 EditorGUILayout.EndScrollView();
+            }
+        }
+
+        /// <summary>選択対象の関連issue一覧へPrev・page番号・Nextを描画します。</summary>
+        private void DrawSelectedIssuePageControls()
+        {
+            var pageCount = GetSelectedIssuePageCount(_selectedIssueIndices.Count);
+            _selectedIssuePage = ClampSelectedIssuePage(_selectedIssuePage, pageCount);
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                using (new EditorGUI.DisabledScope(_selectedIssuePage <= 0))
+                {
+                    if (GUILayout.Button("Prev", GUILayout.Width(48f)))
+                    {
+                        SetSelectedIssuePage(_selectedIssuePage - 1);
+                    }
+                }
+
+                GUILayout.FlexibleSpace();
+                EditorGUILayout.LabelField(
+                    $"Page {_selectedIssuePage + 1} / {pageCount}",
+                    EditorStyles.miniLabel,
+                    GUILayout.Width(82f));
+                GUILayout.FlexibleSpace();
+
+                using (new EditorGUI.DisabledScope(_selectedIssuePage + 1 >= pageCount))
+                {
+                    if (GUILayout.Button("Next", GUILayout.Width(48f)))
+                    {
+                        SetSelectedIssuePage(_selectedIssuePage + 1);
+                    }
+                }
             }
         }
 
@@ -783,8 +833,12 @@ namespace AssemblyDependencyAudit.Editor
             _assemblyReferencePage = 0;
             _declaredReferencePage = 0;
             _cycleComponentPage = 0;
+            _selectedIssuePage = 0;
             _selectedCycleComponentMemberPaths.Clear();
+            _selectedIssueIndices.Clear();
             _cycleComponentErrorMessage = string.Empty;
+            _selectedIssueErrorMessage = string.Empty;
+            _issuesScrollPosition = Vector2.zero;
             _detailsScrollPosition = Vector2.zero;
             _referenceCount = 0;
         }
@@ -797,10 +851,24 @@ namespace AssemblyDependencyAudit.Editor
             _issuePaths.Clear();
             _issueIndicesByPath.Clear();
             _referenceCount = 0;
+            _selectedIssueIndices.Clear();
+            _selectedIssueErrorMessage = string.Empty;
 
             for (var assemblyIndex = 0; assemblyIndex < _result.Assemblies.Count; assemblyIndex++)
             {
                 _referenceCount += _result.Assemblies[assemblyIndex].References.Count;
+            }
+
+            if (!TryValidateSelectedIssueIndices(
+                    _result,
+                    Array.Empty<int>(),
+                    out _,
+                    out var issueErrorMessage))
+            {
+                _selectedIssuePage = 0;
+                _selectedIssueIndex = -1;
+                _selectedIssueErrorMessage = issueErrorMessage;
+                return;
             }
 
             var issueIndicesByPath = BuildIssueIndicesByPath(_result);
@@ -809,6 +877,8 @@ namespace AssemblyDependencyAudit.Editor
                 _issuePaths.Add(pair.Key);
                 _issueIndicesByPath.Add(pair.Key, pair.Value);
             }
+
+            RebuildSelectedIssueIndices(false);
         }
 
         /// <summary>
@@ -1200,10 +1270,11 @@ namespace AssemblyDependencyAudit.Editor
             _selectedAssemblyReferenceIndex = -1;
             _declaredReferencePage = 0;
             _cycleComponentPage = 0;
+            _selectedIssuePage = 0;
             RebuildSelectedCycleComponent();
+            RebuildSelectedIssueIndices(true);
+            _issuesScrollPosition = Vector2.zero;
             _detailsScrollPosition = Vector2.zero;
-            var issueIndices = GetSelectedIssueIndices();
-            _selectedIssueIndex = issueIndices.Count == 0 ? -1 : issueIndices[0];
             _interactionMessage = string.Empty;
         }
 
@@ -1215,6 +1286,7 @@ namespace AssemblyDependencyAudit.Editor
                 : -1;
             _declaredReferencePage = 0;
             _cycleComponentPage = 0;
+            _selectedIssuePage = 0;
             if (_selectedAssemblyReferenceIndex >= 0)
             {
                 _selectedCycleComponentMemberPaths.Clear();
@@ -1224,9 +1296,9 @@ namespace AssemblyDependencyAudit.Editor
             {
                 RebuildSelectedCycleComponent();
             }
+            RebuildSelectedIssueIndices(true);
+            _issuesScrollPosition = Vector2.zero;
             _detailsScrollPosition = Vector2.zero;
-            var issueIndices = GetSelectedIssueIndices();
-            _selectedIssueIndex = issueIndices.Count == 0 ? -1 : issueIndices[0];
             _interactionMessage = string.Empty;
         }
 
@@ -1254,6 +1326,75 @@ namespace AssemblyDependencyAudit.Editor
             {
                 _selectedCycleComponentMemberPaths.Add(memberPaths[index]);
             }
+        }
+
+        /// <summary>選択対象の関連issue cacheを完全な検証結果だけへ置き換えます。</summary>
+        private void RebuildSelectedIssueIndices(bool resetPage)
+        {
+            var candidateIndices = GetSelectedIssueIndicesFromCache();
+            if (!TryValidateSelectedIssueIndices(
+                    _result,
+                    candidateIndices,
+                    out var validatedIndices,
+                    out var errorMessage))
+            {
+                _selectedIssueIndices.Clear();
+                _selectedIssueErrorMessage = errorMessage;
+                _selectedIssuePage = 0;
+                _selectedIssueIndex = -1;
+                return;
+            }
+
+            var sameIndices = HaveSameIssueIndices(_selectedIssueIndices, validatedIndices);
+            _selectedIssueIndices.Clear();
+            for (var index = 0; index < validatedIndices.Count; index++)
+            {
+                _selectedIssueIndices.Add(validatedIndices[index]);
+            }
+
+            _selectedIssueErrorMessage = string.Empty;
+            if (resetPage || !sameIndices)
+            {
+                _selectedIssuePage = 0;
+            }
+            else
+            {
+                _selectedIssuePage = ClampSelectedIssuePage(
+                    _selectedIssuePage,
+                    GetSelectedIssuePageCount(_selectedIssueIndices.Count));
+            }
+
+            var pageStart = GetSelectedIssuePageStart(
+                _selectedIssuePage,
+                _selectedIssueIndices.Count);
+            var pageEnd = Math.Min(
+                pageStart + MaximumDisplayedRows,
+                _selectedIssueIndices.Count);
+            var selectedVisibleIndex = _selectedIssueIndices.IndexOf(_selectedIssueIndex);
+            if (selectedVisibleIndex < pageStart || selectedVisibleIndex >= pageEnd)
+            {
+                _selectedIssueIndex = pageStart < pageEnd
+                    ? _selectedIssueIndices[pageStart]
+                    : -1;
+            }
+        }
+
+        /// <summary>選択対象の関連issue pageを変更し、page先頭へissue選択を同期します。</summary>
+        private void SetSelectedIssuePage(int page)
+        {
+            _selectedIssuePage = ClampSelectedIssuePage(
+                page,
+                GetSelectedIssuePageCount(_selectedIssueIndices.Count));
+            var pageStart = GetSelectedIssuePageStart(
+                _selectedIssuePage,
+                _selectedIssueIndices.Count);
+            _selectedIssueIndex = pageStart < _selectedIssueIndices.Count
+                ? _selectedIssueIndices[pageStart]
+                : -1;
+            _issuesScrollPosition = Vector2.zero;
+            _detailsScrollPosition = Vector2.zero;
+            _interactionMessage = string.Empty;
+            Repaint();
         }
 
         /// <summary>選択asmdefのcycle component pageを有効範囲へ変更します。</summary>
@@ -1331,12 +1472,14 @@ namespace AssemblyDependencyAudit.Editor
         /// <summary>
         /// 選択 assembly に関係する問題 index を監査結果と同じ順序で返します。
         /// </summary>
-        private IReadOnlyList<int> GetSelectedIssueIndices()
+        private IReadOnlyList<int> GetSelectedIssueIndicesFromCache()
         {
             var target = GetSelectedAssemblyReference();
-            if (target != null && _issueIndicesByPath.TryGetValue(target.AssetPath, out var targetIssueIndices))
+            if (target != null)
             {
-                return targetIssueIndices;
+                return _issueIndicesByPath.TryGetValue(target.AssetPath, out var targetIssueIndices)
+                    ? targetIssueIndices
+                    : Array.Empty<int>();
             }
 
             var node = GetSelectedNode();
@@ -1520,6 +1663,126 @@ namespace AssemblyDependencyAudit.Editor
         {
             var pageCount = GetAssemblyReferencePageCount(visibleCount);
             return ClampAssemblyReferencePage(page, pageCount) * MaximumDisplayedRows;
+        }
+
+        /// <summary>選択対象の関連issue件数から500件単位のpage数を返します。</summary>
+        internal static int GetSelectedIssuePageCount(int issueCount)
+        {
+            return issueCount <= 0
+                ? 1
+                : ((issueCount - 1) / MaximumDisplayedRows) + 1;
+        }
+
+        /// <summary>関連issue pageを有効範囲へ制限します。</summary>
+        internal static int ClampSelectedIssuePage(int page, int pageCount)
+        {
+            var safePageCount = Math.Max(1, pageCount);
+            return Math.Max(0, Math.Min(page, safePageCount - 1));
+        }
+
+        /// <summary>指定pageが関連issue一覧で開始するindexを返します。</summary>
+        internal static int GetSelectedIssuePageStart(int page, int issueCount)
+        {
+            var pageCount = GetSelectedIssuePageCount(issueCount);
+            return ClampSelectedIssuePage(page, pageCount) * MaximumDisplayedRows;
+        }
+
+        /// <summary>関連issue cache全体を検証し、result順の独立copyだけを返します。</summary>
+        internal static bool TryValidateSelectedIssueIndices(
+            AssemblyDependencyAuditResult result,
+            IReadOnlyList<int> candidateIndices,
+            out IReadOnlyList<int> validatedIndices,
+            out string errorMessage)
+        {
+            validatedIndices = Array.Empty<int>();
+            errorMessage = string.Empty;
+            if (result == null ||
+                result.Issues == null ||
+                candidateIndices == null ||
+                result.Issues.Count > AssemblyDependencyAnalyzer.MaximumIssues ||
+                candidateIndices.Count > AssemblyDependencyAnalyzer.MaximumIssues)
+            {
+                errorMessage = "関連issue resultが不正なため一覧を表示できません。";
+                return false;
+            }
+
+            for (var issueIndex = 0; issueIndex < result.Issues.Count; issueIndex++)
+            {
+                var issue = result.Issues[issueIndex];
+                if (issue == null || !IsKnownIssueKind(issue.Kind))
+                {
+                    errorMessage = "関連issue resultが不正なため一覧を表示できません。";
+                    return false;
+                }
+            }
+
+            var copy = new int[candidateIndices.Count];
+            var previousIndex = -1;
+            for (var index = 0; index < candidateIndices.Count; index++)
+            {
+                var issueIndex = candidateIndices[index];
+                if (issueIndex < 0 ||
+                    issueIndex >= result.Issues.Count ||
+                    issueIndex <= previousIndex)
+                {
+                    errorMessage = "関連issue resultが不正なため一覧を表示できません。";
+                    return false;
+                }
+
+                copy[index] = issueIndex;
+                previousIndex = issueIndex;
+            }
+
+            validatedIndices = Array.AsReadOnly(copy);
+            return true;
+        }
+
+        /// <summary>2つのissue index一覧が順序と内容まで同じかを返します。</summary>
+        private static bool HaveSameIssueIndices(
+            IReadOnlyList<int> left,
+            IReadOnlyList<int> right)
+        {
+            if (left == null || right == null || left.Count != right.Count)
+            {
+                return false;
+            }
+
+            for (var index = 0; index < left.Count; index++)
+            {
+                if (left[index] != right[index])
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>未知issue kindを一覧へ数値表示しないため既知値だけを受理します。</summary>
+        private static bool IsKnownIssueKind(AssemblyDependencyIssueKind kind)
+        {
+            switch (kind)
+            {
+                case AssemblyDependencyIssueKind.InvalidJson:
+                case AssemblyDependencyIssueKind.MissingName:
+                case AssemblyDependencyIssueKind.DuplicateName:
+                case AssemblyDependencyIssueKind.DuplicateGuid:
+                case AssemblyDependencyIssueKind.AmbiguousReference:
+                case AssemblyDependencyIssueKind.UnresolvedReference:
+                case AssemblyDependencyIssueKind.SelfReference:
+                case AssemblyDependencyIssueKind.PlayerAssemblyReferencesEditorOnly:
+                case AssemblyDependencyIssueKind.MixedReferenceKinds:
+                case AssemblyDependencyIssueKind.IncludeAndExcludePlatforms:
+                case AssemblyDependencyIssueKind.DependencyCycle:
+                case AssemblyDependencyIssueKind.InvalidAssemblyReferenceJson:
+                case AssemblyDependencyIssueKind.MissingAssemblyReference:
+                case AssemblyDependencyIssueKind.UnresolvedAssemblyReference:
+                case AssemblyDependencyIssueKind.AmbiguousAssemblyReference:
+                case AssemblyDependencyIssueKind.MultipleAssemblyOwnersInFolder:
+                    return true;
+                default:
+                    return false;
+            }
         }
 
         /// <summary>宣言参照件数から500件単位のpage数を返します。</summary>

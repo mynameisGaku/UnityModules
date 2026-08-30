@@ -277,6 +277,122 @@ namespace AssemblyDependencyAudit.Tests
         }
 
         /// <summary>
+        /// 関連issue validatorは同内容の別indexを保持し、呼出元一覧から独立したresult順copyを返します。
+        /// </summary>
+        [Test]
+        public void TryValidateSelectedIssueIndices_ReturnsIndependentResultOrderedCopy()
+        {
+            const string assetPath = "Assets/A.asmdef";
+            var issue = CreateIssue(
+                AuditEditor.AssemblyDependencyIssueKind.UnresolvedReference,
+                assetPath,
+                string.Empty,
+                "Missing");
+            var result = CreateResult(
+                new[] { CreateNode("A", assetPath, "guid-a", false) },
+                new[] { issue, issue, issue },
+                Array.Empty<AuditEditor.AssemblyReferenceTarget>());
+            var candidateIndices = new[] { 0, 2 };
+
+            var succeeded = AuditEditor.AssemblyDependencyAuditWindow.TryValidateSelectedIssueIndices(
+                result,
+                candidateIndices,
+                out var validatedIndices,
+                out var errorMessage);
+            candidateIndices[0] = 1;
+
+            Assert.That(succeeded, Is.True, errorMessage);
+            Assert.That(errorMessage, Is.Empty);
+            Assert.That(validatedIndices, Is.EqualTo(new[] { 0, 2 }));
+            Assert.That(ReferenceEquals(result.Issues[0], result.Issues[2]), Is.True);
+
+            var knownKinds = ((AuditEditor.AssemblyDependencyIssueKind[])Enum.GetValues(
+                typeof(AuditEditor.AssemblyDependencyIssueKind)));
+            var knownIssues = knownKinds
+                .Select((kind, index) => CreateIssue(
+                    kind,
+                    $"Assets/Known{index:D2}.asmdef",
+                    string.Empty,
+                    string.Empty))
+                .ToArray();
+            var knownResult = CreateResult(
+                Array.Empty<AuditEditor.AssemblyDependencyNode>(),
+                knownIssues,
+                Array.Empty<AuditEditor.AssemblyReferenceTarget>());
+            var allKnownSucceeded = AuditEditor.AssemblyDependencyAuditWindow.TryValidateSelectedIssueIndices(
+                knownResult,
+                Enumerable.Range(0, knownIssues.Length).ToArray(),
+                out var allKnownValidatedIndices,
+                out var allKnownErrorMessage);
+
+            Assert.That(knownKinds, Has.Length.EqualTo(16));
+            Assert.That(allKnownSucceeded, Is.True, allKnownErrorMessage);
+            Assert.That(allKnownValidatedIndices, Is.EqualTo(Enumerable.Range(0, knownIssues.Length)));
+
+            var maximumResult = CreateResult(
+                Array.Empty<AuditEditor.AssemblyDependencyNode>(),
+                Enumerable.Repeat(issue, 50000).ToArray(),
+                Array.Empty<AuditEditor.AssemblyReferenceTarget>());
+            var maximumSucceeded = AuditEditor.AssemblyDependencyAuditWindow.TryValidateSelectedIssueIndices(
+                maximumResult,
+                Enumerable.Range(0, 50000).ToArray(),
+                out var maximumValidatedIndices,
+                out var maximumErrorMessage);
+
+            Assert.That(maximumSucceeded, Is.True, maximumErrorMessage);
+            Assert.That(maximumValidatedIndices, Has.Count.EqualTo(50000));
+            Assert.That(maximumValidatedIndices[0], Is.Zero);
+            Assert.That(maximumValidatedIndices[49999], Is.EqualTo(49999));
+        }
+
+        /// <summary>
+        /// null、未知kind、範囲外、重複、逆順、50,000件超過はpartial indexを返さずgeneric errorへ閉じます。
+        /// </summary>
+        [Test]
+        public void TryValidateSelectedIssueIndices_RejectsInvalidInputsWithoutPartialOutput()
+        {
+            var validIssue = CreateIssue(
+                AuditEditor.AssemblyDependencyIssueKind.UnresolvedReference,
+                "Assets/A.asmdef",
+                string.Empty,
+                "Missing");
+            var validResult = CreateResult(
+                Array.Empty<AuditEditor.AssemblyDependencyNode>(),
+                new[] { validIssue, validIssue },
+                Array.Empty<AuditEditor.AssemblyReferenceTarget>());
+            var nullIssueResult = CreateResult(
+                Array.Empty<AuditEditor.AssemblyDependencyNode>(),
+                new AuditEditor.AssemblyDependencyIssue[] { validIssue, null },
+                Array.Empty<AuditEditor.AssemblyReferenceTarget>());
+            var unknownIssueResult = CreateResult(
+                Array.Empty<AuditEditor.AssemblyDependencyNode>(),
+                new[]
+                {
+                    CreateIssue(
+                        (AuditEditor.AssemblyDependencyIssueKind)int.MaxValue,
+                        "Assets/Unknown.asmdef",
+                        string.Empty,
+                        string.Empty)
+                },
+                Array.Empty<AuditEditor.AssemblyReferenceTarget>());
+            var excessiveIssuesResult = CreateResult(
+                Array.Empty<AuditEditor.AssemblyDependencyNode>(),
+                Enumerable.Repeat(validIssue, 50001).ToArray(),
+                Array.Empty<AuditEditor.AssemblyReferenceTarget>());
+
+            AssertSelectedIssueIndicesRejected(null, Array.Empty<int>());
+            AssertSelectedIssueIndicesRejected(validResult, null);
+            AssertSelectedIssueIndicesRejected(nullIssueResult, Array.Empty<int>());
+            AssertSelectedIssueIndicesRejected(unknownIssueResult, Array.Empty<int>());
+            AssertSelectedIssueIndicesRejected(validResult, new[] { -1 });
+            AssertSelectedIssueIndicesRejected(validResult, new[] { 2 });
+            AssertSelectedIssueIndicesRejected(validResult, new[] { 0, 0 });
+            AssertSelectedIssueIndicesRejected(validResult, new[] { 1, 0 });
+            AssertSelectedIssueIndicesRejected(validResult, Enumerable.Repeat(0, 50001).ToArray());
+            AssertSelectedIssueIndicesRejected(excessiveIssuesResult, Array.Empty<int>());
+        }
+
+        /// <summary>
         /// 501件目もexact path searchでfiltered一覧の先頭へ到達し、500行capの外へ隠れません。
         /// </summary>
         [Test]
@@ -309,6 +425,37 @@ namespace AssemblyDependencyAudit.Tests
             Assert.That(AuditEditor.AssemblyDependencyAuditWindow.GetAssemblyReferencePageStart(0, 501), Is.Zero);
             Assert.That(AuditEditor.AssemblyDependencyAuditWindow.GetAssemblyReferencePageStart(1, 501), Is.EqualTo(500));
             Assert.That(AuditEditor.AssemblyDependencyAuditWindow.GetAssemblyReferencePageStart(99, 501), Is.EqualTo(500));
+        }
+
+        /// <summary>
+        /// 関連issueは500件単位で0、境界、超過、上限50,000件の全pageへ隙間なく到達できます。
+        /// </summary>
+        [Test]
+        public void SelectedIssuePaging_HandlesZeroExactOverflowAndMaximumCounts()
+        {
+            Assert.That(AuditEditor.AssemblyDependencyAuditWindow.GetSelectedIssuePageCount(-1), Is.EqualTo(1));
+            Assert.That(AuditEditor.AssemblyDependencyAuditWindow.GetSelectedIssuePageCount(0), Is.EqualTo(1));
+            Assert.That(AuditEditor.AssemblyDependencyAuditWindow.GetSelectedIssuePageCount(500), Is.EqualTo(1));
+            Assert.That(AuditEditor.AssemblyDependencyAuditWindow.GetSelectedIssuePageCount(501), Is.EqualTo(2));
+            Assert.That(AuditEditor.AssemblyDependencyAuditWindow.GetSelectedIssuePageCount(50000), Is.EqualTo(100));
+            Assert.That(AuditEditor.AssemblyDependencyAuditWindow.ClampSelectedIssuePage(-1, 100), Is.Zero);
+            Assert.That(AuditEditor.AssemblyDependencyAuditWindow.ClampSelectedIssuePage(100, 100), Is.EqualTo(99));
+            Assert.That(AuditEditor.AssemblyDependencyAuditWindow.GetSelectedIssuePageStart(0, 0), Is.Zero);
+            Assert.That(AuditEditor.AssemblyDependencyAuditWindow.GetSelectedIssuePageStart(1, 501), Is.EqualTo(500));
+            Assert.That(AuditEditor.AssemblyDependencyAuditWindow.GetSelectedIssuePageStart(999, 50000), Is.EqualTo(49500));
+
+            var reachedIssueCount = 0;
+            var pageCount = AuditEditor.AssemblyDependencyAuditWindow.GetSelectedIssuePageCount(50000);
+            for (var page = 0; page < pageCount; page++)
+            {
+                var pageStart = AuditEditor.AssemblyDependencyAuditWindow.GetSelectedIssuePageStart(page, 50000);
+                Assert.That(pageStart, Is.EqualTo(reachedIssueCount));
+                reachedIssueCount = Math.Min(
+                    pageStart + AuditEditor.AssemblyDependencyAuditWindow.MaximumDisplayedRows,
+                    50000);
+            }
+
+            Assert.That(reachedIssueCount, Is.EqualTo(50000));
         }
 
         /// <summary>
@@ -1008,7 +1155,7 @@ namespace AssemblyDependencyAudit.Tests
                 assemblyPath,
                 assemblyReferencePath,
                 "Assets/Feature");
-            var result = CreateResult(new[] { node }, new[] { issue }, new[] { target });
+            var result = CreateResult(new[] { node }, new[] { issue, issue }, new[] { target });
             var window = ScriptableObject.CreateInstance<AuditEditor.AssemblyDependencyAuditWindow>();
             try
             {
@@ -1016,9 +1163,71 @@ namespace AssemblyDependencyAudit.Tests
 
                 InvokeInstance(window, "SelectAssembly", 0);
                 Assert.That(ReferenceEquals(InvokeInstance(window, "GetSelectedIssue"), issue), Is.True);
+                Assert.That(GetField<List<int>>(window, "_selectedIssueIndices"), Is.EqualTo(new[] { 0, 1 }));
 
                 InvokeInstance(window, "SelectAssemblyReference", 0);
                 Assert.That(ReferenceEquals(InvokeInstance(window, "GetSelectedIssue"), issue), Is.True);
+                Assert.That(GetField<List<int>>(window, "_selectedIssueIndices"), Is.EqualTo(new[] { 0, 1 }));
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(window);
+            }
+        }
+
+        /// <summary>
+        /// 問題がないasmrefを選んだ間は解決先asmdefの問題を表示せず、無効選択ではasmdefへ戻します。
+        /// </summary>
+        [Test]
+        public void AssemblyReferenceSelection_UsesOnlyItsOwnIssuesAndInvalidSelectionRestoresAssemblyIssues()
+        {
+            const string assemblyPath = "Assets/A.asmdef";
+            var node = CreateNode("A", assemblyPath, "guid-a", false);
+            var target = new AuditEditor.AssemblyReferenceTarget(
+                "Assets/A.asmref",
+                "A",
+                AuditEditor.AssemblyReferenceTargetKind.Name,
+                assemblyPath);
+            var issue = CreateIssue(
+                AuditEditor.AssemblyDependencyIssueKind.UnresolvedReference,
+                assemblyPath,
+                string.Empty,
+                "Missing");
+            var result = CreateResult(
+                new[] { node },
+                Enumerable.Repeat(issue, 501).ToArray(),
+                new[] { target });
+            var window = ScriptableObject.CreateInstance<AuditEditor.AssemblyDependencyAuditWindow>();
+            try
+            {
+                InitializeWindow(window, result);
+                InvokeInstance(window, "SelectAssembly", 0);
+                InvokeInstance(window, "SetSelectedIssuePage", 1);
+
+                InvokeInstance(window, "SelectAssemblyReference", 0);
+
+                Assert.That(GetField<int>(window, "_selectedAssemblyIndex"), Is.Zero);
+                Assert.That(GetField<int>(window, "_selectedAssemblyReferenceIndex"), Is.Zero);
+                Assert.That(GetField<List<int>>(window, "_selectedIssueIndices"), Is.Empty);
+                Assert.That(GetField<int>(window, "_selectedIssuePage"), Is.Zero);
+                Assert.That(GetField<int>(window, "_selectedIssueIndex"), Is.EqualTo(-1));
+
+                InvokeInstance(window, "SelectAssemblyReference", -1);
+
+                Assert.That(GetField<int>(window, "_selectedAssemblyReferenceIndex"), Is.EqualTo(-1));
+                Assert.That(GetField<List<int>>(window, "_selectedIssueIndices"),
+                    Is.EqualTo(Enumerable.Range(0, 501)));
+                Assert.That(GetField<int>(window, "_selectedIssuePage"), Is.Zero);
+                Assert.That(GetField<int>(window, "_selectedIssueIndex"), Is.Zero);
+
+                InvokeInstance(window, "SelectAssemblyReference", 0);
+                InvokeInstance(window, "SelectAssemblyReference", result.AssemblyReferences.Count);
+
+                Assert.That(GetField<int>(window, "_selectedAssemblyReferenceIndex"), Is.EqualTo(-1));
+                Assert.That(GetField<List<int>>(window, "_selectedIssueIndices"),
+                    Is.EqualTo(Enumerable.Range(0, 501)));
+                Assert.That(GetField<int>(window, "_selectedIssuePage"), Is.Zero);
+                Assert.That(GetField<int>(window, "_selectedIssueIndex"), Is.Zero);
             }
             finally
             {
@@ -1106,6 +1315,217 @@ namespace AssemblyDependencyAudit.Tests
                 Assert.That(GetField<int>(window, "_assemblyReferencePage"), Is.Zero);
                 Assert.That(GetField<int>(window, "_selectedAssemblyReferenceIndex"), Is.EqualTo(500));
                 Assert.That(GetField<List<int>>(window, "_visibleAssemblyReferenceIndices"), Is.EqualTo(new[] { 500 }));
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(window);
+            }
+        }
+
+        /// <summary>
+        /// asmdefとasmrefの501件をpage移動するとpage先頭を選択し、IssueとDetailsだけを先頭へ戻します。
+        /// </summary>
+        [TestCase(false)]
+        [TestCase(true)]
+        public void SelectedIssuePage_ChangesSelectionAndScrollWithoutChangingOtherDetailPages(
+            bool selectAssemblyReference)
+        {
+            var assetPath = selectAssemblyReference ? "Assets/A.asmref" : "Assets/A.asmdef";
+            var issue = CreateIssue(
+                selectAssemblyReference
+                    ? AuditEditor.AssemblyDependencyIssueKind.UnresolvedAssemblyReference
+                    : AuditEditor.AssemblyDependencyIssueKind.UnresolvedReference,
+                assetPath,
+                string.Empty,
+                "Missing");
+            var assemblies = selectAssemblyReference
+                ? Array.Empty<AuditEditor.AssemblyDependencyNode>()
+                : new[] { CreateNode("A", assetPath, "guid-a", false) };
+            var assemblyReferences = selectAssemblyReference
+                ? new[]
+                {
+                    new AuditEditor.AssemblyReferenceTarget(
+                        assetPath,
+                        "Missing",
+                        AuditEditor.AssemblyReferenceTargetKind.Name,
+                        string.Empty)
+                }
+                : Array.Empty<AuditEditor.AssemblyReferenceTarget>();
+            var result = CreateResult(
+                assemblies,
+                Enumerable.Repeat(issue, 501).ToArray(),
+                assemblyReferences);
+            var window = ScriptableObject.CreateInstance<AuditEditor.AssemblyDependencyAuditWindow>();
+            try
+            {
+                InitializeWindow(window, result);
+                InvokeInstance(
+                    window,
+                    selectAssemblyReference ? "SelectAssemblyReference" : "SelectAssembly",
+                    0);
+                Assert.That(GetField<List<int>>(window, "_selectedIssueIndices"),
+                    Is.EqualTo(Enumerable.Range(0, 501)));
+
+                SetField(window, "_declaredReferencePage", 7);
+                SetField(window, "_cycleComponentPage", 6);
+                SetField(window, "_issuesScrollPosition", new Vector2(12f, 34f));
+                SetField(window, "_detailsScrollPosition", new Vector2(56f, 78f));
+                SetField(window, "_interactionMessage", "stale message");
+
+                InvokeInstance(window, "SetSelectedIssuePage", 99);
+
+                Assert.That(GetField<int>(window, "_selectedIssuePage"), Is.EqualTo(1));
+                Assert.That(GetField<int>(window, "_selectedIssueIndex"), Is.EqualTo(500));
+                Assert.That(GetField<Vector2>(window, "_issuesScrollPosition"), Is.EqualTo(Vector2.zero));
+                Assert.That(GetField<Vector2>(window, "_detailsScrollPosition"), Is.EqualTo(Vector2.zero));
+                Assert.That(GetField<string>(window, "_interactionMessage"), Is.Empty);
+                Assert.That(GetField<int>(window, "_declaredReferencePage"), Is.EqualTo(7));
+                Assert.That(GetField<int>(window, "_cycleComponentPage"), Is.EqualTo(6));
+
+                InvokeInstance(window, "RebuildSelectedIssueIndices", false);
+                Assert.That(GetField<int>(window, "_selectedIssuePage"), Is.EqualTo(1));
+                Assert.That(GetField<int>(window, "_selectedIssueIndex"), Is.EqualTo(500));
+
+                InvokeInstance(window, "SetSelectedIssuePage", 0);
+                Assert.That(GetField<int>(window, "_selectedIssuePage"), Is.Zero);
+                Assert.That(GetField<int>(window, "_selectedIssueIndex"), Is.Zero);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(window);
+            }
+        }
+
+        /// <summary>
+        /// filter後も同じ関連集合ならpageを保ち、別assetへ選択が移ると新集合のpage 0へ置き換えます。
+        /// </summary>
+        [Test]
+        public void SelectedIssueFilterTransition_PreservesSameCollectionAndResetsReplacement()
+        {
+            const string firstPath = "Assets/A.asmdef";
+            const string secondPath = "Assets/B.asmdef";
+            var firstIssue = CreateIssue(
+                AuditEditor.AssemblyDependencyIssueKind.UnresolvedReference,
+                firstPath,
+                string.Empty,
+                "MissingA");
+            var secondIssue = CreateIssue(
+                AuditEditor.AssemblyDependencyIssueKind.UnresolvedReference,
+                secondPath,
+                string.Empty,
+                "MissingB");
+            var issues = Enumerable.Repeat(firstIssue, 501).Concat(new[] { secondIssue }).ToArray();
+            var result = CreateResult(
+                new[]
+                {
+                    CreateNode("A", firstPath, "guid-a", false),
+                    CreateNode("B", secondPath, "guid-b", false)
+                },
+                issues,
+                Array.Empty<AuditEditor.AssemblyReferenceTarget>());
+            var window = ScriptableObject.CreateInstance<AuditEditor.AssemblyDependencyAuditWindow>();
+            try
+            {
+                InitializeWindow(window, result);
+                InvokeInstance(window, "SelectAssembly", 0);
+                InvokeInstance(window, "SetSelectedIssuePage", 1);
+                SetField(window, "_searchText", firstPath);
+
+                InvokeInstance(window, "RebuildVisibleAssemblyIndices", true);
+
+                Assert.That(GetField<int>(window, "_selectedAssemblyIndex"), Is.Zero);
+                Assert.That(GetField<int>(window, "_selectedIssuePage"), Is.EqualTo(1));
+                Assert.That(GetField<int>(window, "_selectedIssueIndex"), Is.EqualTo(500));
+                Assert.That(GetField<List<int>>(window, "_selectedIssueIndices"), Has.Count.EqualTo(501));
+
+                SetField(window, "_issuesScrollPosition", new Vector2(10f, 20f));
+                SetField(window, "_detailsScrollPosition", new Vector2(30f, 40f));
+                SetField(window, "_searchText", secondPath);
+                InvokeInstance(window, "RebuildVisibleAssemblyIndices", true);
+
+                Assert.That(GetField<int>(window, "_selectedAssemblyIndex"), Is.EqualTo(1));
+                Assert.That(GetField<int>(window, "_selectedIssuePage"), Is.Zero);
+                Assert.That(GetField<int>(window, "_selectedIssueIndex"), Is.EqualTo(501));
+                Assert.That(GetField<List<int>>(window, "_selectedIssueIndices"), Is.EqualTo(new[] { 501 }));
+                Assert.That(GetField<Vector2>(window, "_issuesScrollPosition"), Is.EqualTo(Vector2.zero));
+                Assert.That(GetField<Vector2>(window, "_detailsScrollPosition"), Is.EqualTo(Vector2.zero));
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(window);
+            }
+        }
+
+        /// <summary>
+        /// 注入cacheが逆順なら旧pageとpartial issueを破棄し、generic errorだけを残します。
+        /// </summary>
+        [Test]
+        public void SelectedIssueCache_InvalidInjectedOrderFailsClosedWithoutPartialState()
+        {
+            const string assetPath = "Assets/A.asmdef";
+            var issue = CreateIssue(
+                AuditEditor.AssemblyDependencyIssueKind.UnresolvedReference,
+                assetPath,
+                string.Empty,
+                "Missing");
+            var result = CreateResult(
+                new[] { CreateNode("A", assetPath, "guid-a", false) },
+                new[] { issue, issue },
+                Array.Empty<AuditEditor.AssemblyReferenceTarget>());
+            var window = ScriptableObject.CreateInstance<AuditEditor.AssemblyDependencyAuditWindow>();
+            try
+            {
+                InitializeWindow(window, result);
+                InvokeInstance(window, "SelectAssembly", 0);
+                var cache = GetField<Dictionary<string, List<int>>>(window, "_issueIndicesByPath");
+                cache[assetPath].Clear();
+                cache[assetPath].Add(1);
+                cache[assetPath].Add(0);
+                SetField(window, "_selectedIssuePage", 9);
+                SetField(window, "_selectedIssueIndex", 1);
+                SetField(window, "_selectedIssueErrorMessage", "stale error");
+
+                InvokeInstance(window, "RebuildSelectedIssueIndices", false);
+
+                Assert.That(GetField<List<int>>(window, "_selectedIssueIndices"), Is.Empty);
+                Assert.That(GetField<int>(window, "_selectedIssuePage"), Is.Zero);
+                Assert.That(GetField<int>(window, "_selectedIssueIndex"), Is.EqualTo(-1));
+                Assert.That(
+                    GetField<string>(window, "_selectedIssueErrorMessage"),
+                    Is.EqualTo("関連issue resultが不正なため一覧を表示できません。"));
+
+                var invalidResults = new[]
+                {
+                    CreateResult(
+                        Array.Empty<AuditEditor.AssemblyDependencyNode>(),
+                        new AuditEditor.AssemblyDependencyIssue[] { null },
+                        Array.Empty<AuditEditor.AssemblyReferenceTarget>()),
+                    CreateResult(
+                        Array.Empty<AuditEditor.AssemblyDependencyNode>(),
+                        new[]
+                        {
+                            CreateIssue(
+                                (AuditEditor.AssemblyDependencyIssueKind)int.MaxValue,
+                                "Assets/Unknown.asmdef",
+                                string.Empty,
+                                string.Empty)
+                        },
+                        Array.Empty<AuditEditor.AssemblyReferenceTarget>())
+                };
+                foreach (var invalidResult in invalidResults)
+                {
+                    SetField(window, "_result", invalidResult);
+                    SetStaleSelectedIssueWindowState(window);
+                    InvokeInstance(window, "RebuildResultCaches");
+
+                    Assert.That(GetField<List<int>>(window, "_selectedIssueIndices"), Is.Empty);
+                    Assert.That(GetField<int>(window, "_selectedIssuePage"), Is.Zero);
+                    Assert.That(GetField<int>(window, "_selectedIssueIndex"), Is.EqualTo(-1));
+                    Assert.That(
+                        GetField<string>(window, "_selectedIssueErrorMessage"),
+                        Is.EqualTo("関連issue resultが不正なため一覧を表示できません。"));
+                    Assert.That(GetField<Dictionary<string, List<int>>>(window, "_issueIndicesByPath"), Is.Empty);
+                }
             }
             finally
             {
@@ -1287,7 +1707,7 @@ namespace AssemblyDependencyAudit.Tests
         }
 
         /// <summary>
-        /// real Service/AnalyzerのRefresh成功はcycle cacheを再構築し、typed failureとthrowはstale stateを全破棄します。
+        /// real Service/AnalyzerのRefresh成功はdetail cacheを再構築し、typed failureとthrowはstale stateを全破棄します。
         /// </summary>
         [Test]
         public void RefreshAudit_RebuildsCycleCacheAndFailuresClearStaleState()
@@ -1320,6 +1740,7 @@ namespace AssemblyDependencyAudit.Tests
                 SetField(window, "_cycleComponentPage", 7);
                 GetField<List<string>>(window, "_selectedCycleComponentMemberPaths").Add("Assets/Stale.asmdef");
                 SetField(window, "_cycleComponentErrorMessage", "stale error");
+                SetStaleSelectedIssueWindowState(window);
                 SetField(window, "_detailsScrollPosition", new Vector2(12f, 34f));
 
                 InvokeInstance(window, "RefreshAudit");
@@ -1333,10 +1754,16 @@ namespace AssemblyDependencyAudit.Tests
                 }));
                 Assert.That(GetField<int>(window, "_cycleComponentPage"), Is.Zero);
                 Assert.That(GetField<string>(window, "_cycleComponentErrorMessage"), Is.Empty);
+                Assert.That(GetField<int>(window, "_selectedIssuePage"), Is.Zero);
+                Assert.That(GetField<List<int>>(window, "_selectedIssueIndices"), Is.EqualTo(new[] { 0 }));
+                Assert.That(GetField<int>(window, "_selectedIssueIndex"), Is.Zero);
+                Assert.That(GetField<string>(window, "_selectedIssueErrorMessage"), Is.Empty);
+                Assert.That(GetField<Vector2>(window, "_issuesScrollPosition"), Is.EqualTo(Vector2.zero));
                 Assert.That(GetField<Vector2>(window, "_detailsScrollPosition"), Is.EqualTo(Vector2.zero));
 
                 SetField(window, "_cycleComponentPage", 6);
                 SetField(window, "_cycleComponentErrorMessage", "stale error");
+                SetStaleSelectedIssueWindowState(window);
                 adapter.ReadSucceeds = false;
                 adapter.ReadAuditError = AuditEditor.AssemblyDependencyAuditError.SourceUnavailable;
                 adapter.ReadError = "fixture typed failure";
@@ -1352,8 +1779,10 @@ namespace AssemblyDependencyAudit.Tests
                 SetField(window, "_service", new AuditEditor.AssemblyDependencyAuditService(adapter));
                 InvokeInstance(window, "RefreshAudit");
                 Assert.That(GetField<List<string>>(window, "_selectedCycleComponentMemberPaths"), Has.Count.EqualTo(3));
+                Assert.That(GetField<List<int>>(window, "_selectedIssueIndices"), Is.EqualTo(new[] { 0 }));
                 SetField(window, "_cycleComponentPage", 5);
                 SetField(window, "_cycleComponentErrorMessage", "stale error");
+                SetStaleSelectedIssueWindowState(window);
                 SetField(window, "_service", new AuditEditor.AssemblyDependencyAuditService(
                     new ThrowingAssemblyDependencySourceAdapter()));
 
@@ -1361,6 +1790,60 @@ namespace AssemblyDependencyAudit.Tests
 
                 AssertClearedCycleWindowState(window);
                 Assert.That(GetField<string>(window, "_auditErrorMessage"), Does.Contain("fixture throw"));
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(window);
+            }
+        }
+
+        /// <summary>
+        /// Refresh成功はasmref path選択を復元し、関連issueをpage 0から完全に再構築します。
+        /// </summary>
+        [Test]
+        public void RefreshAudit_RestoresAssemblyReferenceAndResetsSelectedIssuePage()
+        {
+            const string assemblyReferencePath = "Assets/Refs/Missing.asmref";
+            var adapter = new FakeAssemblyDependencySourceAdapter
+            {
+                Sources = new[]
+                {
+                    AssemblyDependencyTestData.CreateSource(
+                        "Assets/Runtime/A.asmdef",
+                        "A",
+                        "guid-a")
+                },
+                AssemblyReferenceSources = new[]
+                {
+                    AssemblyDependencyTestData.CreateAssemblyReferenceSource(
+                        assemblyReferencePath,
+                        "guid-ref",
+                        "Missing")
+                }
+            };
+            var window = ScriptableObject.CreateInstance<AuditEditor.AssemblyDependencyAuditWindow>();
+            try
+            {
+                SetField(window, "_service", new AuditEditor.AssemblyDependencyAuditService(adapter));
+                InvokeInstance(window, "RefreshAudit");
+                InvokeInstance(window, "SelectAssemblyReference", 0);
+                Assert.That(GetField<List<int>>(window, "_selectedIssueIndices"), Is.EqualTo(new[] { 0 }));
+                SetField(window, "_selectedIssuePage", 9);
+                SetField(window, "_issuesScrollPosition", new Vector2(11f, 22f));
+                SetField(window, "_detailsScrollPosition", new Vector2(33f, 44f));
+
+                InvokeInstance(window, "RefreshAudit");
+
+                Assert.That(GetField<int>(window, "_selectedAssemblyReferenceIndex"), Is.Zero);
+                Assert.That(
+                    ((AuditEditor.AssemblyReferenceTarget)InvokeInstance(window, "GetSelectedAssemblyReference")).AssetPath,
+                    Is.EqualTo(assemblyReferencePath));
+                Assert.That(GetField<int>(window, "_selectedIssuePage"), Is.Zero);
+                Assert.That(GetField<List<int>>(window, "_selectedIssueIndices"), Is.EqualTo(new[] { 0 }));
+                Assert.That(GetField<int>(window, "_selectedIssueIndex"), Is.Zero);
+                Assert.That(GetField<string>(window, "_selectedIssueErrorMessage"), Is.Empty);
+                Assert.That(GetField<Vector2>(window, "_issuesScrollPosition"), Is.EqualTo(Vector2.zero));
+                Assert.That(GetField<Vector2>(window, "_detailsScrollPosition"), Is.EqualTo(Vector2.zero));
             }
             finally
             {
@@ -1399,6 +1882,7 @@ namespace AssemblyDependencyAudit.Tests
                 SetField(window, "_cycleComponentPage", 6);
                 GetField<List<string>>(window, "_selectedCycleComponentMemberPaths").Add("Assets/Stale.asmdef");
                 SetField(window, "_cycleComponentErrorMessage", "stale error");
+                SetStaleSelectedIssueWindowState(window);
                 SetField(window, "_detailsScrollPosition", new Vector2(12f, 34f));
 
                 InvokeInstance(window, "SelectAssembly", 0);
@@ -1410,12 +1894,14 @@ namespace AssemblyDependencyAudit.Tests
                 Assert.That(GetField<int>(window, "_cycleComponentPage"), Is.Zero);
                 Assert.That(GetField<List<string>>(window, "_selectedCycleComponentMemberPaths"), Is.Empty);
                 Assert.That(GetField<string>(window, "_cycleComponentErrorMessage"), Is.Empty);
+                AssertEmptySelectedIssueWindowState(window);
                 Assert.That(GetField<Vector2>(window, "_detailsScrollPosition"), Is.EqualTo(Vector2.zero));
 
                 SetField(window, "_declaredReferencePage", 8);
                 SetField(window, "_cycleComponentPage", 7);
                 GetField<List<string>>(window, "_selectedCycleComponentMemberPaths").Add("Assets/Stale.asmdef");
                 SetField(window, "_cycleComponentErrorMessage", "stale error");
+                SetStaleSelectedIssueWindowState(window);
                 SetField(window, "_detailsScrollPosition", new Vector2(56f, 78f));
                 InvokeInstance(window, "SelectAssemblyReference", 0);
 
@@ -1425,12 +1911,14 @@ namespace AssemblyDependencyAudit.Tests
                 Assert.That(GetField<int>(window, "_cycleComponentPage"), Is.Zero);
                 Assert.That(GetField<List<string>>(window, "_selectedCycleComponentMemberPaths"), Is.Empty);
                 Assert.That(GetField<string>(window, "_cycleComponentErrorMessage"), Is.Empty);
+                AssertEmptySelectedIssueWindowState(window);
                 Assert.That(GetField<Vector2>(window, "_detailsScrollPosition"), Is.EqualTo(Vector2.zero));
 
                 SetField(window, "_declaredReferencePage", 8);
                 SetField(window, "_cycleComponentPage", 7);
                 GetField<List<string>>(window, "_selectedCycleComponentMemberPaths").Add("Assets/Stale.asmdef");
                 SetField(window, "_cycleComponentErrorMessage", "stale error");
+                SetStaleSelectedIssueWindowState(window);
                 SetField(window, "_detailsScrollPosition", new Vector2(90f, 123f));
                 InvokeInstance(window, "SelectAssembly", 0);
 
@@ -1439,12 +1927,14 @@ namespace AssemblyDependencyAudit.Tests
                 Assert.That(GetField<int>(window, "_cycleComponentPage"), Is.Zero);
                 Assert.That(GetField<List<string>>(window, "_selectedCycleComponentMemberPaths"), Is.Empty);
                 Assert.That(GetField<string>(window, "_cycleComponentErrorMessage"), Is.Empty);
+                AssertEmptySelectedIssueWindowState(window);
                 Assert.That(GetField<Vector2>(window, "_detailsScrollPosition"), Is.EqualTo(Vector2.zero));
 
                 SetField(window, "_declaredReferencePage", 8);
                 SetField(window, "_cycleComponentPage", 7);
                 GetField<List<string>>(window, "_selectedCycleComponentMemberPaths").Add("Assets/Stale.asmdef");
                 SetField(window, "_cycleComponentErrorMessage", "stale error");
+                SetStaleSelectedIssueWindowState(window);
                 SetField(window, "_detailsScrollPosition", new Vector2(145f, 167f));
                 InvokeInstance(window, "ClearAuditResult");
 
@@ -1455,6 +1945,7 @@ namespace AssemblyDependencyAudit.Tests
                 Assert.That(GetField<int>(window, "_cycleComponentPage"), Is.Zero);
                 Assert.That(GetField<List<string>>(window, "_selectedCycleComponentMemberPaths"), Is.Empty);
                 Assert.That(GetField<string>(window, "_cycleComponentErrorMessage"), Is.Empty);
+                AssertEmptySelectedIssueWindowState(window);
                 Assert.That(GetField<Vector2>(window, "_detailsScrollPosition"), Is.EqualTo(Vector2.zero));
             }
             finally
@@ -1713,13 +2204,54 @@ namespace AssemblyDependencyAudit.Tests
             }
         }
 
-        /// <summary>Refresh failureまたはClear後のcycle stateが完全に空かを検証します。</summary>
+        /// <summary>不正な関連issue入力がgeneric errorと空indexだけを返すことを共通検証します。</summary>
+        private static void AssertSelectedIssueIndicesRejected(
+            AuditEditor.AssemblyDependencyAuditResult result,
+            IReadOnlyList<int> candidateIndices)
+        {
+            var succeeded = AuditEditor.AssemblyDependencyAuditWindow.TryValidateSelectedIssueIndices(
+                result,
+                candidateIndices,
+                out var validatedIndices,
+                out var errorMessage);
+
+            Assert.That(succeeded, Is.False);
+            Assert.That(validatedIndices, Is.Empty);
+            Assert.That(errorMessage, Is.EqualTo("関連issue resultが不正なため一覧を表示できません。"));
+        }
+
+        /// <summary>選択issueの古いpage、cache、error、scrollをWindowへ注入します。</summary>
+        private static void SetStaleSelectedIssueWindowState(
+            AuditEditor.AssemblyDependencyAuditWindow window)
+        {
+            SetField(window, "_selectedIssuePage", 9);
+            var issueIndices = GetField<List<int>>(window, "_selectedIssueIndices");
+            issueIndices.Clear();
+            issueIndices.Add(123);
+            SetField(window, "_selectedIssueIndex", 123);
+            SetField(window, "_selectedIssueErrorMessage", "stale issue error");
+            SetField(window, "_issuesScrollPosition", new Vector2(21f, 43f));
+        }
+
+        /// <summary>問題がない選択またはClear後に関連issue stateが完全に空かを検証します。</summary>
+        private static void AssertEmptySelectedIssueWindowState(
+            AuditEditor.AssemblyDependencyAuditWindow window)
+        {
+            Assert.That(GetField<int>(window, "_selectedIssuePage"), Is.Zero);
+            Assert.That(GetField<List<int>>(window, "_selectedIssueIndices"), Is.Empty);
+            Assert.That(GetField<int>(window, "_selectedIssueIndex"), Is.EqualTo(-1));
+            Assert.That(GetField<string>(window, "_selectedIssueErrorMessage"), Is.Empty);
+            Assert.That(GetField<Vector2>(window, "_issuesScrollPosition"), Is.EqualTo(Vector2.zero));
+        }
+
+        /// <summary>Refresh failureまたはClear後のcycleと関連issue stateが完全に空かを検証します。</summary>
         private static void AssertClearedCycleWindowState(AuditEditor.AssemblyDependencyAuditWindow window)
         {
             Assert.That(GetField<AuditEditor.AssemblyDependencyAuditResult>(window, "_result"), Is.Null);
             Assert.That(GetField<int>(window, "_cycleComponentPage"), Is.Zero);
             Assert.That(GetField<List<string>>(window, "_selectedCycleComponentMemberPaths"), Is.Empty);
             Assert.That(GetField<string>(window, "_cycleComponentErrorMessage"), Is.Empty);
+            AssertEmptySelectedIssueWindowState(window);
             Assert.That(GetField<Vector2>(window, "_detailsScrollPosition"), Is.EqualTo(Vector2.zero));
         }
 

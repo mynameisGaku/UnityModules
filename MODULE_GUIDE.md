@@ -74,6 +74,7 @@ manufacturer文字列の推測、入力消費、rebind、pairing、player別追�
 ### Assembly依存チェック（Assembly Dependency Audit）
 
 `Assets`と導入済み`Packages`のasmdefをread-onlyで走査し、参照元・assembly・参照先の3列graphと構造上の問題を表示する。
+選択asmdef／asmrefに関係するissueはresult順と別issueの重複を保ち、同じresult indexだけをまとめて500件ずつ、result上限50,000件に対応する最大100 pageまで表示する。page移動、選択、filter、Refresh、result clearのstateを明示し、不正な関連cacheは部分表示しない。
 選択asmdefが循環へ属する場合はstrongly connected componentの全memberをasset path順で500件ずつ、asmdef上限10,000件に対応する最大20 pageまで表示する。この順序はcycle pathやedge順を表さず、単独の自己参照は既存issueで確認する。
 選択asmdefの宣言参照は元の順序と重複を保ち、Name／GUIDのraw valueと一意な解決先を500件ずつ既存上限4,096件まで表示する。graphは同じ解決先へのedgeを1本にまとめ、`Not uniquely resolved`の未解決／曖昧は既存Issue Detailsで区別する。
 asmrefは別一覧で不正JSON、欠落・未解決・曖昧なtargetを検査し、同じfolderのasmdef／asmref owner候補競合は各assetへ報告する。asmdef依存graphへ推測したedgeは追加しない。

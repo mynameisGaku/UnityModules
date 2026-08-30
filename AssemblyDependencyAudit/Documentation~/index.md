@@ -1,8 +1,8 @@
-# Assembly依存チェック 1.4.0
+# Assembly依存チェック 1.5.0
 
 ## 目的
 
-`Assets`と導入済み`Packages`のAssembly Definition（`.asmdef`）を読み取り、参照関係、選択`.asmdef`が属する循環componentのmember集合、宣言単位の参照解決、構成上の問題を1つのEditorWindowで確認します。Assembly Definition Reference（`.asmref`）は別一覧でtargetの整合性を検査し、同じfolderに複数あるassembly owner候補も報告します。read-onlyの検査に限定し、Project fileは変更しません。
+`Assets`と導入済み`Packages`のAssembly Definition（`.asmdef`）を読み取り、参照関係、選択`.asmdef`または`.asmref`に関係する全issue、循環componentのmember集合、宣言単位の参照解決、構成上の問題を1つのEditorWindowで確認します。Assembly Definition Reference（`.asmref`）は別一覧でtargetの整合性を検査し、同じfolderに複数あるassembly owner候補も報告します。read-onlyの検査に限定し、Project fileは変更しません。
 
 ## 操作順
 
@@ -11,10 +11,11 @@
 3. 中央の`Assemblies`列から対象を選びます。
 4. 左の`Referenced By`で直接の参照元を確認します。
 5. 右の`Depends On`で直接の参照先を確認します。
-6. 循環問題がある場合は`Details`の`Cycle Component Members`で、選択`.asmdef`と同じcomponentのmemberを確認します。
-7. `Details`の`Declared References`で、選択`.asmdef`のName／GUID参照と解決先を確認します。
-8. `Assembly References`で`.asmref`の元path、reference、解決先を確認します。
-9. 検索と問題filterで対象を絞り、asset pathと問題内容を確認します。
+6. `Issues`の`Prev`／`Next`で、選択した`.asmdef`に関係するissueを確認します。
+7. 循環問題がある場合は`Details`の`Cycle Component Members`で、選択`.asmdef`と同じcomponentのmemberを確認します。
+8. `Details`の`Declared References`で、選択`.asmdef`のName／GUID参照と解決先を確認します。
+9. `Assembly References`で`.asmref`を選び、その元path、reference、解決先と関係するissueを確認します。
+10. 検索と問題filterで対象を絞り、asset pathと問題内容を確認します。
 
 ## 3列view
 
@@ -25,6 +26,14 @@
 | Depends On | 選択Assemblyが直接参照しているAssembly |
 
 名前参照と`GUID:`参照は、Unityが解決できるAssembly Definitionのpathへ対応付けます。Assembly名はUnity compilerと同じく大小文字を区別せず、解決先がない参照や、同名候補が複数あって決定できない参照はgraphへ推測で追加せず、問題として表示します。
+
+## 選択assetに関係するissue
+
+`Issues`は、選択した`.asmdef`または`.asmref`に関係するissueを監査resultの順序で500件ずつ表示します。1つのresult indexが同じassetへ複数経路から関連付けられても1件へまとめますが、内容が同じでも別々に記録されたissueは残します。監査resultの既存上限50,000件に対応する最大100 pageまで、`Prev`／`Next`で全件へ到達できます。
+
+pageを切り替えるとpage先頭のissueを選び、`Issues`と`Details`のscrollを先頭へ戻します。Assemblyまたはasmrefの選択、Refresh、失敗時の監査result clearではpageを先頭へ戻します。検索または問題filterの変更後も同じ選択対象が残る場合はpageを残った範囲へclampし、選択対象が置き換わる場合は先頭へ戻します。
+
+関連issueの内部cacheにnull、範囲外index、重複indexなどの不整合がある場合は、検証済みissueだけを部分表示せずgeneric errorを示します。Analyzer、Service、model、依存graph、issue taxonomyは変更せず、既存resultの関連付けだけを表示します。
 
 ## 選択`.asmdef`の循環component
 
@@ -48,7 +57,7 @@ cycle result全体を表示前に検証します。null component／node、範�
 
 GUIDが一意でも、対応する`.asmdef`のJSONまたはAssembly名が有効でなければ解決済みにはしません。判明したasmdef pathを問題詳細へ残して未解決として報告します。
 
-長いpath、reference、messageはEditorの描画負荷を抑えるため画面上だけ省略します。選択後の`Copy Reference`または`Copy Issue`は省略前の全文をclipboardへ入れます。宣言参照rowは表示専用であり、既存Copyの項目へ追加しません。
+長いpath、reference、messageはEditorの描画負荷を抑えるため画面上だけ省略します。選択後の`Copy Reference`または現在選択した1件へ使う`Copy Issue`は省略前の全文をclipboardへ入れます。宣言参照rowは表示専用であり、既存Copyの項目へ追加しません。
 
 `.asmref`は同じfolder以下のscriptを既存Assemblyへ所属させるassetであり、asmdef同士の依存を追加するfileではありません。このツールも`.asmref`を`Dependencies`、`Dependents`、循環検出へ追加しません。別folderにある複数の`.asmref`が同じ一意なtargetを指すことは問題として扱いません。
 
@@ -87,7 +96,7 @@ GUIDが一意でも、対応する`.asmdef`のJSONまたはAssembly名が有効�
 
 Asset Databaseの型検索と`Assets`・登録済み`Packages`の物理rootを和集合にし、未importまたは不正な`.asmref`も見落とさないようにします。dot始まり、末尾`~`、`cvs`、Hidden属性、reparse pointのdirectoryは物理探索で降りず、Unityが無視するfile名も候補へ含めません。Asset Databaseがreparse point配下のassembly assetを認識した場合は、そのtyped assetを黙って除外せず、安全に読めないことを明示してRefresh全体を停止します。directory数、file entry数、`.asmdef`／`.asmref`件数、1 fileのbyte数、asmdef phaseとasmref phaseそれぞれの読取総量、問題数には安全上限があります。1件でも読めない場合や上限を超えた場合は監査全体を停止し、部分結果を表示しません。
 
-循環component memberと宣言参照の表示は既存の解析結果だけを読み、Analyzer、model、依存graph、issue taxonomyを変更しません。既存のCopy内容、公開API、Runtime assembly、build callbackも変更しません。
+関連issueのpage、循環component member、宣言参照の表示は既存の解析結果だけを読み、Analyzer、Service、model、依存graph、issue taxonomyを変更しません。既存のCopy内容、公開API、Runtime assembly、build callbackも変更しません。
 
 ## 公開APIと依存
 

@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.5.0] - 2026-08-26
+
+- Added 500-row paging for every issue related to the selected `.asmdef` or `.asmref`, preserving result order and allowing the existing 50,000-issue limit to be reached in at most 100 pages.
+- Deduplicated repeated references to the same result index while retaining distinct issues that have identical content.
+- Made each page change select its first issue and reset the issue-list and detail scroll positions; selection, Refresh, and result clearing reset paging, while an unchanged filtered selection is clamped to its remaining pages.
+- Added fail-visible, all-or-nothing validation for invalid related-issue cache data before any related issue is shown.
+- Kept the analyzer, service, model, dependency graph, issue taxonomy, existing clipboard output, public surface, Runtime surface, and build behavior unchanged.
+
 ## [1.4.0] - 2026-08-26
 
 - Added a paged `Cycle Component Members` section for the selected `.asmdef`, showing the complete strongly connected component in ordinal asset-path order without presenting that order as a cycle path.
