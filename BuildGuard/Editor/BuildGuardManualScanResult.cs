@@ -5,7 +5,7 @@ using System.Collections.Generic;
 namespace BuildGuard.Editor
 {
     /// <summary>
-    /// Stores the immutable outcome of a manual build Scene scan.
+    /// 手動のビルド対象シーン検査で得た、変更されない結果を保持します。
     /// </summary>
     internal readonly struct BuildGuardManualScanResult
     {

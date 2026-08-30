@@ -2,24 +2,24 @@
 
 ## 30秒で分かる
 
-Player buildに使うScene、Project windowで直接選択した保存済みScene、選択Prefabを調べ、壊れた参照を一覧から開けるEditor専用moduleです。build対象SceneのPrefab structural overrideは、build停止とは切り離した別windowで確認できます。
+プレイヤービルドに使うシーン、プロジェクトウィンドウで直接選択した保存済みシーン、選択したプレハブを調べ、壊れた参照を一覧から開けるエディター専用モジュールです。ビルド対象シーンにあるプレハブの構造差分は、ビルド停止とは切り離した別画面で確認できます。
 
-- 削除したC# scriptがComponentとして残った **Missing Script**
-- 削除したTexture、Material、Prefabなどを指したままの **Missing Object Reference**
-- Prefab instanceへ追加・削除したGameObjectまたはComponentの **Structural Override**
+- 削除したC#スクリプトがコンポーネントとして残った **欠落スクリプト**
+- 削除したテクスチャ、マテリアル、プレハブなどを指したままの **欠落オブジェクト参照**
+- プレハブの実体へ追加・削除したゲームオブジェクトまたはコンポーネントの **構造差分**
 
-build対象Sceneは **Tools > Build Guard > Scan Build Scenes**、選択Sceneは **Assets > Build Guard > Scan Selected Scenes**、選択Prefabは **Assets > Build Guard > Scan Selected Prefabs** から検査します。structural overrideは **Tools > Build Guard > Review Prefab Overrides** で確認します。Missing Script／Missing Object ReferenceだけがPlayer buildを停止し、structural overrideはreview結果に留まります。どのflowも自動保存しません。
+ビルド対象シーンは **Tools > ビルドガード > ビルド対象シーンを検査**、選択シーンは **Assets > ビルドガード > 選択シーンを検査**、選択プレハブは **Assets > Build Guard > Scan Selected Prefabs** から検査します。プレハブの構造差分は **Tools > Build Guard > Review Prefab Overrides** で確認します。欠落スクリプトと欠落オブジェクト参照だけがプレイヤービルドを停止し、構造差分は確認結果に留まります。どの流れも自動保存しません。
 
 ## こんな面倒を減らす
 
-- SceneやPrefabを整理した後、壊れた参照を探してHierarchyとInspectorを手作業で巡回する。
-- inactive GameObjectに残ったMissing Scriptを見落とし、長いbuildの後で気付く。
-- Consoleのmessageだけを頼りに、どのComponentのどのfieldかを探し直す。
-- Missing Scriptを見つけた後、InspectorのComponent menuを一つずつ開いて除去する。
-- CIで壊れたSceneを早く止めつつ、修復場所が分かる記録を残す。
-- Build Profileへ未登録、または無効にした作業中Sceneだけをbuild設定を変えずに確認する。
-- PrefabをSceneへ配置する前に、inactive階層も含めて壊れたComponentを確認する。
-- Prefab instanceへ加わった構造変更だけを、property値の差分と混ぜずにScene横断で確認する。
+- シーンやプレハブを整理した後、壊れた参照を探してヒエラルキーとインスペクターを手作業で巡回する。
+- 無効なゲームオブジェクトに残った欠落スクリプトを見落とし、長いビルドの後で気付く。
+- コンソールのメッセージだけを頼りに、どのコンポーネントのどの項目かを探し直す。
+- 欠落スクリプトを見つけた後、インスペクターのコンポーネントメニューを一つずつ開いて除去する。
+- 継続的統合で壊れたシーンを早く止めつつ、修復場所が分かる記録を残す。
+- Build Profileへ未登録、または無効にした作業中シーンだけをビルド設定を変えずに確認する。
+- プレハブをシーンへ配置する前に、無効な階層も含めて壊れたコンポーネントを確認する。
+- プレハブの実体へ加わった構造変更だけを、プロパティ値の差分と混ぜずにシーン横断で確認する。
 
 ## 3分で使う
 
@@ -31,30 +31,30 @@ Unity 6000.5.7f1以降で、Package Managerの **Add package from git URL...** �
 https://github.com/mynameisGaku/UnityModules.git?path=/BuildGuard#build-guard-v1.6.0
 ```
 
-または`BuildGuard` folderをprojectの`Assets/Modules/`へ配置します。追加packageへの依存はありません。設定assetの作成も不要です。
+または`BuildGuard`フォルダーをプロジェクトの`Assets/Modules/`へ配置します。追加パッケージへの依存はありません。設定アセットの作成も不要です。
 
-### 2. build前に一覧で確認する
+### 2. ビルド前に一覧で確認する
 
-1. Build ProfilesのScene一覧を設定します。
-2. **Tools > Build Guard > Scan Build Scenes** を開きます。
-3. `Scan Build Scenes`を押します。
-4. Missing Scriptなら`Open and Remove`を押し、確認dialogの後で対象Sceneを開いて除去します。
-5. Sceneは未保存のままなので、InspectorとHierarchyを確認してから保存するかUndoで戻します。
-6. Missing Object Referenceは`Open Scene`を押し、選択されたComponentのfieldへ正しいAssetを手動設定します。
-7. もう一度scanし、`No missing references found.`になることを確認します。
+1. Build Profilesのシーン一覧を設定します。
+2. **Tools > ビルドガード > ビルド対象シーンを検査** を開きます。
+3. `ビルド対象シーンを検査`を押します。
+4. 欠落スクリプトなら`開いて除去`を押し、確認画面の後で対象シーンを開いて除去します。
+5. シーンは未保存のままなので、インスペクターとヒエラルキーを確認してから保存するか、元に戻します。
+6. 欠落オブジェクト参照は`シーンを開く`を押し、選択されたゲームオブジェクトのインスペクターで、該当コンポーネントの項目へ正しいアセットを手動設定します。
+7. もう一度検査し、状態欄に有効なシーンの件数と`欠落参照は見つかりませんでした。`が表示されることを確認します。
 
-`Copy`はScene path、GameObject階層、Component/fieldを一行でclipboardへコピーします。scan中にCancelしても、完了済みSceneの結果は残ります。
+`内容をコピー`は問題種別、シーン、ゲームオブジェクト、詳細を1行でクリップボードへコピーします。詳細には、欠落スクリプトの件数、またはコンポーネントとプロパティのパスが入ります。検査中にキャンセルしても、完了済みシーンの結果は残ります。
 
-### 3. 選択Sceneを確認する
+### 3. 選択シーンを確認する
 
-1. Project windowで`Assets/`配下の保存済みScene Assetを1個以上、直接選択します。
-2. 右クリックして **Build Guard > Scan Selected Scenes** を選びます。
-3. `Selected Scene Assets`の件数を確認し、`Scan Selected Scenes`を押します。
-4. 一覧から`Open Scene`、`Open and Remove`、`Copy`を既存のbuild Scene scanと同じように使います。
+1. プロジェクトウィンドウで`Assets/`配下の保存済みシーンアセットを1個以上、直接選択します。
+2. 右クリックして **ビルドガード > 選択シーンを検査** を選びます。
+3. `記録済みの選択シーン`の件数を確認し、`選択シーンを検査`を押します。
+4. 一覧から`シーンを開く`、`開いて除去`、`内容をコピー`をビルド対象シーンの検査と同じように使います。
 
-Assets menuはwindowを開いて現在の選択をcaptureします。既にwindowを開いている場合は`Use Current Selection`でも更新できます。対象は直接選択した保存済みSceneだけで、folderを再帰しません。`Packages/`、Scene以外のAsset、Hierarchy上のGameObjectは除外します。Build Profileへ未登録または無効なSceneも検査できます。
+Assetsメニューは画面を開いて現在の選択を記録します。既に画面を開いている場合は`現在の選択を使用`でも更新できます。対象は直接選択した保存済みシーンだけで、フォルダーを再帰しません。`Packages/`、シーン以外のアセット、ヒエラルキー上のゲームオブジェクトは除外します。Build Profileへ未登録または無効なシーンも検査できます。
 
-一度に扱える上限は選択asset候補4,096件、Scene 256件です。Sceneはpath順へ並べて重複を除き、capture時点のsnapshotとして保持します。capture後にSceneを移動・削除した場合はpartial resultを返さず、`Use Current Selection`での再選択を案内します。途中でCancelした場合は完了済みSceneの結果を残します。
+一度に扱える上限は選択アセット候補4,096件、シーン256件です。シーンはパス順へ並べて重複を除き、記録時点の一覧として保持します。記録後にシーンを移動・削除した場合は途中結果を返さず、`現在の選択を使用`での再選択を案内します。途中でキャンセルした場合は完了済みシーンの結果を残します。
 
 ### 4. 選択Prefabを確認する
 

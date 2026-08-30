@@ -1,29 +1,29 @@
 # Build Guard 1.6.0
 
-Build Guardは、Player build対象Scene、Project windowで直接選択した保存済みScene、選択Prefabの壊れたComponent参照をscanし、build対象SceneのPrefab構造変更を別flowでreviewするEditor専用moduleです。Runtime assembly、設定asset、global singleton、公開APIを持ちません。
+Build Guardは、プレイヤービルド対象シーン、プロジェクトウィンドウで直接選択した保存済みシーン、選択プレハブの壊れたコンポーネント参照を検査し、ビルド対象シーンのプレハブ構造変更を別の流れで確認するエディター専用モジュールです。実行時用のアセンブリ、設定アセット、全体共有の単一実体、公開APIを持ちません。
 
 ## 利用者の操作
 
-### build Scene scan
+### ビルド対象シーンの検査
 
-**Tools > Build Guard > Scan Build Scenes** は、active Build Profileで有効なSceneを上から順に検査します。結果windowには次を表示します。
+**Tools > ビルドガード > ビルド対象シーンを検査** は、現在のBuild Profileで有効なシーンを上から順に検査します。結果画面には次を表示します。
 
 - 問題の種類
-- Scene asset path
-- 兄弟index付きGameObject階層path
-- Missing Script件数、またはComponent型・順番・serialized property path
+- シーンアセットのパス
+- 同じ親の中での順番を付けたゲームオブジェクト階層パス
+- 欠落スクリプト件数、またはコンポーネント型・順番・直列化プロパティのパス
 
-`Open Scene`は未保存Sceneの保存確認後に対象Sceneを開き、階層pathがまだ一致すればGameObjectを選択します。対象が既に修復・移動されている場合はScene assetを選択します。`Copy`は1件を一行でclipboardへコピーします。
+`シーンを開く`は未保存シーンの保存確認後に対象シーンを開き、階層パスがまだ一致すればゲームオブジェクトを選択します。対象が既に修復・移動されている場合はシーンアセットを選択します。`内容をコピー`は1件を1行でクリップボードへコピーします。
 
-Missing Scriptの`Open and Remove`は、確認後に同じ方法でSceneとGameObjectを特定します。対象GameObjectのmissing MonoBehaviour slotだけを`Undo.RegisterFullObjectHierarchyUndo`へ記録して除去し、Sceneをdirty状態のまま残します。自動保存しないため、利用者がInspectorを確認して保存するかUndoで戻せます。Missing Object Referenceは参照先を推測できないため自動修復しません。
+欠落スクリプトの`開いて除去`は、確認後に同じ方法でシーンとゲームオブジェクトを特定します。対象ゲームオブジェクトの欠落したMonoBehaviourの枠だけを`Undo.RegisterFullObjectHierarchyUndo`へ記録して除去し、シーンを未保存状態のまま残します。自動保存しないため、利用者がインスペクターを確認して保存するか、元に戻せます。欠落オブジェクト参照は参照先を推測できないため自動修復しません。
 
-### 選択Scene scan
+### 選択シーンの検査
 
-**Assets > Build Guard > Scan Selected Scenes** は同じ結果windowを開き、Project windowで直接選択した`Assets/`配下の保存済みScene Assetをcaptureします。windowを開いた後は`Use Current Selection`でもcaptureを更新し、`Scan Selected Scenes`で検査します。Build Profileへの登録や有効状態は問いません。
+**Assets > ビルドガード > 選択シーンを検査** は同じ結果画面を開き、プロジェクトウィンドウで直接選択した`Assets/`配下の保存済みシーンアセットを記録します。画面を開いた後は`現在の選択を使用`でも記録を更新し、`選択シーンを検査`で検査します。Build Profileへの登録や有効状態は問いません。
 
-対象は直接選択したSceneだけです。選択folder以下を再帰せず、`Packages/`、Scene以外のAsset、Hierarchy上のGameObjectを除外します。最大4,096件の選択asset候補から最大256件のSceneをpath順へ並べ、重複を除いたsnapshotとして保持します。
+対象は直接選択したシーンだけです。選択フォルダー以下を再帰せず、`Packages/`、シーン以外のアセット、ヒエラルキー上のゲームオブジェクトを除外します。最大4,096件の選択アセット候補から最大256件のシーンをパス順へ並べ、重複を除いた記録として保持します。
 
-capture後にSceneが移動・削除されてpathを解決できなくなった場合は、scan結果を全て破棄して`Use Current Selection`による再選択を案内します。scan中にCancelした場合は完了済みSceneの結果を保持します。検出rule、結果表示、navigation、Missing Scriptの明示修復はbuild Scene scanと同じです。
+記録後にシーンが移動・削除されてパスを解決できなくなった場合は、検査結果を全て破棄して`現在の選択を使用`による再選択を案内します。検査中にキャンセルした場合は完了済みシーンの結果を保持します。検出規則、結果表示、移動、欠落スクリプトの明示修復はビルド対象シーンの検査と同じです。
 
 ### 選択Prefab scan
 

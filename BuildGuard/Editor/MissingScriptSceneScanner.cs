@@ -10,27 +10,27 @@ using UnityEngine.SceneManagement;
 namespace BuildGuard.Editor
 {
     /// <summary>
-    /// Scans every loaded Scene GameObject for missing MonoBehaviour slots.
+    /// 読み込み済みシーンの全ゲームオブジェクトから、欠落したMonoBehaviourの枠を検出します。
     /// </summary>
     internal static class MissingScriptSceneScanner
     {
         /// <summary>
-        /// Scans active and inactive GameObjects in deterministic hierarchy order.
+        /// 有効・無効を問わず、階層順が毎回同じになるようゲームオブジェクトを検査します。
         /// </summary>
-        /// <param name="scene">The loaded Scene to scan.</param>
-        /// <returns>Findings sorted by hierarchy path.</returns>
-        /// <exception cref="ArgumentException">The Scene is invalid.</exception>
-        /// <exception cref="InvalidOperationException">The Scene is not loaded.</exception>
+        /// <param name="scene">検査する読み込み済みシーンです。</param>
+        /// <returns>階層パス順に並べた検出結果です。</returns>
+        /// <exception cref="ArgumentException">シーンが無効です。</exception>
+        /// <exception cref="InvalidOperationException">シーンが読み込まれていません。</exception>
         internal static IReadOnlyList<MissingScriptFinding> Scan(Scene scene)
         {
             if (!scene.IsValid())
             {
-                throw new ArgumentException("The Scene to scan is invalid.", nameof(scene));
+                throw new ArgumentException("検査するシーンが無効です。", nameof(scene));
             }
 
             if (!scene.isLoaded)
             {
-                throw new InvalidOperationException("The Scene to scan is not loaded.");
+                throw new InvalidOperationException("検査するシーンが読み込まれていません。");
             }
 
             var findings = new List<MissingScriptFinding>();
@@ -44,7 +44,7 @@ namespace BuildGuard.Editor
         }
 
         /// <summary>
-        /// Recursively scans a Transform regardless of active state.
+        /// 有効状態に関係なく、Transformの子階層を再帰的に検査します。
         /// </summary>
         private static void ScanTransform(Transform current, string hierarchyPath, ICollection<MissingScriptFinding> findings)
         {
@@ -62,7 +62,7 @@ namespace BuildGuard.Editor
         }
 
         /// <summary>
-        /// Escapes path separators and control characters for one-line output.
+        /// 1行で表示できるよう、パス区切りと制御文字を置き換えます。
         /// </summary>
         internal static string EscapePathText(string value)
         {
@@ -70,7 +70,7 @@ namespace BuildGuard.Editor
         }
 
         /// <summary>
-        /// Escapes control characters while preserving ordinary slashes.
+        /// 通常のスラッシュを保ちながら、制御文字を置き換えます。
         /// </summary>
         internal static string EscapeSingleLineText(string value)
         {
@@ -78,7 +78,7 @@ namespace BuildGuard.Editor
         }
 
         /// <summary>
-        /// Escapes control characters with optional slash escaping.
+        /// 指定に応じてスラッシュを含め、制御文字を置き換えます。
         /// </summary>
         private static string EscapeText(string value, bool escapeSlash)
         {

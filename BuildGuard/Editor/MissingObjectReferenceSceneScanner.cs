@@ -9,21 +9,21 @@ using UnityEngine.SceneManagement;
 namespace BuildGuard.Editor
 {
     /// <summary>
-    /// Scans every loaded Scene component for serialized object references whose targets are missing.
+    /// 読み込み済みシーンの全コンポーネントから、参照先が欠落した直列化オブジェクト参照を検出します。
     /// </summary>
     internal static class MissingObjectReferenceSceneScanner
     {
-        /// <summary>Scans active and inactive GameObjects in deterministic hierarchy order.</summary>
+        /// <summary>有効・無効を問わず、階層順が毎回同じになるようゲームオブジェクトを検査します。</summary>
         internal static IReadOnlyList<MissingObjectReferenceFinding> Scan(Scene scene)
         {
             if (!scene.IsValid())
             {
-                throw new ArgumentException("The Scene to scan is invalid.", nameof(scene));
+                throw new ArgumentException("検査するシーンが無効です。", nameof(scene));
             }
 
             if (!scene.isLoaded)
             {
-                throw new InvalidOperationException("The Scene to scan is not loaded.");
+                throw new InvalidOperationException("検査するシーンが読み込まれていません。");
             }
 
             var findings = new List<MissingObjectReferenceFinding>();

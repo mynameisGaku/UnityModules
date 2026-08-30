@@ -8,17 +8,17 @@ using UnityEngine.SceneManagement;
 namespace BuildGuard.Editor
 {
     /// <summary>
-    /// Runs Build Guard rules on enabled build Scenes or captured Scene assets.
+    /// 有効なビルド対象シーン、または取得済みの選択シーンアセットにビルドガードの検査規則を適用します。
     /// </summary>
     internal static class BuildGuardManualScanner
     {
-        /// <summary>Maximum number of selected asset candidates accepted by one capture.</summary>
+        /// <summary>1回の取得で受け付ける選択アセット候補の最大数です。</summary>
         internal const int MaximumSelectedAssetCandidates = 4096;
 
-        /// <summary>Maximum number of selected Scene assets accepted by one scan.</summary>
+        /// <summary>1回の検査で受け付ける選択シーンアセットの最大数です。</summary>
         internal const int MaximumSelectedScenes = 256;
 
-        /// <summary>Returns enabled Scene paths from the effective active Build Profile list.</summary>
+        /// <summary>現在有効なビルドプロファイルから、有効なシーンのパスを返します。</summary>
         internal static IReadOnlyList<string> GetEnabledBuildScenePaths()
         {
             var scenes = EditorBuildSettings.scenes ?? Array.Empty<EditorBuildSettingsScene>();
@@ -35,7 +35,7 @@ namespace BuildGuard.Editor
             return paths;
         }
 
-        /// <summary>Captures directly selected Scene assets below Assets in ordinal path order.</summary>
+        /// <summary>「Assets」配下で直接選択されたシーンアセットを、パスの文字順で取得します。</summary>
         internal static bool TryGetSelectedScenePaths(
             out IReadOnlyList<string> scenePaths,
             out string errorMessage)
@@ -52,12 +52,12 @@ namespace BuildGuard.Editor
             catch (Exception exception)
             {
                 scenePaths = Array.Empty<string>();
-                errorMessage = $"Selected Scene capture failed: {exception.Message}";
+                errorMessage = $"選択シーンの取得に失敗しました: {exception.Message}";
                 return false;
             }
         }
 
-        /// <summary>Resolves selected GUIDs and keeps direct Scene assets below Assets.</summary>
+        /// <summary>選択項目の識別子をパスへ変換し、「Assets」配下のシーンアセットだけを残します。</summary>
         internal static bool TryResolveSelectedScenePaths(
             IReadOnlyList<string> selectedAssetGuids,
             Func<string, string> guidToAssetPath,
@@ -69,13 +69,13 @@ namespace BuildGuard.Editor
             errorMessage = string.Empty;
             if (selectedAssetGuids == null || guidToAssetPath == null || isSceneAsset == null)
             {
-                errorMessage = "Selected Scene capture source is unavailable.";
+                errorMessage = "選択シーンの取得元を利用できません。";
                 return false;
             }
 
             if (selectedAssetGuids.Count > MaximumSelectedAssetCandidates)
             {
-                errorMessage = $"Too many selected assets. Select at most {MaximumSelectedAssetCandidates} assets.";
+                errorMessage = $"選択中のアセットが多すぎます。選択できるアセットは最大{MaximumSelectedAssetCandidates}件です。";
                 return false;
             }
 
@@ -99,14 +99,14 @@ namespace BuildGuard.Editor
                     paths.Add(path);
                     if (paths.Count > MaximumSelectedScenes)
                     {
-                        errorMessage = $"Too many selected Scenes. Select at most {MaximumSelectedScenes} Scene assets.";
+                        errorMessage = $"選択中のシーンが多すぎます。選択できるシーンアセットは最大{MaximumSelectedScenes}件です。";
                         return false;
                     }
                 }
             }
             catch (Exception exception)
             {
-                errorMessage = $"Selected Scene capture failed: {exception.Message}";
+                errorMessage = $"選択シーンの取得に失敗しました: {exception.Message}";
                 return false;
             }
 
@@ -114,7 +114,7 @@ namespace BuildGuard.Editor
             return true;
         }
 
-        /// <summary>Scans specified Scene paths without changing their saved or loaded state.</summary>
+        /// <summary>保存状態と読み込み状態を変えずに、指定されたシーンのパスを検査します。</summary>
         internal static BuildGuardManualScanResult Scan(
             IReadOnlyList<string> scenePaths,
             Func<int, int, string, bool> shouldCancel = null)
@@ -128,7 +128,7 @@ namespace BuildGuard.Editor
             return new BuildGuardManualScanResult(issues, scannedCount, cancelled);
         }
 
-        /// <summary>Revalidates captured Scenes and discards partial results when the snapshot is stale.</summary>
+        /// <summary>取得済みのシーンを再確認し、選択状態が古い場合は途中結果を破棄します。</summary>
         internal static bool TryScanSelectedScenes(
             IReadOnlyList<string> scenePaths,
             Func<int, int, string, bool> shouldCancel,
@@ -151,7 +151,7 @@ namespace BuildGuard.Editor
                     || !HaveSamePaths(normalizedPaths, finalPaths)
                     || (!scanResult.Cancelled && scanResult.ScannedSceneCount != normalizedPaths.Count))
                 {
-                    errorMessage = "Selected Scene assets changed. Press Use Current Selection and scan again.";
+                    errorMessage = "選択シーンの状態が変わりました。「現在の選択を使用」を押してから、もう一度検査してください。";
                     return false;
                 }
 
@@ -160,12 +160,12 @@ namespace BuildGuard.Editor
             }
             catch (Exception exception)
             {
-                errorMessage = $"Selected Scene scan failed: {exception.Message}";
+                errorMessage = $"選択シーンの検査に失敗しました: {exception.Message}";
                 return false;
             }
         }
 
-        /// <summary>Checks that every captured path still resolves to a Scene asset.</summary>
+        /// <summary>取得済みの各パスが、現在もシーンアセットとして参照できることを確認します。</summary>
         private static bool TryNormalizeCapturedScenePaths(
             IReadOnlyList<string> scenePaths,
             out IReadOnlyList<string> normalizedPaths,
@@ -175,13 +175,13 @@ namespace BuildGuard.Editor
             errorMessage = string.Empty;
             if (scenePaths == null || scenePaths.Count == 0)
             {
-                errorMessage = "Select one or more Scene assets in the Project window.";
+                errorMessage = "プロジェクトウィンドウでシーンアセットを1件以上選択してください。";
                 return false;
             }
 
             if (scenePaths.Count > MaximumSelectedScenes)
             {
-                errorMessage = $"Too many selected Scenes. Select at most {MaximumSelectedScenes} Scene assets.";
+                errorMessage = $"選択中のシーンが多すぎます。選択できるシーンアセットは最大{MaximumSelectedScenes}件です。";
                 return false;
             }
 
@@ -191,7 +191,7 @@ namespace BuildGuard.Editor
                 var path = (scenePaths[index] ?? string.Empty).Replace('\\', '/').TrimEnd('/');
                 if (!IsSceneAssetPath(path) || AssetDatabase.LoadAssetAtPath<SceneAsset>(path) == null)
                 {
-                    errorMessage = "Selected Scene assets changed. Press Use Current Selection and scan again.";
+                    errorMessage = "選択シーンの状態が変わりました。「現在の選択を使用」を押してから、もう一度検査してください。";
                     return false;
                 }
 
@@ -202,13 +202,14 @@ namespace BuildGuard.Editor
             return true;
         }
 
-        /// <summary>Checks whether a path identifies a saved Scene asset below Assets.</summary>
+        /// <summary>指定されたパスが「Assets」配下の保存済みシーンアセットを示すか確認します。</summary>
         private static bool IsSceneAssetPath(string path)
         {
             return path.StartsWith("Assets/", StringComparison.Ordinal)
                 && path.EndsWith(".unity", StringComparison.OrdinalIgnoreCase);
         }
 
+        /// <summary>2つのシーンパス一覧が、同じ順序で完全に一致するか確認します。</summary>
         private static bool HaveSamePaths(
             IReadOnlyList<string> expected,
             IReadOnlyList<string> actual)
@@ -229,6 +230,7 @@ namespace BuildGuard.Editor
             return true;
         }
 
+        /// <summary>シーンの検査結果を、画面表示用の問題一覧へ追加します。</summary>
         private static void AppendIssues(
             Scene scene,
             BuildGuardSceneInspection inspection,
@@ -240,7 +242,7 @@ namespace BuildGuard.Editor
                     BuildGuardIssueKind.MissingScript,
                     scene.path.Replace('\\', '/'),
                     finding.HierarchyPath,
-                    $"Missing Scripts: {finding.MissingScriptCount}"));
+                    $"欠落スクリプト: {finding.MissingScriptCount}"));
             }
 
             foreach (var finding in inspection.MissingObjectReferences)

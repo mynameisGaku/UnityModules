@@ -13,7 +13,7 @@ using UnityEngine.SceneManagement;
 namespace BuildGuard.Tests
 {
     /// <summary>
-    /// Verifies manual scanning across multiple closed build Scenes.
+    /// 複数の閉じたシーンを対象とする手動検査の動作を確認します。
     /// </summary>
     [Parallelizable(ParallelScope.None)]
     internal sealed class BuildGuardManualScannerTests
@@ -51,6 +51,8 @@ namespace BuildGuard.Tests
                 Assert.That(result.Issues[0].Kind, Is.EqualTo(BuildGuardIssueKind.MissingScript));
                 Assert.That(result.Issues[1].Kind, Is.EqualTo(BuildGuardIssueKind.MissingScript));
                 Assert.That(result.Issues[2].Kind, Is.EqualTo(BuildGuardIssueKind.MissingObjectReference));
+                Assert.That(result.Issues[0].Details, Is.EqualTo("欠落スクリプト: 1"));
+                Assert.That(result.Issues[1].Details, Is.EqualTo("欠落スクリプト: 2"));
                 Assert.That(result.Issues[2].Details, Is.EqualTo("UnityEngine.Camera[1].m_TargetTexture"));
                 Assert.That(SceneManager.GetActiveScene(), Is.EqualTo(activeScene));
                 Assert.That(SceneManager.GetSceneByPath(brokenScriptPath).isLoaded, Is.False);
@@ -155,6 +157,21 @@ namespace BuildGuard.Tests
         }
 
         [Test]
+        public void TryResolveSelectedScenePaths_MissingSource_ReturnsExactJapaneseError()
+        {
+            var succeeded = BuildGuardManualScanner.TryResolveSelectedScenePaths(
+                null,
+                _ => string.Empty,
+                _ => false,
+                out var scenePaths,
+                out var errorMessage);
+
+            Assert.That(succeeded, Is.False);
+            Assert.That(scenePaths, Is.Empty);
+            Assert.That(errorMessage, Is.EqualTo("選択シーンの取得元を利用できません。"));
+        }
+
+        [Test]
         public void TryResolveSelectedScenePaths_AssetCandidateLimit_AcceptsExactAndRejectsOneOver()
         {
             var exactLimit = new string[BuildGuardManualScanner.MaximumSelectedAssetCandidates];
@@ -162,8 +179,8 @@ namespace BuildGuard.Tests
 
             var exactSucceeded = BuildGuardManualScanner.TryResolveSelectedScenePaths(
                 exactLimit,
-                guid => throw new AssertionException($"Empty GUID must be ignored: {guid}"),
-                _ => throw new AssertionException("Scene predicate must not be called."),
+                guid => throw new AssertionException($"空の識別子は無視される必要があります: {guid}"),
+                _ => throw new AssertionException("シーン判定は呼び出されない必要があります。"),
                 out var exactPaths,
                 out var exactError);
             var overSucceeded = BuildGuardManualScanner.TryResolveSelectedScenePaths(
@@ -175,9 +192,11 @@ namespace BuildGuard.Tests
 
             Assert.That(exactSucceeded, Is.True, exactError);
             Assert.That(exactPaths, Is.Empty);
+            Assert.That(exactError, Is.Empty);
             Assert.That(overSucceeded, Is.False);
             Assert.That(overPaths, Is.Empty);
-            Assert.That(overError, Does.Contain(BuildGuardManualScanner.MaximumSelectedAssetCandidates.ToString()));
+            Assert.That(overError, Is.EqualTo(
+                $"選択中のアセットが多すぎます。選択できるアセットは最大{BuildGuardManualScanner.MaximumSelectedAssetCandidates}件です。"));
         }
 
         [Test]
@@ -201,9 +220,11 @@ namespace BuildGuard.Tests
 
             Assert.That(exactSucceeded, Is.True, exactError);
             Assert.That(exactPaths.Count, Is.EqualTo(BuildGuardManualScanner.MaximumSelectedScenes));
+            Assert.That(exactError, Is.Empty);
             Assert.That(overSucceeded, Is.False);
             Assert.That(overPaths, Is.Empty);
-            Assert.That(overError, Does.Contain(BuildGuardManualScanner.MaximumSelectedScenes.ToString()));
+            Assert.That(overError, Is.EqualTo(
+                $"選択中のシーンが多すぎます。選択できるシーンアセットは最大{BuildGuardManualScanner.MaximumSelectedScenes}件です。"));
         }
 
         [Test]
@@ -211,14 +232,14 @@ namespace BuildGuard.Tests
         {
             var succeeded = BuildGuardManualScanner.TryResolveSelectedScenePaths(
                 new[] { "scene" },
-                _ => throw new InvalidOperationException("resolver failure"),
+                _ => throw new InvalidOperationException("パス解決失敗"),
                 _ => true,
                 out var scenePaths,
                 out var errorMessage);
 
             Assert.That(succeeded, Is.False);
             Assert.That(scenePaths, Is.Empty);
-            Assert.That(errorMessage, Does.Contain("resolver failure"));
+            Assert.That(errorMessage, Is.EqualTo("選択シーンの取得に失敗しました: パス解決失敗"));
         }
 
         [Test]
@@ -227,23 +248,81 @@ namespace BuildGuard.Tests
             var succeeded = BuildGuardManualScanner.TryResolveSelectedScenePaths(
                 new[] { "scene" },
                 _ => "Assets/Scene.unity",
-                _ => throw new InvalidOperationException("predicate failure"),
+                _ => throw new InvalidOperationException("シーン判定失敗"),
                 out var scenePaths,
                 out var errorMessage);
 
             Assert.That(succeeded, Is.False);
             Assert.That(scenePaths, Is.Empty);
-            Assert.That(errorMessage, Does.Contain("predicate failure"));
+            Assert.That(errorMessage, Is.EqualTo("選択シーンの取得に失敗しました: シーン判定失敗"));
         }
 
         [Test]
         public void TryScanSelectedScenes_NullEmptyAndOverLimitSnapshots_ReturnFailureWithoutIssues()
         {
-            AssertSelectedScanRejected(null, "Select one or more Scene assets");
-            AssertSelectedScanRejected(Array.Empty<string>(), "Select one or more Scene assets");
+            AssertSelectedScanRejected(
+                null,
+                "プロジェクトウィンドウでシーンアセットを1件以上選択してください。");
+            AssertSelectedScanRejected(
+                Array.Empty<string>(),
+                "プロジェクトウィンドウでシーンアセットを1件以上選択してください。");
             AssertSelectedScanRejected(
                 new string[BuildGuardManualScanner.MaximumSelectedScenes + 1],
-                BuildGuardManualScanner.MaximumSelectedScenes.ToString());
+                $"選択中のシーンが多すぎます。選択できるシーンアセットは最大{BuildGuardManualScanner.MaximumSelectedScenes}件です。");
+        }
+
+        [Test]
+        public void TryScanSelectedScenes_SnapshotAccessThrows_ReturnsExactJapaneseError()
+        {
+            var succeeded = BuildGuardManualScanner.TryScanSelectedScenes(
+                new ThrowingScenePathList(),
+                null,
+                out var result,
+                out var errorMessage);
+
+            Assert.That(succeeded, Is.False);
+            Assert.That(result.ScannedSceneCount, Is.Zero);
+            Assert.That(result.Issues, Is.Empty);
+            Assert.That(errorMessage, Is.EqualTo("選択シーンの検査に失敗しました: シーン一覧取得失敗"));
+        }
+
+        [Test]
+        public void TryScanSelectedScenes_FailureAfterFirstScene_DiscardsIssuesAndRestoresSceneState()
+        {
+            var fixture = new MissingScriptSceneScannerTests();
+            fixture.SetUp();
+            try
+            {
+                var brokenScene = fixture.OpenSceneFixture();
+                var brokenPath = brokenScene.path;
+                Assert.That(EditorSceneManager.CloseScene(brokenScene, true), Is.True);
+                var validScene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+                var validPath = $"{fixture.TemporaryFolder}/Z_Valid.unity";
+                Assert.That(EditorSceneManager.SaveScene(validScene, validPath), Is.True);
+                var activeScene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+                Assert.That(SceneManager.GetActiveScene(), Is.EqualTo(activeScene));
+
+                var succeeded = BuildGuardManualScanner.TryScanSelectedScenes(
+                    new[] { brokenPath, validPath },
+                    (index, _, _) => index == 1
+                        ? throw new InvalidOperationException("走査途中失敗")
+                        : false,
+                    out var result,
+                    out var errorMessage);
+
+                Assert.That(succeeded, Is.False);
+                Assert.That(result.Cancelled, Is.False);
+                Assert.That(result.ScannedSceneCount, Is.Zero);
+                Assert.That(result.Issues, Is.Empty);
+                Assert.That(errorMessage, Is.EqualTo("選択シーンの検査に失敗しました: 走査途中失敗"));
+                Assert.That(SceneManager.GetActiveScene(), Is.EqualTo(activeScene));
+                Assert.That(SceneManager.GetSceneByPath(brokenPath).isLoaded, Is.False);
+                Assert.That(SceneManager.GetSceneByPath(validPath).isLoaded, Is.False);
+            }
+            finally
+            {
+                fixture.TearDown();
+            }
         }
 
         [Test]
@@ -268,7 +347,8 @@ namespace BuildGuard.Tests
                 Assert.That(succeeded, Is.False);
                 Assert.That(result.ScannedSceneCount, Is.Zero);
                 Assert.That(result.Issues, Is.Empty);
-                Assert.That(errorMessage, Does.Contain("Use Current Selection"));
+                Assert.That(errorMessage, Is.EqualTo(
+                    "選択シーンの状態が変わりました。「現在の選択を使用」を押してから、もう一度検査してください。"));
             }
             finally
             {
@@ -313,7 +393,8 @@ namespace BuildGuard.Tests
                 Assert.That(succeeded, Is.False);
                 Assert.That(result.ScannedSceneCount, Is.Zero);
                 Assert.That(result.Issues, Is.Empty);
-                Assert.That(errorMessage, Does.Contain("Use Current Selection"));
+                Assert.That(errorMessage, Is.EqualTo(
+                    "選択シーンの状態が変わりました。「現在の選択を使用」を押してから、もう一度検査してください。"));
             }
             finally
             {
@@ -459,7 +540,29 @@ namespace BuildGuard.Tests
             Assert.That(succeeded, Is.False);
             Assert.That(result.ScannedSceneCount, Is.Zero);
             Assert.That(result.Issues, Is.Empty);
-            Assert.That(errorMessage, Does.Contain(expectedErrorText));
+            Assert.That(errorMessage, Is.EqualTo(expectedErrorText));
+        }
+
+        /// <summary>シーン一覧の読み取り失敗を再現する試験用一覧です。</summary>
+        private sealed class ThrowingScenePathList : IReadOnlyList<string>
+        {
+            /// <summary>読み取り処理を添字アクセスまで進めるため、1件を返します。</summary>
+            public int Count => 1;
+
+            /// <summary>シーンパスの読み取り失敗を発生させます。</summary>
+            public string this[int index] => throw new InvalidOperationException("シーン一覧取得失敗");
+
+            /// <summary>この試験では列挙を使用しないため、未対応として通知します。</summary>
+            public IEnumerator<string> GetEnumerator()
+            {
+                throw new NotSupportedException();
+            }
+
+            /// <summary>この試験では列挙を使用しないため、型付き列挙処理へ転送します。</summary>
+            System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
+            {
+                return GetEnumerator();
+            }
         }
     }
 }

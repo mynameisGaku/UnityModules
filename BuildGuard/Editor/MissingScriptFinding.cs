@@ -3,15 +3,15 @@
 namespace BuildGuard.Editor
 {
     /// <summary>
-    /// Identifies one GameObject that contains missing MonoBehaviour slots.
+    /// 欠落したMonoBehaviourの枠を含むゲームオブジェクトを1件表します。
     /// </summary>
     internal readonly struct MissingScriptFinding
     {
         /// <summary>
-        /// Creates one deterministic missing-script finding.
+        /// 並び順を一定にできる欠落スクリプトの検出結果を1件作成します。
         /// </summary>
-        /// <param name="hierarchyPath">The hierarchy path including sibling indices.</param>
-        /// <param name="missingScriptCount">The number of missing MonoBehaviour slots.</param>
+        /// <param name="hierarchyPath">同じ親の中での順番を含む階層パスです。</param>
+        /// <param name="missingScriptCount">欠落したMonoBehaviourの枠数です。</param>
         internal MissingScriptFinding(string hierarchyPath, int missingScriptCount)
         {
             HierarchyPath = hierarchyPath;
@@ -19,12 +19,12 @@ namespace BuildGuard.Editor
         }
 
         /// <summary>
-        /// Gets the hierarchy path including sibling indices.
+        /// 同じ親の中での順番を含む階層パスを取得します。
         /// </summary>
         internal string HierarchyPath { get; }
 
         /// <summary>
-        /// Gets the number of missing MonoBehaviour slots.
+        /// 欠落したMonoBehaviourの枠数を取得します。
         /// </summary>
         internal int MissingScriptCount { get; }
     }

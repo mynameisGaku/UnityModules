@@ -14,33 +14,33 @@ using UnityEngine.SceneManagement;
 namespace BuildGuard.Tests
 {
     /// <summary>
-    /// Verifies missing script scanning across hierarchy, inactive objects, and Prefab instances.
+    /// 階層、無効なオブジェクト、プレハブの実体を含む欠落スクリプト検査を確認します。
     /// </summary>
     [Parallelizable(ParallelScope.None)]
     internal sealed class MissingScriptSceneScannerTests
     {
         /// <summary>
-        /// Identifies the missing script Scene fixture.
+        /// 欠落スクリプトを含む試験用シーンを識別します。
         /// </summary>
         internal const string BrokenSceneFixtureGuid = "62568305b48f4bfb8de5c5786171f370";
 
         /// <summary>
-        /// Identifies the missing script Prefab fixture.
+        /// 欠落スクリプトを含む試験用プレハブを識別します。
         /// </summary>
         internal const string BrokenPrefabFixtureGuid = "1288dc4ed86b4939a6b9be1a70cf5ef5";
 
         /// <summary>
-        /// Stores the temporary asset folder for the current test.
+        /// 現在の試験で使う一時アセットフォルダーを保持します。
         /// </summary>
         private string _temporaryFolder;
 
         /// <summary>
-        /// Gets the temporary asset folder for processor tests.
+        /// 処理試験で使う一時アセットフォルダーを取得します。
         /// </summary>
         internal string TemporaryFolder => _temporaryFolder;
 
         /// <summary>
-        /// Creates a dedicated temporary asset folder for each test.
+        /// 各試験専用の一時アセットフォルダーを作成します。
         /// </summary>
         [SetUp]
         public void SetUp()
@@ -50,7 +50,7 @@ namespace BuildGuard.Tests
         }
 
         /// <summary>
-        /// Removes temporary Scenes and assets after each test.
+        /// 各試験後に一時シーンとアセットを除去します。
         /// </summary>
         [TearDown]
         public void TearDown()
@@ -71,7 +71,7 @@ namespace BuildGuard.Tests
         }
 
         /// <summary>
-        /// Verifies that all missing scripts are counted in active and inactive hierarchy nodes.
+        /// 有効・無効を問わず、階層内の欠落スクリプトをすべて数えることを確認します。
         /// </summary>
         [Test]
         public void Scan_BrokenScene_IncludesInactiveHierarchy()
@@ -88,7 +88,7 @@ namespace BuildGuard.Tests
         }
 
         /// <summary>
-        /// Verifies that a valid inactive hierarchy produces no findings.
+        /// 問題のない無効な階層から検出結果が生じないことを確認します。
         /// </summary>
         [Test]
         public void Scan_ValidInactiveHierarchy_ReturnsEmpty()
@@ -106,7 +106,7 @@ namespace BuildGuard.Tests
         }
 
         /// <summary>
-        /// Verifies that missing scripts inside a Prefab instance are reported as Scene hierarchy paths.
+        /// プレハブの実体内にある欠落スクリプトを、シーン階層のパスとして報告することを確認します。
         /// </summary>
         [Test]
         public void Scan_BrokenPrefabInstance_FindsNestedObject()
@@ -126,7 +126,7 @@ namespace BuildGuard.Tests
         }
 
         /// <summary>
-        /// Verifies that path separators and control characters are escaped into one line.
+        /// パス区切りと制御文字を1行へ収まる表記に置き換えることを確認します。
         /// </summary>
         [Test]
         public void EscapePathText_ControlCharacters_AreEscaped()
@@ -135,16 +135,19 @@ namespace BuildGuard.Tests
         }
 
         /// <summary>
-        /// Verifies that an invalid Scene is rejected instead of treated as empty.
+        /// 無効なシーンを空のシーンとして扱わず、拒否することを確認します。
         /// </summary>
         [Test]
         public void Scan_InvalidScene_ThrowsArgumentException()
         {
-            Assert.Throws<ArgumentException>(() => MissingScriptSceneScanner.Scan(default));
+            var exception = Assert.Throws<ArgumentException>(
+                () => MissingScriptSceneScanner.Scan(default));
+
+            Assert.That(exception.Message, Does.StartWith("検査するシーンが無効です。"));
         }
 
         /// <summary>
-        /// Opens the missing script Scene fixture as a temporary asset.
+        /// 欠落スクリプトを含む試験用シーンを、一時アセットとして開きます。
         /// </summary>
         internal Scene OpenSceneFixture()
         {
@@ -153,7 +156,7 @@ namespace BuildGuard.Tests
         }
 
         /// <summary>
-        /// Copies a text fixture resolved by GUID into a temporary asset with the requested extension.
+        /// GUIDから解決した試験用テキストを、指定された拡張子の一時アセットへ複製します。
         /// </summary>
         private string CopyFixture(string fixtureGuid, string destinationName)
         {

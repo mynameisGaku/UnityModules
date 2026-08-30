@@ -12,7 +12,7 @@ using UnityEngine.SceneManagement;
 namespace BuildGuard.Tests
 {
     /// <summary>
-    /// Verifies missing serialized object-reference detection in loaded Scenes.
+    /// 読み込み済みシーンで、欠落した直列化オブジェクト参照の検出を確認します。
     /// </summary>
     [Parallelizable(ParallelScope.None)]
     internal sealed class MissingObjectReferenceSceneScannerTests
@@ -75,7 +75,10 @@ namespace BuildGuard.Tests
         [Test]
         public void Scan_InvalidScene_ThrowsArgumentException()
         {
-            Assert.Throws<ArgumentException>(() => MissingObjectReferenceSceneScanner.Scan(default));
+            var exception = Assert.Throws<ArgumentException>(
+                () => MissingObjectReferenceSceneScanner.Scan(default));
+
+            Assert.That(exception.Message, Does.StartWith("検査するシーンが無効です。"));
         }
 
         internal Scene CreateSceneWithMissingCameraTargetTexture()

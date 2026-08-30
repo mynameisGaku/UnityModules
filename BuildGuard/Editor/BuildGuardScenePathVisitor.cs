@@ -9,11 +9,11 @@ using UnityEngine.SceneManagement;
 namespace BuildGuard.Editor
 {
     /// <summary>
-    /// Visits Scene asset paths while preserving loaded and active Scene state.
+    /// シーンの読み込み状態と有効シーンを保ちながら、シーンアセットのパスを順に処理します。
     /// </summary>
     internal static class BuildGuardScenePathVisitor
     {
-        /// <summary>Visits each valid unique Scene path in its original order.</summary>
+        /// <summary>有効かつ重複しない各シーンパスを、指定された順に処理します。</summary>
         internal static int Visit(
             IReadOnlyList<string> scenePaths,
             Func<int, int, string, bool> shouldCancel,
@@ -64,7 +64,7 @@ namespace BuildGuard.Editor
                         {
                             if (!EditorSceneManager.CloseScene(scene, true))
                             {
-                                throw new InvalidOperationException($"Failed to close inspected Scene: {scenePath}");
+                                throw new InvalidOperationException($"検査のために開いたシーンを閉じられませんでした: {scenePath}");
                             }
                         }
                     }
@@ -77,7 +77,7 @@ namespace BuildGuard.Editor
                     && SceneManager.GetActiveScene() != originalActiveScene
                     && !SceneManager.SetActiveScene(originalActiveScene))
                 {
-                    throw new InvalidOperationException("Failed to restore the original active Scene.");
+                    throw new InvalidOperationException("元の有効シーンを復元できませんでした。");
                 }
             }
 

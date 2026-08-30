@@ -2,6 +2,7 @@
 
 using System;
 using System.IO;
+using System.Reflection;
 using BuildGuard.Editor;
 using NUnit.Framework;
 using UnityEditor;
@@ -11,7 +12,7 @@ using UnityEngine;
 namespace BuildGuard.Tests
 {
     /// <summary>
-    /// Verifies the manual scan window state and Scene navigation contract.
+    /// 手動検査画面の状態とシーン移動の契約を検証します。
     /// </summary>
     [Parallelizable(ParallelScope.None)]
     internal sealed class BuildGuardScanWindowTests
@@ -58,7 +59,8 @@ namespace BuildGuard.Tests
             _window.RunScan();
 
             Assert.That(_window.IssueCount, Is.Zero);
-            Assert.That(_window.StatusText, Is.EqualTo("Scanned 1 Scene(s). No missing references found."));
+            Assert.That(_window.StatusText, Is.EqualTo(
+                "シーンを1件検査しました。欠落参照は見つかりませんでした。"));
         }
 
         [Test]
@@ -69,7 +71,8 @@ namespace BuildGuard.Tests
             _window.RunScan();
 
             Assert.That(_window.IssueCount, Is.Zero);
-            Assert.That(_window.StatusText, Does.Contain("No enabled Scenes"));
+            Assert.That(_window.StatusText, Is.EqualTo(
+                "現在のビルドプロファイルに、有効なシーンが設定されていません。"));
         }
 
         [Test]
@@ -84,11 +87,14 @@ namespace BuildGuard.Tests
 
                 _window.RunScan();
                 Assert.That(_window.IssueCount, Is.EqualTo(2));
+                Assert.That(_window.StatusText, Is.EqualTo(
+                    "シーンを1件検査し、2件の問題を見つけました。"));
 
                 _window.ClearResults();
 
                 Assert.That(_window.IssueCount, Is.Zero);
-                Assert.That(_window.StatusText, Does.Contain("Results cleared"));
+                Assert.That(_window.StatusText, Is.EqualTo(
+                    "結果を消去しました。ビルド対象シーン、または記録済みの選択シーンを再度検査してください。"));
             }
             finally
             {
@@ -108,7 +114,8 @@ namespace BuildGuard.Tests
 
             Assert.That(_window.SelectedSceneCount, Is.Zero);
             Assert.That(_window.IssueCount, Is.Zero);
-            Assert.That(_window.StatusText, Does.Contain("Select one or more Scene assets"));
+            Assert.That(_window.StatusText, Is.EqualTo(
+                "プロジェクトウィンドウでシーンアセットを1件以上選択してください。フォルダーとシーン以外のアセットは無視されます。"));
         }
 
         [Test]
@@ -122,7 +129,8 @@ namespace BuildGuard.Tests
 
             Assert.That(_window.SelectedSceneCount, Is.EqualTo(2));
             Assert.That(_window.IssueCount, Is.Zero);
-            Assert.That(_window.StatusText, Is.EqualTo("Captured 2 Scene asset(s)."));
+            Assert.That(_window.StatusText, Is.EqualTo(
+                "選択中のシーンアセットを2件記録しました。"));
         }
 
         [Test]
@@ -136,7 +144,7 @@ namespace BuildGuard.Tests
 
             Assert.That(_window.IssueCount, Is.Zero);
             Assert.That(_window.StatusText, Is.EqualTo(
-                "Scanned 1 selected Scene(s). No missing references found."));
+                "選択シーンを1件検査しました。欠落参照は見つかりませんでした。"));
         }
 
         [Test]
@@ -151,7 +159,7 @@ namespace BuildGuard.Tests
 
             Assert.That(_window.IssueCount, Is.Zero);
             Assert.That(_window.StatusText, Is.EqualTo(
-                "Selected Scene scan cancelled after 1 Scene(s). 0 issue(s) retained."));
+                "選択シーンを1件検査した時点で中止しました。0件の問題を保持しています。"));
         }
 
         [Test]
@@ -166,7 +174,8 @@ namespace BuildGuard.Tests
             _window.RunSelectedScan();
 
             Assert.That(_window.IssueCount, Is.Zero);
-            Assert.That(_window.StatusText, Does.Contain("Use Current Selection"));
+            Assert.That(_window.StatusText, Is.EqualTo(
+                "選択シーンの状態が変わりました。「現在の選択を使用」を押してから、もう一度検査してください。"));
         }
 
         [Test]
@@ -181,7 +190,7 @@ namespace BuildGuard.Tests
             Assert.That(_window.SelectedSceneCount, Is.EqualTo(1));
             Assert.That(_window.IssueCount, Is.Zero);
             Assert.That(_window.StatusText, Is.EqualTo(
-                "Results cleared. Scan build Scenes or the captured Scene assets again."));
+                "結果を消去しました。ビルド対象シーン、または記録済みの選択シーンを再度検査してください。"));
         }
 
         [Test]
@@ -199,7 +208,7 @@ namespace BuildGuard.Tests
                 BuildGuardIssueKind.MissingScript,
                 scenePath,
                 hierarchyPath,
-                "Missing Scripts: 1");
+                "欠落スクリプト: 1");
 
             var opened = BuildGuardScanWindow.TryOpenIssue(issue, false);
 
@@ -224,7 +233,7 @@ namespace BuildGuard.Tests
                     BuildGuardIssueKind.MissingScript,
                     scene.path,
                     finding.HierarchyPath,
-                    $"Missing Scripts: {finding.MissingScriptCount}");
+                    $"欠落スクリプト: {finding.MissingScriptCount}");
                 UnityEngine.SceneManagement.SceneManager.SetActiveScene(hostScene);
                 Assert.That(EditorSceneManager.CloseScene(scene, true), Is.True);
 
@@ -272,6 +281,113 @@ namespace BuildGuard.Tests
             Assert.That(removedCount, Is.Zero);
         }
 
+        [Test]
+        public void JapaneseMenuAndButtonLabels_AreConfiguredExactly()
+        {
+            var toolMenu = GetMenuItem("ShowFromTools");
+            var assetMenu = GetMenuItem("ShowFromAssets");
+            var assetMenuValidation = GetMenuItem("ValidateShowFromAssets");
+
+            Assert.That(_window.StatusText, Is.EqualTo(
+                "「ビルド対象シーンを検査」を押して、現在のビルドプロファイルを確認してください。"));
+            Assert.That(GetPrivateStaticField<string>("ToolMenuPath"), Is.EqualTo(
+                "Tools/ビルドガード/ビルド対象シーンを検査"));
+            Assert.That(GetPrivateStaticField<string>("AssetMenuPath"), Is.EqualTo(
+                "Assets/ビルドガード/選択シーンを検査"));
+            Assert.That(GetPrivateStaticField<GUIContent>("ScanBuildScenesButtonContent").text, Is.EqualTo(
+                "ビルド対象シーンを検査"));
+            Assert.That(GetPrivateStaticField<GUIContent>("ScanSelectedScenesButtonContent").text, Is.EqualTo(
+                "選択シーンを検査"));
+            Assert.That(GetPrivateStaticField<GUIContent>("ClearButtonContent").text, Is.EqualTo(
+                "結果を消去"));
+            Assert.That(toolMenu.menuItem, Is.EqualTo("Tools/ビルドガード/ビルド対象シーンを検査"));
+            Assert.That(toolMenu.validate, Is.False);
+            Assert.That(toolMenu.priority, Is.EqualTo(2000));
+            Assert.That(assetMenu.menuItem, Is.EqualTo("Assets/ビルドガード/選択シーンを検査"));
+            Assert.That(assetMenu.validate, Is.False);
+            Assert.That(assetMenu.priority, Is.EqualTo(2000));
+            Assert.That(assetMenuValidation.menuItem, Is.EqualTo(
+                "Assets/ビルドガード/選択シーンを検査"));
+            Assert.That(assetMenuValidation.validate, Is.True);
+        }
+
+        [Test]
+        public void ValidateSelectedSceneMenu_EmptySelectionIsDisabledAndSceneSelectionIsEnabled()
+        {
+            Selection.objects = Array.Empty<UnityEngine.Object>();
+            Assert.That(InvokePrivateStaticMethod<bool>("ValidateShowFromAssets"), Is.False);
+
+            var scenePath = CreateSavedScene("MenuSelection.unity");
+            SelectAssets(scenePath);
+
+            Assert.That(InvokePrivateStaticMethod<bool>("ValidateShowFromAssets"), Is.True);
+        }
+
+        [Test]
+        public void FormatBuildSceneCancellationStatus_ShowsRetainedIssueCountInJapanese()
+        {
+            var issue = new BuildGuardScanIssue(
+                BuildGuardIssueKind.MissingScript,
+                "Assets/検査対象.unity",
+                "ルート[0]",
+                "欠落スクリプト: 1");
+            var result = new BuildGuardManualScanResult(
+                new[] { issue },
+                3,
+                true);
+
+            var text = InvokePrivateStaticMethod<string>("FormatStatus", result);
+
+            Assert.That(text, Is.EqualTo(
+                "シーンを3件検査した時点で中止しました。1件の問題を保持しています。"));
+        }
+
+        [Test]
+        public void FormatSelectedSceneFindingStatus_ShowsIssueCountInJapanese()
+        {
+            var issue = new BuildGuardScanIssue(
+                BuildGuardIssueKind.MissingScript,
+                "Assets/検査対象.unity",
+                "ルート[0]",
+                "欠落スクリプト: 1");
+            var result = new BuildGuardManualScanResult(
+                new[] { issue },
+                2,
+                false);
+
+            var text = InvokePrivateStaticMethod<string>("FormatSelectedStatus", result);
+
+            Assert.That(text, Is.EqualTo(
+                "選択シーンを2件検査し、1件の問題を見つけました。"));
+        }
+
+        [Test]
+        public void FormatRemovalStatus_ShowsRemovedCountAndNextActionInJapanese()
+        {
+            var text = InvokePrivateStaticMethod<string>("FormatRemovalStatus", 2);
+
+            Assert.That(text, Is.EqualTo(
+                "欠落スクリプトを2件除去しました。未保存のシーンを確認し、保存するか元に戻してください。"));
+        }
+
+        [TestCase(BuildGuardIssueKind.MissingScript, "欠落スクリプト")]
+        [TestCase(BuildGuardIssueKind.MissingObjectReference, "欠落オブジェクト参照")]
+        public void FormatClipboardText_JapaneseKindAndPropertyLabels_ArePreserved(
+            BuildGuardIssueKind kind,
+            string expectedKind)
+        {
+            var issue = new BuildGuardScanIssue(
+                kind,
+                "Assets/検査対象.unity",
+                "ルート[0]/子[0]",
+                "欠落箇所");
+
+            var text = InvokePrivateStaticMethod<string>("FormatClipboardText", issue);
+
+            Assert.That(text, Is.EqualTo(
+                $"{expectedKind} | シーン: Assets/検査対象.unity | ゲームオブジェクト: ルート[0]/子[0] | 詳細: 欠落箇所"));
+        }
+
         private string CreateSavedScene(string fileName)
         {
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
@@ -291,6 +407,35 @@ namespace BuildGuard.Tests
             }
 
             Selection.objects = assets;
+        }
+
+        private static T GetPrivateStaticField<T>(string fieldName)
+        {
+            var field = typeof(BuildGuardScanWindow).GetField(
+                fieldName,
+                BindingFlags.NonPublic | BindingFlags.Static);
+            Assert.That(field, Is.Not.Null, fieldName);
+            return (T)field.GetValue(null);
+        }
+
+        private static MenuItem GetMenuItem(string methodName)
+        {
+            var method = typeof(BuildGuardScanWindow).GetMethod(
+                methodName,
+                BindingFlags.NonPublic | BindingFlags.Static);
+            Assert.That(method, Is.Not.Null, methodName);
+            var menuItem = method.GetCustomAttribute<MenuItem>();
+            Assert.That(menuItem, Is.Not.Null, methodName);
+            return menuItem;
+        }
+
+        private static T InvokePrivateStaticMethod<T>(string methodName, params object[] arguments)
+        {
+            var method = typeof(BuildGuardScanWindow).GetMethod(
+                methodName,
+                BindingFlags.NonPublic | BindingFlags.Static);
+            Assert.That(method, Is.Not.Null, methodName);
+            return (T)method.Invoke(null, arguments);
         }
     }
 }

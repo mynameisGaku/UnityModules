@@ -3,11 +3,11 @@
 namespace BuildGuard.Editor
 {
     /// <summary>
-    /// Identifies one serialized object property whose referenced object is missing.
+    /// 参照先が欠落した直列化オブジェクトのプロパティを1件表します。
     /// </summary>
     internal readonly struct MissingObjectReferenceFinding
     {
-        /// <summary>Creates one deterministic missing-reference location.</summary>
+        /// <summary>並び順を一定にできる欠落参照の場所を1件作成します。</summary>
         internal MissingObjectReferenceFinding(
             string hierarchyPath,
             string componentTypeName,
@@ -20,16 +20,16 @@ namespace BuildGuard.Editor
             PropertyPath = propertyPath;
         }
 
-        /// <summary>Gets the hierarchy path including sibling indices.</summary>
+        /// <summary>同じ親の中での順番を含む階層パスを取得します。</summary>
         internal string HierarchyPath { get; }
 
-        /// <summary>Gets the full component type name.</summary>
+        /// <summary>コンポーネントの完全な型名を取得します。</summary>
         internal string ComponentTypeName { get; }
 
-        /// <summary>Gets the component index on the GameObject.</summary>
+        /// <summary>ゲームオブジェクト上でのコンポーネントの順番を取得します。</summary>
         internal int ComponentIndex { get; }
 
-        /// <summary>Gets the serialized property path.</summary>
+        /// <summary>直列化プロパティのパスを取得します。</summary>
         internal string PropertyPath { get; }
     }
 }

@@ -3,7 +3,7 @@
 namespace BuildGuard.Editor
 {
     /// <summary>
-    /// Identifies the Build Guard rule that produced a manual scan issue.
+    /// 手動検査で問題を検出したビルドガードの規則を識別します。
     /// </summary>
     internal enum BuildGuardIssueKind
     {
@@ -12,7 +12,7 @@ namespace BuildGuard.Editor
     }
 
     /// <summary>
-    /// Describes one actionable issue found by a manual build Scene scan.
+    /// 手動のビルド対象シーン検査で見つかった、修正対象となる問題を1件表します。
     /// </summary>
     internal readonly struct BuildGuardScanIssue
     {
