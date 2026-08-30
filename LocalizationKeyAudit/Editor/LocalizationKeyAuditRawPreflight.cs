@@ -9,21 +9,21 @@ using System.Text;
 namespace LocalizationKeyAudit.Editor
 {
     /// <summary>
-    /// SharedTableData の physical bytes を検証し、typed load 前の read-only 保証を確立します。
+    /// 共有テーブルデータの物理バイト列を検証し、型として読み取る前の読み取り専用保証を確立します。
     /// </summary>
     internal static class LocalizationKeyAuditRawPreflight
     {
-        /// <summary>Unity YAML で厳密に探す serialized field 名です。</summary>
+        /// <summary>Unity形式のYAMLで厳密に探す直列化項目名です。</summary>
         internal const string CollectionGuidFieldName = "m_TableCollectionNameGuidString";
 
-        /// <summary>Unity YAML で SharedTableData の型を識別する direct field 名です。</summary>
+        /// <summary>Unity形式のYAMLで共有テーブルデータの型を識別する直下項目名です。</summary>
         private const string ScriptFieldName = "m_Script";
 
-        /// <summary>Unity YAML の MonoBehaviour root 直下で使われる空白数です。</summary>
+        /// <summary>Unity形式のYAMLのMonoBehaviour最上位直下で使われる空白数です。</summary>
         private const int DirectFieldIndentation = 2;
 
         /// <summary>
-        /// 全 raw asset の収集と検証が完了した場合だけ identity 一覧を返します。
+        /// 全ての未加工アセットの収集と検証が完了した場合だけ識別情報一覧を返します。
         /// </summary>
         internal static bool TryRun(
             ILocalizationKeyAuditRawSource source,
@@ -37,7 +37,7 @@ namespace LocalizationKeyAudit.Editor
 
             if (source == null)
             {
-                failureMessage = "raw SharedTableData source がありません。";
+                failureMessage = "未加工の共有テーブルデータの取得元がありません。";
                 return false;
             }
 
@@ -47,13 +47,13 @@ namespace LocalizationKeyAudit.Editor
                 var sourceAssets = source.ReadSharedTableDataAssets();
                 if (sourceAssets == null)
                 {
-                    failureMessage = "raw SharedTableData source が null を返しました。";
+                    failureMessage = "未加工の共有テーブルデータの取得元から戻り値がありません。";
                     return false;
                 }
 
                 if (sourceAssets.Count > LocalizationKeyAuditLimits.MaximumSharedTableDataAssets)
                 {
-                    failureMessage = $"SharedTableData 数が上限 {LocalizationKeyAuditLimits.MaximumSharedTableDataAssets} 件を超えています。";
+                    failureMessage = $"共有テーブルデータ数が上限 {LocalizationKeyAuditLimits.MaximumSharedTableDataAssets} 件を超えています。";
                     return false;
                 }
 
@@ -65,7 +65,7 @@ namespace LocalizationKeyAudit.Editor
             }
             catch (Exception exception)
             {
-                failureMessage = $"raw SharedTableData の全件収集に失敗しました: {exception.GetType().Name}";
+                failureMessage = $"未加工の共有テーブルデータの全件収集に失敗しました：{exception.GetType().Name}";
                 return false;
             }
 
@@ -83,7 +83,7 @@ namespace LocalizationKeyAudit.Editor
                 var asset = assets[index];
                 if (asset == null)
                 {
-                    failureMessage = "raw SharedTableData 一覧に null が含まれています。";
+                    failureMessage = "未加工の共有テーブルデータ一覧に未設定の要素が含まれています。";
                     return false;
                 }
 
@@ -100,44 +100,44 @@ namespace LocalizationKeyAudit.Editor
 
                 if (!assetPaths.Add(asset.AssetPath))
                 {
-                    failureMessage = "同じ SharedTableData asset path が複数回列挙されました。";
+                    failureMessage = "同じ共有テーブルデータのアセットパスが複数回列挙されました。";
                     return false;
                 }
 
                 if (!physicalPaths.Add(asset.PhysicalPath))
                 {
-                    failureMessage = "同じ SharedTableData physical path が複数 asset に対応しています。";
+                    failureMessage = "同じ共有テーブルデータの物理パスが複数のアセットに対応しています。";
                     return false;
                 }
 
                 if (asset.HasReparsePoint)
                 {
-                    failureMessage = "SharedTableData path に reparse point が含まれています。";
+                    failureMessage = "共有テーブルデータのパスに再解析点が含まれています。";
                     return false;
                 }
 
                 if (!asset.Exists)
                 {
-                    failureMessage = "SharedTableData physical file が存在しません。";
+                    failureMessage = "共有テーブルデータの物理ファイルが存在しません。";
                     return false;
                 }
 
                 if (asset.IsOversize || asset.ByteCount > LocalizationKeyAuditLimits.MaximumRawAssetBytes)
                 {
-                    failureMessage = $"SharedTableData が 1 file 上限 {LocalizationKeyAuditLimits.MaximumRawAssetBytes} bytes を超えています。";
+                    failureMessage = $"共有テーブルデータがファイル1件あたりの上限 {LocalizationKeyAuditLimits.MaximumRawAssetBytes} バイトを超えています。";
                     return false;
                 }
 
                 if (!string.IsNullOrEmpty(asset.ReadError))
                 {
-                    failureMessage = $"SharedTableData physical file を読み取れません: {GetSafeReadErrorCode(asset.ReadError)}";
+                    failureMessage = $"共有テーブルデータの物理ファイルを読み取れません：{GetSafeReadErrorCode(asset.ReadError)}";
                     return false;
                 }
 
                 totalBytes += asset.ByteCount;
                 if (totalBytes > LocalizationKeyAuditLimits.MaximumTotalRawBytes)
                 {
-                    failureMessage = $"SharedTableData の総 byte 数が上限 {LocalizationKeyAuditLimits.MaximumTotalRawBytes} を超えています。";
+                    failureMessage = $"共有テーブルデータの総バイト数が上限 {LocalizationKeyAuditLimits.MaximumTotalRawBytes} を超えています。";
                     return false;
                 }
 
@@ -155,12 +155,12 @@ namespace LocalizationKeyAudit.Editor
             return true;
         }
 
-        /// <summary>opaqueなraw source error本文を結果へ出さず安全な型名だけにします。</summary>
+        /// <summary>取得元の不透明な読み取りエラー本文を結果へ出さず、安全な型名または有無だけにします。</summary>
         private static string GetSafeReadErrorCode(string readError)
         {
             if (string.IsNullOrEmpty(readError) || readError.Length > 128)
             {
-                return "present";
+                return "あり";
             }
 
             for (var index = 0; index < readError.Length; index++)
@@ -171,7 +171,7 @@ namespace LocalizationKeyAudit.Editor
                 if (!isAsciiLetter && !(character >= '0' && character <= '9') &&
                     character != '_' && character != '.')
                 {
-                    return "present";
+                    return "あり";
                 }
             }
 
@@ -179,7 +179,7 @@ namespace LocalizationKeyAudit.Editor
         }
 
         /// <summary>
-        /// SharedTableData script を持つ単一 document の direct field を 1 件だけ解析します。
+        /// 共有テーブルデータのスクリプトを持つ単一文書の直下項目を1件だけ解析します。
         /// </summary>
         private static bool TryParseCollectionGuid(byte[] bytes, out Guid collectionGuid, out string failureMessage)
         {
@@ -189,7 +189,7 @@ namespace LocalizationKeyAudit.Editor
             {
                 if (bytes[index] == 0)
                 {
-                    failureMessage = "SharedTableData は binary data を含んでいます。";
+                    failureMessage = "共有テーブルデータにバイナリデータが含まれています。";
                     return false;
                 }
             }
@@ -201,7 +201,7 @@ namespace LocalizationKeyAudit.Editor
             }
             catch (DecoderFallbackException)
             {
-                failureMessage = "SharedTableData を strict UTF-8 Unity YAML として読めません。";
+                failureMessage = "共有テーブルデータを厳密なUTF-8のUnity形式のYAMLとして読めません。";
                 return false;
             }
 
@@ -291,7 +291,7 @@ namespace LocalizationKeyAudit.Editor
                             scriptIndentation == DirectFieldIndentation;
                         if (isTargetScript && !isDirectScript)
                         {
-                            failureMessage = "SharedTableData の m_Script が MonoBehaviour root の direct field ではありません。";
+                            failureMessage = "共有テーブルデータのm_ScriptがMonoBehaviourの直下項目ではありません。";
                             return false;
                         }
 
@@ -325,7 +325,7 @@ namespace LocalizationKeyAudit.Editor
                         fieldIndentation == DirectFieldIndentation;
                     if (!isDirectCollectionField)
                     {
-                        failureMessage = $"Unity YAML field {CollectionGuidFieldName} が MonoBehaviour root の direct field ではありません。";
+                        failureMessage = $"Unity形式のYAMLの項目 {CollectionGuidFieldName} がMonoBehaviourの直下項目ではありません。";
                         return false;
                     }
 
@@ -354,32 +354,32 @@ namespace LocalizationKeyAudit.Editor
 
             if (targetDocumentCount == 0)
             {
-                failureMessage = "SharedTableData script GUID を持つ Unity YAML document がありません。";
+                failureMessage = "共有テーブルデータのスクリプトGUIDを持つUnity形式のYAML文書がありません。";
                 return false;
             }
 
             if (string.IsNullOrEmpty(serializedValue))
             {
-                failureMessage = $"Unity YAML field {CollectionGuidFieldName} が空です。typed load は asset を dirty にする可能性があります。";
+                failureMessage = $"Unity形式のYAMLの項目 {CollectionGuidFieldName} が空です。型として読み取るとアセットが未保存変更ありの状態になる可能性があります。";
                 return false;
             }
 
             if (!Guid.TryParse(serializedValue, out collectionGuid))
             {
-                failureMessage = $"Unity YAML field {CollectionGuidFieldName} を GUID として解析できません。";
+                failureMessage = $"Unity形式のYAMLの項目 {CollectionGuidFieldName} をGUIDとして解析できません。";
                 return false;
             }
 
             if (collectionGuid == Guid.Empty)
             {
-                failureMessage = $"Unity YAML field {CollectionGuidFieldName} が empty GUID です。typed load は asset を dirty にする可能性があります。";
+                failureMessage = $"Unity形式のYAMLの項目 {CollectionGuidFieldName} が空のGUIDです。型として読み取るとアセットが未保存変更ありの状態になる可能性があります。";
                 return false;
             }
 
             return true;
         }
 
-        /// <summary>1 document の script と collection field の相関と一意性を確定します。</summary>
+        /// <summary>1文書内のスクリプトとコレクション項目の対応と一意性を確定します。</summary>
         private static bool TryCompleteDocument(
             bool hasDocument,
             int monoBehaviourRootCount,
@@ -402,7 +402,7 @@ namespace LocalizationKeyAudit.Editor
             {
                 if (directCollectionFieldCount > 0)
                 {
-                    failureMessage = $"Unity YAML field {CollectionGuidFieldName} が SharedTableData script と同じ document にありません。";
+                    failureMessage = $"Unity形式のYAMLの項目 {CollectionGuidFieldName} が共有テーブルデータのスクリプトと同じ文書にありません。";
                     return false;
                 }
 
@@ -411,32 +411,32 @@ namespace LocalizationKeyAudit.Editor
 
             if (targetScriptCount != 1 || directScriptCount != 1)
             {
-                failureMessage = "SharedTableData の direct m_Script field を一意に確定できません。";
+                failureMessage = "共有テーブルデータの直下にあるm_Script項目を一意に確定できません。";
                 return false;
             }
 
             if (monoBehaviourRootCount != 1 || topLevelContentCount != 1)
             {
-                failureMessage = "SharedTableData document の top-level mapping owner を MonoBehaviour 一件へ限定できません。";
+                failureMessage = "共有テーブルデータ文書の最上位マッピングの所有元をMonoBehaviour 1件に限定できません。";
                 return false;
             }
 
             targetDocumentCount++;
             if (targetDocumentCount > 1)
             {
-                failureMessage = $"SharedTableData script GUID を持つ Unity YAML document が {targetDocumentCount} 件あります。";
+                failureMessage = $"共有テーブルデータのスクリプトGUIDを持つUnity形式のYAML文書が {targetDocumentCount} 件あります。";
                 return false;
             }
 
             if (directCollectionFieldCount == 0)
             {
-                failureMessage = $"Unity YAML field {CollectionGuidFieldName} が SharedTableData document にありません。";
+                failureMessage = $"Unity形式のYAMLの項目 {CollectionGuidFieldName} が共有テーブルデータ文書にありません。";
                 return false;
             }
 
             if (directCollectionFieldCount > 1)
             {
-                failureMessage = $"Unity YAML field {CollectionGuidFieldName} が SharedTableData document に {directCollectionFieldCount} 件あります。";
+                failureMessage = $"Unity形式のYAMLの項目 {CollectionGuidFieldName} が共有テーブルデータ文書に {directCollectionFieldCount} 件あります。";
                 return false;
             }
 
@@ -444,20 +444,20 @@ namespace LocalizationKeyAudit.Editor
             return true;
         }
 
-        /// <summary>Unity YAML document 境界として扱う行かを返します。</summary>
+        /// <summary>Unity形式のYAML文書の境界として扱う行かを返します。</summary>
         private static bool IsDocumentBoundary(string line)
         {
             return string.Equals(line, "---", StringComparison.Ordinal) ||
                 line.StartsWith("--- ", StringComparison.Ordinal);
         }
 
-        /// <summary>標準の MonoBehaviour document header かを返します。</summary>
+        /// <summary>標準のMonoBehaviour文書ヘッダーかを返します。</summary>
         private static bool IsMonoBehaviourDocumentHeader(string line)
         {
             return line.StartsWith("--- !u!114 &", StringComparison.Ordinal);
         }
 
-        /// <summary>MonoBehaviour以外へownerを移すtop-level content行かを返します。</summary>
+        /// <summary>所有元をMonoBehaviour以外へ移す最上位内容の行かを返します。</summary>
         private static bool IsOtherTopLevelContent(string line)
         {
             return !string.IsNullOrWhiteSpace(line) &&
@@ -467,7 +467,7 @@ namespace LocalizationKeyAudit.Editor
                 line[0] != '%';
         }
 
-        /// <summary>行頭空白と exact key に続く YAML value を取得します。</summary>
+        /// <summary>行頭空白と完全一致するキーに続くYAML値を取得します。</summary>
         private static bool TryGetExactYamlValue(
             string line,
             string fieldName,
@@ -511,7 +511,7 @@ namespace LocalizationKeyAudit.Editor
             return true;
         }
 
-        /// <summary>inline mapping の exact key を一件だけ取得します。</summary>
+        /// <summary>行内マッピングから完全一致するキーを1件だけ取得します。</summary>
         private static bool TryGetInlineMappingValue(
             string serializedValue,
             string key,
@@ -548,23 +548,23 @@ namespace LocalizationKeyAudit.Editor
             return found;
         }
 
-        /// <summary>asset path または absolute physical path の基本形を検証します。</summary>
+        /// <summary>アセットパスまたは絶対物理パスの基本形を検証します。</summary>
         private static bool TryValidatePath(string path, bool requireRooted, out string failureMessage)
         {
             failureMessage = string.Empty;
             if (string.IsNullOrWhiteSpace(path) || path.Length > LocalizationKeyAuditLimits.MaximumTextCharacters)
             {
                 failureMessage = requireRooted
-                    ? "SharedTableData physical path が空または長すぎます。"
-                    : "SharedTableData asset path が空または長すぎます。";
+                    ? "共有テーブルデータの物理パスが空か長すぎます。"
+                    : "共有テーブルデータのアセットパスが空か長すぎます。";
                 return false;
             }
 
             if (path.IndexOf('\0') >= 0 || (requireRooted && !Path.IsPathRooted(path)))
             {
                 failureMessage = requireRooted
-                    ? "SharedTableData physical path が absolute path ではありません。"
-                    : "SharedTableData asset path が不正です。";
+                    ? "共有テーブルデータの物理パスが絶対パスではありません。"
+                    : "共有テーブルデータのアセットパスが不正です。";
                 return false;
             }
 
@@ -578,7 +578,7 @@ namespace LocalizationKeyAudit.Editor
                     var normalizedInput = path.Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar);
                     if (!string.Equals(normalizedInput, Path.GetFullPath(path), comparison))
                     {
-                        failureMessage = "SharedTableData physical path が正規化済み absolute path ではありません。";
+                        failureMessage = "共有テーブルデータの物理パスが正規化済みの絶対パスではありません。";
                         return false;
                     }
                 }
@@ -586,7 +586,7 @@ namespace LocalizationKeyAudit.Editor
                                                    exception is NotSupportedException ||
                                                    exception is PathTooLongException)
                 {
-                    failureMessage = $"SharedTableData physical path を正規化できません: {exception.GetType().Name}";
+                    failureMessage = $"共有テーブルデータの物理パスを正規化できません：{exception.GetType().Name}";
                     return false;
                 }
             }
@@ -597,7 +597,7 @@ namespace LocalizationKeyAudit.Editor
                     (!path.StartsWith("Assets/", StringComparison.Ordinal) &&
                      !path.StartsWith("Packages/", StringComparison.Ordinal)))
                 {
-                    failureMessage = "SharedTableData asset path が Unity relative path ではありません。";
+                    failureMessage = "共有テーブルデータのアセットパスがUnityの相対パスではありません。";
                     return false;
                 }
 
@@ -606,7 +606,7 @@ namespace LocalizationKeyAudit.Editor
                 {
                     if (segments[index].Length == 0 || segments[index] == "." || segments[index] == "..")
                     {
-                        failureMessage = "SharedTableData asset path に不正な segment があります。";
+                        failureMessage = "共有テーブルデータのアセットパスに不正な区切り要素があります。";
                         return false;
                     }
                 }
@@ -615,7 +615,7 @@ namespace LocalizationKeyAudit.Editor
             return true;
         }
 
-        /// <summary>raw asset を asset path、physical path の順に並べます。</summary>
+        /// <summary>未加工アセットをアセットパス、物理パスの順に並べます。</summary>
         private static int CompareRawAssets(LocalizationKeyAuditRawAsset left, LocalizationKeyAuditRawAsset right)
         {
             if (ReferenceEquals(left, right))

@@ -8,12 +8,12 @@ using AuditEditor = LocalizationKeyAudit.Editor;
 namespace LocalizationKeyAudit.Tests
 {
     /// <summary>
-    /// typed load より前に raw YAML と read-only 条件を全件検証する契約を確認します。
+    /// 型として読み取る前に未加工のYAMLと読み取り専用条件を全件検証する契約を確認します。
     /// </summary>
     internal sealed class LocalizationKeyAuditRawPreflightTests
     {
         /// <summary>
-        /// valid な LF/CRLF YAML は入力順に依存せず asset path 順の identity になります。
+        /// 正常なLF/CRLFのYAMLは入力順に依存せず、アセットパス順の識別情報になります。
         /// </summary>
         [Test]
         public void TryRun_ValidYamlReturnsDeterministicReadOnlyIdentities()
@@ -58,28 +58,36 @@ namespace LocalizationKeyAudit.Tests
         }
 
         /// <summary>
-        /// field の欠落、空、empty GUID、malformed、重複を別々に拒否します。
+        /// 項目の欠落、空、空のGUID、不正形式、重複を別々に拒否します。
         /// </summary>
-        [TestCase("m_Name: UI", "SharedTableData document にありません")]
-        [TestCase("m_TableCollectionNameGuidString:", "が空です")]
-        [TestCase("m_TableCollectionNameGuidString: 00000000000000000000000000000000", "empty GUID")]
-        [TestCase("m_TableCollectionNameGuidString: not-a-guid", "GUID として解析")]
+        [TestCase(
+            "m_Name: UI",
+            "Unity形式のYAMLの項目 m_TableCollectionNameGuidString が共有テーブルデータ文書にありません。")]
+        [TestCase(
+            "m_TableCollectionNameGuidString:",
+            "Unity形式のYAMLの項目 m_TableCollectionNameGuidString が空です。型として読み取るとアセットが未保存変更ありの状態になる可能性があります。")]
+        [TestCase(
+            "m_TableCollectionNameGuidString: 00000000000000000000000000000000",
+            "Unity形式のYAMLの項目 m_TableCollectionNameGuidString が空のGUIDです。型として読み取るとアセットが未保存変更ありの状態になる可能性があります。")]
+        [TestCase(
+            "m_TableCollectionNameGuidString: not-a-guid",
+            "Unity形式のYAMLの項目 m_TableCollectionNameGuidString をGUIDとして解析できません。")]
         [TestCase(
             "m_TableCollectionNameGuidString: 11111111222233334444555555555555\n" +
             "m_TableCollectionNameGuidString: aaaaaaaabbbbccccddddeeeeeeeeeeee",
-            "2 件")]
-        public void TryRun_InvalidGuidFieldFailsWithoutIdentity(string yaml, string expectedMessagePart)
+            "Unity形式のYAMLの項目 m_TableCollectionNameGuidString が共有テーブルデータ文書に 2 件あります。")]
+        public void TryRun_InvalidGuidFieldFailsWithoutIdentity(string yaml, string expectedMessage)
         {
             var source = SourceWith(LocalizationKeyAuditTestData.CreateRawAsset(
                 "Assets/Localization/Invalid Shared Data.asset",
                 LocalizationKeyAuditTestData.CreateSharedTableDataYamlBytes(
                     yaml.Replace("\r\n", "\n").Split('\n'))));
 
-            AssertPreflightFailure(source, "Assets/Localization/Invalid Shared Data.asset", expectedMessagePart);
+            AssertPreflightFailure(source, "Assets/Localization/Invalid Shared Data.asset", expectedMessage);
         }
 
         /// <summary>
-        /// exact field 名と大文字小文字が一致しない lookalike は identity として認識しません。
+        /// 完全一致する項目名ではない類似名は、大文字小文字だけが違う場合も識別情報として認識しません。
         /// </summary>
         [TestCase("m_TableCollectionNameGuidStringExtra: 11111111222233334444555555555555")]
         [TestCase("M_TableCollectionNameGuidString: 11111111222233334444555555555555")]
@@ -90,10 +98,13 @@ namespace LocalizationKeyAudit.Tests
                 "Assets/Localization/Lookalike Shared Data.asset",
                 LocalizationKeyAuditTestData.CreateSharedTableDataYamlBytes(new[] { yaml })));
 
-            AssertPreflightFailure(source, "Assets/Localization/Lookalike Shared Data.asset", "SharedTableData document にありません");
+            AssertPreflightFailure(
+                source,
+                "Assets/Localization/Lookalike Shared Data.asset",
+                "Unity形式のYAMLの項目 m_TableCollectionNameGuidString が共有テーブルデータ文書にありません。");
         }
 
-        /// <summary>Unity標準shapeのUTF-8 BOM付きYAMLも同じidentityとして受理します。</summary>
+        /// <summary>Unity標準形式のUTF-8 BOM付きYAMLも同じ識別情報として受理します。</summary>
         [Test]
         public void TryRun_StandardYamlWithBomIsAccepted()
         {
@@ -115,7 +126,7 @@ namespace LocalizationKeyAudit.Tests
             Assert.That(identities[0].CollectionGuid, Is.EqualTo(LocalizationKeyAuditTestData.CollectionGuid));
         }
 
-        /// <summary>target scriptとGUID fieldが別documentなら相関を推測せず拒否します。</summary>
+        /// <summary>対象スクリプトとGUID項目が別文書なら対応を推測せず拒否します。</summary>
         [Test]
         public void TryRun_ScriptAndFieldInDifferentDocumentsFailClosed()
         {
@@ -131,17 +142,32 @@ namespace LocalizationKeyAudit.Tests
                 "Assets/Localization/Separated Shared Data.asset",
                 LocalizationKeyAuditTestData.Utf8(yaml)));
 
-            AssertPreflightFailure(source, "Assets/Localization/Separated Shared Data.asset", "SharedTableData document");
+            AssertPreflightFailure(
+                source,
+                "Assets/Localization/Separated Shared Data.asset",
+                "Unity形式のYAMLの項目 m_TableCollectionNameGuidString が共有テーブルデータ文書にありません。");
         }
 
-        /// <summary>block scalarまたはnested mapping内のlookalikeはdirect fieldとして受理しません。</summary>
-        [TestCase("block-field")]
-        [TestCase("block-script")]
-        [TestCase("nested-field")]
-        [TestCase("nested-script")]
-        [TestCase("nested-duplicate")]
-        [TestCase("other-root-block")]
-        public void TryRun_BlockAndNestedLookalikesFailClosed(string shape)
+        /// <summary>複数行文字列または入れ子のマッピング内にある類似項目を直下項目として受理しません。</summary>
+        [TestCase(
+            "block-field",
+            "Unity形式のYAMLの項目 m_TableCollectionNameGuidString がMonoBehaviourの直下項目ではありません。")]
+        [TestCase(
+            "block-script",
+            "共有テーブルデータのm_ScriptがMonoBehaviourの直下項目ではありません。")]
+        [TestCase(
+            "nested-field",
+            "Unity形式のYAMLの項目 m_TableCollectionNameGuidString がMonoBehaviourの直下項目ではありません。")]
+        [TestCase(
+            "nested-script",
+            "共有テーブルデータのm_ScriptがMonoBehaviourの直下項目ではありません。")]
+        [TestCase(
+            "nested-duplicate",
+            "Unity形式のYAMLの項目 m_TableCollectionNameGuidString がMonoBehaviourの直下項目ではありません。")]
+        [TestCase(
+            "other-root-block",
+            "Unity形式のYAMLの項目 m_TableCollectionNameGuidString がMonoBehaviourの直下項目ではありません。")]
+        public void TryRun_BlockAndNestedLookalikesFailClosed(string shape, string expectedMessage)
         {
             var targetGuid = AuditEditor.UnityLocalizationKeyAuditRawSource.SharedTableDataScriptGuid;
             string document;
@@ -198,10 +224,10 @@ namespace LocalizationKeyAudit.Tests
                 "Assets/Localization/Nested Shared Data.asset",
                 LocalizationKeyAuditTestData.Utf8(CreateYaml(document))));
 
-            AssertPreflightFailure(source, "Assets/Localization/Nested Shared Data.asset", "direct field");
+            AssertPreflightFailure(source, "Assets/Localization/Nested Shared Data.asset", expectedMessage);
         }
 
-        /// <summary>SharedTableData scriptを持つdocumentが複数ならidentityを一件へ畳みません。</summary>
+        /// <summary>共有テーブルデータのスクリプトを持つ文書が複数なら識別情報を1件へまとめません。</summary>
         [Test]
         public void TryRun_MultipleTargetDocumentsFailClosed()
         {
@@ -219,10 +245,13 @@ namespace LocalizationKeyAudit.Tests
                 "Assets/Localization/Multiple Shared Data.asset",
                 LocalizationKeyAuditTestData.Utf8(yaml)));
 
-            AssertPreflightFailure(source, "Assets/Localization/Multiple Shared Data.asset", "2 件");
+            AssertPreflightFailure(
+                source,
+                "Assets/Localization/Multiple Shared Data.asset",
+                "共有テーブルデータのスクリプトGUIDを持つUnity形式のYAML文書が 2 件あります。");
         }
 
-        /// <summary>同じdocumentのtarget script fieldが複数なら相関先を推測せず拒否します。</summary>
+        /// <summary>同じ文書の対象スクリプト項目が複数なら対応先を推測せず拒否します。</summary>
         [Test]
         public void TryRun_DuplicateDirectTargetScriptFailsClosed()
         {
@@ -236,10 +265,13 @@ namespace LocalizationKeyAudit.Tests
                 "Assets/Localization/Duplicate Script Shared Data.asset",
                 LocalizationKeyAuditTestData.Utf8(yaml)));
 
-            AssertPreflightFailure(source, "Assets/Localization/Duplicate Script Shared Data.asset", "m_Script field");
+            AssertPreflightFailure(
+                source,
+                "Assets/Localization/Duplicate Script Shared Data.asset",
+                "共有テーブルデータの直下にあるm_Script項目を一意に確定できません。");
         }
 
-        /// <summary>別scriptのdocumentにある同名fieldはSharedTableData identityへ変換しません。</summary>
+        /// <summary>別スクリプトの文書にある同名項目は共有テーブルデータの識別情報へ変換しません。</summary>
         [Test]
         public void TryRun_FieldWithoutTargetScriptCorrelationFailsClosed()
         {
@@ -251,10 +283,13 @@ namespace LocalizationKeyAudit.Tests
                 "Assets/Localization/Uncorrelated Shared Data.asset",
                 LocalizationKeyAuditTestData.Utf8(yaml)));
 
-            AssertPreflightFailure(source, "Assets/Localization/Uncorrelated Shared Data.asset", "同じ document");
+            AssertPreflightFailure(
+                source,
+                "Assets/Localization/Uncorrelated Shared Data.asset",
+                "Unity形式のYAMLの項目 m_TableCollectionNameGuidString が共有テーブルデータのスクリプトと同じ文書にありません。");
         }
 
-        /// <summary>無関係なdocumentがあってもtarget documentが一件ならdirect identityを返します。</summary>
+        /// <summary>無関係な文書があっても対象文書が1件なら直下項目から識別情報を返します。</summary>
         [Test]
         public void TryRun_UnrelatedDocumentAndSingleTargetDocumentAreAccepted()
         {
@@ -280,7 +315,7 @@ namespace LocalizationKeyAudit.Tests
         }
 
         /// <summary>
-        /// NUL を含む binary data と不正 UTF-8 を YAML parser へ渡しません。
+        /// NULを含むバイナリデータと不正なUTF-8をYAML解析処理へ渡しません。
         /// </summary>
         [Test]
         public void TryRun_BinaryAndInvalidUtf8FailClosed()
@@ -292,12 +327,18 @@ namespace LocalizationKeyAudit.Tests
                 "Assets/Localization/Utf8 Shared Data.asset",
                 new byte[] { 0xC3, 0x28 }));
 
-            AssertPreflightFailure(binary, "Assets/Localization/Binary Shared Data.asset", "binary data");
-            AssertPreflightFailure(invalidUtf8, "Assets/Localization/Utf8 Shared Data.asset", "strict UTF-8");
+            AssertPreflightFailure(
+                binary,
+                "Assets/Localization/Binary Shared Data.asset",
+                "共有テーブルデータにバイナリデータが含まれています。");
+            AssertPreflightFailure(
+                invalidUtf8,
+                "Assets/Localization/Utf8 Shared Data.asset",
+                "共有テーブルデータを厳密なUTF-8のUnity形式のYAMLとして読めません。");
         }
 
         /// <summary>
-        /// null または空 byte snapshot は GUID field 欠落として拒否します。
+        /// 参照なしまたは空のバイト列は、共有テーブルデータ文書の欠落として拒否します。
         /// </summary>
         [Test]
         public void TryRun_NullAndEmptyBytesFailClosed()
@@ -309,18 +350,19 @@ namespace LocalizationKeyAudit.Tests
                 "Assets/Localization/Empty Shared Data.asset",
                 Array.Empty<byte>()));
 
-            AssertPreflightFailure(nullBytes, "Assets/Localization/Null Shared Data.asset", "がありません");
-            AssertPreflightFailure(emptyBytes, "Assets/Localization/Empty Shared Data.asset", "がありません");
+            const string expectedMessage = "共有テーブルデータのスクリプトGUIDを持つUnity形式のYAML文書がありません。";
+            AssertPreflightFailure(nullBytes, "Assets/Localization/Null Shared Data.asset", expectedMessage);
+            AssertPreflightFailure(emptyBytes, "Assets/Localization/Empty Shared Data.asset", expectedMessage);
         }
 
         /// <summary>
-        /// missing file、reparse point、oversize、read error を read-only 保証不能として拒否します。
+        /// ファイル欠落、再解析点、容量超過、読み取りエラーを読み取り専用保証不能として拒否します。
         /// </summary>
-        [TestCase("missing", "存在しません")]
-        [TestCase("reparse", "reparse point")]
-        [TestCase("oversize", "1 file 上限")]
-        [TestCase("read-error", "IOException")]
-        public void TryRun_UnsafePhysicalStateFailsClosed(string state, string expectedMessagePart)
+        [TestCase("missing")]
+        [TestCase("reparse")]
+        [TestCase("oversize")]
+        [TestCase("read-error")]
+        public void TryRun_UnsafePhysicalStateFailsClosed(string state)
         {
             var validBytes = LocalizationKeyAuditTestData.CreateYamlBytes(LocalizationKeyAuditTestData.CollectionGuid);
             var asset = LocalizationKeyAuditTestData.CreateRawAsset(
@@ -331,10 +373,28 @@ namespace LocalizationKeyAudit.Tests
                 isOversize: state == "oversize",
                 readError: state == "read-error" ? "IOException" : string.Empty);
 
-            AssertPreflightFailure(SourceWith(asset), asset.AssetPath, expectedMessagePart);
+            string expectedMessage;
+            switch (state)
+            {
+                case "missing":
+                    expectedMessage = "共有テーブルデータの物理ファイルが存在しません。";
+                    break;
+                case "reparse":
+                    expectedMessage = "共有テーブルデータのパスに再解析点が含まれています。";
+                    break;
+                case "oversize":
+                    expectedMessage =
+                        $"共有テーブルデータがファイル1件あたりの上限 {AuditEditor.LocalizationKeyAuditLimits.MaximumRawAssetBytes} バイトを超えています。";
+                    break;
+                default:
+                    expectedMessage = "共有テーブルデータの物理ファイルを読み取れません：IOException";
+                    break;
+            }
+
+            AssertPreflightFailure(SourceWith(asset), asset.AssetPath, expectedMessage);
         }
 
-        /// <summary>記号を含むopaqueなraw ReadErrorをpresentへ潰し、本文を公開しません。</summary>
+        /// <summary>記号を含む不透明な未加工入力のReadErrorを「あり」へ丸め、本文を公開しません。</summary>
         [Test]
         public void TryRun_OpaqueReadErrorDoesNotExposePhysicalCanary()
         {
@@ -353,12 +413,12 @@ namespace LocalizationKeyAudit.Tests
             Assert.That(succeeded, Is.False);
             Assert.That(identities, Is.Empty);
             Assert.That(failureAssetPath, Is.EqualTo(asset.AssetPath));
-            StringAssert.Contains("present", failureMessage);
+            Assert.That(failureMessage, Is.EqualTo("共有テーブルデータの物理ファイルを読み取れません：あり"));
             StringAssert.DoesNotContain(physicalCanary, failureMessage);
         }
 
         /// <summary>
-        /// source の null、null return、例外を捕捉し、部分 identity を返しません。
+        /// 取得元の参照なし、参照なしの戻り値、例外を捕捉し、部分的な識別情報を返しません。
         /// </summary>
         [Test]
         public void TryRun_SourceFailuresAreIsolated()
@@ -370,8 +430,8 @@ namespace LocalizationKeyAudit.Tests
                 Exception = new InvalidOperationException(physicalCanary)
             };
 
-            AssertPreflightFailure(null, string.Empty, "source がありません");
-            AssertPreflightFailure(nullResult, string.Empty, "null を返しました");
+            AssertPreflightFailure(null, string.Empty, "未加工の共有テーブルデータの取得元がありません。");
+            AssertPreflightFailure(nullResult, string.Empty, "未加工の共有テーブルデータの取得元から戻り値がありません。");
             var succeeded = AuditEditor.LocalizationKeyAuditRawPreflight.TryRun(
                 throwing,
                 out var identities,
@@ -380,14 +440,16 @@ namespace LocalizationKeyAudit.Tests
             Assert.That(succeeded, Is.False);
             Assert.That(identities, Is.Empty);
             Assert.That(failureAssetPath, Is.Empty);
-            StringAssert.Contains("InvalidOperationException", failureMessage);
+            Assert.That(
+                failureMessage,
+                Is.EqualTo("未加工の共有テーブルデータの全件収集に失敗しました：InvalidOperationException"));
             StringAssert.DoesNotContain(physicalCanary, failureMessage);
             Assert.That(nullResult.ReadCallCount, Is.EqualTo(1));
             Assert.That(throwing.ReadCallCount, Is.EqualTo(1));
         }
 
         /// <summary>
-        /// 前半が valid でも後半が invalid なら検証済み identity を全て破棄します。
+        /// 前半が正常でも後半が不正なら検証済みの識別情報を全て破棄します。
         /// </summary>
         [Test]
         public void TryRun_LaterFailureDiscardsEarlierValidatedIdentity()
@@ -405,11 +467,14 @@ namespace LocalizationKeyAudit.Tests
                 }
             };
 
-            AssertPreflightFailure(source, "Assets/Localization/Z Shared Data.asset", "がありません");
+            AssertPreflightFailure(
+                source,
+                "Assets/Localization/Z Shared Data.asset",
+                "共有テーブルデータのスクリプトGUIDを持つUnity形式のYAML文書がありません。");
         }
 
         /// <summary>
-        /// null item と asset path、physical path の重複を曖昧な raw 入力として拒否します。
+        /// 参照なしの要素と、アセットパスまたは物理パスの重複を曖昧な未加工入力として拒否します。
         /// </summary>
         [Test]
         public void TryRun_NullAndDuplicatePathsFailClosed()
@@ -431,13 +496,19 @@ namespace LocalizationKeyAudit.Tests
                     Assets = new AuditEditor.LocalizationKeyAuditRawAsset[] { null }
                 },
                 string.Empty,
-                "null");
-            AssertPreflightFailure(SourceWith(first, sameAssetPath), first.AssetPath, "asset path");
-            AssertPreflightFailure(SourceWith(first, samePhysicalPath), samePhysicalPath.AssetPath, "physical path");
+                "未加工の共有テーブルデータ一覧に未設定の要素が含まれています。");
+            AssertPreflightFailure(
+                SourceWith(first, sameAssetPath),
+                first.AssetPath,
+                "同じ共有テーブルデータのアセットパスが複数回列挙されました。");
+            AssertPreflightFailure(
+                SourceWith(first, samePhysicalPath),
+                samePhysicalPath.AssetPath,
+                "同じ共有テーブルデータの物理パスが複数のアセットに対応しています。");
         }
 
         /// <summary>
-        /// parseable な collection GUID 重複は dirty 化条件ではないため raw identity を保持します。
+        /// 解析可能なコレクション識別子（GUID）の重複は未保存変更の原因ではないため、未加工の識別情報を保持します。
         /// </summary>
         [Test]
         public void TryRun_DuplicateCollectionGuidPreservesBothRawIdentities()
@@ -463,17 +534,17 @@ namespace LocalizationKeyAudit.Tests
         }
 
         /// <summary>
-        /// Unity relative asset path と absolute physical path の境界を厳密に検証します。
+        /// Unity相対アセットパスと絶対物理パスの境界を厳密に検証します。
         /// </summary>
-        [TestCase("Localization/UI.asset", null, "Unity relative path")]
-        [TestCase("Assets\\Localization\\UI.asset", null, "Unity relative path")]
-        [TestCase("Assets/../UI.asset", null, "不正な segment")]
-        [TestCase("Assets//UI.asset", null, "不正な segment")]
-        [TestCase("Assets/Localization/UI.asset", "relative/file.asset", "absolute path")]
+        [TestCase("Localization/UI.asset", null, "共有テーブルデータのアセットパスがUnityの相対パスではありません。")]
+        [TestCase("Assets\\Localization\\UI.asset", null, "共有テーブルデータのアセットパスがUnityの相対パスではありません。")]
+        [TestCase("Assets/../UI.asset", null, "共有テーブルデータのアセットパスに不正な区切り要素があります。")]
+        [TestCase("Assets//UI.asset", null, "共有テーブルデータのアセットパスに不正な区切り要素があります。")]
+        [TestCase("Assets/Localization/UI.asset", "relative/file.asset", "共有テーブルデータの物理パスが絶対パスではありません。")]
         public void TryRun_InvalidPathsFailClosed(
             string assetPath,
             string physicalPath,
-            string expectedMessagePart)
+            string expectedMessage)
         {
             var asset = LocalizationKeyAuditTestData.CreateRawAsset(
                 assetPath,
@@ -483,10 +554,10 @@ namespace LocalizationKeyAudit.Tests
             AssertPreflightFailure(
                 SourceWith(asset),
                 physicalPath == null ? string.Empty : assetPath,
-                expectedMessagePart);
+                expectedMessage);
         }
 
-        /// <summary>absolute physical canaryを装うinvalid AssetPathをpath/messageへ公開しません。</summary>
+        /// <summary>絶対物理パスを装う不正なアセットパスを、失敗パスや理由へ公開しません。</summary>
         [Test]
         public void TryRun_InvalidAssetPathDoesNotExposePhysicalCanary()
         {
@@ -506,11 +577,11 @@ namespace LocalizationKeyAudit.Tests
             Assert.That(identities, Is.Empty);
             Assert.That(failureAssetPath, Is.Empty);
             StringAssert.DoesNotContain(physicalCanary, failureMessage);
-            StringAssert.Contains("Unity relative path", failureMessage);
+            Assert.That(failureMessage, Is.EqualTo("共有テーブルデータのアセットパスがUnityの相対パスではありません。"));
         }
 
         /// <summary>
-        /// raw asset 数が上限を一件でも超えたら item を走査せず拒否します。
+        /// 未加工アセット数が上限を1件でも超えたら、要素を走査せず拒否します。
         /// </summary>
         [Test]
         public void TryRun_RejectsAssetCountAboveLimit()
@@ -519,11 +590,14 @@ namespace LocalizationKeyAudit.Tests
                 AuditEditor.LocalizationKeyAuditLimits.MaximumSharedTableDataAssets + 1];
             var source = new FakeLocalizationKeyAuditRawSource { Assets = assets };
 
-            AssertPreflightFailure(source, string.Empty, "数が上限");
+            AssertPreflightFailure(
+                source,
+                string.Empty,
+                $"共有テーブルデータ数が上限 {AuditEditor.LocalizationKeyAuditLimits.MaximumSharedTableDataAssets} 件を超えています。");
         }
 
         /// <summary>
-        /// provider が oversize flag を付け忘れても実 byte 数が 1 file 上限を超えたら拒否します。
+        /// 取得元が容量超過フラグを付け忘れても、実バイト数がファイル1件の上限を超えたら拒否します。
         /// </summary>
         [Test]
         public void TryRun_RejectsByteCountAbovePerAssetLimit()
@@ -533,11 +607,14 @@ namespace LocalizationKeyAudit.Tests
                 "Assets/Localization/Large Shared Data.asset",
                 bytes);
 
-            AssertPreflightFailure(SourceWith(asset), asset.AssetPath, "1 file 上限");
+            AssertPreflightFailure(
+                SourceWith(asset),
+                asset.AssetPath,
+                $"共有テーブルデータがファイル1件あたりの上限 {AuditEditor.LocalizationKeyAuditLimits.MaximumRawAssetBytes} バイトを超えています。");
         }
 
         /// <summary>
-        /// raw asset は constructor 入力と返却 byte の変更を受けません。
+        /// 未加工アセットはコンストラクター入力と返却バイト列の変更を受けません。
         /// </summary>
         [Test]
         public void RawAsset_DefensivelyCopiesBytes()
@@ -561,7 +638,7 @@ namespace LocalizationKeyAudit.Tests
             Assert.That(asset.CopyBytes()[0], Is.Not.Zero);
         }
 
-        /// <summary>Unity YAML preambleと指定documentを連結します。</summary>
+        /// <summary>Unity形式のYAMLの冒頭宣言と指定文書を連結します。</summary>
         private static string CreateYaml(params string[] documents)
         {
             return "%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n" +
@@ -569,7 +646,7 @@ namespace LocalizationKeyAudit.Tests
                 "\n";
         }
 
-        /// <summary>指定scriptと追加行を持つ標準MonoBehaviour documentを作ります。</summary>
+        /// <summary>指定スクリプトと追加行を持つ標準MonoBehaviour文書を作ります。</summary>
         private static string CreateMonoBehaviourDocument(
             string anchor,
             string scriptGuid,
@@ -590,18 +667,18 @@ namespace LocalizationKeyAudit.Tests
             return string.Join("\n", lines);
         }
 
-        /// <summary>指定 asset だけを返す fake source を作ります。</summary>
+        /// <summary>指定アセットだけを返す模擬取得元を作ります。</summary>
         private static FakeLocalizationKeyAuditRawSource SourceWith(
             params AuditEditor.LocalizationKeyAuditRawAsset[] assets)
         {
             return new FakeLocalizationKeyAuditRawSource { Assets = assets };
         }
 
-        /// <summary>失敗時に identity が空で、path と理由が限定されることを検証します。</summary>
+        /// <summary>失敗時に識別情報が空で、パスと理由が限定されることを検証します。</summary>
         private static void AssertPreflightFailure(
             AuditEditor.ILocalizationKeyAuditRawSource source,
             string expectedAssetPath,
-            string expectedMessagePart)
+            string expectedMessage)
         {
             var succeeded = AuditEditor.LocalizationKeyAuditRawPreflight.TryRun(
                 source,
@@ -612,7 +689,7 @@ namespace LocalizationKeyAudit.Tests
             Assert.That(succeeded, Is.False);
             Assert.That(identities, Is.Empty);
             Assert.That(failureAssetPath, Is.EqualTo(expectedAssetPath));
-            StringAssert.Contains(expectedMessagePart, failureMessage);
+            Assert.That(failureMessage, Is.EqualTo(expectedMessage));
         }
     }
 }

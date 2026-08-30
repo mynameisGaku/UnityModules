@@ -6,11 +6,11 @@ using System.Collections.Generic;
 namespace LocalizationKeyAudit.Editor
 {
     /// <summary>
-    /// raw preflight、typed snapshot、pure analyzer を順序保証付きで実行します。
+    /// 未加工の事前検査、型として読み取ったスナップショット、純粋な解析を順序保証付きで実行します。
     /// </summary>
     internal static class LocalizationKeyAuditService
     {
-        /// <summary>default Assetsまたはregistered Package coverage sourceでrequestを構築します。</summary>
+        /// <summary>既定のAssetsまたは登録済みパッケージの網羅取得元で監査条件を構築します。</summary>
         internal static LocalizationKeyAuditRequest CreateRequest(
             IReadOnlyList<string> requiredLocaleIdentifiers,
             string scopeDescription,
@@ -23,7 +23,7 @@ namespace LocalizationKeyAudit.Editor
                 new UnityLocalizationKeyAuditCoverageSource());
         }
 
-        /// <summary>宣言済みAssetsまたはregistered Package scopeを走査してauditします。</summary>
+        /// <summary>宣言済みのAssetsまたは登録済みパッケージ範囲を走査して監査します。</summary>
         internal static LocalizationKeyAuditResult Audit(
             IReadOnlyList<string> requiredLocaleIdentifiers,
             string scopeDescription,
@@ -54,7 +54,7 @@ namespace LocalizationKeyAudit.Editor
                         string.Empty,
                         string.Empty,
                         0,
-                        $"監査入力を snapshot 化できません: {exception.GetType().Name}"));
+                        $"監査入力のスナップショットを作成できません: {exception.GetType().Name}"));
             }
 
             if (!LocalizationKeyAuditAnalyzer.TryValidateRequest(provisionalRequest, out var requestFailure))
@@ -69,7 +69,7 @@ namespace LocalizationKeyAudit.Editor
                 new UnityLocalizationKeyAuditCoverageSource()));
         }
 
-        /// <summary>coverage source を注入して request を構築します。</summary>
+        /// <summary>網羅取得元を注入して監査条件を構築します。</summary>
         internal static LocalizationKeyAuditRequest CreateRequest(
             IReadOnlyList<string> requiredLocaleIdentifiers,
             string scopeDescription,
@@ -84,7 +84,7 @@ namespace LocalizationKeyAudit.Editor
         }
 
         /// <summary>
-        /// Unity project の raw/typed source を使って manual advisory audit を実行します。
+        /// Unityプロジェクトの未加工取得元と型として読み取る取得元を使い、手動の助言監査を実行します。
         /// </summary>
         internal static LocalizationKeyAuditResult Audit(LocalizationKeyAuditRequest request)
         {
@@ -95,7 +95,7 @@ namespace LocalizationKeyAudit.Editor
         }
 
         /// <summary>
-        /// 注入した source を使い、raw failure 時は typed source を一度も呼ばず terminal result を返します。
+        /// 注入した取得元を使い、未加工取得の失敗時は型として読み取る取得元を一度も呼ばず監査停止結果を返します。
         /// </summary>
         internal static LocalizationKeyAuditResult Audit(
             LocalizationKeyAuditRequest request,
@@ -129,7 +129,7 @@ namespace LocalizationKeyAudit.Editor
 
             if (typedSource == null)
             {
-                return CreateAuditFailure(request.Coverage, "typed Localization source がありません。");
+                return CreateAuditFailure(request.Coverage, "型付きローカライズ情報の取得元がありません。");
             }
 
             try
@@ -156,11 +156,11 @@ namespace LocalizationKeyAudit.Editor
             {
                 return CreateAuditFailure(
                     request.Coverage,
-                    $"typed Localization 監査に失敗しました: {exception.GetType().Name}");
+                    $"型として読み取るローカライズ監査に失敗しました: {exception.GetType().Name}");
             }
         }
 
-        /// <summary>typed または analyzer 例外を partial data なしで隔離します。</summary>
+        /// <summary>型としての読み取りまたは解析の例外を、部分データなしで隔離します。</summary>
         private static LocalizationKeyAuditResult CreateAuditFailure(
             LocalizationKeyAuditCoverage coverage,
             string message)
@@ -179,7 +179,7 @@ namespace LocalizationKeyAudit.Editor
                     message));
         }
 
-        /// <summary>terminal issue 1 件だけを持つ incomplete result を作ります。</summary>
+        /// <summary>監査停止問題1件だけを持つ未完了結果を作ります。</summary>
         private static LocalizationKeyAuditResult CreateFailure(
             LocalizationKeyAuditCoverage coverage,
             LocalizationKeyAuditIssue issue)

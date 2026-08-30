@@ -1,70 +1,101 @@
-# Changelog
+# 変更履歴
 
-All notable changes to this package will be documented in this file.
+このパッケージの主な変更を記録します。
+
+## [1.4.0] - 2026-08-30
+
+### 追加
+
+- 絞り込み後の問題一覧へ「前へ」と「次へ」によるページ移動を追加しました。1ページは500件で、既存の問題上限100,000件、最大200ページの全件へ到達できます。
+- 「表示分をコピー」は、重複する問題と監査結果内の順序を保ったまま、現在のページだけをコピーします。結果が「未完了」の場合も利用できます。
+- クリップボードの見出しへ「表示ページ: 現在ページ / 総ページ数」と、1から始まる「表示範囲: 開始番号-終了番号」を追加しました。従来の表示件数、絞り込み後の件数、問題総数も維持します。
+
+### 状態
+
+- 検索または区分の絞り込みを変更したとき、「監査」を開始したとき、「結果を消去」で結果を消したときに、先頭ページへ戻します。
+- 4区分の集計は絞り込み前の結果を示し、現在のページには依存しません。
+
+### 表示
+
+- メニューの`Tools/Localization Key Audit/Open`を`Tools/ローカライズキー監査/開く`へ変え、ウィンドウ名、見出し、項目名、選択肢、操作ボタン、状態を日本語表示へ統一しました。
+- `Copy Displayed`を「表示分をコピー」へ変え、コピー本文の英語見出しと項目名も日本語化しました。
+- 全21種類の問題種別へ日本語の表示名を割り当てました。検索は日本語の表示名と従来の列挙識別子の両方に一致します。
+- 監査条件、未加工の事前検査、静的参照網羅、型としての読み取り、上限超過、整合性問題を説明するパッケージ生成の診断文を日本語化しました。例外型名、アセットパス、GUID、項目識別子などの技術的な識別値は維持します。
+- 「詳細をコピー」は、対象、アセットパスなどの識別値、項目順、コピー動作を維持し、項目名、問題種別の表示名、パッケージが生成する説明を日本語化しました。利用者が入力した走査範囲の説明は変更しません。
+- 旧版の英語の走査範囲説明は、利用者が変更していない値と完全一致する場合だけ日本語の既定値へ移行します。独自の説明は変更しません。
+
+### 安全性
+
+- クリップボード本文全体が1,048,576 UTF-16符号単位ちょうどなら受理し、1符号単位でも超えた場合は切り詰めやクリップボードの変更をせず、操作全体を拒否します。
+- 現在のページに問題がない場合や、結果が不正、古い、消去済み、例外後に初期化済みの場合はコピーできません。
+
+### 境界
+
+- 解析の判定条件、問題種別・件数・識別値・並び順、上限、部分結果を返さない失敗時契約、問題種別の列挙識別子、公開範囲、実行時向け範囲、ビルドコールバックの動作は変更しません。
 
 ## [1.3.0] - 2026-08-26
 
-### Added
+### 追加
 
-- Added `Copy Displayed Issues` for exactly the findings currently drawn after Search and Category filtering, capped at the first `min(filtered, 500)` findings.
-- Preserved audit-result order and duplicate findings, and kept the action available when the result or static coverage is `Incomplete`.
-- Prefixed the payload with `Result`, `Static Coverage`, `Displayed Issues`, `Filtered Issues`, and `Total Issues` so incomplete and display-capped snapshots remain explicit outside the window.
+- 検索と区分による絞り込み後、一覧へ実際に描画する先頭500件までを対象とする、当時の「表示分をコピー（`Copy Displayed`）」を追加しました。
+- 監査結果内の順序と重複する問題を保ち、結果または静的参照網羅が未完了（`Incomplete`）の場合も利用できるようにしました。
+- 画面外で本文だけを確認しても未完了や表示上限を判別できるように、本文を当時の`Localization Key Audit - Displayed Issues`で始め、監査結果（`Result`）、静的参照網羅（`Static Coverage`）、表示件数（`Displayed Issues`）、絞り込み後の件数（`Filtered Issues`）、問題総数（`Total Issues`）を見出しへ追加しました。
 
-### Safety
+### 安全性
 
-- Accept the complete clipboard payload at exactly 1,048,576 UTF-16 code units; reject one code unit over atomically without truncation or clipboard mutation.
-- Keep copy unavailable for zero displayed findings and invalid, stale, cleared, or exception-reset result state.
+- クリップボード本文全体が1,048,576 UTF-16符号単位ちょうどなら受理し、1符号単位でも超えた場合は切り詰めやクリップボードの変更をせず、操作全体を拒否します。
+- 表示する問題が0件の場合や、結果が不正、古い、消去済み、例外後に初期化済みの場合はコピーできません。
 
-### Boundaries
+### 境界
 
-- Kept the existing single-finding `Copy Details`, unfiltered category summary, Analyzer, Service, model, issue taxonomy, public and Runtime surfaces, and build callback behavior unchanged.
+- 選択中の1件を対象とする既存の「詳細をコピー（`Copy Details`）」、絞り込み前の区分集計、解析処理、サービス、モデル、問題種別、公開範囲、実行時向け範囲、ビルドコールバックの動作は変更しません。
 
 ## [1.2.0] - 2026-08-26
 
-### Added
+### 追加
 
-- Added unfiltered finding counts for `Terminal`, `Required Locale Coverage`, `Static References`, and `Integrity`, with every existing issue kind assigned to exactly one category.
-- Counted the complete result snapshot independently of Search, Category, and the 500-row display cap.
+- 既存の全問題種別を、当時の「監査停止（`Terminal`）」「必須ロケール網羅（`Required Locale Coverage`）」「静的参照（`Static References`）」「整合性（`Integrity`）」のいずれか1区分へ割り当て、絞り込み前の問題件数を追加しました。
+- 検索、区分、500件の表示上限に依存せず、結果全体を集計します。
 
-### Boundaries
+### 境界
 
-- Kept `Complete`／`Incomplete` and static coverage completion authoritative; a zero category count in an incomplete result is not proof that the category is safe or absent.
-- Kept the issue taxonomy, read-only Editor-only behavior, advisory scope, and zero Runtime or public API surface unchanged.
+- 当時の「完了（`Complete`）」／「未完了（`Incomplete`）」と静的参照網羅（`Static coverage`）の完了状態を優先します。未完了の結果で区分が0件でも、その区分が安全または不存在である証明にはなりません。
+- 問題種別、読み取り専用かつエディター専用の動作、判断材料としての範囲、実行時アセンブリと公開APIが0件という境界は変更しません。
 
 ## [1.1.0] - 2026-08-26
 
-### Added
+### 追加
 
-- Added static-reference coverage for explicitly declared `Assets[/...]` or `Packages/<registered-name>[/...]` paths, using exactly one logical root per audit and allowing multiple paths only within that root.
-- Added exact registered package-name resolution through `PackageInfo.resolvedPath` while keeping physical paths out of the window, audit result, errors, and clipboard; read errors expose only logical paths and exception types.
+- 明示した`Assets[/...]`または`Packages/<登録済みパッケージ名>[/...]`のパスを対象とする静的参照網羅を追加しました。1回の監査では論理ルートをちょうど1つに限定し、そのルート内でだけ複数パスを指定できます。
+- `PackageInfo.resolvedPath`を使って登録済みパッケージ名を厳密に解決します。画面、監査結果、エラー、クリップボードには物理パスを残さず、読み取りエラーには論理パスと例外型だけを示します。
 
-### Safety
+### 安全性
 
-- Reject bare `Packages`, direct `Library/PackageCache` paths, unregistered package names, mixed Assets/package roots, multiple package roots, and explicit paths with `~`, `:`, or a segment ending in dot or space before filesystem access.
-- Apply discovery, file, byte, reference, and issue limits audit-wide across all declared paths under the single logical root.
-- Fail closed without partial coverage results for normalized duplicate targets, reparse points on the root, any root ancestor, or a selected child path, and root escape.
+- 単独の`Packages`、`Library/PackageCache`の直接指定、未登録パッケージ名、`Assets`とパッケージのルート混在、複数パッケージのルート混在、`~`、`:`、末尾がピリオドまたは空白の部分を含むパスは、ファイルシステムへアクセスする前に拒否します。
+- 探索数、ファイル数、バイト数、参照数、問題数の上限は、同じ論理ルート内の全指定パスを合わせた監査全体へ適用します。
+- 正規化後の対象重複、ルート自身または親階層や選択した配下パスの再解析ポイント、ルート外への逸脱がある場合は、安全側で停止して部分的な網羅結果を返しません。
 
-### Boundaries
+### 境界
 
-- Kept the raw preflight, typed snapshot, graph, and issue taxonomy unchanged.
-- Kept the audit read-only, Editor-only, advisory, and free of Runtime or public API additions.
+- 未加工データの事前検査、型として読み取ったスナップショット、参照関係、問題種別は変更しません。
+- 読み取り専用、エディター専用、判断材料としての監査を維持し、実行時向け機能や公開APIは追加しません。
 
 ## [1.0.0] - 2026-08-25
 
-### Added
+### 追加
 
-- Added a manual, Editor-only advisory audit for required-locale direct coverage and localization table integrity.
-- Added the `Tools/Localization Key Audit/Open` window with explicit required Locale and Assets-only scope inputs, issue filters, details, and a 500-row display cap.
-- Added distinct `MissingLocaleTable`, `MissingDirectEntry`, and `EmptyDirectValue` findings without inferring runtime translation availability.
-- Added `NoStaticReferenceFoundWithinDeclaredScope` with explicit static-reference coverage instead of an unused-key conclusion.
-- Added raw Shared Table Data preflight and terminal `ReadOnlyGuaranteeUnavailable` handling before typed loading.
-- Added duplicate and orphan integrity findings without automatic repair or deletion.
-- Added String and Asset Table owner classification so Asset-only Shared Table Data does not become a String key finding; cross-type GUID collisions fail closed.
-- Documented excluded package, source-code, dynamic, Smart String nested, Addressables, external-data, and out-of-scope asset references.
-- Declared Unity Localization 1.5.12 as the only direct package dependency.
+- 必須ロケールの直接網羅とローカライズテーブルの整合性を手動で調べる、エディター専用の判断用監査を追加しました。
+- 必須ロケール、`Assets`だけを対象とする範囲、問題の絞り込み、詳細、500件の表示上限を備えた`Tools/Localization Key Audit/Open`画面を追加しました。
+- 実行時に翻訳を利用できるかは推測せず、`MissingLocaleTable`、`MissingDirectEntry`、`EmptyDirectValue`を区別して報告します。
+- 未使用キーとは断定せず、静的参照の網羅範囲を明示した`NoStaticReferenceFoundWithinDeclaredScope`を追加しました。
+- 型として読み取る前に未加工の共有テーブルデータを検査し、読み取り専用を保証できない場合に監査を停止する`ReadOnlyGuaranteeUnavailable`を追加しました。
+- 自動修復や削除を行わず、重複と孤立の整合性問題を報告します。
+- アセットテーブルだけが所有する共有テーブルデータを文字列キーの問題へ混在させないように、文字列テーブルとアセットテーブルの所有元を分類します。両種別でGUIDが衝突した場合は安全側で停止します。
+- 対象外であるパッケージ、ソースコード、動的検索、Smart String内の入れ子参照、Addressables、外部データ、宣言範囲外のアセット参照を文書化しました。
+- Unity Localization 1.5.12を唯一の直接依存パッケージとして宣言しました。
 
-### Boundaries
+### 境界
 
-- No Runtime assembly or public API.
-- No build blocking or automatic build integration.
-- No asset mutation, autofix, or deletion.
+- 実行時アセンブリと公開APIはありません。
+- ビルド停止や自動ビルド連携はありません。
+- アセットの変更、自動修正、削除はありません。

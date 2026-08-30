@@ -10,18 +10,18 @@ using PackageManagerPackageInfo = UnityEditor.PackageManager.PackageInfo;
 namespace LocalizationKeyAudit.Editor
 {
     /// <summary>
-    /// AssetDatabase type search と physical Unity YAML scan の和集合を raw bytes として収集します。
+    /// AssetDatabaseの型検索とUnity形式のYAMLの物理走査の和集合を未加工バイト列として収集します。
     /// </summary>
     internal sealed class UnityLocalizationKeyAuditRawSource : ILocalizationKeyAuditRawSource
     {
-        /// <summary>Localization 1.5.12 の SharedTableData MonoScript GUID です。</summary>
+        /// <summary>Localization 1.5.12の共有テーブルデータ用MonoScript GUIDです。</summary>
         internal const string SharedTableDataScriptGuid = "5b11a58205ec3474ca216360e9fa74a8";
 
-        /// <summary>1 YAML line の識別に保持する先頭 byte 数です。</summary>
+        /// <summary>Unity形式のYAMLの1行を識別するために保持する先頭バイト数です。</summary>
         private const int DiscoveryLinePrefixBytes = 1024;
 
         /// <summary>
-        /// typed search から漏れた malformed SharedTableData も physical scan で候補へ追加します。
+        /// 型検索から漏れた不正な共有テーブルデータも物理走査で候補へ追加します。
         /// </summary>
         public IReadOnlyList<LocalizationKeyAuditRawAsset> ReadSharedTableDataAssets()
         {
@@ -48,7 +48,7 @@ namespace LocalizationKeyAudit.Editor
                 var assetPath = AssetDatabase.GUIDToAssetPath(guids[index]);
                 if (string.IsNullOrEmpty(assetPath))
                 {
-                    throw new InvalidDataException($"t:SharedTableData GUID {guids[index]} の asset path を取得できません。");
+                    throw new InvalidDataException($"検索式「t:SharedTableData」で得たGUID {guids[index]} のアセットパスを取得できません。");
                 }
 
                 var physicalPath = ResolvePhysicalPath(assetPath);
@@ -58,7 +58,7 @@ namespace LocalizationKeyAudit.Editor
             if (physicalPaths.Count > LocalizationKeyAuditLimits.MaximumSharedTableDataAssets)
             {
                 throw new InvalidDataException(
-                    $"SharedTableData candidate 数が上限 {LocalizationKeyAuditLimits.MaximumSharedTableDataAssets} 件を超えています。");
+                    $"共有テーブルデータ候補数が上限 {LocalizationKeyAuditLimits.MaximumSharedTableDataAssets} 件を超えています。");
             }
 
             var paths = new List<string>(physicalPaths.Keys);
@@ -73,17 +73,17 @@ namespace LocalizationKeyAudit.Editor
             return assets;
         }
 
-        /// <summary>typed candidate GUIDをsort/path解決する前に件数上限を検証します。</summary>
+        /// <summary>型として読み取った共有テーブルデータの候補GUIDを並べ替え、パスを解決する前に件数上限を検証します。</summary>
         internal static void EnsureTypedCandidateCountWithinLimit(int count)
         {
             if (count < 0 || count > LocalizationKeyAuditLimits.MaximumSharedTableDataAssets)
             {
                 throw new InvalidDataException(
-                    $"typed SharedTableData candidate 数が上限 {LocalizationKeyAuditLimits.MaximumSharedTableDataAssets} 件を超えています。");
+                    $"型として読み取った共有テーブルデータ候補数が上限 {LocalizationKeyAuditLimits.MaximumSharedTableDataAssets} 件を超えています。");
             }
         }
 
-        /// <summary>Assets と全 registered package の scan root を構築します。</summary>
+        /// <summary>Assetsと全ての登録済みパッケージの走査ルートを構築します。</summary>
         private static List<DiscoveryRoot> GetDiscoveryRoots()
         {
             var roots = new List<DiscoveryRoot>();
@@ -98,7 +98,7 @@ namespace LocalizationKeyAudit.Editor
                 var package = packages[index];
                 if (package == null || string.IsNullOrWhiteSpace(package.name) || string.IsNullOrWhiteSpace(package.resolvedPath))
                 {
-                    throw new InvalidDataException("registered package の name または resolvedPath が空です。");
+                    throw new InvalidDataException("登録済みパッケージの名前（name）または解決済みパス（resolvedPath）が空です。");
                 }
 
                 AddDiscoveryRoot(
@@ -110,7 +110,7 @@ namespace LocalizationKeyAudit.Editor
             return roots;
         }
 
-        /// <summary>重複 physical root を 1 回だけ scan 対象へ追加します。</summary>
+        /// <summary>重複する物理ルートを1回だけ走査対象へ追加します。</summary>
         private static void AddDiscoveryRoot(
             ICollection<DiscoveryRoot> roots,
             ISet<string> uniquePhysicalRoots,
@@ -118,12 +118,12 @@ namespace LocalizationKeyAudit.Editor
         {
             if (!Directory.Exists(root.PhysicalRoot))
             {
-                throw new DirectoryNotFoundException($"physical discovery root がありません: {root.AssetPrefix}");
+                throw new DirectoryNotFoundException($"物理探索ルートがありません：{root.AssetPrefix}");
             }
 
             if (HasReparsePoint(root.PhysicalRoot))
             {
-                throw new IOException($"physical discovery root が reparse point です: {root.AssetPrefix}");
+                throw new IOException($"物理探索ルートが再解析点です：{root.AssetPrefix}");
             }
 
             if (uniquePhysicalRoots.Add(root.PhysicalRoot))
@@ -132,7 +132,7 @@ namespace LocalizationKeyAudit.Editor
             }
         }
 
-        /// <summary>Unity が対象外にする dot/tilde path を除いて .asset YAML を全走査します。</summary>
+        /// <summary>Unityが対象外にするドット始まりとチルダ終わりのパスを除き、Unity形式のYAMLである.assetファイルを全走査します。</summary>
         private static void DiscoverPhysicalCandidates(
             DiscoveryRoot root,
             IDictionary<string, string> candidates,
@@ -144,7 +144,7 @@ namespace LocalizationKeyAudit.Editor
             discoveredDirectoryCount = IncrementPhysicalDiscoveryCount(
                 discoveredDirectoryCount,
                 LocalizationKeyAuditLimits.MaximumPhysicalDirectories,
-                "directory");
+                "ディレクトリ");
             stack.Push(root.PhysicalRoot);
             while (stack.Count > 0)
             {
@@ -159,7 +159,7 @@ namespace LocalizationKeyAudit.Editor
                         discoveredDirectoryCount = IncrementPhysicalDiscoveryCount(
                             discoveredDirectoryCount,
                             LocalizationKeyAuditLimits.MaximumPhysicalDirectories,
-                            "directory");
+                            "ディレクトリ");
                         childDirectories.Add(childDirectory);
                     }
 
@@ -169,7 +169,7 @@ namespace LocalizationKeyAudit.Editor
                         discoveredFileCount = IncrementPhysicalDiscoveryCount(
                             discoveredFileCount,
                             LocalizationKeyAuditLimits.MaximumPhysicalAssetFiles,
-                            "file");
+                            "ファイル");
 
                         if (IsAssetFilePath(candidate))
                         {
@@ -186,7 +186,7 @@ namespace LocalizationKeyAudit.Editor
                 catch (Exception exception)
                 {
                     throw new IOException(
-                        $"physical discovery directory を列挙できません: {root.AssetPrefix} ({exception.GetType().Name})",
+                        $"物理探索中にディレクトリを列挙できません：{root.AssetPrefix}（{exception.GetType().Name}）",
                         exception);
                 }
 
@@ -201,7 +201,7 @@ namespace LocalizationKeyAudit.Editor
 
                     if (HasReparsePoint(child))
                     {
-                        throw new IOException($"physical discovery path に reparse point があります: {root.AssetPrefix}");
+                        throw new IOException($"物理探索パスに再解析点があります：{root.AssetPrefix}");
                     }
 
                     stack.Push(child);
@@ -218,7 +218,7 @@ namespace LocalizationKeyAudit.Editor
 
                     if (HasReparsePoint(file))
                     {
-                        throw new IOException($"physical .asset file が reparse point です: {root.AssetPrefix}");
+                        throw new IOException($"物理探索中の.assetファイルが再解析点です：{root.AssetPrefix}");
                     }
 
                     var length = new FileInfo(file).Length;
@@ -226,7 +226,7 @@ namespace LocalizationKeyAudit.Editor
                     if (discoveredByteCount > LocalizationKeyAuditLimits.MaximumPhysicalDiscoveryBytes)
                     {
                         throw new InvalidDataException(
-                            $"physical discovery byte 数が上限 {LocalizationKeyAuditLimits.MaximumPhysicalDiscoveryBytes} を超えています。");
+                            $"物理探索のバイト数が上限 {LocalizationKeyAuditLimits.MaximumPhysicalDiscoveryBytes} を超えています。");
                     }
 
                     if (!ContainsSharedTableDataScriptGuid(file))
@@ -241,26 +241,26 @@ namespace LocalizationKeyAudit.Editor
             }
         }
 
-        /// <summary>physical entryを保持する前にglobal discovery budgetを消費します。</summary>
+        /// <summary>物理項目を保持する前に探索全体の上限を消費します。</summary>
         internal static int IncrementPhysicalDiscoveryCount(int currentCount, int maximum, string itemKind)
         {
             if (currentCount < 0 || maximum <= 0 || currentCount >= maximum)
             {
                 throw new InvalidDataException(
-                    $"physical discovery {itemKind} 数が上限 {maximum} 件を超えています。");
+                    $"物理探索の{itemKind}数が上限 {maximum} 件を超えています。");
             }
 
             return currentCount + 1;
         }
 
-        /// <summary>physical fallbackで大小文字を問わずUnity .asset fileだけを選びます。</summary>
+        /// <summary>物理走査の代替経路では、大文字小文字を問わずUnityの.assetファイルだけを選びます。</summary>
         internal static bool IsAssetFilePath(string path)
         {
             return !string.IsNullOrEmpty(path) &&
                 string.Equals(Path.GetExtension(path), ".asset", StringComparison.OrdinalIgnoreCase);
         }
 
-        /// <summary>全 file を bounded line-prefix scanner で読み、exact m_Script GUID を探します。</summary>
+        /// <summary>全ファイルを保持量に上限のある行頭走査で読み、完全一致するm_Script GUIDを探します。</summary>
         internal static bool ContainsSharedTableDataScriptGuid(string physicalPath)
         {
             var prefix = new byte[DiscoveryLinePrefixBytes];
@@ -301,7 +301,7 @@ namespace LocalizationKeyAudit.Editor
                             if (IsTruncatedScriptLineIndeterminate(prefix, prefixLength, lineTruncated))
                             {
                                 throw new InvalidDataException(
-                                    $"physical .asset の m_Script line が {DiscoveryLinePrefixBytes} bytesを超え、SharedTableData候補か確定できません。");
+                                    $"物理.assetファイルのm_Script行が {DiscoveryLinePrefixBytes} バイトを超え、共有テーブルデータ候補か確定できません。");
                             }
 
                             prefixLength = 0;
@@ -328,13 +328,13 @@ namespace LocalizationKeyAudit.Editor
             if (IsTruncatedScriptLineIndeterminate(prefix, prefixLength, lineTruncated))
             {
                 throw new InvalidDataException(
-                    $"physical .asset の m_Script line が {DiscoveryLinePrefixBytes} bytesを超え、SharedTableData候補か確定できません。");
+                    $"物理.assetファイルのm_Script行が {DiscoveryLinePrefixBytes} バイトを超え、共有テーブルデータ候補か確定できません。");
             }
 
             return false;
         }
 
-        /// <summary>prefix上でexact m_Script keyが見えた長行をno-matchへ落とさず不確定とします。</summary>
+        /// <summary>保持した行頭に完全一致するm_Scriptキーが見えた長い行を、不一致と断定せず不確定にします。</summary>
         internal static bool IsTruncatedScriptLineIndeterminate(byte[] prefix, int length, bool wasTruncated)
         {
             if (!wasTruncated || prefix == null || length <= 0 || length > prefix.Length)
@@ -359,7 +359,7 @@ namespace LocalizationKeyAudit.Editor
             return cursor == trimmed.Length || trimmed[cursor] == ':';
         }
 
-        /// <summary>1 YAML line prefix の exact m_Script key と GUID を照合します。</summary>
+        /// <summary>Unity形式のYAMLの1行について、保持した先頭部分のm_ScriptキーとGUIDを完全一致で照合します。</summary>
         private static bool LineContainsSharedTableDataScriptGuid(byte[] prefix, int length)
         {
             var line = System.Text.Encoding.ASCII.GetString(prefix, 0, length).TrimEnd('\r');
@@ -403,7 +403,7 @@ namespace LocalizationKeyAudit.Editor
                     StringComparison.OrdinalIgnoreCase) == 0;
         }
 
-        /// <summary>candidate path の path-to-physical mapping を一意に保ちます。</summary>
+        /// <summary>候補のアセットパスから物理パスへの対応を一意に保ちます。</summary>
         internal static void AddCandidatePath(
             IDictionary<string, string> candidates,
             string assetPath,
@@ -413,7 +413,7 @@ namespace LocalizationKeyAudit.Editor
             {
                 if (!string.Equals(existing, physicalPath, GetPhysicalPathComparison()))
                 {
-                    throw new InvalidDataException($"1 asset path が複数 physical file に対応しています: {assetPath}");
+                    throw new InvalidDataException($"1つのアセットパスが複数の物理ファイルに対応しています：{assetPath}");
                 }
 
                 return;
@@ -422,13 +422,13 @@ namespace LocalizationKeyAudit.Editor
             if (candidates.Count >= LocalizationKeyAuditLimits.MaximumSharedTableDataAssets)
             {
                 throw new InvalidDataException(
-                    $"SharedTableData candidate 数が上限 {LocalizationKeyAuditLimits.MaximumSharedTableDataAssets} 件を超えています。");
+                    $"共有テーブルデータ候補数が上限 {LocalizationKeyAuditLimits.MaximumSharedTableDataAssets} 件を超えています。");
             }
 
             candidates.Add(assetPath, physicalPath);
         }
 
-        /// <summary>1 candidate を reparse/存在/size/read 状態付き raw asset にします。</summary>
+        /// <summary>1候補を再解析点、存在、容量、読み取り状態付きの未加工アセットにします。</summary>
         private static LocalizationKeyAuditRawAsset ReadCandidate(
             string assetPath,
             string physicalPath,
@@ -482,7 +482,7 @@ namespace LocalizationKeyAudit.Editor
                         var read = stream.Read(bytes, offset, bytes.Length - offset);
                         if (read == 0)
                         {
-                            throw new EndOfStreamException("SharedTableData file が読み取り中に短くなりました。");
+                            throw new EndOfStreamException("共有テーブルデータのファイルが読み取り中に短くなりました。");
                         }
 
                         offset += read;
@@ -490,7 +490,7 @@ namespace LocalizationKeyAudit.Editor
 
                     if (stream.ReadByte() != -1)
                     {
-                        throw new IOException("SharedTableData file が読み取り中に変化しました。");
+                        throw new IOException("共有テーブルデータのファイルが読み取り中に変化しました。");
                     }
 
                     return new LocalizationKeyAuditRawAsset(assetPath, physicalPath, bytes);
@@ -511,7 +511,7 @@ namespace LocalizationKeyAudit.Editor
             }
         }
 
-        /// <summary>discovery後に増大したraw fileもallocation前のactual aggregate上限で拒否します。</summary>
+        /// <summary>探索後に増大した未加工ファイルも、メモリ確保前に実読取総量の上限で拒否します。</summary>
         internal static long EnsureActualReadBudget(long bytesAlreadyRead, long nextFileBytes)
         {
             if (bytesAlreadyRead < 0 || nextFileBytes < 0 ||
@@ -519,13 +519,13 @@ namespace LocalizationKeyAudit.Editor
                 nextFileBytes > LocalizationKeyAuditLimits.MaximumTotalRawBytes - bytesAlreadyRead)
             {
                 throw new LocalizationKeyAuditLimitException(
-                    $"raw actual read byte 数が上限 {LocalizationKeyAuditLimits.MaximumTotalRawBytes} を超えています。");
+                    $"未加工データの実読取バイト数が上限 {LocalizationKeyAuditLimits.MaximumTotalRawBytes} を超えています。");
             }
 
             return bytesAlreadyRead + nextFileBytes;
         }
 
-        /// <summary>Unity asset path を registered root 内の absolute physical path へ変換します。</summary>
+        /// <summary>Unityのアセットパスを登録済みルート内の絶対物理パスへ変換します。</summary>
         private static string ResolvePhysicalPath(string assetPath)
         {
             if (assetPath.StartsWith("Assets/", StringComparison.Ordinal))
@@ -537,19 +537,19 @@ namespace LocalizationKeyAudit.Editor
 
             if (!assetPath.StartsWith("Packages/", StringComparison.Ordinal))
             {
-                throw new InvalidDataException($"Unity asset path ではありません: {assetPath}");
+                throw new InvalidDataException($"Unityのアセットパスではありません：{assetPath}");
             }
 
             var package = PackageManagerPackageInfo.FindForAssetPath(assetPath);
             if (package == null || string.IsNullOrWhiteSpace(package.name) || string.IsNullOrWhiteSpace(package.resolvedPath))
             {
-                throw new InvalidDataException($"registered package root を解決できません: {assetPath}");
+                throw new InvalidDataException($"登録済みパッケージのルートを解決できません：{assetPath}");
             }
 
             var prefix = "Packages/" + package.name + "/";
             if (!assetPath.StartsWith(prefix, StringComparison.Ordinal))
             {
-                throw new InvalidDataException($"package asset path と package name が一致しません: {assetPath}");
+                throw new InvalidDataException($"パッケージのアセットパスとパッケージ名が一致しません：{assetPath}");
             }
 
             return CombineInsideRoot(
@@ -557,7 +557,7 @@ namespace LocalizationKeyAudit.Editor
                 assetPath.Substring(prefix.Length));
         }
 
-        /// <summary>asset path に対応する Assets または package physical root を返します。</summary>
+        /// <summary>アセットパスに対応するAssetsまたはパッケージの物理ルートを返します。</summary>
         private static string GetContainingRoot(string assetPath)
         {
             if (assetPath.StartsWith("Assets/", StringComparison.Ordinal))
@@ -568,13 +568,13 @@ namespace LocalizationKeyAudit.Editor
             var package = PackageManagerPackageInfo.FindForAssetPath(assetPath);
             if (package == null || string.IsNullOrWhiteSpace(package.resolvedPath))
             {
-                throw new InvalidDataException($"candidate の package root を解決できません: {assetPath}");
+                throw new InvalidDataException($"候補のパッケージルートを解決できません：{assetPath}");
             }
 
             return Path.GetFullPath(package.resolvedPath);
         }
 
-        /// <summary>root 外へ出ない relative path 結合を行います。</summary>
+        /// <summary>ルート外へ出ない相対パス結合を行います。</summary>
         private static string CombineInsideRoot(string root, string relativePath)
         {
             var fullRoot = root.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
@@ -582,13 +582,13 @@ namespace LocalizationKeyAudit.Editor
             var prefix = fullRoot + Path.DirectorySeparatorChar;
             if (!fullPath.StartsWith(prefix, GetPhysicalPathComparison()))
             {
-                throw new InvalidDataException($"physical path が registered root の外を指しています: {fullPath}");
+                throw new InvalidDataException("物理パスが登録済みルートの外を指しています。");
             }
 
             return fullPath;
         }
 
-        /// <summary>root から file までに reparse point が 1 件でもあるかを調べます。</summary>
+        /// <summary>ルートからファイルまでに再解析点が1件でもあるかを調べます。</summary>
         private static bool ContainsReparsePoint(string root, string physicalPath)
         {
             var fullRoot = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
@@ -597,7 +597,7 @@ namespace LocalizationKeyAudit.Editor
             if (!string.Equals(fullRoot, fullPath, GetPhysicalPathComparison()) &&
                 !fullPath.StartsWith(prefix, GetPhysicalPathComparison()))
             {
-                throw new InvalidDataException($"physical path が scan root の外を指しています: {fullPath}");
+                throw new InvalidDataException("物理パスが走査ルートの外を指しています。");
             }
 
             if (HasReparsePoint(fullRoot))
@@ -625,13 +625,13 @@ namespace LocalizationKeyAudit.Editor
             return false;
         }
 
-        /// <summary>1 physical path の ReparsePoint attribute を調べます。</summary>
+        /// <summary>1つの物理パスに再解析点属性があるかを調べます。</summary>
         private static bool HasReparsePoint(string path)
         {
             return (File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0;
         }
 
-        /// <summary>Unity が import 対象外にする dot/tilde name かを調べます。</summary>
+        /// <summary>Unityがインポート対象外にするドット始まりまたはチルダ終わりの名前かを調べます。</summary>
         private static bool ShouldIgnorePathName(string name)
         {
             return string.IsNullOrEmpty(name) ||
@@ -639,7 +639,7 @@ namespace LocalizationKeyAudit.Editor
                 name.EndsWith("~", StringComparison.Ordinal);
         }
 
-        /// <summary>OS の filesystem case rule に合わせた比較方法です。</summary>
+        /// <summary>オペレーティングシステムのファイルシステムにおける大小文字規則に合わせた比較方法です。</summary>
         private static StringComparison GetPhysicalPathComparison()
         {
             return Path.DirectorySeparatorChar == '\\'
@@ -647,7 +647,7 @@ namespace LocalizationKeyAudit.Editor
                 : StringComparison.Ordinal;
         }
 
-        /// <summary>OS の filesystem case rule に合わせた comparer です。</summary>
+        /// <summary>オペレーティングシステムのファイルシステムにおける大小文字規則に合わせた比較器です。</summary>
         private static StringComparer GetPhysicalPathComparer()
         {
             return Path.DirectorySeparatorChar == '\\'
@@ -655,7 +655,7 @@ namespace LocalizationKeyAudit.Editor
                 : StringComparer.Ordinal;
         }
 
-        /// <summary>registered package を name、resolved path の順に並べます。</summary>
+        /// <summary>登録済みパッケージを名前（name）、解決済みパス（resolvedPath）の順に並べます。</summary>
         private static int ComparePackages(PackageManagerPackageInfo left, PackageManagerPackageInfo right)
         {
             if (ReferenceEquals(left, right))
@@ -679,20 +679,20 @@ namespace LocalizationKeyAudit.Editor
                 : string.Compare(left.resolvedPath, right.resolvedPath, StringComparison.Ordinal);
         }
 
-        /// <summary>physical discovery root と Unity asset prefix の組です。</summary>
+        /// <summary>物理探索ルートとUnityアセットパス接頭辞の組です。</summary>
         private readonly struct DiscoveryRoot
         {
-            /// <summary>root pair を保持します。</summary>
+            /// <summary>ルートの組を保持します。</summary>
             internal DiscoveryRoot(string assetPrefix, string physicalRoot)
             {
                 AssetPrefix = assetPrefix;
                 PhysicalRoot = physicalRoot;
             }
 
-            /// <summary>Assets または Packages/package-name です。</summary>
+            /// <summary>AssetsまたはPackages/&lt;パッケージ名&gt;です。</summary>
             internal string AssetPrefix { get; }
 
-            /// <summary>対応する absolute directory です。</summary>
+            /// <summary>対応する絶対ディレクトリです。</summary>
             internal string PhysicalRoot { get; }
         }
     }

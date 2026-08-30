@@ -9,11 +9,11 @@ using System.Text;
 namespace LocalizationKeyAudit.Editor
 {
     /// <summary>
-    /// Unity YAML の GUID + key ID 形式だけを direct static reference として保守的に認識します。
+    /// Unity形式のYAMLにあるGUIDと項目識別子による直接の静的参照だけを、安全側に倒して認識します。
     /// </summary>
     internal static class LocalizationKeyAuditCoverageScanner
     {
-        /// <summary>全 asset を検証後にだけ complete coverage を返し、失敗時は partial references を破棄します。</summary>
+        /// <summary>全アセットを検証した後だけ網羅完了を返し、失敗時は途中までの参照を破棄します。</summary>
         internal static LocalizationKeyAuditCoverage Scan(
             string scopeDescription,
             IReadOnlyList<string> declaredAssetPaths,
@@ -30,18 +30,18 @@ namespace LocalizationKeyAudit.Editor
                 scopeDescription.Length > LocalizationKeyAuditLimits.MaximumTextCharacters ||
                 !string.Equals(scopeDescription, scopeDescription.Trim(), StringComparison.Ordinal))
             {
-                return CreateIncomplete(scopeDescription, declaredPaths, "coverage scope description が空、不正、または長すぎます。");
+                return CreateIncomplete(scopeDescription, declaredPaths, "走査範囲の説明が空、不正、または長すぎます。");
             }
 
             if (source == null)
             {
-                return CreateIncomplete(scopeDescription, declaredPaths, "static reference coverage source がありません。");
+                return CreateIncomplete(scopeDescription, declaredPaths, "静的参照網羅の取得元がありません。");
             }
 
             if (maximumStaticReferences < 0 ||
                 maximumStaticReferences > LocalizationKeyAuditLimits.MaximumStaticReferences)
             {
-                return CreateIncomplete(scopeDescription, declaredPaths, "static reference 上限が不正です。");
+                return CreateIncomplete(scopeDescription, declaredPaths, "静的参照の上限が不正です。");
             }
 
             List<LocalizationKeyAuditCoverageAsset> assets;
@@ -50,7 +50,7 @@ namespace LocalizationKeyAudit.Editor
                 var sourceAssets = source.ReadAssets(declaredPaths);
                 if (sourceAssets == null)
                 {
-                    return CreateIncomplete(scopeDescription, declaredPaths, "coverage source が null を返しました。");
+                    return CreateIncomplete(scopeDescription, declaredPaths, "静的参照網羅の取得元が空の結果を返しました。");
                 }
 
                 if (sourceAssets.Count > LocalizationKeyAuditLimits.MaximumPhysicalAssetFiles)
@@ -58,7 +58,7 @@ namespace LocalizationKeyAudit.Editor
                     return CreateIncomplete(
                         scopeDescription,
                         declaredPaths,
-                        $"coverage file 数が上限 {LocalizationKeyAuditLimits.MaximumPhysicalAssetFiles} 件を超えています。");
+                        $"走査対象ファイル数が上限 {LocalizationKeyAuditLimits.MaximumPhysicalAssetFiles} 件を超えています。");
                 }
 
                 assets = new List<LocalizationKeyAuditCoverageAsset>(sourceAssets.Count);
@@ -72,7 +72,7 @@ namespace LocalizationKeyAudit.Editor
                 return CreateIncomplete(
                     scopeDescription,
                     declaredPaths,
-                    $"coverage 全件収集に失敗しました: {exception.GetType().Name}");
+                    $"走査対象の全件収集に失敗しました: {exception.GetType().Name}");
             }
 
             assets.Sort(CompareAssets);
@@ -88,7 +88,7 @@ namespace LocalizationKeyAudit.Editor
                     !IsInsideDeclaredScope(asset.AssetPath, declaredPaths) ||
                     !paths.Add(asset.AssetPath))
                 {
-                    return CreateIncomplete(scopeDescription, declaredPaths, "coverage asset path が null、不正、または重複しています。");
+                    return CreateIncomplete(scopeDescription, declaredPaths, "走査対象のアセットパスが空、不正、または重複しています。");
                 }
 
                 if (!asset.Exists || asset.HasReparsePoint || asset.IsOversize ||
@@ -98,7 +98,7 @@ namespace LocalizationKeyAudit.Editor
                     return CreateIncomplete(
                         scopeDescription,
                         declaredPaths,
-                        $"{asset.AssetPath} を安全に読み取れません: exists={asset.Exists}, reparse={asset.HasReparsePoint}, oversize={asset.IsOversize}, error={GetSafeReadErrorCode(asset.ReadError)}");
+                        $"{asset.AssetPath} を安全に読み取れません: 存在={FormatBoolean(asset.Exists)}, 再解析点={FormatBoolean(asset.HasReparsePoint)}, 容量超過={FormatBoolean(asset.IsOversize)}, 読取失敗={GetSafeReadErrorCode(asset.ReadError)}");
                 }
 
                 totalBytes += asset.ByteCount;
@@ -107,7 +107,7 @@ namespace LocalizationKeyAudit.Editor
                     return CreateIncomplete(
                         scopeDescription,
                         declaredPaths,
-                        $"coverage 総 byte 数が上限 {LocalizationKeyAuditLimits.MaximumCoverageTotalBytes} を超えています。");
+                        $"走査対象の総バイト数が上限 {LocalizationKeyAuditLimits.MaximumCoverageTotalBytes} を超えています。");
                 }
 
                 if (!TryParseAsset(
@@ -126,7 +126,7 @@ namespace LocalizationKeyAudit.Editor
                     return CreateIncomplete(
                         scopeDescription,
                         declaredPaths,
-                        $"static reference 数が上限 {maximumStaticReferences} 件を超えています。");
+                        $"静的参照数が上限 {maximumStaticReferences} 件を超えています。");
                 }
             }
 
@@ -139,7 +139,7 @@ namespace LocalizationKeyAudit.Editor
                 string.Empty);
         }
 
-        /// <summary>1 Unity YAML asset から隣接する table/entry reference pair を抽出します。</summary>
+        /// <summary>Unity形式のYAMLで保存された1つのアセットから、隣接するテーブル参照と項目参照の組を抽出します。</summary>
         private static bool TryParseAsset(
             string assetPath,
             byte[] bytes,
@@ -153,7 +153,7 @@ namespace LocalizationKeyAudit.Editor
             {
                 if (bytes[index] == 0)
                 {
-                    failure = "binary data は v1 static reference scope で未対応です。";
+                    failure = "バイナリーデータは、第1版の静的参照走査では未対応です。";
                     return false;
                 }
             }
@@ -165,13 +165,13 @@ namespace LocalizationKeyAudit.Editor
             }
             catch (DecoderFallbackException)
             {
-                failure = "strict UTF-8 Unity YAML として読めません。";
+                failure = "Unity形式のYAMLを厳密なUTF-8として読み取れません。";
                 return false;
             }
 
             if (!yaml.StartsWith("%YAML ", StringComparison.Ordinal))
             {
-                failure = "Unity YAML header がない text/binary format は未対応です。";
+                failure = "Unity形式のYAMLヘッダーがないテキストまたはバイナリー形式は未対応です。";
                 return false;
             }
 
@@ -197,13 +197,13 @@ namespace LocalizationKeyAudit.Editor
                 {
                     if (IsSequenceTableReference(content))
                     {
-                        failure = "YAML sequence 内の m_TableReference は conservative parser で未対応です。";
+                        failure = "YAMLの配列内にある m_TableReference は、安全側に倒す解析では未対応です。";
                         return false;
                     }
 
                     if (content.IndexOf("m_TableReference", StringComparison.Ordinal) >= 0)
                     {
-                        failure = "non-canonical、inline、またはflow mappingのm_TableReferenceはconservative parserで未対応です。";
+                        failure = "正規形でない記述、行内記述、またはフローマッピング形式の m_TableReference は、安全側に倒す解析では未対応です。";
                         return false;
                     }
 
@@ -221,7 +221,7 @@ namespace LocalizationKeyAudit.Editor
                 {
                     if (string.IsNullOrEmpty(failure))
                     {
-                        failure = "m_TableReference の後で YAML が終了し、entry reference の有無を確定できません。";
+                        failure = "m_TableReference の後でYAMLが終了し、項目参照の有無を確定できません。";
                     }
 
                     return false;
@@ -229,7 +229,7 @@ namespace LocalizationKeyAudit.Editor
 
                 if (siblingIndent != indent || !string.Equals(siblingContent, "m_TableEntryReference:", StringComparison.Ordinal))
                 {
-                    failure = "m_TableReference の直後に同じ indent の exact m_TableEntryReference block がなく、reference shape を確定できません。";
+                    failure = "m_TableReference の直後に同じ字下げ幅の正確な m_TableEntryReference ブロックがないため、参照構造を確定できません。";
                     return false;
                 }
 
@@ -264,13 +264,13 @@ namespace LocalizationKeyAudit.Editor
                     !Guid.TryParse(serializedTable.Substring(5), out var collectionGuid) ||
                     collectionGuid == Guid.Empty)
                 {
-                    failure = "name-based、empty、または malformed table reference は GUID identity coverage で未対応です。";
+                    failure = "名前指定、空、または形式不正のテーブル参照は、GUIDによる識別の走査では未対応です。";
                     return false;
                 }
 
                 if (!long.TryParse(serializedId, NumberStyles.Integer, CultureInfo.InvariantCulture, out var entryId) || entryId == 0)
                 {
-                    failure = "name-based、empty、または malformed table entry reference は key ID coverage で未対応です。";
+                    failure = "名前指定、空、または形式不正のテーブル項目参照は、項目識別子による走査では未対応です。";
                     return false;
                 }
 
@@ -279,7 +279,7 @@ namespace LocalizationKeyAudit.Editor
                 {
                     if (references.Count >= maximumStaticReferences)
                     {
-                        failure = $"static reference 数が上限 {maximumStaticReferences} 件を超えています。";
+                        failure = $"静的参照数が上限 {maximumStaticReferences} 件を超えています。";
                         return false;
                     }
 
@@ -298,7 +298,7 @@ namespace LocalizationKeyAudit.Editor
             return true;
         }
 
-        /// <summary>block scalar本文を構造解析から除外し、tab indentationは全行で拒否します。</summary>
+        /// <summary>ブロック形式の複数行文字列を構造解析から除外し、タブによる字下げは全行で拒否します。</summary>
         private static bool TryValidateScalarContexts(
             string[] sourceLines,
             out string failure)
@@ -318,25 +318,25 @@ namespace LocalizationKeyAudit.Editor
 
                 if (IsUnsupportedExplicitMappingKey(content))
                 {
-                    failure = "explicit mapping keyはv1 conservative static reference parserで未対応です。";
+                    failure = "明示的なマッピングキーは、第1版の安全側に倒す静的参照解析では未対応です。";
                     return false;
                 }
 
                 if (IsBlockScalarHeader(content))
                 {
-                    failure = "block scalarはv1 conservative static reference parserで未対応です。";
+                    failure = "ブロック形式の複数行文字列は、第1版の安全側に倒す静的参照解析では未対応です。";
                     return false;
                 }
 
                 if (HasUnclosedQuotedScalar(content))
                 {
-                    failure = "複数行quoted scalarはv1 conservative static reference parserで未対応です。";
+                    failure = "複数行の引用符付き文字列は、第1版の安全側に倒す静的参照解析では未対応です。";
                     return false;
                 }
 
                 if (HasUnclosedFlowCollection(content))
                 {
-                    failure = "複数行flow collectionはv1 conservative static reference parserで未対応です。";
+                    failure = "複数行のフロー形式コレクションは、第1版の安全側に倒す静的参照解析では未対応です。";
                     return false;
                 }
             }
@@ -344,7 +344,7 @@ namespace LocalizationKeyAudit.Editor
             return true;
         }
 
-        /// <summary>CR/LF/CRLFを同じline境界として読み、Split allocation前にline数を制限します。</summary>
+        /// <summary>CR、LF、CRLFを同じ行境界として読み、分割用の領域確保前に行数を制限します。</summary>
         private static bool TryReadYamlLines(string yaml, out string[] lines, out string failure)
         {
             failure = string.Empty;
@@ -357,7 +357,7 @@ namespace LocalizationKeyAudit.Editor
                     if (!IsCoverageYamlLineCountWithinLimit(values.Count + 1))
                     {
                         lines = Array.Empty<string>();
-                        failure = $"Unity YAML line数が上限 {LocalizationKeyAuditLimits.MaximumCoverageYamlLines} 件を超えています。";
+                        failure = $"Unity形式のYAMLの行数が上限 {LocalizationKeyAuditLimits.MaximumCoverageYamlLines} 件を超えています。";
                         return false;
                     }
 
@@ -369,13 +369,13 @@ namespace LocalizationKeyAudit.Editor
             return true;
         }
 
-        /// <summary>次のUnity YAML lineを保持する前にhard limitを確認します。</summary>
+        /// <summary>次のUnity形式のYAML行を保持する前に上限を確認します。</summary>
         internal static bool IsCoverageYamlLineCountWithinLimit(int count)
         {
             return count >= 0 && count <= LocalizationKeyAuditLimits.MaximumCoverageYamlLines;
         }
 
-        /// <summary>mapping valueがYAML literal/folded block scalar indicatorかを調べます。</summary>
+        /// <summary>マッピング値がYAMLのリテラルまたは折り畳みブロック文字列の記号かを調べます。</summary>
         private static bool IsBlockScalarHeader(string content)
         {
             var value = GetNormalizedNodeValue(content);
@@ -406,7 +406,7 @@ namespace LocalizationKeyAudit.Editor
             return false;
         }
 
-        /// <summary>mapping/sequence valueで開始したquoteが同じline内に閉じているかを調べます。</summary>
+        /// <summary>マッピング値または配列値で始まった引用符が、同じ行内で閉じているかを調べます。</summary>
         private static bool HasUnclosedQuotedScalar(string content)
         {
             var value = GetNormalizedNodeValue(content);
@@ -453,7 +453,7 @@ namespace LocalizationKeyAudit.Editor
             return true;
         }
 
-        /// <summary>mapping valueとして開始したflow collectionが同じlineで閉じるかを調べます。</summary>
+        /// <summary>マッピング値として始まったフロー形式コレクションが、同じ行内で閉じるかを調べます。</summary>
         private static bool HasUnclosedFlowCollection(string content)
         {
             var value = GetNormalizedNodeValue(content);
@@ -550,7 +550,7 @@ namespace LocalizationKeyAudit.Editor
             return inSingleQuote || inDoubleQuote || curlyDepth != 0 || squareDepth != 0;
         }
 
-        /// <summary>nested sequence markerを除き、mappingならvalue側を返します。</summary>
+        /// <summary>入れ子の配列記号を除き、マッピングなら値側を返します。</summary>
         private static string GetNormalizedNodeValue(string content)
         {
             var node = RemoveLeadingSequenceMarkers(content);
@@ -560,7 +560,7 @@ namespace LocalizationKeyAudit.Editor
                 : node;
         }
 
-        /// <summary>v1で構造を確定できないexplicit mapping keyを検出します。</summary>
+        /// <summary>第1版で構造を確定できない明示的なマッピングキーを検出します。</summary>
         private static bool IsUnsupportedExplicitMappingKey(string content)
         {
             var node = RemoveLeadingSequenceMarkers(content);
@@ -568,7 +568,7 @@ namespace LocalizationKeyAudit.Editor
                 node.StartsWith("? ", StringComparison.Ordinal);
         }
 
-        /// <summary>nested block sequence markerを順に除きます。</summary>
+        /// <summary>入れ子のブロック配列記号を順に除きます。</summary>
         private static string RemoveLeadingSequenceMarkers(string content)
         {
             var node = content;
@@ -581,7 +581,7 @@ namespace LocalizationKeyAudit.Editor
             return node;
         }
 
-        /// <summary>mapping keyの終端colonをquoteやtag内部のcolonと区別します。</summary>
+        /// <summary>マッピングキー末尾のコロンを、引用符やタグ内部のコロンと区別します。</summary>
         private static int FindMappingValueSeparator(string content)
         {
             var inSingleQuote = false;
@@ -669,7 +669,7 @@ namespace LocalizationKeyAudit.Editor
             return -1;
         }
 
-        /// <summary>literal/folded scalar indicatorとchomping/indent suffixだけを受理します。</summary>
+        /// <summary>リテラルまたは折り畳み文字列の記号と、末尾・字下げ指定だけを受理します。</summary>
         private static bool IsBlockScalarIndicator(string token)
         {
             if (string.IsNullOrEmpty(token) || (token[0] != '|' && token[0] != '>'))
@@ -689,7 +689,7 @@ namespace LocalizationKeyAudit.Editor
             return true;
         }
 
-        /// <summary>sequence要素として現れたtable reference候補を安全側で検出します。</summary>
+        /// <summary>配列要素として現れたテーブル参照候補を安全側に倒して検出します。</summary>
         private static bool IsSequenceTableReference(string content)
         {
             if (string.IsNullOrEmpty(content) || content[0] != '-')
@@ -706,7 +706,7 @@ namespace LocalizationKeyAudit.Editor
             return content.Substring(cursor).StartsWith("m_TableReference:", StringComparison.Ordinal);
         }
 
-        /// <summary>parent より深い行の終了位置を返します。</summary>
+        /// <summary>親より深く字下げされた行の終了位置を返します。</summary>
         private static int FindBlockEnd(string[] lines, int startIndex, int parentIndent, out string failure)
         {
             failure = string.Empty;
@@ -726,7 +726,7 @@ namespace LocalizationKeyAudit.Editor
             return lines.Length;
         }
 
-        /// <summary>空行と comment を飛ばした次行を返します。</summary>
+        /// <summary>空行とコメントを飛ばした次の行を返します。</summary>
         private static int FindNextContentLine(
             string[] lines,
             int startIndex,
@@ -753,7 +753,7 @@ namespace LocalizationKeyAudit.Editor
             return -1;
         }
 
-        /// <summary>block 内の exact YAML field value が 1 件だけかを検証します。</summary>
+        /// <summary>ブロック内に完全一致するYAML項目値が1件だけあるかを検証します。</summary>
         private static bool TryReadUniqueChildValue(
             string[] lines,
             int startIndex,
@@ -786,7 +786,7 @@ namespace LocalizationKeyAudit.Editor
 
                 if (indent != parentIndent + 2)
                 {
-                    failure = $"{fieldName} がexact direct childではなく、reference shapeを確定できません。";
+                    failure = $"{fieldName} が直下の正確な子要素ではないため、参照構造を確定できません。";
                     return false;
                 }
 
@@ -796,14 +796,14 @@ namespace LocalizationKeyAudit.Editor
 
             if (count != 1 || value.Length == 0)
             {
-                failure = $"{fieldName} が 1 件の non-empty scalar ではありません。";
+                failure = $"{fieldName} が空でない単一の値ではありません。";
                 return false;
             }
 
             return true;
         }
 
-        /// <summary>space indentation と content を分離し、tab indentation を拒否します。</summary>
+        /// <summary>空白による字下げと内容を分離し、タブによる字下げを拒否します。</summary>
         private static bool TryReadLine(string raw, out int indent, out string content, out string failure)
         {
             indent = 0;
@@ -812,7 +812,7 @@ namespace LocalizationKeyAudit.Editor
             var line = raw.EndsWith("\r", StringComparison.Ordinal) ? raw.Substring(0, raw.Length - 1) : raw;
             if (line.IndexOf('\t') >= 0)
             {
-                failure = "tab character は conservative Unity YAML parser で未対応です。";
+                failure = "タブ文字は、Unity形式のYAMLを安全側に倒して解析する処理では未対応です。";
                 return false;
             }
 
@@ -825,7 +825,7 @@ namespace LocalizationKeyAudit.Editor
             return true;
         }
 
-        /// <summary>simple YAML quote だけを除きます。</summary>
+        /// <summary>単純なYAML引用符だけを除きます。</summary>
         private static string Unquote(string value)
         {
             if (value.Length >= 2 &&
@@ -838,7 +838,7 @@ namespace LocalizationKeyAudit.Editor
             return value;
         }
 
-        /// <summary>scanner対象のUnity asset file pathかを調べます。</summary>
+        /// <summary>走査対象となるUnityのアセットファイルパスかを調べます。</summary>
         private static bool IsProjectAssetPath(string path)
         {
             if (!IsDeclaredProjectPath(path) || path == "Assets")
@@ -850,7 +850,7 @@ namespace LocalizationKeyAudit.Editor
             return segments[0] != "Packages" || segments.Length >= 3;
         }
 
-        /// <summary>rootを含む安全なAssets/Packages declared pathかを調べます。</summary>
+        /// <summary>ルートを含む安全なAssetsまたはPackagesの指定パスかを調べます。</summary>
         private static bool IsDeclaredProjectPath(string path)
         {
             if (string.IsNullOrWhiteSpace(path) ||
@@ -877,7 +877,7 @@ namespace LocalizationKeyAudit.Editor
                 (segments[0] == "Packages" && segments.Length >= 2);
         }
 
-        /// <summary>source asset が宣言済み asset または folder の内側かを調べます。</summary>
+        /// <summary>取得元アセットが指定済みのアセットまたはフォルダーの内側かを調べます。</summary>
         private static bool IsInsideDeclaredScope(string assetPath, IReadOnlyList<string> declaredPaths)
         {
             for (var index = 0; index < declaredPaths.Count; index++)
@@ -893,7 +893,7 @@ namespace LocalizationKeyAudit.Editor
             return false;
         }
 
-        /// <summary>partial references を持たない incomplete coverage を作ります。</summary>
+        /// <summary>途中までの参照を含まない網羅未完了結果を作ります。</summary>
         private static LocalizationKeyAuditCoverage CreateIncomplete(
             string scopeDescription,
             IReadOnlyList<string> declaredAssetPaths,
@@ -907,7 +907,7 @@ namespace LocalizationKeyAudit.Editor
                 reason);
         }
 
-        /// <summary>filesystem access前にAssets/Packages pathをbounded snapshotにします。</summary>
+        /// <summary>ファイルシステムへアクセスする前に、AssetsまたはPackagesのパスを上限付きで複製します。</summary>
         private static IReadOnlyList<string> CopyAndValidateDeclaredPaths(
             IReadOnlyList<string> source,
             out string failure)
@@ -915,13 +915,13 @@ namespace LocalizationKeyAudit.Editor
             failure = string.Empty;
             if (source == null || source.Count == 0)
             {
-                failure = "static reference の asset scope path を 1 件以上宣言してください。";
+                failure = "静的参照を走査するアセット範囲のパスを1件以上指定してください。";
                 return Array.Empty<string>();
             }
 
             if (source.Count > LocalizationKeyAuditLimits.MaximumDeclaredAssetPaths)
             {
-                failure = $"declared asset path 数が上限 {LocalizationKeyAuditLimits.MaximumDeclaredAssetPaths} 件を超えています。";
+                failure = $"対象アセットパス数が上限 {LocalizationKeyAuditLimits.MaximumDeclaredAssetPaths} 件を超えています。";
                 return Array.Empty<string>();
             }
 
@@ -933,7 +933,7 @@ namespace LocalizationKeyAudit.Editor
                 var path = source[index];
                 if (!IsDeclaredProjectPath(path) || !unique.Add(path))
                 {
-                    failure = "declared asset path が不正、重複、または対応scope外です。";
+                    failure = "対象アセットパスが不正、重複、または対応する走査範囲外です。";
                     return Array.Empty<string>();
                 }
 
@@ -944,7 +944,7 @@ namespace LocalizationKeyAudit.Editor
                 }
                 else if (!string.Equals(logicalRoot, candidateRoot, StringComparison.Ordinal))
                 {
-                    failure = "1 回の監査で宣言できるlogical rootはAssetsまたは1つのregistered packageだけです。";
+                    failure = "1回の監査で指定できる論理上のルートは、Assetsまたは登録済みパッケージ1つだけです。";
                     return Array.Empty<string>();
                 }
 
@@ -955,17 +955,17 @@ namespace LocalizationKeyAudit.Editor
             return new ReadOnlyCollection<string>(paths.ToArray());
         }
 
-        /// <summary>opaqueなsource error本文を結果へ出さず、安全な状態codeだけにします。</summary>
+        /// <summary>取得元の読取失敗本文を結果へ出さず、安全な状態名だけにします。</summary>
         private static string GetSafeReadErrorCode(string readError)
         {
             if (string.IsNullOrEmpty(readError))
             {
-                return "none";
+                return "なし";
             }
 
             if (readError.Length > 128)
             {
-                return "present";
+                return "あり";
             }
 
             for (var index = 0; index < readError.Length; index++)
@@ -976,14 +976,20 @@ namespace LocalizationKeyAudit.Editor
                 if (!isAsciiLetter && !(character >= '0' && character <= '9') &&
                     character != '_' && character != '.')
                 {
-                    return "present";
+                    return "あり";
                 }
             }
 
             return readError;
         }
 
-        /// <summary>declared pathをAssetsまたはPackages/package-name rootへ正規化します。</summary>
+        /// <summary>真偽値を利用者向けの日本語へ変換します。</summary>
+        private static string FormatBoolean(bool value)
+        {
+            return value ? "はい" : "いいえ";
+        }
+
+        /// <summary>指定パスをAssetsまたはPackages内のパッケージ名ルートへ正規化します。</summary>
         private static string GetLogicalRoot(string path)
         {
             if (path == "Assets" || path.StartsWith("Assets/", StringComparison.Ordinal))
@@ -995,13 +1001,13 @@ namespace LocalizationKeyAudit.Editor
             return separator < 0 ? path : path.Substring(0, separator);
         }
 
-        /// <summary>asset path で決定論的に並べます。</summary>
+        /// <summary>アセットパスで決定論的に並べます。</summary>
         private static int CompareAssets(LocalizationKeyAuditCoverageAsset left, LocalizationKeyAuditCoverageAsset right)
         {
             return string.Compare(left?.AssetPath, right?.AssetPath, StringComparison.Ordinal);
         }
 
-        /// <summary>source path、GUID、entry ID の順に並べます。</summary>
+        /// <summary>取得元パス、GUID、項目識別子の順に並べます。</summary>
         private static int CompareReferences(LocalizationKeyAuditStaticReference left, LocalizationKeyAuditStaticReference right)
         {
             var comparison = string.Compare(left.SourceAssetPath, right.SourceAssetPath, StringComparison.Ordinal);

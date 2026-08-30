@@ -37,29 +37,28 @@ namespace LocalizationKeyAudit.Editor
         /// <summary>問題種別です。</summary>
         internal LocalizationKeyAuditIssueKind Kind { get; }
 
-        /// <summary>問題の発生元 asset path です。</summary>
+        /// <summary>問題の発生元アセットパスです。</summary>
         internal string AssetPath { get; }
 
-        /// <summary>関連する table または SharedTableData の asset path です。</summary>
+        /// <summary>関連するテーブルまたは共有テーブルデータのアセットパスです。</summary>
         internal string RelatedAssetPath { get; }
 
-        /// <summary>関連する table collection 名です。</summary>
+        /// <summary>関連するテーブルコレクション名です。</summary>
         internal string CollectionName { get; }
 
-        /// <summary>関連する table collection GUID です。</summary>
+        /// <summary>関連するテーブルのコレクション識別子（GUID）です。</summary>
         internal Guid CollectionGuid { get; }
 
-        /// <summary>関連する Locale identifier です。</summary>
+        /// <summary>関連するロケール識別子です。</summary>
         internal string LocaleIdentifier { get; }
 
-        /// <summary>関連する shared entry key です。</summary>
+        /// <summary>関連する共有項目キーです。</summary>
         internal string EntryKey { get; }
 
-        /// <summary>関連する shared entry ID です。</summary>
+        /// <summary>関連する共有項目識別子です。</summary>
         internal long EntryId { get; }
 
         /// <summary>断定範囲を限定した表示用説明です。</summary>
         internal string Message { get; }
     }
 }
-

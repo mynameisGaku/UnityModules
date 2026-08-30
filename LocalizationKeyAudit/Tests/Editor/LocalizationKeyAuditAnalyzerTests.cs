@@ -8,12 +8,12 @@ using AuditEditor = LocalizationKeyAudit.Editor;
 namespace LocalizationKeyAudit.Tests
 {
     /// <summary>
-    /// typed snapshot の integrity、direct coverage、static reference graph を検証します。
+    /// 型として読み取ったスナップショットの整合性、直接網羅、静的参照グラフを検証します。
     /// </summary>
     internal sealed class LocalizationKeyAuditAnalyzerTests
     {
         /// <summary>
-        /// locale table 欠落、direct entry 欠落、null/empty value を分け、空白 value は保持します。
+        /// ロケールテーブル欠落、直接項目欠落、参照なし／空の値を分け、空白値は保持します。
         /// </summary>
         [Test]
         public void Analyze_DistinguishesDirectCoverageFindingsWithoutFallbackClaims()
@@ -59,17 +59,29 @@ namespace LocalizationKeyAudit.Tests
                     .EntryId,
                 Is.EqualTo(20));
             Assert.That(
+                result.Issues.Single(issue => issue.Kind == AuditEditor.LocalizationKeyAuditIssueKind.MissingLocaleTable)
+                    .Message,
+                Is.EqualTo("必須ロケール「fr」の直接の文字列テーブルがありません。実行時の代替処理結果は判定していません。"));
+            Assert.That(
+                result.Issues.Single(issue => issue.Kind == AuditEditor.LocalizationKeyAuditIssueKind.MissingDirectEntry)
+                    .Message,
+                Is.EqualTo("必須ロケールテーブルに共有項目識別子と対応する直接項目がありません。実行時の代替処理結果は判定していません。"));
+            Assert.That(
                 result.Issues.Where(issue => issue.Kind == AuditEditor.LocalizationKeyAuditIssueKind.EmptyDirectValue)
                     .Select(issue => issue.EntryId),
                 Is.EqualTo(new long[] { 10, 10 }));
+            Assert.That(
+                result.Issues.Where(issue => issue.Kind == AuditEditor.LocalizationKeyAuditIssueKind.EmptyDirectValue)
+                    .Select(issue => issue.Message),
+                Is.All.EqualTo("直接のローカライズ値が未設定または空です。空白文字だけの値と実行時の代替処理結果は別扱いです。"));
             Assert.That(result.Issues.Any(issue => issue.EntryId == 30), Is.False);
-            Assert.That(result.Issues.All(issue => !issue.Message.Contains("runtime で利用できません")), Is.True);
+            Assert.That(result.Issues.All(issue => !issue.Message.Contains("実行時に利用できません")), Is.True);
             Assert.That(result.Issues.All(issue => !issue.Message.Contains("未翻訳です")), Is.True);
             Assert.That(result.GraphEdgeCount, Is.EqualTo(19));
         }
 
         /// <summary>
-        /// required Locale の settings 不在は direct table の有無と独立して報告します。
+        /// 必須ロケールが設定にない問題は、直接テーブルの有無と独立して報告します。
         /// </summary>
         [Test]
         public void Analyze_ReportsRequiredLocaleNotConfiguredIndependently()
@@ -87,13 +99,17 @@ namespace LocalizationKeyAudit.Tests
                 new[] { Reference(collection.CollectionGuid, 10) });
 
             AssertIssueCount(result, AuditEditor.LocalizationKeyAuditIssueKind.RequiredLocaleNotConfigured, 1);
+            Assert.That(
+                result.Issues.Single(issue => issue.Kind == AuditEditor.LocalizationKeyAuditIssueKind.RequiredLocaleNotConfigured)
+                    .Message,
+                Is.EqualTo("必須ロケール「fr」がローカライズ設定に登録されていません。"));
             AssertIssueCount(result, AuditEditor.LocalizationKeyAuditIssueKind.MissingLocaleTable, 0);
             AssertIssueCount(result, AuditEditor.LocalizationKeyAuditIssueKind.MissingDirectEntry, 0);
             AssertIssueCount(result, AuditEditor.LocalizationKeyAuditIssueKind.EmptyDirectValue, 0);
         }
 
         /// <summary>
-        /// Locale、shared identity/key、table、localized identity、orphan を別々の integrity issue にします。
+        /// ロケール、共有識別情報／キー、テーブル、ローカライズ済み識別情報、孤立状態を別々の整合性問題にします。
         /// </summary>
         [Test]
         public void Analyze_ReportsAllNestedDuplicateAndOrphanKinds()
@@ -134,7 +150,8 @@ namespace LocalizationKeyAudit.Tests
         }
 
         /// <summary>
-        /// collection に属さない typed table と typed object のない valid raw SharedTableData を結果へ残します。
+        /// コレクションに属さない、型として読み取ったテーブルと、
+        /// 型として読み取ったオブジェクトのない正常な未加工の共有テーブルデータを結果へ残します。
         /// </summary>
         [Test]
         public void Analyze_PreservesTypedAndRawOrphansAsExplicitFindings()
@@ -168,15 +185,21 @@ namespace LocalizationKeyAudit.Tests
             Assert.That(typedOrphanIssue.AssetPath, Is.EqualTo("Assets/Localization/Orphan_en.asset"));
             Assert.That(typedOrphanIssue.RelatedAssetPath, Is.EqualTo("Assets/Localization/Orphan Shared Data.asset"));
             Assert.That(typedOrphanIssue.CollectionGuid, Is.EqualTo(orphanGuid));
+            Assert.That(
+                typedOrphanIssue.Message,
+                Is.EqualTo("型として読み取った文字列テーブルに対応する文字列テーブルコレクションが見つかりません。"));
             var rawOrphanIssue = result.Issues.Single(
                 issue => issue.Kind == AuditEditor.LocalizationKeyAuditIssueKind.OrphanedSharedTableData);
             Assert.That(rawOrphanIssue.AssetPath, Is.EqualTo("Assets/Localization/RawOnly Shared Data.asset"));
             Assert.That(rawOrphanIssue.CollectionGuid, Is.EqualTo(rawOnlyGuid));
+            Assert.That(
+                rawOrphanIssue.Message,
+                Is.EqualTo("有効な未加工の共有テーブルデータに対応する、型として読み取ったコレクションまたはテーブルが見つかりません。"));
             Assert.That(result.GraphEdgeCount, Is.EqualTo(2));
         }
 
         /// <summary>
-        /// collection 名と GUID の重複は該当する各 collection に決定論的な issue を付けます。
+        /// コレクション名とGUIDの重複は、該当する各コレクションに決定論的な問題を付けます。
         /// </summary>
         [Test]
         public void Analyze_ReportsDuplicateCollectionNameAndGuidPerCollection()
@@ -197,7 +220,7 @@ namespace LocalizationKeyAudit.Tests
         }
 
         /// <summary>
-        /// static reference は表示 hint でなく collection GUID と entry ID だけで解決します。
+        /// 静的参照は表示補助でなく、コレクション識別子（GUID）と項目識別子だけで解決します。
         /// </summary>
         [Test]
         public void Analyze_StaticReferencesUseGuidAndEntryIdAndRejectAmbiguity()
@@ -236,7 +259,8 @@ namespace LocalizationKeyAudit.Tests
         }
 
         /// <summary>
-        /// typed object のない raw SharedTableData でも GUID 重複なら static identity を曖昧にします。
+        /// 型として読み取ったオブジェクのない未加工の共有テーブルデータでも、
+        /// GUIDが重複すれば静的識別情報を曖昧にします。
         /// </summary>
         [Test]
         public void Analyze_RawOrphanDuplicateGuidMakesStaticIdentityAmbiguous()
@@ -261,7 +285,7 @@ namespace LocalizationKeyAudit.Tests
         }
 
         /// <summary>
-        /// Asset Tableだけが所有するSharedTableDataはStringのorphan/duplicate/static danglingへ混ぜません。
+        /// アセットテーブルだけが所有する共有テーブルデータは、文字列側の孤立／重複／静的参照未解決へ混ぜません。
         /// </summary>
         [Test]
         public void Analyze_ExcludesAssetOnlySharedDataFromAllStringIdentityFindings()
@@ -292,7 +316,7 @@ namespace LocalizationKeyAudit.Tests
             AssertIssueCount(result, AuditEditor.LocalizationKeyAuditIssueKind.NoStaticReferenceFoundWithinDeclaredScope, 0);
         }
 
-        /// <summary>String/Asset間の同一collection GUIDはraw YAML reference typeを断定せずfail-closedにします。</summary>
+        /// <summary>文字列テーブルとアセットテーブルの間で同じコレクション識別子（GUID）が使われている場合、未加工のYAML参照の種別を断定せず安全側で失敗します。</summary>
         [Test]
         public void Analyze_RejectsCrossTypeCollectionGuidCollision()
         {
@@ -326,10 +350,10 @@ namespace LocalizationKeyAudit.Tests
             var exception = Assert.Throws<InvalidDataException>(() =>
                 AuditEditor.LocalizationKeyAuditAnalyzer.Analyze(request, snapshot, rawIdentities));
 
-            Assert.That(exception.Message, Does.Contain("static reference typeを一意に判定できません"));
+            Assert.That(exception.Message, Does.Contain("静的参照の種類を一意に判定できません"));
         }
 
-        /// <summary>Asset Tableだけに解決できるraw YAML referenceをStringのdanglingとは断定しません。</summary>
+        /// <summary>アセットテーブルだけに解決できる未加工のYAML参照を、文字列側の未解決参照とは断定しません。</summary>
         [Test]
         public void Analyze_DoesNotClassifyAssetOnlyReferenceAsDanglingStringReference()
         {
@@ -352,7 +376,7 @@ namespace LocalizationKeyAudit.Tests
             Assert.That(result.Issues, Is.Empty);
         }
 
-        /// <summary>Asset Table identityもraw preflightのpath/GUIDと完全一致しなければ通常結果を返しません。</summary>
+        /// <summary>アセットテーブルの識別情報も、未加工の事前検査のパス／GUIDと完全一致しなければ通常結果を返しません。</summary>
         [Test]
         public void Analyze_RejectsAssetTableIdentityThatDoesNotMatchRawPreflight()
         {
@@ -382,11 +406,14 @@ namespace LocalizationKeyAudit.Tests
                     snapshot,
                     new[] { new AuditEditor.LocalizationKeyAuditRawIdentity(assetPath, rawGuid) }));
 
-            Assert.That(exception.Message, Does.Contain("raw preflight と一致しません"));
+            Assert.That(
+                exception.Message,
+                Is.EqualTo(
+                    $"型として読み取ったアセットテーブルの共有テーブルデータ識別情報が未加工の事前検査結果と一致しません: {assetPath}"));
         }
 
         /// <summary>
-        /// 3 path 以上の raw GUID 重複でも related path と issue 順を raw 入力順から独立させます。
+        /// 3パス以上の未加工GUID重複でも、関連パスと問題順を未加工入力順から独立させます。
         /// </summary>
         [Test]
         public void Analyze_RawGuidDuplicateIssuesAreDeterministicForManyPaths()
@@ -415,7 +442,7 @@ namespace LocalizationKeyAudit.Tests
         }
 
         /// <summary>
-        /// complete coverage で参照がゼロなら一意な全 shared key を NoStatic として列挙します。
+        /// 網羅完了時に参照がゼロなら、一意な全共有キーを静的参照なし問題として列挙します。
         /// </summary>
         [Test]
         public void Analyze_CompleteCoverageWithNoReferencesReportsEveryUniqueSharedKey()
@@ -428,7 +455,7 @@ namespace LocalizationKeyAudit.Tests
         }
 
         /// <summary>
-        /// 一部 key に参照があっても同じ collection の未参照 key を NoStatic として残します。
+        /// 一部のキーに参照があっても、同じコレクションの未参照キーを静的参照なし問題として残します。
         /// </summary>
         [Test]
         public void Analyze_PartialReferencesReportOnlyRemainingSharedKeys()
@@ -445,7 +472,7 @@ namespace LocalizationKeyAudit.Tests
         }
 
         /// <summary>
-        /// duplicate collection GUID と duplicate shared ID は一意でないため NoStatic を断定しません。
+        /// コレクション識別子（GUID）と共有項目識別子の重複は一意でないため、静的参照なし問題を断定しません。
         /// </summary>
         [Test]
         public void Analyze_AmbiguousIdentitiesSuppressNoStaticFinding()
@@ -479,7 +506,7 @@ namespace LocalizationKeyAudit.Tests
         }
 
         /// <summary>
-        /// incomplete coverage は理由を一件だけ示し、未参照 key を NoStatic と断定しません。
+        /// 網羅未完了は理由を1件だけ示し、未参照キーを静的参照なし問題と断定しません。
         /// </summary>
         [Test]
         public void Analyze_IncompleteCoverageReportsIncompleteWithoutNoStatic()
@@ -499,7 +526,7 @@ namespace LocalizationKeyAudit.Tests
         }
 
         /// <summary>
-        /// 大量 sibling を事前構築 index で解決し、入力順に依存しない未参照 key 一覧を返します。
+        /// 大量の同階層要素を事前構築した索引で解決し、入力順に依存しない未参照キー一覧を返します。
         /// </summary>
         [Test]
         public void Analyze_ManySiblingEntriesAndReferencesRemainDeterministic()
@@ -549,7 +576,7 @@ namespace LocalizationKeyAudit.Tests
         }
 
         /// <summary>
-        /// Locale、collection、table、entry、issue の順序を入力配列の順序から独立させます。
+        /// ロケール、コレクション、テーブル、項目、問題の順序を入力配列の順序から独立させます。
         /// </summary>
         [Test]
         public void Analyze_NormalizesAllResultOrdering()
@@ -572,7 +599,7 @@ namespace LocalizationKeyAudit.Tests
         }
 
         /// <summary>
-        /// declared scope の同じ集合は入力順に関係なく同じ coverage と static issue を返します。
+        /// 同じ宣言範囲の集合は、入力順に関係なく同じ網羅情報と静的参照問題を返します。
         /// </summary>
         [Test]
         public void Analyze_NormalizesDeclaredScopePathOrdering()
@@ -596,7 +623,7 @@ namespace LocalizationKeyAudit.Tests
             Assert.That(ProjectIssues(reversed), Is.EqualTo(ProjectIssues(forward)));
         }
 
-        /// <summary>direct analyzer を実行する valid request、snapshot、raw identity を作ります。</summary>
+        /// <summary>直接解析を実行する正常な要求、スナップショット、未加工識別情報を作ります。</summary>
         private static AuditEditor.LocalizationKeyAuditResult Analyze(
             AuditEditor.LocalizationKeyAuditCollectionSnapshot[] collections,
             string[] configuredLocales,
@@ -653,7 +680,7 @@ namespace LocalizationKeyAudit.Tests
             return AuditEditor.LocalizationKeyAuditAnalyzer.Analyze(request, snapshot, collectionRawIdentities);
         }
 
-        /// <summary>valid direct table を持つ UI collection を作ります。</summary>
+        /// <summary>正常な直接テーブルを持つUIコレクションを作ります。</summary>
         private static AuditEditor.LocalizationKeyAuditCollectionSnapshot CompleteCollectionWithEntries(
             params long[] entryIds)
         {
@@ -666,7 +693,7 @@ namespace LocalizationKeyAudit.Tests
                 new[] { Table("en", localized) });
         }
 
-        /// <summary>指定した identity と children を持つ collection を作ります。</summary>
+        /// <summary>指定した識別情報と子要素を持つコレクションを作ります。</summary>
         private static AuditEditor.LocalizationKeyAuditCollectionSnapshot CreateCollection(
             string name,
             Guid guid,
@@ -682,19 +709,19 @@ namespace LocalizationKeyAudit.Tests
                 tables);
         }
 
-        /// <summary>shared entry を作ります。</summary>
+        /// <summary>共有項目を作ります。</summary>
         private static AuditEditor.LocalizationKeyAuditSharedEntrySnapshot Entry(long id, string key)
         {
             return new AuditEditor.LocalizationKeyAuditSharedEntrySnapshot(id, key);
         }
 
-        /// <summary>localized entry を作ります。</summary>
+        /// <summary>ローカライズ済み項目を作ります。</summary>
         private static AuditEditor.LocalizationKeyAuditLocalizedEntrySnapshot Localized(long id, string value)
         {
             return new AuditEditor.LocalizationKeyAuditLocalizedEntrySnapshot(id, value);
         }
 
-        /// <summary>既定 path の Locale table を作ります。</summary>
+        /// <summary>既定パスのロケールテーブルを作ります。</summary>
         private static AuditEditor.LocalizationKeyAuditLocaleTableSnapshot Table(
             string locale,
             params AuditEditor.LocalizationKeyAuditLocalizedEntrySnapshot[] entries)
@@ -702,7 +729,7 @@ namespace LocalizationKeyAudit.Tests
             return TableAt(locale, $"Assets/Localization/UI_{locale}.asset", entries);
         }
 
-        /// <summary>指定 path の Locale table を作ります。</summary>
+        /// <summary>指定パスのロケールテーブルを作ります。</summary>
         private static AuditEditor.LocalizationKeyAuditLocaleTableSnapshot TableAt(
             string locale,
             string assetPath,
@@ -711,7 +738,7 @@ namespace LocalizationKeyAudit.Tests
             return new AuditEditor.LocalizationKeyAuditLocaleTableSnapshot(locale, assetPath, entries);
         }
 
-        /// <summary>宣言 scope 内の static reference を作ります。</summary>
+        /// <summary>宣言範囲内の静的参照を作ります。</summary>
         private static AuditEditor.LocalizationKeyAuditStaticReference Reference(
             Guid collectionGuid,
             long entryId,
@@ -726,7 +753,7 @@ namespace LocalizationKeyAudit.Tests
                 entryKey);
         }
 
-        /// <summary>指定 issue kind の件数を検証します。</summary>
+        /// <summary>指定した問題種別の件数を検証します。</summary>
         private static void AssertIssueCount(
             AuditEditor.LocalizationKeyAuditResult result,
             AuditEditor.LocalizationKeyAuditIssueKind kind,
@@ -735,7 +762,7 @@ namespace LocalizationKeyAudit.Tests
             Assert.That(result.Issues.Count(issue => issue.Kind == kind), Is.EqualTo(expectedCount));
         }
 
-        /// <summary>NoStatic finding の entry ID を結果順で返します。</summary>
+        /// <summary>静的参照なしの検出内容の項目識別子を結果順で返します。</summary>
         private static long[] NoStaticEntryIds(AuditEditor.LocalizationKeyAuditResult result)
         {
             return result.Issues
@@ -744,7 +771,7 @@ namespace LocalizationKeyAudit.Tests
                 .ToArray();
         }
 
-        /// <summary>決定論比較用に全 issue field を文字列化します。</summary>
+        /// <summary>決定論比較用に全問題項目を文字列化します。</summary>
         private static string[] ProjectIssues(AuditEditor.LocalizationKeyAuditResult result)
         {
             return result.Issues.Select(issue => string.Join("|", new[]

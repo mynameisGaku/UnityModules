@@ -5,7 +5,7 @@ using System.Collections.Generic;
 namespace LocalizationKeyAudit.Editor
 {
     /// <summary>
-    /// AssetDatabase path と physical bytes だけで SharedTableData を収集する境界です。
+    /// AssetDatabaseのパスと物理バイト列だけで共有テーブルデータを収集する境界です。
     /// </summary>
     internal interface ILocalizationKeyAuditRawSource
     {
@@ -15,4 +15,3 @@ namespace LocalizationKeyAudit.Editor
         IReadOnlyList<LocalizationKeyAuditRawAsset> ReadSharedTableDataAssets();
     }
 }
-

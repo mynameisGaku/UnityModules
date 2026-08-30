@@ -10,12 +10,12 @@ using AuditEditor = LocalizationKeyAudit.Editor;
 namespace LocalizationKeyAudit.Tests
 {
     /// <summary>
-    /// Assetsとregistered PackagesのUnity YAMLからdirect GUID/key-ID referenceを保守的に抽出する契約を検証します。
+    /// Assetsと登録済みパッケージのUnity形式のYAMLから、GUIDと項目識別子による直接参照を安全側に倒して抽出する契約を検証します。
     /// </summary>
     internal sealed class LocalizationKeyAuditCoverageScannerTests
     {
         /// <summary>
-        /// LF/CRLF、BOM、quoted GUID を受理し、重複を除いた参照を path/GUID/ID 順へ固定します。
+        /// LF、CRLF、BOM、引用符付きGUIDを受理し、重複を除いた参照をパス、GUID、項目識別子の順へ固定します。
         /// </summary>
         [Test]
         public void Scan_ValidAssetsReturnDeterministicCompleteCoverage()
@@ -35,13 +35,13 @@ namespace LocalizationKeyAudit.Tests
             var declaredPaths = new[] { "Assets/Scenes", "Assets/Prefabs" };
 
             var coverage = AuditEditor.LocalizationKeyAuditCoverageScanner.Scan(
-                "Gameplay assets",
+                "ゲーム用アセット",
                 declaredPaths,
                 source);
 
             Assert.That(coverage.IsComplete, Is.True, coverage.IncompleteReason);
             Assert.That(coverage.IncompleteReason, Is.Empty);
-            Assert.That(coverage.ScopeDescription, Is.EqualTo("Gameplay assets"));
+            Assert.That(coverage.ScopeDescription, Is.EqualTo("ゲーム用アセット"));
             Assert.That(
                 coverage.DeclaredAssetPaths,
                 Is.EqualTo(new[] { "Assets/Prefabs", "Assets/Scenes" }));
@@ -61,7 +61,7 @@ namespace LocalizationKeyAudit.Tests
                 Is.EqualTo(new long[] { 10, 20 }));
         }
 
-        /// <summary>Assetsとpackage、または異なるpackageの混在をsource呼出前に拒否します。</summary>
+        /// <summary>Assetsとパッケージ、または異なるパッケージの混在を取得元の呼出前に拒否します。</summary>
         [TestCase("Assets", "Packages/com.example")]
         [TestCase("Packages/com.alpha", "Packages/com.beta")]
         public void Scan_MixedLogicalRootsRejectWithoutReadingSourceOrPartialData(
@@ -73,7 +73,7 @@ namespace LocalizationKeyAudit.Tests
                 ReferenceYaml(LocalizationKeyAuditTestData.CollectionGuid, 10)));
 
             var coverage = AuditEditor.LocalizationKeyAuditCoverageScanner.Scan(
-                "Mixed roots",
+                "異なる論理ルート",
                 new[] { firstDeclaredPath, secondDeclaredPath },
                 source);
 
@@ -81,11 +81,11 @@ namespace LocalizationKeyAudit.Tests
             Assert.That(coverage.DeclaredAssetPaths, Is.Empty);
             Assert.That(coverage.RecognizedReferences, Is.Empty);
             Assert.That(source.ReadCallCount, Is.Zero);
-            StringAssert.Contains("logical root", coverage.IncompleteReason);
+            StringAssert.Contains("論理上のルート", coverage.IncompleteReason);
         }
 
         /// <summary>
-        /// 同一packageのroot、nested folder、direct fileを受理し、参照をsource pathのOrdinal順へ固定します。
+        /// 同じパッケージのルート、入れ子のフォルダー、直接指定したファイルを受理し、参照を取得元パスの序数順へ固定します。
         /// </summary>
         [Test]
         public void Scan_SamePackageScopesReturnOrdinalCompleteCoverage()
@@ -102,7 +102,7 @@ namespace LocalizationKeyAudit.Tests
                     ReferenceYaml(LocalizationKeyAuditTestData.CollectionGuid, 20)));
 
             var coverage = AuditEditor.LocalizationKeyAuditCoverageScanner.Scan(
-                "Package scope",
+                "パッケージ範囲",
                 new[]
                 {
                     "Packages/com.example/Runtime/Z.asset",
@@ -132,7 +132,7 @@ namespace LocalizationKeyAudit.Tests
                 Is.EqualTo(new long[] { 10, 20, 30 }));
         }
 
-        /// <summary>bare Packages、PackageCache、unsafe segment、backslashをsource呼出前に拒否します。</summary>
+        /// <summary>Packagesだけの指定、PackageCache、安全でない区切り要素、逆斜線を取得元の呼出前に拒否します。</summary>
         [TestCase("Packages")]
         [TestCase("Library/PackageCache/com.example/A.asset")]
         [TestCase("Packages/com.example/../A.asset")]
@@ -149,17 +149,17 @@ namespace LocalizationKeyAudit.Tests
                 ReferenceYaml(LocalizationKeyAuditTestData.CollectionGuid, 10)));
 
             var coverage = AuditEditor.LocalizationKeyAuditCoverageScanner.Scan(
-                "Package scope",
+                "パッケージ範囲",
                 new[] { declaredPath },
                 source);
 
             Assert.That(coverage.IsComplete, Is.False);
             Assert.That(coverage.RecognizedReferences, Is.Empty);
             Assert.That(source.ReadCallCount, Is.Zero);
-            StringAssert.Contains("declared asset path", coverage.IncompleteReason);
+            StringAssert.Contains("対象アセットパス", coverage.IncompleteReason);
         }
 
-        /// <summary>同じpackage declared pathの重複をsource呼出前に拒否します。</summary>
+        /// <summary>同じパッケージ内の指定パス重複を取得元の呼出前に拒否します。</summary>
         [Test]
         public void Scan_DuplicatePackageDeclaredPathRejectsWithoutPartialData()
         {
@@ -168,7 +168,7 @@ namespace LocalizationKeyAudit.Tests
                 ReferenceYaml(LocalizationKeyAuditTestData.CollectionGuid, 10)));
 
             var coverage = AuditEditor.LocalizationKeyAuditCoverageScanner.Scan(
-                "Package scope",
+                "パッケージ範囲",
                 new[] { "Packages/com.example", "Packages/com.example" },
                 source);
 
@@ -178,7 +178,7 @@ namespace LocalizationKeyAudit.Tests
             StringAssert.Contains("重複", coverage.IncompleteReason);
         }
 
-        /// <summary>package source failureをincompleteへ隔離し、opaqueなphysical detailを公開しません。</summary>
+        /// <summary>パッケージ取得元の失敗を網羅未完了へ隔離し、物理パスの詳細を公開しません。</summary>
         [Test]
         public void Scan_PackageSourceFailureReturnsNoPartialDataOrOpaqueDetails()
         {
@@ -186,11 +186,11 @@ namespace LocalizationKeyAudit.Tests
             var source = new FakeLocalizationKeyAuditCoverageSource
             {
                 Exception = new System.IO.InvalidDataException(
-                    "registered package root を解決できません: " + physicalCanary)
+                    "登録済みパッケージのルートを解決できません: " + physicalCanary)
             };
 
             var coverage = AuditEditor.LocalizationKeyAuditCoverageScanner.Scan(
-                "Package scope",
+                "パッケージ範囲",
                 new[] { "Packages/com.missing" },
                 source);
 
@@ -201,7 +201,7 @@ namespace LocalizationKeyAudit.Tests
             StringAssert.DoesNotContain(physicalCanary, coverage.IncompleteReason);
         }
 
-        /// <summary>CR-only Unity YAMLもLF/CRLFと同じdirect referenceとして解析します。</summary>
+        /// <summary>CRだけのUnity形式のYAMLも、LFやCRLFと同じ直接参照として解析します。</summary>
         [Test]
         public void Scan_CarriageReturnOnlyYamlReturnsCompleteCoverage()
         {
@@ -216,7 +216,7 @@ namespace LocalizationKeyAudit.Tests
             Assert.That(coverage.RecognizedReferences, Has.Count.EqualTo(1));
         }
 
-        /// <summary>Unity YAML line数を配列保持前のexact境界で拒否します。</summary>
+        /// <summary>Unity形式のYAMLの行数を、配列へ保持する前の正確な境界で拒否します。</summary>
         [Test]
         public void CoverageYamlLineCount_UsesExactHardLimit()
         {
@@ -231,34 +231,34 @@ namespace LocalizationKeyAudit.Tests
         }
 
         /// <summary>
-        /// binary、invalid UTF-8、header 欠落、tab indentation を incomplete にします。
+        /// バイナリー、無効なUTF-8、ヘッダー欠落、タブによる字下げを網羅未完了にします。
         /// </summary>
         [Test]
         public void Scan_UnsupportedEncodingAndYamlFormsFailClosed()
         {
-            AssertIncomplete(
+            AssertIncompleteReason(
                 SourceWith(Asset("Assets/Binary.asset", new byte[] { 1, 0, 2 })),
-                "binary data");
-            AssertIncomplete(
+                "Assets/Binary.asset: バイナリーデータは、第1版の静的参照走査では未対応です。");
+            AssertIncompleteReason(
                 SourceWith(Asset("Assets/Utf8.asset", new byte[] { 0xC3, 0x28 })),
-                "strict UTF-8");
-            AssertIncomplete(
+                "Assets/Utf8.asset: Unity形式のYAMLを厳密なUTF-8として読み取れません。");
+            AssertIncompleteReason(
                 SourceWith(Asset("Assets/Text.asset", Encoding.UTF8.GetBytes("plain text"))),
-                "Unity YAML header");
-            AssertIncomplete(
+                "Assets/Text.asset: Unity形式のYAMLヘッダーがないテキストまたはバイナリー形式は未対応です。");
+            AssertIncompleteReason(
                 SourceWith(Asset(
                     "Assets/Tab.asset",
                     Encoding.UTF8.GetBytes("%YAML 1.1\n\tm_TableReference:\n"))),
-                "tab character");
-            AssertIncomplete(
+                "Assets/Tab.asset: タブ文字は、Unity形式のYAMLを安全側に倒して解析する処理では未対応です。");
+            AssertIncompleteReason(
                 SourceWith(Asset(
                     "Assets/InlineTab.asset",
                     Encoding.UTF8.GetBytes("%YAML 1.1\nMonoBehaviour:\n  m_Text:\t|\n"))),
-                "tab character");
+                "Assets/InlineTab.asset: タブ文字は、Unity形式のYAMLを安全側に倒して解析する処理では未対応です。");
         }
 
         /// <summary>
-        /// name-based table、empty key ID、field 重複を対応済み identity と誤認しません。
+        /// 名前指定のテーブル、空の項目識別子、項目重複を対応済みの識別情報と誤認しません。
         /// </summary>
         [Test]
         public void Scan_UnsupportedReferenceIdentitiesFailClosed()
@@ -275,17 +275,17 @@ namespace LocalizationKeyAudit.Tests
 
             AssertIncomplete(
                 SourceWith(Asset("Assets/NameBased.asset", Encoding.UTF8.GetBytes(nameBased))),
-                "name-based");
+                "名前指定");
             AssertIncomplete(
                 SourceWith(Asset("Assets/EmptyId.asset", Encoding.UTF8.GetBytes(emptyId))),
-                "table entry reference");
+                "テーブル項目参照");
             AssertIncomplete(
                 SourceWith(Asset("Assets/Duplicate.asset", Encoding.UTF8.GetBytes(duplicateGuidField))),
-                "1 件の non-empty scalar");
+                "空でない単一の値");
         }
 
         /// <summary>
-        /// table block が entry block より前に途切れた asset を参照ゼロの complete としません。
+        /// テーブルブロックが項目ブロックより前に途切れたアセットを、参照ゼロの網羅完了としません。
         /// </summary>
         [Test]
         public void Scan_TruncatedTableReferenceBlockIsIncomplete()
@@ -302,11 +302,11 @@ namespace LocalizationKeyAudit.Tests
 
             AssertIncomplete(
                 SourceWith(Asset("Assets/Truncated.asset", Encoding.UTF8.GetBytes(yaml))),
-                "entry reference");
+                "項目参照");
         }
 
         /// <summary>
-        /// table と entry の間に同一 indent の別 field がある unsupported 配置を incomplete にし、先行参照も破棄します。
+        /// テーブルと項目の間に同じ字下げ幅の別項目がある未対応配置を網羅未完了にし、先行参照も破棄します。
         /// </summary>
         [Test]
         public void NonAdjacentEntryBlock_ReturnsIncompleteAndDiscardsReferences()
@@ -349,7 +349,7 @@ namespace LocalizationKeyAudit.Tests
             }
         }
 
-        /// <summary>sequence要素の未対応reference shapeを見逃さず、先行参照も破棄します。</summary>
+        /// <summary>配列要素にある未対応の参照構造を見逃さず、先行参照も破棄します。</summary>
         [Test]
         public void SequenceTableReference_ReturnsIncompleteAndDiscardsReferences()
         {
@@ -378,10 +378,10 @@ namespace LocalizationKeyAudit.Tests
 
             Assert.That(coverage.IsComplete, Is.False);
             Assert.That(coverage.RecognizedReferences, Is.Empty);
-            StringAssert.Contains("YAML sequence", coverage.IncompleteReason);
+            StringAssert.Contains("YAMLの配列", coverage.IncompleteReason);
         }
 
-        /// <summary>block scalar本文の見かけ上のreferenceを構造として採用しません。</summary>
+        /// <summary>ブロック形式の複数行文字列内にある見かけ上の参照を、構造として採用しません。</summary>
         [TestCase("|")]
         [TestCase("&note |")]
         [TestCase("!!str >-")]
@@ -407,10 +407,10 @@ namespace LocalizationKeyAudit.Tests
 
             Assert.That(coverage.IsComplete, Is.False);
             Assert.That(coverage.RecognizedReferences, Is.Empty);
-            StringAssert.Contains("block scalar", coverage.IncompleteReason);
+            StringAssert.Contains("ブロック形式の複数行文字列", coverage.IncompleteReason);
         }
 
-        /// <summary>sequence block scalar本文のlookalikeも構造として採用しません。</summary>
+        /// <summary>配列内のブロック形式文字列にある見かけ上の参照も、構造として採用しません。</summary>
         [Test]
         public void SequenceBlockScalarLookalike_IsIgnoredWithoutCreatingReference()
         {
@@ -435,10 +435,10 @@ namespace LocalizationKeyAudit.Tests
 
             Assert.That(coverage.IsComplete, Is.False);
             Assert.That(coverage.RecognizedReferences, Is.Empty);
-            StringAssert.Contains("block scalar", coverage.IncompleteReason);
+            StringAssert.Contains("ブロック形式の複数行文字列", coverage.IncompleteReason);
         }
 
-        /// <summary>quoted mapping key内のcolonをvalue separatorと誤認しません。</summary>
+        /// <summary>引用符付きマッピングキー内のコロンを、値の区切りと誤認しません。</summary>
         [TestCase("  \"label: note\": |")]
         [TestCase("  'label: note': >-")]
         public void QuotedMappingKeyBlockScalar_ReturnsIncomplete(string header)
@@ -463,10 +463,10 @@ namespace LocalizationKeyAudit.Tests
 
             Assert.That(coverage.IsComplete, Is.False);
             Assert.That(coverage.RecognizedReferences, Is.Empty);
-            StringAssert.Contains("block scalar", coverage.IncompleteReason);
+            StringAssert.Contains("ブロック形式の複数行文字列", coverage.IncompleteReason);
         }
 
-        /// <summary>non-specific tag付きblock scalarも本文を構造として採用しません。</summary>
+        /// <summary>非固有タグ付きのブロック形式文字列も、本文を構造として採用しません。</summary>
         [TestCase("  m_Text: ! |")]
         [TestCase("  - ! >-")]
         public void NonSpecificTagBlockScalar_ReturnsIncomplete(string header)
@@ -491,10 +491,10 @@ namespace LocalizationKeyAudit.Tests
 
             Assert.That(coverage.IsComplete, Is.False);
             Assert.That(coverage.RecognizedReferences, Is.Empty);
-            StringAssert.Contains("block scalar", coverage.IncompleteReason);
+            StringAssert.Contains("ブロック形式の複数行文字列", coverage.IncompleteReason);
         }
 
-        /// <summary>nested sequence内のblock scalar本文も構造として採用しません。</summary>
+        /// <summary>入れ子の配列内にあるブロック形式文字列の本文も、構造として採用しません。</summary>
         [TestCase("  - - |")]
         [TestCase("  - - m_Text: >-")]
         public void NestedSequenceBlockScalar_ReturnsIncomplete(string header)
@@ -519,10 +519,10 @@ namespace LocalizationKeyAudit.Tests
 
             Assert.That(coverage.IsComplete, Is.False);
             Assert.That(coverage.RecognizedReferences, Is.Empty);
-            StringAssert.Contains("block scalar", coverage.IncompleteReason);
+            StringAssert.Contains("ブロック形式の複数行文字列", coverage.IncompleteReason);
         }
 
-        /// <summary>explicit mapping key scalar内のlookalikeを構造として採用しません。</summary>
+        /// <summary>明示的なマッピングキー内の見かけ上の参照を、構造として採用しません。</summary>
         [TestCase("  ? |")]
         [TestCase("  - ? >-")]
         public void ExplicitMappingKeyScalar_ReturnsIncomplete(string header)
@@ -547,10 +547,10 @@ namespace LocalizationKeyAudit.Tests
 
             Assert.That(coverage.IsComplete, Is.False);
             Assert.That(coverage.RecognizedReferences, Is.Empty);
-            StringAssert.Contains("explicit mapping key", coverage.IncompleteReason);
+            StringAssert.Contains("明示的なマッピングキー", coverage.IncompleteReason);
         }
 
-        /// <summary>block scalarに見えるcommentは無視し、その後の実referenceをmaskしません。</summary>
+        /// <summary>ブロック形式文字列に見えるコメントは無視し、その後の実参照を隠しません。</summary>
         [Test]
         public void CommentBlockScalarLookalike_DoesNotHideActualReference()
         {
@@ -569,7 +569,7 @@ namespace LocalizationKeyAudit.Tests
             Assert.That(coverage.RecognizedReferences, Has.Count.EqualTo(1));
         }
 
-        /// <summary>複数行quoted scalar内のlookalikeを構造referenceとして採用しません。</summary>
+        /// <summary>複数行の引用符付き文字列内にある見かけ上の参照を、構造参照として採用しません。</summary>
         [Test]
         public void MultilineQuotedScalar_ReturnsIncompleteAndDiscardsReferences()
         {
@@ -599,10 +599,10 @@ namespace LocalizationKeyAudit.Tests
 
             Assert.That(coverage.IsComplete, Is.False);
             Assert.That(coverage.RecognizedReferences, Is.Empty);
-            StringAssert.Contains("quoted scalar", coverage.IncompleteReason);
+            StringAssert.Contains("引用符付き文字列", coverage.IncompleteReason);
         }
 
-        /// <summary>複数行flow collection内のquoted lookalikeも構造referenceとして採用しません。</summary>
+        /// <summary>複数行のフロー形式コレクション内にある引用符付きの見かけ上の参照も、構造参照として採用しません。</summary>
         [Test]
         public void MultilineFlowCollection_ReturnsIncompleteAndDiscardsReferences()
         {
@@ -632,10 +632,10 @@ namespace LocalizationKeyAudit.Tests
 
             Assert.That(coverage.IsComplete, Is.False);
             Assert.That(coverage.RecognizedReferences, Is.Empty);
-            StringAssert.Contains("flow collection", coverage.IncompleteReason);
+            StringAssert.Contains("フロー形式コレクション", coverage.IncompleteReason);
         }
 
-        /// <summary>sequence flow mapping内のcolonをouter mapping separatorと誤認しません。</summary>
+        /// <summary>配列のフローマッピング内にあるコロンを、外側のマッピング区切りと誤認しません。</summary>
         [Test]
         public void SequenceMultilineFlowCollection_ReturnsIncompleteAndDiscardsReferences()
         {
@@ -665,10 +665,10 @@ namespace LocalizationKeyAudit.Tests
 
             Assert.That(coverage.IsComplete, Is.False);
             Assert.That(coverage.RecognizedReferences, Is.Empty);
-            StringAssert.Contains("flow collection", coverage.IncompleteReason);
+            StringAssert.Contains("フロー形式コレクション", coverage.IncompleteReason);
         }
 
-        /// <summary>quoted/whitespace keyのnon-canonical table referenceをsilent missしません。</summary>
+        /// <summary>引用符付きまたは余分な空白を持つ非正規形のテーブル参照を、黙って見逃しません。</summary>
         [TestCase("m_TableReference   :")]
         [TestCase("'m_TableReference':")]
         [TestCase("\"m_TableReference\":")]
@@ -686,10 +686,10 @@ namespace LocalizationKeyAudit.Tests
 
             AssertIncomplete(
                 SourceWith(Asset("Assets/NonCanonical.prefab", yaml)),
-                "non-canonical");
+                "正規形でない記述");
         }
 
-        /// <summary>comment内のreference tokenをflow mapping候補として扱いません。</summary>
+        /// <summary>コメント内の参照文字列をフローマッピング候補として扱いません。</summary>
         [Test]
         public void CommentLookalike_IsIgnoredWithoutCreatingReference()
         {
@@ -711,7 +711,7 @@ namespace LocalizationKeyAudit.Tests
             Assert.That(coverage.RecognizedReferences, Is.Empty);
         }
 
-        /// <summary>flow mapping内の未対応reference tokenをno-reference completeにしません。</summary>
+        /// <summary>フローマッピング内の未対応参照文字列を、参照なしの網羅完了にしません。</summary>
         [Test]
         public void FlowSequenceTableReference_ReturnsIncompleteAndDiscardsReferences()
         {
@@ -739,10 +739,10 @@ namespace LocalizationKeyAudit.Tests
 
             Assert.That(coverage.IsComplete, Is.False);
             Assert.That(coverage.RecognizedReferences, Is.Empty);
-            StringAssert.Contains("flow mapping", coverage.IncompleteReason);
+            StringAssert.Contains("フローマッピング形式", coverage.IncompleteReason);
         }
 
-        /// <summary>nested fieldをdirect childのGUID/key IDと誤認しません。</summary>
+        /// <summary>入れ子の項目を、直下の子要素にあるGUIDまたは項目識別子と誤認しません。</summary>
         [Test]
         public void NestedReferenceFields_ReturnIncompleteAndDiscardReferences()
         {
@@ -768,11 +768,11 @@ namespace LocalizationKeyAudit.Tests
 
             Assert.That(coverage.IsComplete, Is.False);
             Assert.That(coverage.RecognizedReferences, Is.Empty);
-            StringAssert.Contains("direct child", coverage.IncompleteReason);
+            StringAssert.Contains("直下の正確な子要素", coverage.IncompleteReason);
         }
 
         /// <summary>
-        /// 同一package内の後半asset失敗時は前半から抽出済みの参照を全て破棄します。
+        /// 同じパッケージ内の後半アセットが失敗した場合は、前半から抽出済みの参照を全て破棄します。
         /// </summary>
         [Test]
         public void Scan_LaterPackageFailureDiscardsEarlierPackageReferences()
@@ -789,7 +789,7 @@ namespace LocalizationKeyAudit.Tests
             };
 
             var coverage = AuditEditor.LocalizationKeyAuditCoverageScanner.Scan(
-                "Package scope",
+                "パッケージ範囲",
                 new[] { "Packages/com.example" },
                 source);
 
@@ -798,12 +798,12 @@ namespace LocalizationKeyAudit.Tests
             StringAssert.Contains("Packages/com.example/Z.asset", coverage.IncompleteReason);
         }
 
-        /// <summary>同一packageの後半にunsafe segmentが現れても先行referenceを返しません。</summary>
+        /// <summary>同じパッケージの後半に安全でない区切り要素が現れても、先行参照を返しません。</summary>
         [Test]
         public void Scan_LaterAmbiguousPackagePathDiscardsEarlierPackageReferences()
         {
             var coverage = AuditEditor.LocalizationKeyAuditCoverageScanner.Scan(
-                "Package scope",
+                "パッケージ範囲",
                 new[] { "Packages/com.example" },
                 SourceWith(
                     Asset(
@@ -815,19 +815,19 @@ namespace LocalizationKeyAudit.Tests
 
             Assert.That(coverage.IsComplete, Is.False);
             Assert.That(coverage.RecognizedReferences, Is.Empty);
-            StringAssert.Contains("coverage asset path", coverage.IncompleteReason);
+            StringAssert.Contains("走査対象のアセットパス", coverage.IncompleteReason);
         }
 
         /// <summary>
-        /// source の欠落、null return、例外を incomplete coverage に隔離します。
+        /// 取得元の欠落、空の返却、例外を網羅未完了に隔離します。
         /// </summary>
         [Test]
         public void Scan_SourceFailuresAreIsolated()
         {
-            AssertIncomplete(null, "source がありません");
+            AssertIncomplete(null, "取得元がありません");
             AssertIncomplete(
                 new FakeLocalizationKeyAuditCoverageSource { Assets = null },
-                "null を返しました");
+                "空の結果を返しました");
             const string physicalCanary = "C:\\private\\source-exception-canary";
             var exceptionCoverage = AuditEditor.LocalizationKeyAuditCoverageScanner.Scan(
                 "Assets",
@@ -844,7 +844,7 @@ namespace LocalizationKeyAudit.Tests
         }
 
         /// <summary>
-        /// null、対応root外、重複pathを含むasset一覧をpartial resultなしで拒否します。
+        /// 空要素、対応ルート外、重複パスを含むアセット一覧を、部分結果を残さず拒否します。
         /// </summary>
         [Test]
         public void Scan_InvalidAndDuplicateAssetPathsFailClosed()
@@ -854,12 +854,12 @@ namespace LocalizationKeyAudit.Tests
                 {
                     Assets = new AuditEditor.LocalizationKeyAuditCoverageAsset[] { null }
                 },
-                "path");
+                "アセットパス");
             AssertIncomplete(
                 SourceWith(Asset(
                     "Library/PackageCache/com.example/A.asset",
                     ReferenceYaml(LocalizationKeyAuditTestData.CollectionGuid, 10))),
-                "path");
+                "アセットパス");
             var asset = Asset(
                 "Assets/A.asset",
                 ReferenceYaml(LocalizationKeyAuditTestData.CollectionGuid, 10));
@@ -873,11 +873,11 @@ namespace LocalizationKeyAudit.Tests
                     ReferenceYaml(LocalizationKeyAuditTestData.CollectionGuid, 10))));
             Assert.That(outsideScope.IsComplete, Is.False);
             Assert.That(outsideScope.RecognizedReferences, Is.Empty);
-            StringAssert.Contains("coverage asset path", outsideScope.IncompleteReason);
+            StringAssert.Contains("走査対象のアセットパス", outsideScope.IncompleteReason);
         }
 
         /// <summary>
-        /// package root自体、別package、prefixだけが似たpackageのsource assetをpartialなしで拒否します。
+        /// パッケージルート自体、別パッケージ、接頭部だけが似たパッケージの取得元アセットを、部分結果なしで拒否します。
         /// </summary>
         [TestCase("Packages/com.example")]
         [TestCase("Packages/com.other/A.asset")]
@@ -885,7 +885,7 @@ namespace LocalizationKeyAudit.Tests
         public void Scan_InvalidOrOutOfScopePackageSourcePathReturnsNoPartialData(string sourcePath)
         {
             var coverage = AuditEditor.LocalizationKeyAuditCoverageScanner.Scan(
-                "Package scope",
+                "パッケージ範囲",
                 new[] { "Packages/com.example" },
                 SourceWith(Asset(
                     sourcePath,
@@ -893,16 +893,16 @@ namespace LocalizationKeyAudit.Tests
 
             Assert.That(coverage.IsComplete, Is.False);
             Assert.That(coverage.RecognizedReferences, Is.Empty);
-            StringAssert.Contains("coverage asset path", coverage.IncompleteReason);
+            StringAssert.Contains("走査対象のアセットパス", coverage.IncompleteReason);
         }
 
         /// <summary>
-        /// missing、reparse、oversize、read error を complete coverage にしません。
+        /// 不在、再解析点、容量超過、読取失敗がある場合は、網羅完了にしません。
         /// </summary>
-        [TestCase("missing", "exists=False")]
-        [TestCase("reparse", "reparse=True")]
-        [TestCase("oversize", "oversize=True")]
-        [TestCase("read-error", "error=IOException")]
+        [TestCase("missing", "Assets/A.asset を安全に読み取れません: 存在=いいえ, 再解析点=いいえ, 容量超過=いいえ, 読取失敗=なし")]
+        [TestCase("reparse", "Assets/A.asset を安全に読み取れません: 存在=はい, 再解析点=はい, 容量超過=いいえ, 読取失敗=なし")]
+        [TestCase("oversize", "Assets/A.asset を安全に読み取れません: 存在=はい, 再解析点=いいえ, 容量超過=はい, 読取失敗=なし")]
+        [TestCase("read-error", "Assets/A.asset を安全に読み取れません: 存在=はい, 再解析点=いいえ, 容量超過=いいえ, 読取失敗=IOException")]
         public void Scan_UnsafeAssetStateIsIncomplete(string state, string expectedReasonPart)
         {
             var asset = new AuditEditor.LocalizationKeyAuditCoverageAsset(
@@ -920,10 +920,10 @@ namespace LocalizationKeyAudit.Tests
 
             Assert.That(coverage.IsComplete, Is.False);
             Assert.That(coverage.RecognizedReferences, Is.Empty);
-            StringAssert.Contains(expectedReasonPart, coverage.IncompleteReason);
+            Assert.That(coverage.IncompleteReason, Is.EqualTo(expectedReasonPart));
         }
 
-        /// <summary>記号を含むopaqueなReadError本文をpresentへ潰し、physical canaryを公開しません。</summary>
+        /// <summary>記号を含む読取失敗本文を「あり」へ置き換え、物理パスの検査用文字列を公開しません。</summary>
         [Test]
         public void Scan_OpaqueReadErrorDoesNotExposePhysicalCanary()
         {
@@ -940,12 +940,12 @@ namespace LocalizationKeyAudit.Tests
 
             Assert.That(coverage.IsComplete, Is.False);
             Assert.That(coverage.RecognizedReferences, Is.Empty);
-            StringAssert.Contains("error=present", coverage.IncompleteReason);
+            StringAssert.Contains("読取失敗=あり", coverage.IncompleteReason);
             StringAssert.DoesNotContain(physicalCanary, coverage.IncompleteReason);
         }
 
         /// <summary>
-        /// coverage file 数と 1 file byte 数の hard limit 超過を parse 前に拒否します。
+        /// 走査対象ファイル数と1ファイルのバイト数の上限超過を解析前に拒否します。
         /// </summary>
         [Test]
         public void Scan_RejectsFileCountAndPerAssetBytesAboveLimits()
@@ -954,7 +954,7 @@ namespace LocalizationKeyAudit.Tests
                 AuditEditor.LocalizationKeyAuditLimits.MaximumPhysicalAssetFiles + 1];
             AssertIncomplete(
                 new FakeLocalizationKeyAuditCoverageSource { Assets = tooMany },
-                "coverage file 数");
+                "走査対象ファイル数");
 
             var tooLarge = new byte[AuditEditor.LocalizationKeyAuditLimits.MaximumCoverageAssetBytes + 1];
             AssertIncomplete(
@@ -963,7 +963,7 @@ namespace LocalizationKeyAudit.Tests
         }
 
         /// <summary>
-        /// coverage asset は constructor 入力と返却 byte の変更を受けません。
+        /// 走査対象アセットは、構築時の入力と返却されたバイト列の変更を受けません。
         /// </summary>
         [Test]
         public void CoverageAsset_DefensivelyCopiesBytes()
@@ -984,7 +984,7 @@ namespace LocalizationKeyAudit.Tests
         }
 
         /// <summary>
-        /// service の request factory は宣言 scope を一度だけ走査し、complete/incomplete 状態を保持します。
+        /// サービスの要求生成処理は指定範囲を一度だけ走査し、網羅完了または未完了の状態を保持します。
         /// </summary>
         [Test]
         public void CreateRequest_UsesInjectedCoverageSourceOnce()
@@ -1009,7 +1009,7 @@ namespace LocalizationKeyAudit.Tests
         }
 
         /// <summary>
-        /// folder scope は v1 対応 Unity YAML 種別だけを列挙し、source code と binary asset を除外します。
+        /// フォルダー範囲は第1版で対応する、Unity形式のYAMLで保存されたアセットの種類だけを列挙し、ソースコードとバイナリーアセットを除外します。
         /// </summary>
         [TestCase(".asset", true)]
         [TestCase(".ASSET", true)]
@@ -1055,7 +1055,7 @@ namespace LocalizationKeyAudit.Tests
             }
         }
 
-        /// <summary>unsupported fileやdirectoryもstreaming列挙時にglobal budgetを消費します。</summary>
+        /// <summary>未対応のファイルやディレクトリーも、逐次列挙時に全体上限を消費します。</summary>
         [Test]
         public void CoverageSource_PhysicalDiscoveryBudgetRejectsBeforeNextEntry()
         {
@@ -1065,21 +1065,21 @@ namespace LocalizationKeyAudit.Tests
                     AuditEditor.LocalizationKeyAuditLimits.MaximumPhysicalAssetFiles,
                     "file"),
                 Is.EqualTo(AuditEditor.LocalizationKeyAuditLimits.MaximumPhysicalAssetFiles));
-            Assert.That(
-                () => AuditEditor.UnityLocalizationKeyAuditCoverageSource.IncrementPhysicalDiscoveryCount(
+            var fileException = Assert.Throws<AuditEditor.LocalizationKeyAuditLimitException>(() =>
+                AuditEditor.UnityLocalizationKeyAuditCoverageSource.IncrementPhysicalDiscoveryCount(
                     AuditEditor.LocalizationKeyAuditLimits.MaximumPhysicalAssetFiles,
                     AuditEditor.LocalizationKeyAuditLimits.MaximumPhysicalAssetFiles,
-                    "file"),
-                Throws.TypeOf<AuditEditor.LocalizationKeyAuditLimitException>());
-            Assert.That(
-                () => AuditEditor.UnityLocalizationKeyAuditCoverageSource.IncrementPhysicalDiscoveryCount(
+                    "file"));
+            StringAssert.Contains("物理ファイル数", fileException.Message);
+            var directoryException = Assert.Throws<AuditEditor.LocalizationKeyAuditLimitException>(() =>
+                AuditEditor.UnityLocalizationKeyAuditCoverageSource.IncrementPhysicalDiscoveryCount(
                     AuditEditor.LocalizationKeyAuditLimits.MaximumPhysicalDirectories,
                     AuditEditor.LocalizationKeyAuditLimits.MaximumPhysicalDirectories,
-                    "directory"),
-                Throws.TypeOf<AuditEditor.LocalizationKeyAuditLimitException>());
+                    "directory"));
+            StringAssert.Contains("物理ディレクトリー数", directoryException.Message);
         }
 
-        /// <summary>coverage actual read総量を次fileのallocation前に拒否します。</summary>
+        /// <summary>実際に読み取る総量を、次のファイル用領域を確保する前に拒否します。</summary>
         [Test]
         public void CoverageSource_ActualReadBudgetRejectsBeforeAllocation()
         {
@@ -1087,15 +1087,15 @@ namespace LocalizationKeyAudit.Tests
             Assert.That(
                 AuditEditor.UnityLocalizationKeyAuditCoverageSource.EnsureActualReadBudget(maximum - 1, 1),
                 Is.EqualTo(maximum));
-            Assert.That(
-                () => AuditEditor.UnityLocalizationKeyAuditCoverageSource.EnsureActualReadBudget(maximum, 1),
-                Throws.TypeOf<AuditEditor.LocalizationKeyAuditLimitException>());
+            var upperLimitException = Assert.Throws<AuditEditor.LocalizationKeyAuditLimitException>(() =>
+                AuditEditor.UnityLocalizationKeyAuditCoverageSource.EnsureActualReadBudget(maximum, 1));
+            StringAssert.Contains("実読取バイト数", upperLimitException.Message);
             Assert.That(
                 () => AuditEditor.UnityLocalizationKeyAuditCoverageSource.EnsureActualReadBudget(-1, 0),
                 Throws.TypeOf<AuditEditor.LocalizationKeyAuditLimitException>());
         }
 
-        /// <summary>static reference上限を次のunique pair追加前に拒否し、先行結果も破棄します。</summary>
+        /// <summary>静的参照の上限を、次の固有な組を追加する前に拒否し、先行結果も破棄します。</summary>
         [Test]
         public void StaticReferenceLimit_RejectsBeforeNextPairAndDiscardsEarlierReferences()
         {
@@ -1122,7 +1122,7 @@ namespace LocalizationKeyAudit.Tests
             Assert.That(exact.RecognizedReferences, Has.Count.EqualTo(1));
         }
 
-        /// <summary>ancestor directoryはnested directory/supported fileを包含し、explicit unsupported fileは保持します。</summary>
+        /// <summary>祖先ディレクトリーは入れ子のディレクトリーと対応ファイルを包含し、明示指定された未対応ファイルは保持します。</summary>
         [Test]
         public void CoverageSource_SelectNonOverlappingTargetsScansContainedSupportedAssetsOnce()
         {
@@ -1139,7 +1139,7 @@ namespace LocalizationKeyAudit.Tests
             Assert.That(selected, Is.EqualTo(new[] { 0, 3 }));
         }
 
-        /// <summary>dot segment正規化後に同じphysical targetとなるdeclared pathを拒否します。</summary>
+        /// <summary>ドット区切り要素の正規化後に同じ物理対象となる指定パスを拒否します。</summary>
         [Test]
         public void CoverageSource_NormalizedDuplicateDeclaredTargetsAreRejected()
         {
@@ -1160,16 +1160,16 @@ namespace LocalizationKeyAudit.Tests
                 }));
 
             Assert.That(exception.InnerException, Is.TypeOf<InvalidDataException>());
-            StringAssert.Contains("同じ physical target", exception.InnerException.Message);
+            StringAssert.Contains("同じ物理対象", exception.InnerException.Message);
         }
 
-        /// <summary>missing leafでも既存ancestorのjunctionをrootまで検査して拒否します。</summary>
+        /// <summary>末端が存在しなくても、既存の祖先にある接合点をルートまで検査して拒否します。</summary>
         [Test]
         public void CoverageSource_MissingTargetUnderWindowsJunctionIsRejected()
         {
             if (Environment.OSVersion.Platform != PlatformID.Win32NT)
             {
-                Assert.Ignore("Windows reparse point専用の検証です。");
+                Assert.Ignore("Windowsの再解析点専用の検証です。");
             }
 
             var temporaryRoot = Path.Combine(
@@ -1193,13 +1193,13 @@ namespace LocalizationKeyAudit.Tests
                 {
                     if (process == null)
                     {
-                        Assert.Ignore("junction作成processを開始できませんでした。");
+                        Assert.Ignore("接合点の作成処理を開始できませんでした。");
                     }
 
                     process.WaitForExit();
                     if (process.ExitCode != 0)
                     {
-                        Assert.Ignore("この環境ではjunctionを作成できませんでした。");
+                        Assert.Ignore("この環境では接合点を作成できませんでした。");
                     }
                 }
 
@@ -1214,7 +1214,7 @@ namespace LocalizationKeyAudit.Tests
                     new object[] { registeredRoot, missingTarget }));
 
                 Assert.That(exception.InnerException, Is.TypeOf<InvalidDataException>());
-                StringAssert.Contains("reparse point", exception.InnerException.Message);
+                StringAssert.Contains("再解析点", exception.InnerException.Message);
             }
             finally
             {
@@ -1240,20 +1240,20 @@ namespace LocalizationKeyAudit.Tests
             }
         }
 
-        /// <summary>指定 asset だけを返す coverage source を作ります。</summary>
+        /// <summary>指定アセットだけを返す網羅走査の取得元を作ります。</summary>
         private static FakeLocalizationKeyAuditCoverageSource SourceWith(
             params AuditEditor.LocalizationKeyAuditCoverageAsset[] assets)
         {
             return new FakeLocalizationKeyAuditCoverageSource { Assets = assets };
         }
 
-        /// <summary>coverage asset を作ります。</summary>
+        /// <summary>走査対象アセットを作ります。</summary>
         private static AuditEditor.LocalizationKeyAuditCoverageAsset Asset(string path, byte[] bytes)
         {
             return new AuditEditor.LocalizationKeyAuditCoverageAsset(path, bytes);
         }
 
-        /// <summary>valid direct GUID/key-ID pair を持つ Unity YAML byte を作ります。</summary>
+        /// <summary>有効なGUIDと項目識別子の直接参照の組を持つUnity形式のYAMLバイト列を作ります。</summary>
         private static byte[] ReferenceYaml(
             Guid collectionGuid,
             long entryId,
@@ -1264,7 +1264,7 @@ namespace LocalizationKeyAudit.Tests
             return Encoding.UTF8.GetBytes(text);
         }
 
-        /// <summary>valid direct GUID/key-ID pair を持つ Unity YAML text を作ります。</summary>
+        /// <summary>有効なGUIDと項目識別子の直接参照の組を持つUnity形式のYAML文字列を作ります。</summary>
         private static string ReferenceYamlText(
             Guid collectionGuid,
             long entryId,
@@ -1291,7 +1291,7 @@ namespace LocalizationKeyAudit.Tests
             });
         }
 
-        /// <summary>複数 YAML document を一つの file text に連結します。</summary>
+        /// <summary>複数のYAML文書を1つのファイル文字列へ連結します。</summary>
         private static byte[] ConcatYamlDocuments(params byte[][] documents)
         {
             return Encoding.UTF8.GetBytes(string.Join(
@@ -1299,13 +1299,13 @@ namespace LocalizationKeyAudit.Tests
                 documents.Select(document => Encoding.UTF8.GetString(document))));
         }
 
-        /// <summary>UTF-8 BOM を byte 先頭へ追加します。</summary>
+        /// <summary>UTF-8のBOMをバイト列の先頭へ追加します。</summary>
         private static byte[] AddUtf8Bom(byte[] bytes)
         {
             return new UTF8Encoding(true).GetPreamble().Concat(bytes).ToArray();
         }
 
-        /// <summary>incomplete coverage が partial reference を返さないことを検証します。</summary>
+        /// <summary>網羅未完了結果が途中までの参照を返さないことを検証します。</summary>
         private static void AssertIncomplete(
             AuditEditor.ILocalizationKeyAuditCoverageSource source,
             string expectedReasonPart)
@@ -1318,6 +1318,21 @@ namespace LocalizationKeyAudit.Tests
             Assert.That(coverage.IsComplete, Is.False);
             Assert.That(coverage.RecognizedReferences, Is.Empty);
             StringAssert.Contains(expectedReasonPart, coverage.IncompleteReason);
+        }
+
+        /// <summary>網羅未完了結果が途中までの参照を返さず、失敗理由も完全一致することを検証します。</summary>
+        private static void AssertIncompleteReason(
+            AuditEditor.ILocalizationKeyAuditCoverageSource source,
+            string expectedReason)
+        {
+            var coverage = AuditEditor.LocalizationKeyAuditCoverageScanner.Scan(
+                "Assets",
+                new[] { "Assets" },
+                source);
+
+            Assert.That(coverage.IsComplete, Is.False);
+            Assert.That(coverage.RecognizedReferences, Is.Empty);
+            Assert.That(coverage.IncompleteReason, Is.EqualTo(expectedReason));
         }
     }
 }

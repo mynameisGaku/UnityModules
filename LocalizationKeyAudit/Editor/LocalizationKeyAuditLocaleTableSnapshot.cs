@@ -6,11 +6,11 @@ using System.Collections.ObjectModel;
 namespace LocalizationKeyAudit.Editor
 {
     /// <summary>
-    /// 1 Locale の StringTable asset と direct entry 一覧を保持します。
+    /// 1つのロケールの文字列テーブルアセットと直接項目一覧を保持します。
     /// </summary>
     internal sealed class LocalizationKeyAuditLocaleTableSnapshot
     {
-        /// <summary>table と entry 一覧を防御的に copy します。</summary>
+        /// <summary>テーブルと項目一覧を防御的に複製します。</summary>
         internal LocalizationKeyAuditLocaleTableSnapshot(
             string localeIdentifier,
             string assetPath,
@@ -30,14 +30,13 @@ namespace LocalizationKeyAudit.Editor
             Entries = new ReadOnlyCollection<LocalizationKeyAuditLocalizedEntrySnapshot>(copy);
         }
 
-        /// <summary>StringTable の Locale identifier です。</summary>
+        /// <summary>文字列テーブルのロケール識別子です。</summary>
         internal string LocaleIdentifier { get; }
 
-        /// <summary>StringTable asset path です。</summary>
+        /// <summary>文字列テーブルのアセットパスです。</summary>
         internal string AssetPath { get; }
 
-        /// <summary>fallback を適用していない direct entry 一覧です。</summary>
+        /// <summary>代替処理を適用していない直接項目一覧です。</summary>
         internal IReadOnlyList<LocalizationKeyAuditLocalizedEntrySnapshot> Entries { get; }
     }
 }
-

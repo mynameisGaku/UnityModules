@@ -4,12 +4,12 @@ using AuditEditor = LocalizationKeyAudit.Editor;
 namespace LocalizationKeyAudit.Tests
 {
     /// <summary>
-    /// 監査の全 hard limit を v1.0.0 の固定契約として検証します。
+    /// 監査の全固定上限をv1.0.0の契約として検証します。
     /// </summary>
     internal sealed class LocalizationKeyAuditLimitsTests
     {
         /// <summary>
-        /// 入力、raw data、typed snapshot、graph、結果の上限値を意図せず緩めません。
+        /// 入力、未加工データ、型として読み取ったスナップショット、参照関係、結果の上限値を意図せず緩めません。
         /// </summary>
         [Test]
         public void Constants_MatchVersionOneSafetyBudget()

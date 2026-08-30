@@ -9,11 +9,11 @@ using PackageManagerPackageInfo = UnityEditor.PackageManager.PackageInfo;
 namespace LocalizationKeyAudit.Editor
 {
     /// <summary>
-    /// 宣言済み Assets と registered Packages scope を physical file 単位で読み取ります。
+    /// 指定済みのAssetsと登録済みパッケージの範囲を、物理ファイル単位で読み取ります。
     /// </summary>
     internal sealed class UnityLocalizationKeyAuditCoverageSource : ILocalizationKeyAuditCoverageSource
     {
-        /// <summary>scope overlap を除去し、reparse point を追跡せず全 file を収集します。</summary>
+        /// <summary>走査範囲の重なりを除去し、再解析点を追跡せずに全ファイルを収集します。</summary>
         public IReadOnlyList<LocalizationKeyAuditCoverageAsset> ReadAssets(
             IReadOnlyList<string> declaredAssetPaths)
         {
@@ -26,7 +26,7 @@ namespace LocalizationKeyAudit.Editor
             var projectRoot = Directory.GetParent(assetsRoot)?.FullName;
             if (string.IsNullOrEmpty(projectRoot))
             {
-                throw new InvalidDataException("Unity project root を取得できません。");
+                throw new InvalidDataException("Unityプロジェクトのルートを取得できません。");
             }
 
             var physicalByAssetPath = new Dictionary<string, string>(StringComparer.Ordinal);
@@ -49,7 +49,7 @@ namespace LocalizationKeyAudit.Editor
                 var assetPath = declared[index];
                 if (!IsDeclaredProjectPath(assetPath))
                 {
-                    throw new InvalidDataException($"coverage scope path が不正です: {assetPath}");
+                    throw new InvalidDataException($"網羅走査の範囲パスが不正です: {assetPath}");
                 }
 
                 roots[index] = ResolveCoverageRoot(assetPath, rootsByPrefix);
@@ -122,7 +122,7 @@ namespace LocalizationKeyAudit.Editor
                 catch (Exception exception)
                 {
                     throw new InvalidDataException(
-                        $"coverage scope を読み取れません: {assetPath} ({exception.GetType().Name})");
+                        $"網羅走査の範囲を読み取れません: {assetPath} ({exception.GetType().Name})");
                 }
             }
 
@@ -137,13 +137,13 @@ namespace LocalizationKeyAudit.Editor
                 catch (Exception exception)
                 {
                     throw new InvalidDataException(
-                        $"coverage asset path を検証できません: {pair.Key} ({exception.GetType().Name})");
+                        $"網羅走査のアセットパスを検証できません: {pair.Key} ({exception.GetType().Name})");
                 }
 
                 if (!uniquePhysicalPaths.Add(normalized))
                 {
                     throw new InvalidDataException(
-                        $"複数の declared asset path が同じ physical path を指しています: {pair.Key}");
+                        $"複数の指定アセットパスが同じ物理パスを指しています: {pair.Key}");
                 }
             }
 
@@ -191,7 +191,7 @@ namespace LocalizationKeyAudit.Editor
                             var read = stream.Read(bytes, offset, bytes.Length - offset);
                             if (read == 0)
                             {
-                                throw new EndOfStreamException("coverage file が読み取り中に短くなりました。");
+                                throw new EndOfStreamException("網羅走査のファイルが読み取り中に短くなりました。");
                             }
 
                             offset += read;
@@ -199,7 +199,7 @@ namespace LocalizationKeyAudit.Editor
 
                         if (stream.ReadByte() != -1)
                         {
-                            throw new IOException("coverage file が読み取り中に変化しました。");
+                            throw new IOException("網羅走査のファイルが読み取り中に変化しました。");
                         }
 
                         assets.Add(new LocalizationKeyAuditCoverageAsset(assetPath, bytes));
@@ -224,7 +224,7 @@ namespace LocalizationKeyAudit.Editor
             return assets;
         }
 
-        /// <summary>metadata確認後に増大したfileもallocation前のactual aggregate上限で拒否します。</summary>
+        /// <summary>付帯情報の確認後に増大したファイルも、領域確保前の実読取総量上限で拒否します。</summary>
         internal static long EnsureActualReadBudget(long bytesAlreadyRead, long nextFileBytes)
         {
             if (bytesAlreadyRead < 0 || nextFileBytes < 0 ||
@@ -232,13 +232,13 @@ namespace LocalizationKeyAudit.Editor
                 nextFileBytes > LocalizationKeyAuditLimits.MaximumCoverageTotalBytes - bytesAlreadyRead)
             {
                 throw new LocalizationKeyAuditLimitException(
-                    $"coverage actual read byte 数が上限 {LocalizationKeyAuditLimits.MaximumCoverageTotalBytes} を超えています。");
+                    $"網羅走査の実読取バイト数が上限 {LocalizationKeyAuditLimits.MaximumCoverageTotalBytes} を超えています。");
             }
 
             return bytesAlreadyRead + nextFileBytes;
         }
 
-        /// <summary>ancestor directoryで同じsupported targetを一度だけ走査し、explicit unsupported/missingは保持します。</summary>
+        /// <summary>祖先ディレクトリー内の同じ対応対象を一度だけ走査し、明示指定された未対応・不在対象は保持します。</summary>
         internal static IReadOnlyList<int> SelectNonOverlappingTargets(
             IReadOnlyList<string> physicalPaths,
             IReadOnlyList<bool> isDirectory,
@@ -247,7 +247,7 @@ namespace LocalizationKeyAudit.Editor
             if (physicalPaths == null || isDirectory == null || isSupportedFile == null ||
                 physicalPaths.Count != isDirectory.Count || physicalPaths.Count != isSupportedFile.Count)
             {
-                throw new ArgumentException("declared physical target metadataの件数が一致しません。");
+                throw new ArgumentException("指定された物理対象の付帯情報件数が一致しません。");
             }
 
             var order = new List<int>(physicalPaths.Count);
@@ -292,14 +292,14 @@ namespace LocalizationKeyAudit.Editor
             return selected;
         }
 
-        /// <summary>case差を含むdeclared targetのphysical重複をscan前に拒否します。</summary>
+        /// <summary>大文字小文字の差を含む指定対象の物理的な重複を走査前に拒否します。</summary>
         private static void EnsureDistinctDeclaredTargets(
             IReadOnlyList<string> physicalPaths,
             IReadOnlyList<string> declaredPaths)
         {
             if (physicalPaths.Count != declaredPaths.Count)
             {
-                throw new ArgumentException("declared path と physical target の件数が一致しません。");
+                throw new ArgumentException("指定パスと物理対象の件数が一致しません。");
             }
 
             var unique = new HashSet<string>(GetPhysicalPathComparer());
@@ -313,18 +313,18 @@ namespace LocalizationKeyAudit.Editor
                 catch (Exception exception)
                 {
                     throw new InvalidDataException(
-                        $"coverage path を検証できません: {declaredPaths[index]} ({exception.GetType().Name})");
+                        $"網羅走査のパスを検証できません: {declaredPaths[index]} ({exception.GetType().Name})");
                 }
 
                 if (!unique.Add(normalized))
                 {
                     throw new InvalidDataException(
-                        $"複数の declared asset path が同じ physical target を指しています: {declaredPaths[index]}");
+                        $"複数の指定アセットパスが同じ物理対象を指しています: {declaredPaths[index]}");
                 }
             }
         }
 
-        /// <summary>candidateが同じphysical directoryまたはその子孫かをplatform comparerで調べます。</summary>
+        /// <summary>候補が同じ物理ディレクトリーまたはその子孫かを、実行環境の比較規則で調べます。</summary>
         private static bool HasSelectedDirectoryAncestor(
             string candidate,
             ISet<string> selectedDirectories)
@@ -349,7 +349,7 @@ namespace LocalizationKeyAudit.Editor
             return false;
         }
 
-        /// <summary>directory tree を明示 stack で決定論的に列挙します。</summary>
+        /// <summary>ディレクトリー木を明示的な積み重ねで決定論的に列挙します。</summary>
         private static void DiscoverDirectory(
             CoverageRoot root,
             string physicalRoot,
@@ -415,19 +415,35 @@ namespace LocalizationKeyAudit.Editor
             }
         }
 
-        /// <summary>filesystem entryを保持・解析する前にglobal discovery budgetを消費します。</summary>
+        /// <summary>ファイルシステム項目を保持・解析する前に、全体の列挙上限を消費します。</summary>
         internal static int IncrementPhysicalDiscoveryCount(int currentCount, int maximum, string itemKind)
         {
             if (currentCount < 0 || maximum <= 0 || currentCount >= maximum)
             {
                 throw new LocalizationKeyAuditLimitException(
-                    $"coverage physical {itemKind} 数が上限 {maximum} 件を超えています。");
+                    $"網羅走査の物理{GetJapaneseItemKind(itemKind)}数が上限 {maximum} 件を超えています。");
             }
 
             return currentCount + 1;
         }
 
-        /// <summary>1 file を対応する Unity asset path に変換し discovery 上限内で追加します。</summary>
+        /// <summary>内部の項目種別を利用者向けの日本語へ変換します。</summary>
+        private static string GetJapaneseItemKind(string itemKind)
+        {
+            if (string.Equals(itemKind, "file", StringComparison.Ordinal))
+            {
+                return "ファイル";
+            }
+
+            if (string.Equals(itemKind, "directory", StringComparison.Ordinal))
+            {
+                return "ディレクトリー";
+            }
+
+            return itemKind;
+        }
+
+        /// <summary>1ファイルを対応するUnityのアセットパスへ変換し、列挙上限内で追加します。</summary>
         private static void AddFile(
             CoverageRoot root,
             string physicalPath,
@@ -452,21 +468,21 @@ namespace LocalizationKeyAudit.Editor
             if (physicalByAssetPath.Count >= LocalizationKeyAuditLimits.MaximumPhysicalAssetFiles)
             {
                 throw new LocalizationKeyAuditLimitException(
-                    $"coverage file 数が上限 {LocalizationKeyAuditLimits.MaximumPhysicalAssetFiles} 件を超えています。");
+                    $"網羅走査のファイル数が上限 {LocalizationKeyAuditLimits.MaximumPhysicalAssetFiles} 件を超えています。");
             }
 
             discoveryBytes = checked(discoveryBytes + new FileInfo(physicalPath).Length);
             if (discoveryBytes > LocalizationKeyAuditLimits.MaximumCoverageTotalBytes)
             {
                 throw new LocalizationKeyAuditLimitException(
-                    $"coverage discovery byte 数が上限 {LocalizationKeyAuditLimits.MaximumCoverageTotalBytes} を超えています。");
+                    $"網羅走査の列挙時バイト数が上限 {LocalizationKeyAuditLimits.MaximumCoverageTotalBytes} を超えています。");
             }
 
             physicalByAssetPath[assetPath] = physicalPath;
             rootByAssetPath[assetPath] = root;
         }
 
-        /// <summary>folderでは未対応fileを除外し、明示指定ではcoverage不完全として扱えるよう拒否します。</summary>
+        /// <summary>フォルダーでは未対応ファイルを除外し、明示指定では網羅未完了として扱えるよう拒否します。</summary>
         internal static bool ShouldIncludeYamlAssetFile(string physicalPath, bool isExplicit)
         {
             if (IsSupportedYamlAssetExtension(physicalPath))
@@ -477,13 +493,13 @@ namespace LocalizationKeyAudit.Editor
             if (isExplicit)
             {
                 throw new InvalidDataException(
-                    $"明示指定されたcoverage fileの拡張子は未対応です: {Path.GetExtension(physicalPath)}");
+                    $"明示指定された網羅走査ファイルの拡張子は未対応です: {Path.GetExtension(physicalPath)}");
             }
 
             return false;
         }
 
-        /// <summary>宣言されたlogical rootだけをregistered physical rootへ固定します。</summary>
+        /// <summary>指定された論理上のルートだけを、登録済みの物理ルートへ固定します。</summary>
         private static Dictionary<string, CoverageRoot> CreateCoverageRoots(
             string projectRoot,
             string assetsRoot,
@@ -496,7 +512,7 @@ namespace LocalizationKeyAudit.Editor
                 var path = declaredPaths[index];
                 if (!IsDeclaredProjectPath(path))
                 {
-                    throw new InvalidDataException($"coverage scope path が不正です: {path}");
+                    throw new InvalidDataException($"網羅走査の範囲パスが不正です: {path}");
                 }
 
                 if (path == "Assets" || path.StartsWith("Assets/", StringComparison.Ordinal))
@@ -513,7 +529,7 @@ namespace LocalizationKeyAudit.Editor
             if (requestedRootCount != 1)
             {
                 throw new InvalidDataException(
-                    "1 回の監査で宣言できるlogical rootはAssetsまたは1つのregistered packageだけです。");
+                    "1回の監査で指定できる論理上のルートは、Assetsまたは登録済みパッケージ1つだけです。");
             }
 
             var roots = new Dictionary<string, CoverageRoot>(StringComparer.Ordinal);
@@ -527,7 +543,7 @@ namespace LocalizationKeyAudit.Editor
                 catch (Exception exception)
                 {
                     throw new InvalidDataException(
-                        $"Unity project root を検証できません: {exception.GetType().Name}");
+                        $"Unityプロジェクトのルートを検証できません: {exception.GetType().Name}");
                 }
 
                 var assetsCoverageRoot = CreateCoverageRoot("Assets", assetsRoot);
@@ -535,7 +551,7 @@ namespace LocalizationKeyAudit.Editor
                 if (!IsSameOrDescendantPhysicalPath(fullAssetsRoot, fullProjectRoot) ||
                     string.Equals(fullAssetsRoot, fullProjectRoot, GetPhysicalPathComparison()))
                 {
-                    throw new InvalidDataException("Assets root が Unity project root 内にありません。");
+                    throw new InvalidDataException("AssetsのルートがUnityプロジェクトのルート内にありません。");
                 }
 
                 AddCoverageRoot(roots, assetsCoverageRoot);
@@ -555,7 +571,7 @@ namespace LocalizationKeyAudit.Editor
             catch (Exception exception)
             {
                 throw new InvalidDataException(
-                    $"registered package 一覧を取得できません: {exception.GetType().Name}");
+                    $"登録済みパッケージ一覧を取得できません: {exception.GetType().Name}");
             }
 
             Array.Sort(packages, ComparePackages);
@@ -570,13 +586,13 @@ namespace LocalizationKeyAudit.Editor
 
                 if (string.IsNullOrWhiteSpace(package.resolvedPath))
                 {
-                    throw new InvalidDataException($"registered package の resolvedPath が空です: {package.name}");
+                    throw new InvalidDataException($"登録済みパッケージの解決済みパスが空です: {package.name}");
                 }
 
                 var prefix = "Packages/" + package.name;
                 if (roots.ContainsKey(prefix))
                 {
-                    throw new InvalidDataException($"registered package name が重複しています: {package.name}");
+                    throw new InvalidDataException($"登録済みパッケージ名が重複しています: {package.name}");
                 }
 
                 AddCoverageRoot(
@@ -588,21 +604,21 @@ namespace LocalizationKeyAudit.Editor
             {
                 if (!roots.ContainsKey("Packages/" + packageName))
                 {
-                    throw new InvalidDataException($"registered package root を解決できません: Packages/{packageName}");
+                    throw new InvalidDataException($"登録済みパッケージのルートを解決できません: Packages/{packageName}");
                 }
             }
 
             return roots;
         }
 
-        /// <summary>存在しreparseを通らない一意なphysical rootだけを追加します。</summary>
+        /// <summary>存在し、再解析点を通らない一意な物理ルートだけを追加します。</summary>
         private static void AddCoverageRoot(
             IDictionary<string, CoverageRoot> roots,
             CoverageRoot candidate)
         {
             if (!Directory.Exists(candidate.PhysicalRoot))
             {
-                throw new DirectoryNotFoundException($"coverage physical root がありません: {candidate.AssetPrefix}");
+                throw new DirectoryNotFoundException($"網羅走査の物理ルートがありません: {candidate.AssetPrefix}");
             }
 
             try
@@ -617,7 +633,7 @@ namespace LocalizationKeyAudit.Editor
             catch (Exception exception)
             {
                 throw new InvalidDataException(
-                    $"coverage physical root を検証できません: {candidate.AssetPrefix} ({exception.GetType().Name})");
+                    $"網羅走査の物理ルートを検証できません: {candidate.AssetPrefix} ({exception.GetType().Name})");
             }
             foreach (var existing in roots.Values)
             {
@@ -625,14 +641,14 @@ namespace LocalizationKeyAudit.Editor
                     IsSameOrDescendantPhysicalPath(existing.PhysicalRoot, candidate.PhysicalRoot))
                 {
                     throw new InvalidDataException(
-                        $"複数の coverage root が同じ physical tree を指しています: {existing.AssetPrefix}, {candidate.AssetPrefix}");
+                        $"複数の網羅走査ルートが同じ物理ディレクトリー木を指しています: {existing.AssetPrefix}, {candidate.AssetPrefix}");
                 }
             }
 
             roots.Add(candidate.AssetPrefix, candidate);
         }
 
-        /// <summary>physical root正規化失敗をlogical package identityだけで報告します。</summary>
+        /// <summary>物理ルートの正規化失敗を、論理上のパッケージ識別情報だけで報告します。</summary>
         private static CoverageRoot CreateCoverageRoot(string assetPrefix, string physicalRoot)
         {
             try
@@ -642,11 +658,11 @@ namespace LocalizationKeyAudit.Editor
             catch (Exception exception)
             {
                 throw new InvalidDataException(
-                    $"coverage physical root を解決できません: {assetPrefix} ({exception.GetType().Name})");
+                    $"網羅走査の物理ルートを解決できません: {assetPrefix} ({exception.GetType().Name})");
             }
         }
 
-        /// <summary>logical asset pathをexactなAssetsまたはregistered package rootへ対応させます。</summary>
+        /// <summary>論理上のアセットパスを、完全一致するAssetsまたは登録済みパッケージのルートへ対応させます。</summary>
         private static CoverageRoot ResolveCoverageRoot(
             string assetPath,
             IReadOnlyDictionary<string, CoverageRoot> roots)
@@ -658,13 +674,13 @@ namespace LocalizationKeyAudit.Editor
                     : string.Empty;
             if (prefix.Length == 0 || !roots.TryGetValue(prefix, out var root))
             {
-                throw new InvalidDataException($"coverage root を解決できません: {assetPath}");
+                throw new InvalidDataException($"網羅走査のルートを解決できません: {assetPath}");
             }
 
             return root;
         }
 
-        /// <summary>registered root外へ出ないphysical pathを作ります。</summary>
+        /// <summary>登録済みルート外へ出ない物理パスを作ります。</summary>
         private static string ResolvePhysicalPath(CoverageRoot root, string assetPath)
         {
             try
@@ -678,7 +694,7 @@ namespace LocalizationKeyAudit.Editor
                 if (!IsSameOrDescendantPhysicalPath(physical, root.PhysicalRoot))
                 {
                     throw new InvalidDataException(
-                        $"coverage path が registered root 外を指しています: {assetPath}");
+                        $"網羅走査のパスが登録済みルート外を指しています: {assetPath}");
                 }
 
                 return physical;
@@ -690,18 +706,18 @@ namespace LocalizationKeyAudit.Editor
             catch (Exception exception)
             {
                 throw new InvalidDataException(
-                    $"coverage path を解決できません: {assetPath} ({exception.GetType().Name})");
+                    $"網羅走査のパスを解決できません: {assetPath} ({exception.GetType().Name})");
             }
         }
 
-        /// <summary>rootからtargetまでの既存segmentにreparse pointがないことを確認します。</summary>
+        /// <summary>ルートから対象までの既存区切り要素に再解析点がないことを確認します。</summary>
         private static void EnsureNoReparsePoint(string rootPath, string targetPath)
         {
             var root = NormalizePhysicalRoot(rootPath);
             var target = Path.GetFullPath(targetPath);
             if (!IsSameOrDescendantPhysicalPath(target, root))
             {
-                throw new InvalidDataException("coverage path が registered root 内にありません。");
+                throw new InvalidDataException("網羅走査のパスが登録済みルート内にありません。");
             }
 
             var current = target;
@@ -711,7 +727,7 @@ namespace LocalizationKeyAudit.Editor
                 {
                     if ((File.GetAttributes(current) & FileAttributes.ReparsePoint) != 0)
                     {
-                        throw new InvalidDataException("coverage path が reparse point を通ります。");
+                        throw new InvalidDataException("網羅走査のパスが再解析点を通ります。");
                     }
                 }
                 catch (FileNotFoundException)
@@ -729,17 +745,17 @@ namespace LocalizationKeyAudit.Editor
                 current = Path.GetDirectoryName(current);
             }
 
-            throw new InvalidDataException("coverage path が registered root 内にありません。");
+            throw new InvalidDataException("網羅走査のパスが登録済みルート内にありません。");
         }
 
-        /// <summary>filesystem rootからcoverage rootまでのreparse ancestorを拒否します。</summary>
+        /// <summary>ファイルシステムのルートから網羅走査ルートまでにある祖先の再解析点を拒否します。</summary>
         private static void EnsureNoReparsePointInRootAncestors(string rootPath, string assetPrefix)
         {
             var current = NormalizePhysicalRoot(rootPath);
             var fileSystemRoot = Path.GetPathRoot(current);
             if (string.IsNullOrEmpty(fileSystemRoot))
             {
-                throw new InvalidDataException($"coverage physical root を検証できません: {assetPrefix}");
+                throw new InvalidDataException($"網羅走査の物理ルートを検証できません: {assetPrefix}");
             }
 
             while (!string.IsNullOrEmpty(current))
@@ -747,7 +763,7 @@ namespace LocalizationKeyAudit.Editor
                 if ((File.GetAttributes(current) & FileAttributes.ReparsePoint) != 0)
                 {
                     throw new InvalidDataException(
-                        $"coverage root が reparse point を通ります: {assetPrefix}");
+                        $"網羅走査のルートが再解析点を通ります: {assetPrefix}");
                 }
 
                 if (string.Equals(
@@ -761,10 +777,10 @@ namespace LocalizationKeyAudit.Editor
                 current = Path.GetDirectoryName(current);
             }
 
-            throw new InvalidDataException($"coverage physical root を検証できません: {assetPrefix}");
+            throw new InvalidDataException($"網羅走査の物理ルートを検証できません: {assetPrefix}");
         }
 
-        /// <summary>AssetsまたはPackages/package-nameをrootに持つ安全なdeclared pathかを調べます。</summary>
+        /// <summary>AssetsまたはPackages内のパッケージ名をルートに持つ、安全な指定パスかを調べます。</summary>
         private static bool IsDeclaredProjectPath(string path)
         {
             if (string.IsNullOrWhiteSpace(path) ||
@@ -791,7 +807,7 @@ namespace LocalizationKeyAudit.Editor
                 (segments[0] == "Packages" && segments.Length >= 2);
         }
 
-        /// <summary>Packages/package-name[/...]からexactなpackage nameを取り出します。</summary>
+        /// <summary>Packages内のパスから完全一致するパッケージ名を取り出します。</summary>
         private static bool TryGetPackageName(string assetPath, out string packageName)
         {
             packageName = string.Empty;
@@ -808,7 +824,7 @@ namespace LocalizationKeyAudit.Editor
             return packageName.Length > 0;
         }
 
-        /// <summary>physical pathがroot自身または子孫かをplatform規則で調べます。</summary>
+        /// <summary>物理パスがルート自身または子孫かを、実行環境の規則で調べます。</summary>
         private static bool IsSameOrDescendantPhysicalPath(string path, string root)
         {
             var fullPath = NormalizePhysicalRoot(path);
@@ -825,7 +841,7 @@ namespace LocalizationKeyAudit.Editor
             return fullPath.StartsWith(boundary, GetPhysicalPathComparison());
         }
 
-        /// <summary>drive rootを壊さずphysical root末尾separatorだけを除きます。</summary>
+        /// <summary>ドライブルートを壊さず、物理ルート末尾の区切り文字だけを除きます。</summary>
         private static string NormalizePhysicalRoot(string path)
         {
             var fullPath = Path.GetFullPath(path);
@@ -840,7 +856,7 @@ namespace LocalizationKeyAudit.Editor
             return fullPath;
         }
 
-        /// <summary>OSのfilesystem case ruleに合わせた比較方法です。</summary>
+        /// <summary>オペレーティングシステムのファイルシステムにおける大文字小文字の規則に合わせた比較方法です。</summary>
         private static StringComparison GetPhysicalPathComparison()
         {
             return Path.DirectorySeparatorChar == '\\'
@@ -848,7 +864,7 @@ namespace LocalizationKeyAudit.Editor
                 : StringComparison.Ordinal;
         }
 
-        /// <summary>OSのfilesystem case ruleに合わせたcomparerです。</summary>
+        /// <summary>オペレーティングシステムのファイルシステムにおける大文字小文字の規則に合わせた比較器です。</summary>
         private static StringComparer GetPhysicalPathComparer()
         {
             return Path.DirectorySeparatorChar == '\\'
@@ -856,7 +872,7 @@ namespace LocalizationKeyAudit.Editor
                 : StringComparer.Ordinal;
         }
 
-        /// <summary>registered packageをname、resolved pathの順に並べます。</summary>
+        /// <summary>登録済みパッケージを名前、解決済みパスの順に並べます。</summary>
         private static int ComparePackages(PackageManagerPackageInfo left, PackageManagerPackageInfo right)
         {
             if (ReferenceEquals(left, right))
@@ -880,14 +896,14 @@ namespace LocalizationKeyAudit.Editor
                 : string.Compare(left.resolvedPath, right.resolvedPath, StringComparison.Ordinal);
         }
 
-        /// <summary>Unity meta と temporary/dot file を coverage 対象外にします。</summary>
+        /// <summary>Unityの .meta ファイル、一時ファイル、ドットで始まるファイルを網羅走査の対象外にします。</summary>
         private static bool ShouldIgnoreFile(string physicalPath)
         {
             var name = Path.GetFileName(physicalPath);
             return name.EndsWith(".meta", StringComparison.OrdinalIgnoreCase) || ShouldIgnoreName(name);
         }
 
-        /// <summary>dot/tilde 名を追跡しません。</summary>
+        /// <summary>ドットまたはチルダで始まる名前を追跡しません。</summary>
         private static bool ShouldIgnoreName(string name)
         {
             return string.IsNullOrEmpty(name) ||
@@ -895,7 +911,7 @@ namespace LocalizationKeyAudit.Editor
                 name.EndsWith("~", StringComparison.Ordinal);
         }
 
-        /// <summary>folder scanでdirect static referenceを認識するUnity YAML asset種別です。</summary>
+        /// <summary>フォルダー走査で直接の静的参照を認識する、Unity形式のYAMLで保存されたアセットの種類です。</summary>
         private static bool IsSupportedYamlAssetExtension(string physicalPath)
         {
             var extension = Path.GetExtension(physicalPath);
@@ -904,20 +920,20 @@ namespace LocalizationKeyAudit.Editor
                 string.Equals(extension, ".unity", StringComparison.OrdinalIgnoreCase);
         }
 
-        /// <summary>logical Unity prefixとregistered physical directoryの固定対応です。</summary>
+        /// <summary>Unity上の論理接頭部と登録済み物理ディレクトリーの固定対応です。</summary>
         private readonly struct CoverageRoot
         {
-            /// <summary>検証済みroot pairを保持します。</summary>
+            /// <summary>検証済みのルートの組を保持します。</summary>
             internal CoverageRoot(string assetPrefix, string physicalRoot)
             {
                 AssetPrefix = assetPrefix;
                 PhysicalRoot = physicalRoot;
             }
 
-            /// <summary>AssetsまたはPackages/package-nameです。</summary>
+            /// <summary>AssetsまたはPackages/&lt;パッケージ名&gt;です。</summary>
             internal string AssetPrefix { get; }
 
-            /// <summary>対応するabsolute physical directoryです。</summary>
+            /// <summary>対応する絶対物理ディレクトリーです。</summary>
             internal string PhysicalRoot { get; }
         }
     }

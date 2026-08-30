@@ -1,99 +1,103 @@
-# Localization Key Audit
+# ローカライズキー監査
 
 ## 30秒で分かる説明
 
-Localization Key Auditは、Unity LocalizationのString Table Collectionについて、明示したrequired localeごとのdirect coverageとtable integrityを手動で確認するEditor専用ツールです。静的参照は、1回の監査につき`Assets`または1つのregistered packageのどちらか一方をlogical rootとして、同じroot内に宣言したpathだけを対象にできます。監査結果全体のfindingは4カテゴリ別の件数でも確認でき、現在のfilterで実際に表示するfindingだけをまとめてcopyできます。結果はadvisory（判断材料）であり、assetを変更せず、buildを停止しません。
+ローカライズキー監査は、Unity Localizationの文字列テーブルコレクションについて、明示した必須ロケールごとの直接網羅とテーブルの整合性を手動で確認するエディター専用ツールです。静的参照は、1回の監査につき`Assets`または登録済みパッケージ1つのどちらか一方を論理ルートとして、同じルート内に宣言したパスだけを対象にできます。監査結果全体の問題は4区分別の件数でも確認でき、現在の絞り込みに一致する問題を500件ずつ最大100,000件まで確認して、表示中のページだけをまとめてコピーできます。結果は判断材料であり、アセットを変更せず、ビルドを停止しません。
 
 ## できること
 
-- required localeのtableがあるかを確認します。
-- 共有keyごとに、required localeのdirect entryとdirect valueを確認します。
+- 必須ロケールのテーブルがあるかを確認します。
+- 共有キーごとに、必須ロケールの直接項目と直接値を確認します。
 - `MissingLocaleTable`、`MissingDirectEntry`、`EmptyDirectValue`を別々に報告します。
-- 1回につきlogical rootを`Assets`または1つの`Packages/<registered-name>`に限定し、そのroot内に宣言された静的参照だけを調べます。見つからない場合は`NoStaticReferenceFoundWithinDeclaredScope`と報告します。
-- findingと一緒にcoverage scope、coverage外、incomplete要因を示します。
-- filter前のfindingを`Terminal`、`Required Locale Coverage`、`Static References`、`Integrity`の4カテゴリ別に集計します。
-- SearchとCategory filter後に一覧へ実際に描画する先頭500件だけを、result順と重複を保って`Copy Displayed` buttonからcopyします。
+- 1回につき論理ルートを`Assets`または1つの`Packages/<登録済みパッケージ名>`に限定し、そのルート内に宣言した静的参照だけを調べます。見つからない場合は`NoStaticReferenceFoundWithinDeclaredScope`と報告します。
+- 問題と一緒に静的参照の範囲、範囲外、未完了の要因を示します。
+- 絞り込み前の問題を「監査停止」「必須ロケール網羅」「静的参照」「整合性」の4区分別に集計します。
+- 検索と区分による絞り込み後の問題を結果内の順序と重複を保って500件ずつ最大200ページに分け、「前へ」／「次へ」で最大100,000件へ到達できます。「表示分をコピー」は現在のページだけをコピーします。
 
 ## 使わない方がよい場合
 
-- locale fallbackを含むruntimeの最終表示可否を確定したい場合
-- C# source code、dynamic lookup、Smart String内のnested参照を網羅したい場合
-- `Packages`全体、未登録package、Addressables、remote content、外部dataまで到達可能性を自動解析したい場合
-- buildを自動で失敗させたい場合
-- entryの自動修正や削除を行いたい場合
+- ロケールの代替値を含む実行時の最終表示可否を確定したい場合
+- C#ソースコード、動的検索、Smart String内の入れ子参照を網羅したい場合
+- `Packages`全体、未登録パッケージ、Addressables、遠隔コンテンツ、外部データまで到達可能性を自動解析したい場合
+- ビルドを自動で失敗させたい場合
+- 項目の自動修正や削除を行いたい場合
 
-このpackageは、これらの目的を満たしません。特に、静的参照が見つからないkeyをunusedとは判定しません。
+このパッケージは、これらの目的を満たしません。特に、静的参照が見つからないキーを未使用とは判定しません。
 
 ## 3分で試す
 
-1. Package Managerの「Add package from git URL...」へ次を入力します。
+1. Unityのパッケージ管理画面で「GitのURLからパッケージを追加（Add package from git URL...）」を選び、次を入力します。
 
    ```text
-   https://github.com/mynameisGaku/UnityModules.git?path=/LocalizationKeyAudit#localization-key-audit-v1.3.0
+   https://github.com/mynameisGaku/UnityModules.git?path=/LocalizationKeyAudit#localization-key-audit-v1.4.0
    ```
 
-2. Unity Editorの`Tools/Localization Key Audit/Open`からwindowを開きます。
-3. `Required Locales`へカンマまたは改行区切りのLocale identifierを入力します。`Declared Asset Paths`の既定値は`Assets`です。必要なら、同じ`Assets` root内のpath、または1つのregistered package root内のpathだけへ置き換えます。
-4. `Audit`を実行します。監査はbuttonを押したときだけ行われます。
-5. findingだけでなく、表示されたcoverageと完了状態も確認します。
-6. 必要なら`Copy Displayed` buttonで、現在のfilterにより一覧へ実際に表示されているfindingをcopyします。
+2. Unityエディターの`Tools/ローカライズキー監査/開く`から画面を開きます。
+3. 「必須ロケール」へ、カンマまたは改行区切りのロケール識別子を入力します。「対象アセットのパス」の既定値は`Assets`です。必要なら、同じ`Assets`ルート内のパス、または登録済みパッケージ1つのルート内のパスだけへ置き換えます。
+4. 「監査」を実行します。監査はボタンを押したときだけ行われます。
+5. 問題だけでなく、表示された静的参照の範囲と完了状態も確認します。
+6. 必要なら「前へ」／「次へ」でページを移動し、「表示分をコピー」で現在のページに表示されている問題だけをコピーします。
 
-sample assetは同梱していません。既存projectのLocalization assetに対して手動で実行します。
+見本アセットは同梱していません。既存プロジェクトのローカライズ用アセットに対して手動で実行します。
 
-## 最小のEditor操作例
+## 最小のエディター操作例
 
-通常は、既定のAssets-only scopeを同じ`Assets` root内で絞り込んで監査します。
+通常は、既定の`Assets`だけを対象とする範囲を同じ`Assets`ルート内で絞り込んで監査します。
 
 ```text
-Required locales: en, ja
-Declared Asset Paths:
+必須ロケール: en, ja
+対象アセットのパス:
 Assets/Game
 Assets/UI
 
-1. Audit
-2. Completion statusとStatic coverageを確認
-3. Issuesを選択してDetailsを確認
+1. 監査
+2. 完了状態と静的参照網羅を確認
+3. 問題を選択して詳細を確認
 ```
 
-registered packageだけを監査する場合は別のauditとして実行します。次の`com.yourcompany.localization-content`はplaceholderです。実際に登録されているpackageのmanifest `name`へ置き換え、`Assets`や別packageのpathを同じ入力へ混在させないでください。
+登録済みパッケージだけを監査する場合は、別の監査として実行します。次の`com.yourcompany.localization-content`は記入例です。実際に登録されているパッケージのマニフェストにある`name`へ置き換え、`Assets`や別パッケージのパスを同じ入力へ混在させないでください。
 
 ```text
-Required locales: en, ja
-Declared Asset Paths:
+必須ロケール: en, ja
+対象アセットのパス:
 Packages/com.yourcompany.localization-content/Runtime
 Packages/com.yourcompany.localization-content/Content
 
-1. Audit
-2. Completion statusとStatic coverageを確認
-3. Issuesを選択してDetailsを確認
+1. 監査
+2. 完了状態と静的参照網羅を確認
+3. 問題を選択して詳細を確認
 ```
 
-scope外にも参照があり得るprojectでは、`NoStaticReferenceFoundWithinDeclaredScope`を削除判断へ使わないでください。
+宣言範囲外にも参照があり得るプロジェクトでは、`NoStaticReferenceFoundWithinDeclaredScope`を削除判断へ使わないでください。
 
 ## 実行結果
 
-Windowの`Issue Categories (unfiltered result)`は、現在の監査resultに含まれる全findingを`Terminal`、`Required Locale Coverage`、`Static References`、`Integrity`へ1回だけ分類した件数です。Search、Category filter、一覧の500件表示上限を変えても、この内訳は変わりません。件数はfinding数であり、uniqueなasset数、collection数、key数ではありません。`Clear`は結果と内訳を消し、次の`Audit`は新しいresultから集計します。
+画面の「問題区分（絞り込み前の結果）」は、現在の監査結果に含まれる全問題を「監査停止」「必須ロケール網羅」「静的参照」「整合性」のいずれか1つへ分類した件数です。検索、区分の絞り込み、現在のページを変えても、この内訳は変わりません。件数は問題数であり、重複を除いたアセット数、コレクション数、キー数ではありません。「結果を消去」は結果と内訳を消し、次の「監査」は新しい結果から集計します。
 
-resultまたはStatic coverageが`Incomplete`の場合、あるカテゴリが0件でも、そのカテゴリに問題がない、安全である、またはfindingが存在しないことの証明にはなりません。内訳より`Complete`／`Incomplete`とcoverageの完了状態を優先してください。
+監査結果または静的参照網羅が「未完了」の場合、ある区分が0件でも、その区分に問題がない、安全である、または問題が存在しないことの証明にはなりません。内訳より「完了」／「未完了」と静的参照網羅の完了状態を優先してください。
 
-### 表示中findingの一括copy
+### 表示中の問題のページ移動と一括コピー
 
-`Copy Displayed Issues`は、現在のSearchとCategory filterを適用した`visibleIssueIndices`のうち、一覧で実際に描画される先頭`min(filtered, 500)`件だけをcopyします。500件を超えてfilterに一致する表示外findingは含めません。result内の順序とduplicate findingをそのまま保ち、resultまたはStatic coverageが`Incomplete`でも、現在表示できているfindingのcopyは抑止しません。ただし、copyできた内容は監査の完了性を保証しません。
+現在の検索と区分の絞り込みに一致する問題は、結果内の順序と重複をそのまま保ち、500件ずつページへ分割されます。「前へ」／「次へ」で既存の問題上限100,000件、最大200ページの全件へ到達できます。絞り込みの変更、「監査」の開始、「結果を消去」はページを先頭へ戻します。区分集計はページと絞り込みに依存しません。
 
-clipboard本文の先頭には`Result`、`Static Coverage`、`Displayed Issues`、`Filtered Issues`、`Total Issues`を記録します。これにより、Window外で本文だけを確認する場合も、Incomplete resultや500件の表示上限を全件結果と誤読しないようにします。
+「表示分をコピー」は、現在のページで一覧へ実際に描画される最大500件だけをコピーします。前後のページにある問題は含めません。監査結果または静的参照網羅が「未完了」でも現在のページはコピーできますが、コピーできた内容は監査の完了性を保証しません。
 
-区切りを含むclipboard文字列全体が1,048,576 UTF-16 code unitの場合はexactに受理します。1 code unitでも超える場合は、切り詰めやpartial copyを行わず操作全体を拒否し、既存clipboardを変更しません。表示findingが0件の場合、resultや表示indexがinvalid／staleな場合、`Clear`後、または監査の例外catch後もcopyできず、clipboardを変更しません。既存の選択1件用`Copy Details`の内容と動作は変更しません。
+クリップボード本文は「ローカライズキー監査 - 表示中の問題」で始まります。続く「監査結果」「静的参照網羅」「表示ページ: 現在ページ / 総ページ数」、1から始まる「表示範囲: 開始番号-終了番号」、「表示件数」「絞り込み後の件数」「問題総数」により、画面外で本文だけを確認する場合も、未完了の結果や現在の500件ページを全件結果と誤読しないようにします。
 
-| Finding / status | 意味 | 断定しないこと |
+区切りを含むクリップボード文字列全体が1,048,576 UTF-16符号単位の場合は、上限ちょうどとして受理します。1符号単位でも超える場合は、切り詰めや一部コピーを行わず操作全体を拒否し、既存のクリップボードを変更しません。現在のページに問題が0件の場合、結果や表示索引、ページ状態が不正または古い場合、「結果を消去」後、または監査の例外処理後もコピーできず、クリップボードを変更しません。選択中の1件を対象とする「詳細をコピー」は、対象、アセットパスなどの識別値、項目順、コピー動作を維持し、項目名、問題種別の表示名、パッケージが生成する説明を日本語で出力します。
+
+画面の見出し、状態、問題説明、未完了理由、コピー本文の項目名は日本語です。問題種別の列挙識別子、UnityのAPI名、アセットパス、GUID、例外型名など、互換性や原因確認に必要な技術表記は原文を維持します。利用者が入力した走査範囲の説明や識別値は翻訳せず、そのまま表示します。
+
+| 問題種別／状態 | 意味 | 断定しないこと |
 | --- | --- | --- |
-| `MissingLocaleTable` | 対象collectionに、明示したrequired localeのtableがありません。 | locale fallbackなどを含むruntimeの最終結果は断定しません。 |
-| `MissingDirectEntry` | required localeのtableはありますが、共有keyに対応するdirect entryがありません。 | fallbackにより値が得られる可能性を否定しません。 |
-| `EmptyDirectValue` | direct entryはありますが、そのdirect valueが空です。 | 空値が意図的かどうか、runtimeで別の値が得られるかは断定しません。 |
-| `NoStaticReferenceFoundWithinDeclaredScope` | 宣言されたcoverage scope内で、対象keyへの静的参照を検出できませんでした。 | keyが未使用であるとは判定せず、削除候補にも変換しません。 |
-| `StaticReferenceCoverageIncomplete` | scope内に未対応形式、読取失敗、上限超過などがあり、参照走査を完了できませんでした。 | 認識済みの部分だけから参照なしとは判定しません。 |
-| `OrphanedLocaleTable` | typed String Tableに対応するString Table Collectionが見つかりませんでした。 | assetを自動修復・削除しません。 |
-| `OrphanedSharedTableData` | valid raw Shared Table Dataに対応するtyped String／Asset Table ownerが見つかりませんでした。 | String用のassetだとは断定せず、assetを自動修復・削除しません。 |
-| `ReadOnlyGuaranteeUnavailable` | raw preflightで、typed loadをread-onlyのまま実行できると証明できませんでした。 | 不完全な結果を通常の監査完了として扱いません。 |
+| `MissingLocaleTable` | 対象コレクションに、明示した必須ロケールのテーブルがありません。 | ロケールの代替値などを含む実行時の最終結果は断定しません。 |
+| `MissingDirectEntry` | 必須ロケールのテーブルはありますが、共有キーに対応する直接項目がありません。 | 代替値により値を得られる可能性を否定しません。 |
+| `EmptyDirectValue` | 直接項目はありますが、その直接値が空です。 | 空値が意図的か、実行時に別の値を得られるかは断定しません。 |
+| `NoStaticReferenceFoundWithinDeclaredScope` | 宣言した範囲内で、対象キーへの静的参照を検出できませんでした。 | キーが未使用であるとは判定せず、削除候補にも変換しません。 |
+| `StaticReferenceCoverageIncomplete` | 範囲内に未対応形式、読み取り失敗、上限超過などがあり、参照走査を完了できませんでした。 | 認識済みの部分だけから参照なしとは判定しません。 |
+| `OrphanedLocaleTable` | 型として読み取った文字列テーブルに対応する文字列テーブルコレクションが見つかりませんでした。 | アセットを自動修復または削除しません。 |
+| `OrphanedSharedTableData` | 有効な未加工の共有テーブルデータに対応する、型として読み取った文字列テーブルまたはアセットテーブルの所有元が見つかりませんでした。 | 文字列用のアセットだとは断定せず、アセットを自動修復または削除しません。 |
+| `ReadOnlyGuaranteeUnavailable` | 未加工データの事前検査で、型としての読み取りを読み取り専用のまま実行できると証明できませんでした。 | 不完全な結果を通常の監査完了として扱いません。 |
 
 `MissingLocaleTable`、`MissingDirectEntry`、`EmptyDirectValue`は互いに別の状態です。ひとつの「未翻訳」判定へまとめません。
 
@@ -101,69 +105,69 @@ clipboard本文の先頭には`Result`、`Static Coverage`、`Displayed Issues`�
 
 ### `ReadOnlyGuaranteeUnavailable`で停止する
 
-Shared Table Dataのraw serialized dataを安全に読めないか、collection GUIDが欠落・空・malformedです。監査はassetを変更しないため、typed adapterを呼ばずに停止します。先にassetの状態を別の安全な手順で確認してください。
+共有テーブルデータの未加工の直列化データを安全に読めないか、コレクション識別子（GUID）が欠落、空、または形式不正です。監査はアセットを変更しないため、型指定の読み取り処理を呼ばずに停止します。先にアセットの状態を別の安全な手順で確認してください。
 
-### 静的参照なしでもruntimeで使われている
+### 静的参照なしでも実行時に使われている
 
-C# source code、dynamic lookup、Smart String内のnested参照、Addressablesや外部dataはcoverage外です。`NoStaticReferenceFoundWithinDeclaredScope`は宣言scope内の観測だけを示します。
+C#ソースコード、動的検索、Smart String内の入れ子参照、Addressablesや外部データは網羅範囲外です。`NoStaticReferenceFoundWithinDeclaredScope`は宣言範囲内の観測だけを示します。
 
-### direct findingがあるのにruntimeでは値が表示される
+### 直接網羅の問題があるのに実行時には値が表示される
 
-locale fallback、個別参照のfallback設定、Locale override、culture fallbackなどで値が解決された可能性があります。本監査はdirect valueとruntime解決を分離します。
+ロケールの代替値、個別参照の代替値設定、ロケールの上書き設定、文化圏の代替値などで値が解決された可能性があります。本監査は直接値と実行時解決を分離します。
 
-### 結果がincompleteになる
+### 結果が未完了になる
 
-上限到達、読取失敗、scope外path、未対応serialized表現がある場合、結果はincompleteです。normalized duplicate target、rootまたはその全ancestorや選択したchild pathのreparse point、rootからのescapeもfail closedとし、認識済み参照のpartial resultを返しません。問題なしの完全な結果として扱わないでください。
+上限到達、読み取り失敗、範囲外パス、未対応の直列化表現がある場合、結果は未完了です。正規化後の対象重複、ルートまたはその全親階層や選択した配下パスの再解析ポイント、ルート外への逸脱も安全側で停止し、認識済み参照の部分結果を返しません。問題なしの完全な結果として扱わないでください。
 
-### Package scopeが拒否される
+### パッケージ範囲が拒否される
 
-package scopeには、登録済みpackageのmanifest `name`を使った`Packages/<registered-name>`またはその配下を指定します。bare `Packages`、直接指定した`Library/PackageCache`、未登録package名は受け付けません。`Assets`とpackage、または異なる複数packageを混在させた入力は、filesystem access前にincompleteとしてpartial coverage 0件で拒否します。short-nameなどの曖昧性を避けるため、`~`、`:`、またはdot／spaceで終わるsegmentを含む明示pathも拒否します。packageが登録済みかをPackage Managerで確認し、表示名やphysical folder名ではなくpackage名を指定してください。
+パッケージ範囲には、登録済みパッケージのマニフェストにある`name`を使った`Packages/<登録済みパッケージ名>`またはその配下を指定します。単独の`Packages`、直接指定した`Library/PackageCache`、未登録パッケージ名は受け付けません。`Assets`とパッケージ、または異なる複数パッケージを混在させた入力は、ファイルシステムへアクセスする前に未完了として、部分的な網羅結果0件で拒否します。短い別名などの曖昧性を避けるため、`~`、`:`、または末尾がピリオドか空白の部分を含む明示パスも拒否します。パッケージが登録済みかをUnityのパッケージ管理画面で確認し、表示名や物理フォルダー名ではなくパッケージ名を指定してください。
 
 ## 詳しい契約
 
-### Package boundary
+### パッケージの境界
 
-- 実行は手動です。自動実行、build前処理、CIの合否判定には組み込みません。
-- Editor専用です。Runtime assemblyとRuntime APIはありません。
-- public APIはありません。
-- 監査はread-onlyです。autofix、entry追加、値の書換え、削除、asset保存を行いません。
-- WindowはassetをloadするPing／Openを提供せず、選択findingのlogical pathと詳細、または現在表示中のfindingだけをclipboardへcopyします。Window、監査結果、error、clipboardへphysical pathを露出せず、読取errorはlogical pathとexception typeだけを示します。
-- 結果は宣言されたrequired localeとcoverage scopeに対する直接的な観測です。fallback後のruntime表示結果や、翻訳が実行時に利用できないことまでは断定しません。
-- registered package対応で広がるのはstatic-reference coverageだけです。raw preflight、typed snapshot、direct coverage、integrity、graph、finding taxonomyは変更しません。
+- 実行は手動です。自動実行、ビルド前処理、継続的統合（CI）の合否判定には組み込みません。
+- エディター専用です。実行時アセンブリと実行時APIはありません。
+- 公開APIはありません。
+- 監査は読み取り専用です。自動修正、項目追加、値の書換え、削除、アセット保存を行いません。
+- 画面はアセットを読み込む位置表示や開く操作を提供せず、選択中の問題の論理パスと詳細、または現在のページに表示中の問題だけをクリップボードへコピーします。画面、監査結果、エラー、クリップボードへ物理パスを露出せず、読み取りエラーは論理パスと例外型だけを示します。
+- 結果は宣言した必須ロケールと静的参照の範囲に対する直接的な観測です。代替値適用後の実行時表示結果や、翻訳が実行時に利用できないことまでは断定しません。
+- 登録済みパッケージ対応で広がるのは静的参照の網羅範囲だけです。未加工データの事前検査、型として読み取ったスナップショット、直接網羅、整合性、参照関係、問題種別は変更しません。
 
-### Read-only preflight
+### 読み取り専用の事前検査
 
-Unity Localization 1.5.12では、`SharedTableData.OnAfterDeserialize()`が保存されたcollection GUID文字列を処理します。GUIDが欠落または空の場合、公式実装は`delayCall`でasset GUIDを代入し、`EditorUtility.SetDirty`を呼ぶため、読み込みだけのつもりでもassetをdirtyにし得ます。一方、非空のGUIDがmalformedな場合は、先に`Guid.Parse`が例外を送出し、この自動修復経路には入りません。typed deserializeを安全に完了できない状態として扱う必要があります。
+Unity Localization 1.5.12では、`SharedTableData.OnAfterDeserialize()`が保存されたコレクション識別子（GUID）の文字列を処理します。GUIDが欠落または空の場合、公式実装は`delayCall`でアセットGUIDを代入し、`EditorUtility.SetDirty`を呼ぶため、読み込みだけのつもりでもアセットを変更済みにし得ます。一方、空ではないGUIDが形式不正の場合は、先に`Guid.Parse`が例外を送出し、この自動修復経路には入りません。型として読み取る逆直列化を安全に完了できない状態として扱う必要があります。
 
-このため、監査はtyped loadより先にraw serialized dataを検査します。String TableとAsset Tableは同じ`SharedTableData`型を使うため、raw preflightは両方を対象にします。通過後だけtyped String／Asset Table ownerを読み、Asset Tableだけが所有するidentityをString keyのduplicate、orphan、static-reference判定から除外します。Asset Tableのentryやlocalized asset自体はdirect coverage対象にしません。
+このため、監査は型指定の読み込みより先に未加工の直列化データを検査します。文字列テーブルとアセットテーブルは同じ共有テーブルデータ型を使うため、事前検査は両方を対象にします。通過後だけ型として読み取った文字列テーブルとアセットテーブルの所有元を確認し、アセットテーブルだけが所有する識別情報を文字列キーの重複、孤立、静的参照の判定から除外します。アセットテーブルの項目やローカライズ済みアセット自体は直接網羅の対象にしません。
 
-String TableとAsset Tableが同じcollection GUIDを使う場合、raw YAMLのGUID＋entry IDだけではreference typeを一意に判定できません。この状態はcleanな完全結果へ推測で畳まず、terminal `AuditFailed`として部分結果を破棄します。
+文字列テーブルとアセットテーブルが同じコレクション識別子（GUID）を使う場合、未加工のYAMLにあるGUIDと項目識別子だけでは参照種別を一意に判定できません。この状態は問題なしの完全な結果へ推測でまとめず、監査停止の`AuditFailed`として部分結果を破棄します。
 
-Shared Table Dataをrawに読めない、期待するserialized表現を確認できない、またはcollection GUIDが欠落・空・malformedである場合は、監査全体を`ReadOnlyGuaranteeUnavailable`で停止します。その状態ではtyped adapterを1回も呼ばず、部分的に取得できたfindingも通常の完了結果として公開しません。
+共有テーブルデータを未加工のまま読めない、期待する直列化表現を確認できない、またはコレクション識別子（GUID）が欠落、空、形式不正である場合は、監査全体を`ReadOnlyGuaranteeUnavailable`で停止します。その状態では型指定の読み取り処理を1回も呼ばず、部分的に取得できた問題も通常の完了結果として公開しません。
 
-### Coverage scope
+### 静的参照の網羅範囲
 
-静的参照の確認範囲は実行時に明示し、結果にも表示します。既定scopeはAssets-onlyです。1回の監査が受け付けるlogical rootは、`Assets`または1つの`Packages/<registered-name>`のexact 1つです。同じroot配下なら複数pathを宣言できます。package名は登録済みpackageのmanifest `name`とexactに照合し、対応する`PackageInfo.resolvedPath`を内部のphysical rootとして使います。
+静的参照の確認範囲は実行時に明示し、結果にも表示します。既定では`Assets`だけが対象です。1回の監査が受け付ける論理ルートは、`Assets`または1つの`Packages/<登録済みパッケージ名>`のちょうど1つです。同じルート配下なら複数パスを宣言できます。パッケージ名は登録済みパッケージのマニフェストにある`name`と厳密に照合し、対応する`PackageInfo.resolvedPath`を内部の物理ルートとして使います。
 
-bare `Packages`、直接指定した`Library/PackageCache`、未登録package名は拒否します。`Assets`とpackage、または異なる複数packageのrootを混在させた場合はfilesystem access前にincompleteとし、認識済みreferences／edgesをpartial coverageとして返しません。登録済みpackageを検索する場合も、必ず`Packages/<registered-name>[/...]`として明示します。
+単独の`Packages`、直接指定した`Library/PackageCache`、未登録パッケージ名は拒否します。`Assets`とパッケージ、または異なる複数パッケージのルートを混在させた場合は、ファイルシステムへアクセスする前に未完了とし、認識済みの参照や辺を部分的な網羅結果として返しません。登録済みパッケージを検索する場合も、必ず`Packages/<登録済みパッケージ名>[/...]`として明示します。
 
-明示pathに`~`、`:`、またはdot／spaceで終わるsegmentがある場合はshort-nameなどの曖昧性を避けるため拒否します。解決後のnormalized targetが重複する場合、physical root自身またはその全ancestorや選択したchild pathにreparse pointがある場合、root外へescapeする場合もfail closedとし、partial resultを返しません。Window、監査結果、error、clipboardには宣言したlogical pathだけを残し、physical rootやexception messageを露出しません。読取errorはlogical pathとexception typeだけを示します。
+明示パスに`~`、`:`、または末尾がピリオドか空白の部分がある場合は、短い別名などの曖昧性を避けるため拒否します。解決後の正規化対象が重複する場合、物理ルート自身またはその全親階層や選択した配下パスに再解析ポイントがある場合、ルート外へ逸脱する場合も安全側で停止し、部分結果を返しません。画面、監査結果、エラー、クリップボードには宣言した論理パスだけを残し、物理ルートや例外メッセージを露出しません。読み取りエラーは論理パスと例外型だけを示します。
 
-対象scope内にあるtext serialized Unity YAMLの`.unity`、`.prefab`、`.asset`から、隣接するtable GUID＋key ID pairとして直接確認できる参照だけを対象にします。folder指定では他の拡張子を対象外とし、未対応fileを直接指定した場合やbinary／非UTF-8／未知のserialized表現はincompleteにします。同じlogical root内で複数pathを宣言しても、asset候補、directory、file、byte、reference、issueを含む全ての安全上限は監査全体で適用します。次の領域や参照形態はcoverage外です。
+対象範囲内にあるテキスト直列化されたUnity形式のYAMLの`.unity`、`.prefab`、`.asset`から、隣接するテーブルGUIDと項目識別子の組として直接確認できる参照だけを対象にします。フォルダー指定では他の拡張子を対象外とし、未対応ファイルを直接指定した場合やバイナリ、UTF-8以外、未知の直列化表現は未完了にします。同じ論理ルート内で複数パスを宣言しても、アセット候補、ディレクトリ、ファイル、バイト、参照、問題を含む全ての安全上限は監査全体へ適用します。次の領域や参照形態は網羅範囲外です。
 
-- bare `Packages`、直接指定した`Library/PackageCache`、未登録package、および未宣言のregistered package asset
-- C# source code、実行時に組み立てる文字列、reflectionなどのdynamic lookup
-- Smart String内部のplaceholderやselector、およびSmart String内にnestedされた`LocalizedString`
-- Addressables catalog、remote content、外部data、実行時load経路と到達可能性
-- 宣言されたasset scope外のscene、prefab、ScriptableObjectその他のasset
-- locale fallback chain、project設定のfallback、各参照のfallback設定やLocale override、culture fallbackによるruntime解決
+- 単独の`Packages`、直接指定した`Library/PackageCache`、未登録パッケージ、および未宣言の登録済みパッケージアセット
+- C#ソースコード、実行時に組み立てる文字列、リフレクションなどの動的検索
+- Smart String内部のプレースホルダーやセレクター、およびSmart String内に入れ子になった`LocalizedString`
+- Addressablesのカタログ、遠隔コンテンツ、外部データ、実行時の読み込み経路と到達可能性
+- 宣言したアセット範囲外のシーン、プレハブ、ScriptableObjectその他のアセット
+- ロケールの代替値の探索順、プロジェクト設定の代替値、各参照の代替値設定やロケールの上書き設定、文化圏の代替値による実行時解決
 
-coverage外があるため、`NoStaticReferenceFoundWithinDeclaredScope`を「unused」と言い換えません。上限到達、読取失敗、scope外path、未対応serialized表現がある場合はincompleteとして扱い、問題なしの完全な結果にはしません。
+網羅範囲外があるため、`NoStaticReferenceFoundWithinDeclaredScope`を「未使用」と言い換えません。上限到達、読み取り失敗、範囲外パス、未対応の直列化表現がある場合は未完了として扱い、問題なしの完全な結果にはしません。
 
-結果の`References`と`Edges`はraw YAMLで認識したGUID＋entry ID pairを数える観測metricです。Asset Tableだけに解決できるpairもmetricには含みますが、String keyのdangling／参照あり判定には使用しません。
+結果の「参照数」と「辺数」は、未加工のYAMLで認識したGUIDと項目識別子の組を数える観測値です。アセットテーブルだけに解決できる組も観測値には含みますが、文字列キーの解決不能または参照ありの判定には使用しません。
 
-### Dependency and documents
+### 依存関係と文書
 
-hard dependencyとして`com.unity.localization` 1.5.12を使用します。Addressablesを直接依存として宣言せず、Unity Localization側の依存関係に従います。
+必須依存として`com.unity.localization` 1.5.12を使用します。Addressablesを直接依存として宣言せず、Unity Localization側の依存関係に従います。
 
-完全なfinding semanticsとcoverageは[Documentation](Documentation~/index.md)を参照してください。変更履歴は[CHANGELOG.md](CHANGELOG.md)、ライセンスは[LICENSE.md](LICENSE.md)、third-party情報は[Third-Party Notices.txt](Third-Party%20Notices.txt)にあります。
+全ての問題種別の意味と網羅範囲は[詳しい説明](Documentation~/index.md)を参照してください。変更履歴は[CHANGELOG.md](CHANGELOG.md)、ライセンスは[LICENSE.md](LICENSE.md)、第三者提供物の情報は[Third-Party Notices.txt](Third-Party%20Notices.txt)にあります。

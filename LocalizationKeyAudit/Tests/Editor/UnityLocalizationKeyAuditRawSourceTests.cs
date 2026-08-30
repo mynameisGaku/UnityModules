@@ -7,11 +7,11 @@ using AuditEditor = LocalizationKeyAudit.Editor;
 namespace LocalizationKeyAudit.Tests
 {
     /// <summary>
-    /// physical SharedTableData fallbackの拡張子判定をplatform非依存に固定します。
+    /// 共有テーブルデータの物理走査による代替経路で、拡張子判定をプラットフォーム非依存に固定します。
     /// </summary>
     internal sealed class UnityLocalizationKeyAuditRawSourceTests
     {
-        /// <summary>大文字小文字を問わずexact .assetだけを受理します。</summary>
+        /// <summary>大文字小文字を問わず、拡張子が完全一致する.assetだけを受理します。</summary>
         [TestCase("Assets/Tables/UI.asset", true)]
         [TestCase("Assets/Tables/UI.ASSET", true)]
         [TestCase("Assets/Tables/UI.asset.meta", false)]
@@ -21,7 +21,7 @@ namespace LocalizationKeyAudit.Tests
             Assert.That(AuditEditor.UnityLocalizationKeyAuditRawSource.IsAssetFilePath(path), Is.EqualTo(expected));
         }
 
-        /// <summary>candidate上限到達後は同一mapping更新だけを許し、新規pathを保持前に拒否します。</summary>
+        /// <summary>候補上限への到達後は同じ対応の再登録だけを許し、新規パスを保持前に拒否します。</summary>
         [Test]
         public void AddCandidatePath_RejectsNewPathBeforeGrowingPastLimit()
         {
@@ -40,16 +40,19 @@ namespace LocalizationKeyAudit.Tests
                     existingPhysicalPath));
             Assert.That(candidates, Has.Count.EqualTo(AuditEditor.LocalizationKeyAuditLimits.MaximumSharedTableDataAssets));
 
-            Assert.That(
+            var exception = Assert.Throws<InvalidDataException>(
                 () => AuditEditor.UnityLocalizationKeyAuditRawSource.AddCandidatePath(
                     candidates,
                     "Assets/Tables/Overflow.asset",
-                    Path.GetFullPath("C:/Tables/Overflow.asset")),
-                Throws.TypeOf<InvalidDataException>());
+                    Path.GetFullPath("C:/Tables/Overflow.asset")));
+            Assert.That(
+                exception.Message,
+                Is.EqualTo(
+                    $"共有テーブルデータ候補数が上限 {AuditEditor.LocalizationKeyAuditLimits.MaximumSharedTableDataAssets} 件を超えています。"));
             Assert.That(candidates, Has.Count.EqualTo(AuditEditor.LocalizationKeyAuditLimits.MaximumSharedTableDataAssets));
         }
 
-        /// <summary>raw discoveryもfileとdirectoryをstreaming上限到達直後に拒否します。</summary>
+        /// <summary>未加工データの物理探索でも、ファイルとディレクトリを逐次上限へ達した直後に拒否します。</summary>
         [Test]
         public void IncrementPhysicalDiscoveryCount_RejectsBeforeNextEntry()
         {
@@ -57,17 +60,20 @@ namespace LocalizationKeyAudit.Tests
                 AuditEditor.UnityLocalizationKeyAuditRawSource.IncrementPhysicalDiscoveryCount(
                     AuditEditor.LocalizationKeyAuditLimits.MaximumPhysicalDirectories - 1,
                     AuditEditor.LocalizationKeyAuditLimits.MaximumPhysicalDirectories,
-                    "directory"),
+                    "ディレクトリ"),
                 Is.EqualTo(AuditEditor.LocalizationKeyAuditLimits.MaximumPhysicalDirectories));
-            Assert.That(
+            var exception = Assert.Throws<InvalidDataException>(
                 () => AuditEditor.UnityLocalizationKeyAuditRawSource.IncrementPhysicalDiscoveryCount(
                     AuditEditor.LocalizationKeyAuditLimits.MaximumPhysicalDirectories,
                     AuditEditor.LocalizationKeyAuditLimits.MaximumPhysicalDirectories,
-                    "directory"),
-                Throws.TypeOf<InvalidDataException>());
+                    "ディレクトリ"));
+            Assert.That(
+                exception.Message,
+                Is.EqualTo(
+                    $"物理探索のディレクトリ数が上限 {AuditEditor.LocalizationKeyAuditLimits.MaximumPhysicalDirectories} 件を超えています。"));
         }
 
-        /// <summary>prefix外にGUIDがあるlong m_Script lineを候補なしと断定しません。</summary>
+        /// <summary>保持範囲外にGUIDがある長いm_Script行を、候補なしと断定しません。</summary>
         [Test]
         public void IsTruncatedScriptLineIndeterminate_DetectsExactLongScriptKey()
         {
@@ -100,20 +106,23 @@ namespace LocalizationKeyAudit.Tests
                 Is.True);
         }
 
-        /// <summary>typed candidate GUIDをsort前にexact上限で拒否します。</summary>
+        /// <summary>型として読み取った共有テーブルデータの候補GUIDを並べ替える前に、厳密な件数上限で拒否します。</summary>
         [Test]
         public void EnsureTypedCandidateCountWithinLimit_RejectsAboveMaximum()
         {
             Assert.DoesNotThrow(
                 () => AuditEditor.UnityLocalizationKeyAuditRawSource.EnsureTypedCandidateCountWithinLimit(
                     AuditEditor.LocalizationKeyAuditLimits.MaximumSharedTableDataAssets));
-            Assert.That(
+            var exception = Assert.Throws<InvalidDataException>(
                 () => AuditEditor.UnityLocalizationKeyAuditRawSource.EnsureTypedCandidateCountWithinLimit(
-                    AuditEditor.LocalizationKeyAuditLimits.MaximumSharedTableDataAssets + 1),
-                Throws.TypeOf<InvalidDataException>());
+                    AuditEditor.LocalizationKeyAuditLimits.MaximumSharedTableDataAssets + 1));
+            Assert.That(
+                exception.Message,
+                Is.EqualTo(
+                    $"型として読み取った共有テーブルデータ候補数が上限 {AuditEditor.LocalizationKeyAuditLimits.MaximumSharedTableDataAssets} 件を超えています。"));
         }
 
-        /// <summary>raw actual read総量を次fileのallocation前に拒否します。</summary>
+        /// <summary>未加工データの実読取総量を、次のファイル分のメモリ確保前に拒否します。</summary>
         [Test]
         public void EnsureActualReadBudget_RejectsBeforeAllocation()
         {
@@ -121,15 +130,19 @@ namespace LocalizationKeyAudit.Tests
             Assert.That(
                 AuditEditor.UnityLocalizationKeyAuditRawSource.EnsureActualReadBudget(maximum - 1, 1),
                 Is.EqualTo(maximum));
+            var overflow = Assert.Throws<AuditEditor.LocalizationKeyAuditLimitException>(
+                () => AuditEditor.UnityLocalizationKeyAuditRawSource.EnsureActualReadBudget(maximum, 1));
             Assert.That(
-                () => AuditEditor.UnityLocalizationKeyAuditRawSource.EnsureActualReadBudget(maximum, 1),
-                Throws.TypeOf<AuditEditor.LocalizationKeyAuditLimitException>());
+                overflow.Message,
+                Is.EqualTo($"未加工データの実読取バイト数が上限 {maximum} を超えています。"));
+            var negative = Assert.Throws<AuditEditor.LocalizationKeyAuditLimitException>(
+                () => AuditEditor.UnityLocalizationKeyAuditRawSource.EnsureActualReadBudget(0, -1));
             Assert.That(
-                () => AuditEditor.UnityLocalizationKeyAuditRawSource.EnsureActualReadBudget(0, -1),
-                Throws.TypeOf<AuditEditor.LocalizationKeyAuditLimitException>());
+                negative.Message,
+                Is.EqualTo($"未加工データの実読取バイト数が上限 {maximum} を超えています。"));
         }
 
-        /// <summary>physical path由来の例外本文をRawAssetへ入れず、安全な型名だけを保持します。</summary>
+        /// <summary>物理パス由来の例外本文を未加工アセットへ入れず、安全な型名だけを保持します。</summary>
         [Test]
         public void ReadCandidate_PhysicalFailureStoresOnlyExceptionType()
         {
@@ -165,7 +178,7 @@ namespace LocalizationKeyAudit.Tests
             }
         }
 
-        /// <summary>CR-only Unity YAMLでも後続target script行をphysical fallback候補として検出します。</summary>
+        /// <summary>CRのみのUnity形式のYAMLでも、後続する対象スクリプト行を物理走査の代替候補として検出します。</summary>
         [Test]
         public void ContainsSharedTableDataScriptGuid_RecognizesCarriageReturnOnlyLines()
         {

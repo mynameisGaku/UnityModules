@@ -5,11 +5,11 @@ using System;
 namespace LocalizationKeyAudit.Editor
 {
     /// <summary>
-    /// typed StringTable は存在する一方、対応する StringTableCollection が見つからない table snapshot です。
+    /// 型として読み取った文字列テーブルは存在する一方、対応する文字列テーブルコレクションが見つからない所属先なしテーブルのスナップショットです。
     /// </summary>
     internal sealed class LocalizationKeyAuditOrphanLocaleTableSnapshot
     {
-        /// <summary>SharedTableData identity と table を防御的に copy します。</summary>
+        /// <summary>共有テーブルデータの識別情報とテーブルを防御的に複製します。</summary>
         internal LocalizationKeyAuditOrphanLocaleTableSnapshot(
             string sharedDataAssetPath,
             Guid collectionGuid,
@@ -25,13 +25,13 @@ namespace LocalizationKeyAudit.Editor
                     localeTable.Entries);
         }
 
-        /// <summary>table が参照する SharedTableData asset path です。</summary>
+        /// <summary>テーブルが参照する共有テーブルデータのアセットパスです。</summary>
         internal string SharedDataAssetPath { get; }
 
-        /// <summary>table が参照する collection GUID です。</summary>
+        /// <summary>テーブルが参照するコレクション識別子（GUID）です。</summary>
         internal Guid CollectionGuid { get; }
 
-        /// <summary>collection に所属しない direct table です。</summary>
+        /// <summary>コレクションに所属しない直接テーブルです。</summary>
         internal LocalizationKeyAuditLocaleTableSnapshot LocaleTable { get; }
     }
 }

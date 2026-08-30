@@ -3,11 +3,11 @@
 namespace LocalizationKeyAudit.Editor
 {
     /// <summary>
-    /// 宣言済み static-reference scope から読み取った 1 asset の immutable bytes です。
+    /// 宣言済みの静的参照走査範囲から読み取った1アセットの不変バイト列です。
     /// </summary>
     internal sealed class LocalizationKeyAuditCoverageAsset
     {
-        /// <summary>asset path と読み取り状態を防御的に copy します。</summary>
+        /// <summary>アセットパスと読み取り状態を防御的に複製します。</summary>
         internal LocalizationKeyAuditCoverageAsset(
             string assetPath,
             byte[] bytes,
@@ -26,25 +26,25 @@ namespace LocalizationKeyAudit.Editor
 
         private readonly byte[] storedBytes;
 
-        /// <summary>Assets 起点の Unity asset path です。</summary>
+        /// <summary>Assets起点のUnityアセットパスです。</summary>
         internal string AssetPath { get; }
 
-        /// <summary>physical file が収集時に存在したかを示します。</summary>
+        /// <summary>物理ファイルが収集時に存在したかを示します。</summary>
         internal bool Exists { get; }
 
-        /// <summary>scope から file までに reparse point があったかを示します。</summary>
+        /// <summary>走査範囲からファイルまでに再解析ポイントがあったかを示します。</summary>
         internal bool HasReparsePoint { get; }
 
-        /// <summary>読み取り前に file size 上限を超えたかを示します。</summary>
+        /// <summary>読み取り前にファイルサイズ上限を超えたかを示します。</summary>
         internal bool IsOversize { get; }
 
-        /// <summary>個別 file の取得失敗です。</summary>
+        /// <summary>個別ファイルの取得失敗です。</summary>
         internal string ReadError { get; }
 
-        /// <summary>保持 byte 数です。</summary>
+        /// <summary>保持バイト数です。</summary>
         internal int ByteCount => storedBytes.Length;
 
-        /// <summary>parser 用の独立 byte copy を返します。</summary>
+        /// <summary>解析処理用の独立したバイト列複製を返します。</summary>
         internal byte[] CopyBytes()
         {
             return (byte[])storedBytes.Clone();

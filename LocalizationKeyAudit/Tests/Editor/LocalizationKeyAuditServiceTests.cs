@@ -9,12 +9,12 @@ using AuditEditor = LocalizationKeyAudit.Editor;
 namespace LocalizationKeyAudit.Tests
 {
     /// <summary>
-    /// request、raw preflight、typed source、analyzer の順序と例外隔離を検証します。
+    /// 監査条件、未加工事前検査、型として読み取る取得元、解析器の順序と例外隔離を検証します。
     /// </summary>
     internal sealed class LocalizationKeyAuditServiceTests
     {
         /// <summary>
-        /// request failure は raw/typed source のどちらも呼ばず terminal issue 一件だけを返します。
+        /// 監査条件の失敗は未加工取得元と型として読み取る取得元のどちらも呼ばず、監査停止問題1件だけを返します。
         /// </summary>
         [Test]
         public void Audit_InvalidRequestCallsNeitherSource()
@@ -29,12 +29,12 @@ namespace LocalizationKeyAudit.Tests
             Assert.That(typed.ReadCallCount, Is.Zero);
         }
 
-        /// <summary>mixed logical root requestをsource呼出前に拒否し、元coverageのpath/referenceも返しません。</summary>
+        /// <summary>論理ルートが混在した要求を取得元の呼び出し前に拒否し、元の網羅情報にあるパス／参照も返しません。</summary>
         [Test]
         public void Audit_MixedRootRequestCallsNeitherSourceAndDiscardsCoverage()
         {
             var coverage = new AuditEditor.LocalizationKeyAuditCoverage(
-                "Mixed roots",
+                "異なる論理ルート",
                 new[] { "Assets", "Packages/com.example" },
                 new[]
                 {
@@ -60,7 +60,7 @@ namespace LocalizationKeyAudit.Tests
             Assert.That(typed.ReadCallCount, Is.Zero);
         }
 
-        /// <summary>input snapshot例外は型名だけを返し、opaque本文とcoverageを公開しません。</summary>
+        /// <summary>入力スナップショット例外は型名だけを返し、非公開本文と網羅情報を公開しません。</summary>
         [Test]
         public void Audit_InputSnapshotExceptionDoesNotExposeOpaqueDetails()
         {
@@ -74,12 +74,14 @@ namespace LocalizationKeyAudit.Tests
             AssertTerminalFailure(result, AuditEditor.LocalizationKeyAuditIssueKind.InvalidConfiguration);
             Assert.That(result.Coverage.DeclaredAssetPaths, Is.Empty);
             Assert.That(result.Coverage.RecognizedReferences, Is.Empty);
-            StringAssert.Contains("InvalidOperationException", result.Issues[0].Message);
+            Assert.That(
+                result.Issues[0].Message,
+                Is.EqualTo("監査入力のスナップショットを作成できません: InvalidOperationException"));
             AssertIssueDoesNotExpose(result.Issues[0], physicalCanary);
         }
 
         /// <summary>
-        /// raw YAML の後半で失敗しても typed source を呼ばず、検証済み前半を結果へ残しません。
+        /// 未加工のYAMLの後半で失敗しても型として読み取る取得元を呼ばず、検証済みの前半を結果へ残しません。
         /// </summary>
         [Test]
         public void Audit_RawFailureCallsTypedZeroTimesAndDiscardsPartialData()
@@ -111,7 +113,7 @@ namespace LocalizationKeyAudit.Tests
             Assert.That(typed.ReadCallCount, Is.Zero);
         }
 
-        /// <summary>invalid raw AssetPathをissue fieldやcoverageへ移さずtyped load前に停止します。</summary>
+        /// <summary>不正な未加工アセットパスを問題項目や網羅情報へ移さず、型として読み取る前に停止します。</summary>
         [Test]
         public void Audit_InvalidRawAssetPathDoesNotExposePhysicalCanary()
         {
@@ -139,7 +141,7 @@ namespace LocalizationKeyAudit.Tests
         }
 
         /// <summary>
-        /// scriptとGUID fieldが別documentにあるspoofは、前半identityを捨てtyped load前に停止します。
+        /// スクリプトとGUID項目が別文書にある偽装では、前半の識別情報を捨てて型として読み取る前に停止します。
         /// </summary>
         [Test]
         public void Audit_UncorrelatedRawYamlCallsTypedZeroTimesAndDiscardsPartialIdentity()
@@ -181,7 +183,7 @@ namespace LocalizationKeyAudit.Tests
         }
 
         /// <summary>
-        /// raw source の例外を ReadOnlyGuaranteeUnavailable に限定し typed source を呼びません。
+        /// 未加工データ取得元の例外をReadOnlyGuaranteeUnavailableに限定し、型として読み取る取得元を呼びません。
         /// </summary>
         [Test]
         public void Audit_RawSourceExceptionIsIsolatedBeforeTypedLoad()
@@ -203,7 +205,7 @@ namespace LocalizationKeyAudit.Tests
         }
 
         /// <summary>
-        /// typed source の欠落、null snapshot、例外を AuditFailed 一件へ隔離します。
+        /// 型として読み取る取得元の欠落、参照なしのスナップショット、例外をAuditFailed 1件へ隔離します。
         /// </summary>
         [Test]
         public void Audit_TypedSourceFailuresDiscardPartialData()
@@ -213,6 +215,9 @@ namespace LocalizationKeyAudit.Tests
                 CreateValidRawSource(),
                 null);
             AssertTerminalFailure(missingResult, AuditEditor.LocalizationKeyAuditIssueKind.AuditFailed);
+            Assert.That(
+                missingResult.Issues[0].Message,
+                Is.EqualTo("型付きローカライズ情報の取得元がありません。"));
 
             var nullSnapshot = new FakeLocalizationKeyAuditTypedSource { Snapshot = null };
             var nullResult = AuditEditor.LocalizationKeyAuditService.Audit(
@@ -220,6 +225,9 @@ namespace LocalizationKeyAudit.Tests
                 CreateValidRawSource(),
                 nullSnapshot);
             AssertTerminalFailure(nullResult, AuditEditor.LocalizationKeyAuditIssueKind.AuditFailed);
+            Assert.That(
+                nullResult.Issues[0].Message,
+                Is.EqualTo("型として読み取るローカライズ監査に失敗しました: InvalidDataException"));
             Assert.That(nullSnapshot.ReadCallCount, Is.EqualTo(1));
 
             const string physicalCanary = "C:\\private\\typed-source-canary";
@@ -232,13 +240,15 @@ namespace LocalizationKeyAudit.Tests
                 CreateValidRawSource(),
                 throwing);
             AssertTerminalFailure(exceptionResult, AuditEditor.LocalizationKeyAuditIssueKind.AuditFailed);
-            StringAssert.Contains("InvalidOperationException", exceptionResult.Issues[0].Message);
+            Assert.That(
+                exceptionResult.Issues[0].Message,
+                Is.EqualTo("型として読み取るローカライズ監査に失敗しました: InvalidOperationException"));
             AssertIssueDoesNotExpose(exceptionResult.Issues[0], physicalCanary);
             Assert.That(throwing.ReadCallCount, Is.EqualTo(1));
         }
 
         /// <summary>
-        /// typed adapter が検出した hard limit 超過を AuditFailed と混同しません。
+        /// 型として読み取る変換処理が検出した固定上限超過をAuditFailedと混同しません。
         /// </summary>
         [Test]
         public void Audit_TypedLimitExceptionReturnsLimitExceeded()
@@ -259,7 +269,7 @@ namespace LocalizationKeyAudit.Tests
         }
 
         /// <summary>
-        /// typed collection、orphan table、Asset Table ownerのpath/GUIDがraw identityと違えばterminal failureにします。
+        /// 型として読み取ったコレクション、所属先なしテーブル、アセットテーブルの所有元にあるパスやGUIDが未加工の識別情報と違えば、監査停止失敗にします。
         /// </summary>
         [Test]
         public void Audit_TypedAndRawIdentityMismatchDiscardsTypedSnapshot()
@@ -325,7 +335,7 @@ namespace LocalizationKeyAudit.Tests
         }
 
         /// <summary>
-        /// 全 raw asset を検証した後にだけ typed snapshot を一度読み、完全な結果を返します。
+        /// 全未加工アセットを検証した後にだけスナップショットを型として一度読み、完全な結果を返します。
         /// </summary>
         [Test]
         public void Audit_ValidSourcesCallEachAdapterOnceAndReturnCompleteResult()
@@ -342,7 +352,7 @@ namespace LocalizationKeyAudit.Tests
             Assert.That(result.Collections, Has.Count.EqualTo(1));
         }
 
-        /// <summary>valid request と coverage を作ります。</summary>
+        /// <summary>正常な要求と網羅情報を作ります。</summary>
         private static AuditEditor.LocalizationKeyAuditRequest CreateRequest()
         {
             var reference = new AuditEditor.LocalizationKeyAuditStaticReference(
@@ -360,7 +370,7 @@ namespace LocalizationKeyAudit.Tests
             return new AuditEditor.LocalizationKeyAuditRequest(new[] { "en" }, coverage);
         }
 
-        /// <summary>valid raw identity を一件返す source を作ります。</summary>
+        /// <summary>正常な未加工識別情報を1件返す取得元を作ります。</summary>
         private static FakeLocalizationKeyAuditRawSource CreateValidRawSource()
         {
             return new FakeLocalizationKeyAuditRawSource
@@ -369,7 +379,7 @@ namespace LocalizationKeyAudit.Tests
             };
         }
 
-        /// <summary>direct entry が揃った最小 typed snapshot を作ります。</summary>
+        /// <summary>直接項目が揃った、型として読み取った最小のスナップショットを作ります。</summary>
         private static AuditEditor.LocalizationKeyAuditTypedSnapshot CreateCompleteSnapshot()
         {
             var table = new AuditEditor.LocalizationKeyAuditLocaleTableSnapshot(
@@ -385,7 +395,7 @@ namespace LocalizationKeyAudit.Tests
             return new AuditEditor.LocalizationKeyAuditTypedSnapshot(new[] { "en" }, new[] { collection });
         }
 
-        /// <summary>terminal failure が partial typed data を含まないことを検証します。</summary>
+        /// <summary>監査停止失敗が、型として読み取った部分データを含まないことを検証します。</summary>
         private static void AssertTerminalFailure(
             AuditEditor.LocalizationKeyAuditResult result,
             AuditEditor.LocalizationKeyAuditIssueKind expectedKind)
@@ -400,7 +410,7 @@ namespace LocalizationKeyAudit.Tests
             Assert.That(result.Issues[0].Kind, Is.EqualTo(expectedKind));
         }
 
-        /// <summary>Window表示・copyに使うissue文字列へcanaryがないことを確認します。</summary>
+            /// <summary>画面表示とコピーに使う問題文字列へ、検査用文字列がないことを確認します。</summary>
         private static void AssertIssueDoesNotExpose(
             AuditEditor.LocalizationKeyAuditIssue issue,
             string canary)
@@ -417,28 +427,28 @@ namespace LocalizationKeyAudit.Tests
             StringAssert.DoesNotContain(canary, displayedAndCopiedText);
         }
 
-        /// <summary>index accessで指定例外を送出するinput一覧です。</summary>
+            /// <summary>添字アクセスで指定例外を送出する入力一覧です。</summary>
         private sealed class ThrowingStringList : IReadOnlyList<string>
         {
-            /// <summary>opaque例外本文を保持します。</summary>
+            /// <summary>不透明な例外本文を保持します。</summary>
             internal ThrowingStringList(string message)
             {
                 m_Message = message;
             }
 
-            /// <summary>copyを開始させる一件を報告します。</summary>
+            /// <summary>複製を開始させる1件を報告します。</summary>
             public int Count => 1;
 
-            /// <summary>snapshot中の入力失敗を再現します。</summary>
+            /// <summary>スナップショット作成中の入力失敗を再現します。</summary>
             public string this[int index] => throw new InvalidOperationException(m_Message);
 
-            /// <summary>enumeration中の入力失敗を再現します。</summary>
+            /// <summary>列挙中の入力失敗を再現します。</summary>
             public IEnumerator<string> GetEnumerator()
             {
                 throw new InvalidOperationException(m_Message);
             }
 
-            /// <summary>非generic enumerationを同じ失敗へ揃えます。</summary>
+            /// <summary>非ジェネリック列挙を同じ失敗へ揃えます。</summary>
             IEnumerator IEnumerable.GetEnumerator()
             {
                 return GetEnumerator();

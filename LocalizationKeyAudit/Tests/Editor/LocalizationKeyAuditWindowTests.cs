@@ -10,25 +10,116 @@ using AuditEditor = LocalizationKeyAudit.Editor;
 namespace LocalizationKeyAudit.Tests
 {
     /// <summary>
-    /// Window の入力 parser、pure issue filter、4区分集計、表示・clipboard上限を GUI なしで検証します。
+    /// 画面の入力解析、問題の絞り込み、4区分集計、ページ表示、クリップボード上限を画面描画なしで検証します。
     /// </summary>
     internal sealed class LocalizationKeyAuditWindowTests
     {
         /// <summary>
-        /// Tools menu identity と問題一覧の 500 行 cap を v1.0.0 契約として固定します。
+        /// ツールメニュー、画面タイトル、既定の範囲説明、問題一覧の1ページ500行上限を固定します。
         /// </summary>
         [Test]
         public void Constants_MatchMenuAndDisplayContracts()
         {
-            Assert.That(AuditEditor.LocalizationKeyAuditMenu.MenuPath, Is.EqualTo("Tools/Localization Key Audit/Open"));
+            Assert.That(AuditEditor.LocalizationKeyAuditMenu.MenuPath, Is.EqualTo("Tools/ローカライズキー監査/開く"));
+            Assert.That(AuditEditor.LocalizationKeyAuditWindow.WindowTitle, Is.EqualTo("ローカライズキー監査"));
+            Assert.That(
+                AuditEditor.LocalizationKeyAuditWindow.DefaultScopeDescription,
+                Is.EqualTo("Assets内のテキスト形式の.unity、.prefab、.assetにあるGUIDと項目識別子の直接参照"));
             Assert.That(AuditEditor.LocalizationKeyAuditWindow.MaximumDisplayedIssues, Is.EqualTo(500));
             Assert.That(
                 AuditEditor.LocalizationKeyAuditWindow.MaximumDisplayedIssueClipboardCharacters,
                 Is.EqualTo(1_048_576));
         }
 
+        /// <summary>問題件数の境界からページ数、有効範囲、開始位置を整数演算だけで決定します。</summary>
+        [Test]
+        public void IssuePageHelpers_HandleEmptyBoundaryAndAllTwoHundredPages()
+        {
+            Assert.That(AuditEditor.LocalizationKeyAuditWindow.GetIssuePageCount(-1), Is.EqualTo(1));
+            Assert.That(AuditEditor.LocalizationKeyAuditWindow.GetIssuePageCount(0), Is.EqualTo(1));
+            Assert.That(AuditEditor.LocalizationKeyAuditWindow.GetIssuePageCount(500), Is.EqualTo(1));
+            Assert.That(AuditEditor.LocalizationKeyAuditWindow.GetIssuePageCount(501), Is.EqualTo(2));
+            Assert.That(AuditEditor.LocalizationKeyAuditWindow.GetIssuePageCount(100000), Is.EqualTo(200));
+
+            Assert.That(AuditEditor.LocalizationKeyAuditWindow.ClampIssuePage(-1, 2), Is.Zero);
+            Assert.That(AuditEditor.LocalizationKeyAuditWindow.ClampIssuePage(0, 2), Is.Zero);
+            Assert.That(AuditEditor.LocalizationKeyAuditWindow.ClampIssuePage(1, 2), Is.EqualTo(1));
+            Assert.That(AuditEditor.LocalizationKeyAuditWindow.ClampIssuePage(2, 2), Is.EqualTo(1));
+            Assert.That(AuditEditor.LocalizationKeyAuditWindow.ClampIssuePage(7, 0), Is.Zero);
+
+            Assert.That(AuditEditor.LocalizationKeyAuditWindow.GetIssuePageStart(-1, -1), Is.Zero);
+            Assert.That(AuditEditor.LocalizationKeyAuditWindow.GetIssuePageStart(7, 0), Is.Zero);
+            Assert.That(AuditEditor.LocalizationKeyAuditWindow.GetIssuePageStart(-1, 501), Is.Zero);
+            Assert.That(AuditEditor.LocalizationKeyAuditWindow.GetIssuePageStart(0, 501), Is.Zero);
+            Assert.That(AuditEditor.LocalizationKeyAuditWindow.GetIssuePageStart(1, 501), Is.EqualTo(500));
+            Assert.That(AuditEditor.LocalizationKeyAuditWindow.GetIssuePageStart(2, 501), Is.EqualTo(500));
+            Assert.That(
+                Enumerable.Range(0, 200).Select(page =>
+                    AuditEditor.LocalizationKeyAuditWindow.GetIssuePageStart(page, 100000)),
+                Is.EqualTo(Enumerable.Range(0, 200).Select(page => page * 500)));
+        }
+
+        /// <summary>日本語タイトルを復元し、未変更の旧既定値だけを移行して独自の範囲説明は保持します。</summary>
+        [Test]
+        public void OnEnable_RestoresJapaneseTitleAndMigratesOnlyExactLegacyScopeDescription()
+        {
+            const string legacyDefault =
+                "Assets text .unity/.prefab/.asset の GUID + key ID direct references";
+            var legacyWindow = ScriptableObject.CreateInstance<AuditEditor.LocalizationKeyAuditWindow>();
+            try
+            {
+                legacyWindow.titleContent = new GUIContent("Localization Key Audit");
+                SetField(legacyWindow, "scopeDescription", legacyDefault);
+
+                Invoke(legacyWindow, "OnEnable");
+
+                Assert.That(legacyWindow.titleContent, Is.Not.Null);
+                Assert.That(
+                    legacyWindow.titleContent.text,
+                    Is.EqualTo(AuditEditor.LocalizationKeyAuditWindow.WindowTitle));
+                Assert.That(
+                    GetField<string>(legacyWindow, "scopeDescription"),
+                    Is.EqualTo(AuditEditor.LocalizationKeyAuditWindow.DefaultScopeDescription));
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(legacyWindow);
+            }
+
+            var customDescriptions = new[]
+            {
+                legacyDefault + " ",
+                "利用者独自の範囲説明",
+                string.Empty,
+                null
+            };
+            foreach (var customDescription in customDescriptions)
+            {
+                var customWindow = ScriptableObject.CreateInstance<AuditEditor.LocalizationKeyAuditWindow>();
+                try
+                {
+                    customWindow.titleContent = new GUIContent("Localization Key Audit");
+                    SetField(customWindow, "scopeDescription", customDescription);
+
+                    Invoke(customWindow, "OnEnable");
+
+                    Assert.That(customWindow.titleContent, Is.Not.Null);
+                    Assert.That(
+                        customWindow.titleContent.text,
+                        Is.EqualTo(AuditEditor.LocalizationKeyAuditWindow.WindowTitle));
+                    Assert.That(
+                        GetField<string>(customWindow, "scopeDescription"),
+                        Is.EqualTo(customDescription));
+                }
+                finally
+                {
+                    UnityEngine.Object.DestroyImmediate(customWindow);
+                }
+            }
+        }
+
         /// <summary>
-        /// required Locale はカンマ、semicolon、改行を区切りに trim し、入力順を保ちます。
+        /// 必須ロケールはカンマ、セミコロン、改行を区切りに前後空白を除き、入力順を保ちます。
         /// </summary>
         [Test]
         public void ParseRequiredLocales_ParsesSupportedSeparatorsAndDropsEmptyTokens()
@@ -41,7 +132,7 @@ namespace LocalizationKeyAudit.Tests
         }
 
         /// <summary>
-        /// declared Assets/Packages pathは改行だけで分け、非空行の原文と入力順を保ちます。
+        /// 対象とする Assets または Packages のパスは改行だけで分け、非空行の原文と入力順を保ちます。
         /// </summary>
         [Test]
         public void ParseDeclaredAssetPaths_PreservesNonEmptyLinesAndDropsWhitespaceOnlyLines()
@@ -58,7 +149,7 @@ namespace LocalizationKeyAudit.Tests
             Assert.That(AuditEditor.LocalizationKeyAuditWindow.ParseDeclaredAssetPaths(null), Is.Empty);
         }
 
-        /// <summary>declared pathの前後空白をparserで保持し、service validationで設定不正にします。</summary>
+        /// <summary>対象パスの前後空白を入力解析で保持し、監査処理の検証で設定不正にします。</summary>
         [TestCase("Assets/Foo ")]
         [TestCase(" Assets/Foo")]
         public void Audit_RejectsDeclaredPathWhitespacePreservedByParser(string line)
@@ -68,7 +159,7 @@ namespace LocalizationKeyAudit.Tests
             Assert.That(paths, Is.EqualTo(new[] { line }));
             var result = AuditEditor.LocalizationKeyAuditService.Audit(
                 new[] { "en" },
-                "Whitespace path",
+                "前後空白を含むパス",
                 paths);
 
             Assert.That(result.IsComplete, Is.False);
@@ -77,10 +168,10 @@ namespace LocalizationKeyAudit.Tests
             Assert.That(
                 result.Issues[0].Kind,
                 Is.EqualTo(AuditEditor.LocalizationKeyAuditIssueKind.InvalidConfiguration));
-            StringAssert.Contains("declared asset path", result.Issues[0].Message);
+            StringAssert.Contains("宣言済みアセットパス", result.Issues[0].Message);
         }
 
-        /// <summary>parserはmixed rootの順序を保ち、serviceはcoverage scan前に設定不正として拒否します。</summary>
+        /// <summary>入力解析は異なる基点の順序を保ち、監査処理は網羅走査前に設定不正として拒否します。</summary>
         [Test]
         public void Audit_RejectsMixedParsedLogicalRoots()
         {
@@ -95,7 +186,7 @@ namespace LocalizationKeyAudit.Tests
 
             var result = AuditEditor.LocalizationKeyAuditService.Audit(
                 new[] { "en" },
-                "Mixed roots",
+                "異なる論理ルート",
                 paths);
 
             Assert.That(result.IsComplete, Is.False);
@@ -104,11 +195,11 @@ namespace LocalizationKeyAudit.Tests
             Assert.That(
                 result.Issues[0].Kind,
                 Is.EqualTo(AuditEditor.LocalizationKeyAuditIssueKind.InvalidConfiguration));
-            StringAssert.Contains("logical root", result.Issues[0].Message);
+            StringAssert.Contains("論理ルート", result.Issues[0].Message);
         }
 
         /// <summary>
-        /// frozen defaultを固定し、Clearがrequest/filter入力を残してtransient resultだけを消すことを確認します。
+        /// 日本語の既定値を固定し、消去操作が監査条件と絞り込みを残して一時結果だけを消すことを確認します。
         /// </summary>
         [Test]
         public void DefaultsAndClear_PreserveInputsAndResetTransientState()
@@ -119,11 +210,11 @@ namespace LocalizationKeyAudit.Tests
                 Assert.That(GetField<string>(window, "declaredAssetPathsText"), Is.EqualTo("Assets"));
                 Assert.That(
                     GetField<string>(window, "scopeDescription"),
-                    Is.EqualTo("Assets text .unity/.prefab/.asset の GUID + key ID direct references"));
+                    Is.EqualTo(AuditEditor.LocalizationKeyAuditWindow.DefaultScopeDescription));
 
                 SetField(window, "requiredLocalesText", "en, ja");
                 SetField(window, "declaredAssetPathsText", "Packages/com.example\nAssets");
-                SetField(window, "scopeDescription", "Frozen scope");
+                SetField(window, "scopeDescription", "保持する走査範囲");
                 SetField(window, "searchText", "package");
                 SetField(
                     window,
@@ -135,8 +226,9 @@ namespace LocalizationKeyAudit.Tests
                     "issueCategoryCounts",
                     new AuditEditor.LocalizationKeyAuditWindow.IssueCategoryCounts(7, 6, 5, 4));
                 GetField<List<int>>(window, "visibleIssueIndices").Add(0);
+                SetField(window, "issuePage", 1);
                 SetField(window, "selectedIssueIndex", 0);
-                SetField(window, "interactionMessage", "old status");
+                SetField(window, "interactionMessage", "以前の状態");
                 SetField(window, "issueScrollPosition", new Vector2(1f, 2f));
                 SetField(window, "detailScrollPosition", new Vector2(3f, 4f));
                 SetField(window, "windowScrollPosition", new Vector2(5f, 6f));
@@ -147,7 +239,7 @@ namespace LocalizationKeyAudit.Tests
                 Assert.That(
                     GetField<string>(window, "declaredAssetPathsText"),
                     Is.EqualTo("Packages/com.example\nAssets"));
-                Assert.That(GetField<string>(window, "scopeDescription"), Is.EqualTo("Frozen scope"));
+                Assert.That(GetField<string>(window, "scopeDescription"), Is.EqualTo("保持する走査範囲"));
                 Assert.That(GetField<string>(window, "searchText"), Is.EqualTo("package"));
                 Assert.That(
                     GetField<AuditEditor.LocalizationKeyAuditWindow.IssueCategoryFilter>(window, "issueCategory"),
@@ -162,6 +254,7 @@ namespace LocalizationKeyAudit.Tests
                     0,
                     0);
                 Assert.That(GetField<List<int>>(window, "visibleIssueIndices"), Is.Empty);
+                Assert.That(GetField<int>(window, "issuePage"), Is.Zero);
                 Assert.That(GetField<int>(window, "selectedIssueIndex"), Is.EqualTo(-1));
                 Assert.That(GetField<string>(window, "interactionMessage"), Is.Empty);
                 Assert.That(GetField<Vector2>(window, "issueScrollPosition"), Is.EqualTo(Vector2.zero));
@@ -174,7 +267,7 @@ namespace LocalizationKeyAudit.Tests
             }
         }
 
-        /// <summary>UI token parserはmax+1 tokenと保持前の長大tokenを即時拒否します。</summary>
+        /// <summary>画面入力の解析は件数上限超過と、保持前の長大な入力要素を即時拒否します。</summary>
         [Test]
         public void ParseInputs_RejectCountsAndTokenLengthAtHardLimits()
         {
@@ -199,9 +292,10 @@ namespace LocalizationKeyAudit.Tests
         }
 
         /// <summary>
-        /// 検索は kind、message、全 identity field を trim 済み大小文字無視で照合します。
+        /// 検索は日本語の問題種別名、従来の列挙識別子、説明、全識別項目を前後空白除去済みで照合します。
         /// </summary>
         [TestCase(" danglingstaticreference ")]
+        [TestCase(" 解決不能な静的参照 ")]
         [TestCase("UNIQUE MESSAGE")]
         [TestCase("assets/source.prefab")]
         [TestCase("assets/related.asset")]
@@ -223,7 +317,7 @@ namespace LocalizationKeyAudit.Tests
         }
 
         /// <summary>
-        /// null issue と検索不一致を除外し、null/空白検索は category 一致だけで表示します。
+        /// 空の問題と検索不一致を除外し、空または空白だけの検索は区分一致だけで表示します。
         /// </summary>
         [Test]
         public void MatchesFilter_HandlesNullAndEmptySearchDefensively()
@@ -239,7 +333,7 @@ namespace LocalizationKeyAudit.Tests
             Assert.That(
                 AuditEditor.LocalizationKeyAuditWindow.MatchesFilter(
                     issue,
-                    "not present",
+                    "存在しない語句",
                     AuditEditor.LocalizationKeyAuditWindow.IssueCategoryFilter.All),
                 Is.False);
             Assert.That(
@@ -256,7 +350,7 @@ namespace LocalizationKeyAudit.Tests
                 Is.True);
         }
 
-        /// <summary>検索語はissue loop前に一度だけtrimし、長大入力を拒否します。</summary>
+        /// <summary>検索語は問題走査前に一度だけ前後空白を除き、長大入力を拒否します。</summary>
         [Test]
         public void NormalizeSearchText_TrimsOnceAndRejectsOversizeInput()
         {
@@ -269,8 +363,160 @@ namespace LocalizationKeyAudit.Tests
                 Throws.TypeOf<AuditEditor.LocalizationKeyAuditLimitException>());
         }
 
+        /// <summary>表示区分5種の日本語名と選択欄の並びを固定し、未知の区分を拒否します。</summary>
+        [Test]
+        public void GetIssueCategoryDisplayName_CoversEveryJapaneseLabelAndRejectsUnknownValue()
+        {
+            var categories = new[]
+            {
+                AuditEditor.LocalizationKeyAuditWindow.IssueCategoryFilter.All,
+                AuditEditor.LocalizationKeyAuditWindow.IssueCategoryFilter.Terminal,
+                AuditEditor.LocalizationKeyAuditWindow.IssueCategoryFilter.RequiredLocaleCoverage,
+                AuditEditor.LocalizationKeyAuditWindow.IssueCategoryFilter.StaticReferences,
+                AuditEditor.LocalizationKeyAuditWindow.IssueCategoryFilter.Integrity
+            };
+            var expectedDisplayNames = new[]
+            {
+                "すべて",
+                "監査停止",
+                "必須ロケール網羅",
+                "静的参照",
+                "整合性"
+            };
+
+            Assert.That(
+                (AuditEditor.LocalizationKeyAuditWindow.IssueCategoryFilter[])Enum.GetValues(
+                    typeof(AuditEditor.LocalizationKeyAuditWindow.IssueCategoryFilter)),
+                Is.EqualTo(categories));
+            Assert.That(
+                categories.Select(AuditEditor.LocalizationKeyAuditWindow.GetIssueCategoryDisplayName),
+                Is.EqualTo(expectedDisplayNames));
+            Assert.That(
+                GetStaticField<string[]>("IssueCategoryDisplayNames"),
+                Is.EqualTo(expectedDisplayNames));
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
+                AuditEditor.LocalizationKeyAuditWindow.GetIssueCategoryDisplayName(
+                    (AuditEditor.LocalizationKeyAuditWindow.IssueCategoryFilter)int.MaxValue));
+        }
+
+        /// <summary>問題種別21種の日本語名を固定し、日本語名と従来の列挙識別子の両方で検索できます。</summary>
+        [Test]
+        public void GetIssueKindDisplayName_CoversEveryJapaneseLabelAndBothSearchForms()
+        {
+            var expectedDisplayNames = new Dictionary<AuditEditor.LocalizationKeyAuditIssueKind, string>
+            {
+                { AuditEditor.LocalizationKeyAuditIssueKind.ReadOnlyGuaranteeUnavailable, "読み取り専用保証不可" },
+                { AuditEditor.LocalizationKeyAuditIssueKind.InvalidConfiguration, "設定不備" },
+                { AuditEditor.LocalizationKeyAuditIssueKind.LimitExceeded, "上限超過" },
+                { AuditEditor.LocalizationKeyAuditIssueKind.AuditFailed, "監査失敗" },
+                { AuditEditor.LocalizationKeyAuditIssueKind.RequiredLocaleNotConfigured, "必須ロケール未登録" },
+                { AuditEditor.LocalizationKeyAuditIssueKind.MissingLocaleTable, "ロケールテーブル不足" },
+                { AuditEditor.LocalizationKeyAuditIssueKind.MissingDirectEntry, "直接項目不足" },
+                { AuditEditor.LocalizationKeyAuditIssueKind.EmptyDirectValue, "直接値が空" },
+                { AuditEditor.LocalizationKeyAuditIssueKind.DanglingStaticReference, "解決不能な静的参照" },
+                { AuditEditor.LocalizationKeyAuditIssueKind.NoStaticReferenceFoundWithinDeclaredScope, "宣言範囲内の静的参照なし" },
+                { AuditEditor.LocalizationKeyAuditIssueKind.StaticReferenceCoverageIncomplete, "静的参照網羅が未完了" },
+                { AuditEditor.LocalizationKeyAuditIssueKind.DuplicateCollectionName, "コレクション名重複" },
+                { AuditEditor.LocalizationKeyAuditIssueKind.DuplicateCollectionGuid, "コレクション識別子（GUID）重複" },
+                { AuditEditor.LocalizationKeyAuditIssueKind.DuplicateSharedEntryId, "共有項目識別子重複" },
+                { AuditEditor.LocalizationKeyAuditIssueKind.DuplicateSharedEntryKey, "共有項目キー重複" },
+                { AuditEditor.LocalizationKeyAuditIssueKind.DuplicateLocaleTable, "ロケールテーブル重複" },
+                { AuditEditor.LocalizationKeyAuditIssueKind.DuplicateLocalizedEntryId, "翻訳項目識別子重複" },
+                { AuditEditor.LocalizationKeyAuditIssueKind.OrphanedLocalizedEntry, "所属先なし翻訳項目" },
+                { AuditEditor.LocalizationKeyAuditIssueKind.OrphanedLocaleTable, "所属先なしロケールテーブル" },
+                { AuditEditor.LocalizationKeyAuditIssueKind.OrphanedSharedTableData, "所属先なし共有テーブルデータ" },
+                { AuditEditor.LocalizationKeyAuditIssueKind.DuplicateLocaleIdentifier, "ロケール識別子重複" }
+            };
+            var kinds = (AuditEditor.LocalizationKeyAuditIssueKind[])Enum.GetValues(
+                typeof(AuditEditor.LocalizationKeyAuditIssueKind));
+
+            Assert.That(kinds, Is.EquivalentTo(expectedDisplayNames.Keys));
+            foreach (var kind in kinds)
+            {
+                var issue = CreateIssue(kind);
+                Assert.That(
+                    AuditEditor.LocalizationKeyAuditWindow.GetIssueKindDisplayName(kind),
+                    Is.EqualTo(expectedDisplayNames[kind]),
+                    kind.ToString());
+                Assert.That(
+                    AuditEditor.LocalizationKeyAuditWindow.MatchesFilter(
+                        issue,
+                        expectedDisplayNames[kind],
+                        AuditEditor.LocalizationKeyAuditWindow.IssueCategoryFilter.All),
+                    Is.True,
+                    $"日本語表示名: {kind}");
+                Assert.That(
+                    AuditEditor.LocalizationKeyAuditWindow.MatchesFilter(
+                        issue,
+                        kind.ToString(),
+                        AuditEditor.LocalizationKeyAuditWindow.IssueCategoryFilter.All),
+                    Is.True,
+                    $"列挙識別子: {kind}");
+            }
+
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
+                AuditEditor.LocalizationKeyAuditWindow.GetIssueKindDisplayName(
+                    (AuditEditor.LocalizationKeyAuditIssueKind)int.MaxValue));
+        }
+
+        /// <summary>日本語の詳細項目でも、生成後のUTF-16長と事前計算値が問題種別21種すべてで一致します。</summary>
+        [Test]
+        public void IssueDetailsLength_MatchesGeneratedJapaneseDetailsForEveryIssueKind()
+        {
+            var kinds = (AuditEditor.LocalizationKeyAuditIssueKind[])Enum.GetValues(
+                typeof(AuditEditor.LocalizationKeyAuditIssueKind));
+            foreach (var kind in kinds)
+            {
+                var issue = CreateIssue(kind);
+                var details = InvokeStatic<string>("BuildIssueDetails", issue);
+                var lengthArguments = new object[] { issue, 0 };
+                var succeeded = InvokeStatic<bool>("TryGetIssueDetailsLength", lengthArguments);
+
+                Assert.That(succeeded, Is.True, kind.ToString());
+                Assert.That((int)lengthArguments[1], Is.EqualTo(details.Length), kind.ToString());
+                Assert.That(
+                    details,
+                    Does.StartWith(
+                        $"種別: {AuditEditor.LocalizationKeyAuditWindow.GetIssueKindDisplayName(kind)}" +
+                        Environment.NewLine +
+                        "説明: Unique Message"),
+                    kind.ToString());
+            }
+
+            var invalidIssue = CreateIssue((AuditEditor.LocalizationKeyAuditIssueKind)int.MaxValue);
+            var invalidArguments = new object[] { invalidIssue, 123 };
+            Assert.That(
+                InvokeStatic<bool>("TryGetIssueDetailsLength", invalidArguments),
+                Is.False);
+            Assert.That((int)invalidArguments[1], Is.Zero);
+        }
+
+        /// <summary>最後の詳細値に残る各種空白を除いた後も、実際のUTF-16長と事前計算値が一致します。</summary>
+        [TestCase("   ", "説明:")]
+        [TestCase("説明本体\r\n", "説明: 説明本体")]
+        [TestCase("説明本体\u3000", "説明: 説明本体")]
+        public void IssueDetailsLength_MatchesWhenLastValueHasTrailingWhitespace(
+            string message,
+            string expectedLastLine)
+        {
+            var issue = CreateMinimalIssue(
+                AuditEditor.LocalizationKeyAuditIssueKind.AuditFailed,
+                message);
+            var details = InvokeStatic<string>("BuildIssueDetails", issue);
+            var lengthArguments = new object[] { issue, 0 };
+            var succeeded = InvokeStatic<bool>("TryGetIssueDetailsLength", lengthArguments);
+
+            Assert.That(succeeded, Is.True);
+            Assert.That((int)lengthArguments[1], Is.EqualTo(details.Length));
+            Assert.That(details, Is.EqualTo(string.Join(Environment.NewLine, new[]
+            {
+                "種別: 監査失敗",
+                expectedLastLine
+            })));
+        }
+
         /// <summary>
-        /// 全 IssueKind を terminal、required coverage、static reference、integrity の一つだけへ割り当てます。
+        /// 全問題種別を監査停止、必須ロケール網羅、静的参照、整合性の一つだけへ割り当てます。
         /// </summary>
         [Test]
         public void ClassifyIssueKind_AssignsEveryIssueKindToExactlyOneCategory()
@@ -342,7 +588,7 @@ namespace LocalizationKeyAudit.Tests
                 10);
         }
 
-        /// <summary>集計はkindの種類数ではなく、各区分に発行されたissue頻度を数えます。</summary>
+        /// <summary>集計は問題種別の種類数ではなく、各区分に発行された問題の件数を数えます。</summary>
         [Test]
         public void CountIssueCategories_CountsEveryIssueOccurrence()
         {
@@ -368,7 +614,7 @@ namespace LocalizationKeyAudit.Tests
                 5);
         }
 
-        /// <summary>null一覧・null要素・未知kindは部分集計を返さず、空一覧だけを0件にします。</summary>
+        /// <summary>空の一覧参照、空の要素、未知の種別は部分集計を返さず、空一覧だけを0件にします。</summary>
         [Test]
         public void CountIssueCategories_NullAndInvalidInputsFailClosed()
         {
@@ -398,7 +644,7 @@ namespace LocalizationKeyAudit.Tests
                     new[] { CreateIssue(invalidKind) }));
         }
 
-        /// <summary>表示capを超える501件とmodel上限exact 100000件も省略せず集計します。</summary>
+        /// <summary>表示上限を超える501件と処理上限ちょうどの100,000件も省略せず集計します。</summary>
         [Test]
         public void CountIssueCategories_CountsBeyondDisplayCapAndAtModelLimit()
         {
@@ -426,7 +672,101 @@ namespace LocalizationKeyAudit.Tests
                 0);
         }
 
-        /// <summary>Incomplete結果の内訳はsearch/categoryで表示一覧が変わってもfilter前のままです。</summary>
+        /// <summary>501件のページ変更は2ページ目先頭を選び、入力と区分件数を保ったまま表示状態だけを初期化します。</summary>
+        [Test]
+        public void SetIssuePage_SelectsCurrentPageStartAndCopyUsesOnlyThatPage()
+        {
+            var issues = Enumerable.Range(0, 501).Select(index => CreateMinimalIssue(
+                AuditEditor.LocalizationKeyAuditIssueKind.AuditFailed,
+                $"Issue-{index:D3}")).ToArray();
+            var result = CreateResult(true, issues);
+            var counts = AuditEditor.LocalizationKeyAuditWindow.CountIssueCategories(result.Issues);
+            var previousClipboard = UnityEditor.EditorGUIUtility.systemCopyBuffer;
+            var window = ScriptableObject.CreateInstance<AuditEditor.LocalizationKeyAuditWindow>();
+            try
+            {
+                SetField(window, "result", result);
+                SetField(window, "issueCategoryCounts", counts);
+                SetField(window, "requiredLocalesText", "en, ja");
+                SetField(window, "declaredAssetPathsText", "Assets/Localization");
+                SetField(window, "scopeDescription", "ページ表示の走査範囲");
+                SetField(window, "searchText", string.Empty);
+                SetField(
+                    window,
+                    "issueCategory",
+                    AuditEditor.LocalizationKeyAuditWindow.IssueCategoryFilter.All);
+                Invoke(window, "RebuildVisibleIssues", true);
+
+                Assert.That(GetField<List<int>>(window, "visibleIssueIndices"),
+                    Is.EqualTo(Enumerable.Range(0, 501).ToArray()));
+                Assert.That(GetField<int>(window, "issuePage"), Is.Zero);
+                Assert.That(GetField<int>(window, "selectedIssueIndex"), Is.Zero);
+
+                SetField(window, "issueScrollPosition", new Vector2(1f, 2f));
+                SetField(window, "detailScrollPosition", new Vector2(3f, 4f));
+                SetField(window, "interactionMessage", "以前のメッセージ");
+                Invoke(window, "SetIssuePage", 1);
+
+                Assert.That(GetField<int>(window, "issuePage"), Is.EqualTo(1));
+                Assert.That(GetField<int>(window, "selectedIssueIndex"), Is.EqualTo(500));
+                Assert.That(GetField<Vector2>(window, "issueScrollPosition"), Is.EqualTo(Vector2.zero));
+                Assert.That(GetField<Vector2>(window, "detailScrollPosition"), Is.EqualTo(Vector2.zero));
+                Assert.That(GetField<string>(window, "interactionMessage"), Is.Empty);
+                Assert.That(GetField<string>(window, "requiredLocalesText"), Is.EqualTo("en, ja"));
+                Assert.That(GetField<string>(window, "declaredAssetPathsText"), Is.EqualTo("Assets/Localization"));
+                Assert.That(GetField<string>(window, "scopeDescription"), Is.EqualTo("ページ表示の走査範囲"));
+                AssertCounts(
+                    GetField<AuditEditor.LocalizationKeyAuditWindow.IssueCategoryCounts>(
+                        window,
+                        "issueCategoryCounts"),
+                    501,
+                    0,
+                    0,
+                    0);
+
+                UnityEditor.EditorGUIUtility.systemCopyBuffer = "paged-copy-sentinel";
+                Invoke(window, "CopyDisplayedIssues");
+
+                Assert.That(
+                    UnityEditor.EditorGUIUtility.systemCopyBuffer,
+                    Does.StartWith(BuildExpectedClipboardHeader(true, true, 2, 2, 501, 501, 1, 501, 501)));
+                StringAssert.Contains("説明: Issue-500", UnityEditor.EditorGUIUtility.systemCopyBuffer);
+                StringAssert.DoesNotContain("説明: Issue-499", UnityEditor.EditorGUIUtility.systemCopyBuffer);
+                Assert.That(
+                    GetField<string>(window, "interactionMessage"),
+                    Is.EqualTo("画面に表示中の問題 1 件をクリップボードへコピーしました。"));
+                Assert.That(GetField<int>(window, "issuePage"), Is.EqualTo(1));
+                Assert.That(GetField<int>(window, "selectedIssueIndex"), Is.EqualTo(500));
+
+                SetField(window, "searchText", "Issue-500");
+                SetField(window, "issueScrollPosition", new Vector2(5f, 6f));
+                SetField(window, "detailScrollPosition", new Vector2(7f, 8f));
+                SetField(window, "interactionMessage", "複製後の状態");
+                Invoke(window, "RebuildVisibleIssues", true);
+
+                Assert.That(GetField<List<int>>(window, "visibleIssueIndices"), Is.EqualTo(new[] { 500 }));
+                Assert.That(GetField<int>(window, "issuePage"), Is.Zero);
+                Assert.That(GetField<int>(window, "selectedIssueIndex"), Is.EqualTo(500));
+                Assert.That(GetField<Vector2>(window, "issueScrollPosition"), Is.EqualTo(Vector2.zero));
+                Assert.That(GetField<Vector2>(window, "detailScrollPosition"), Is.EqualTo(Vector2.zero));
+                Assert.That(GetField<string>(window, "interactionMessage"), Is.Empty);
+                AssertCounts(
+                    GetField<AuditEditor.LocalizationKeyAuditWindow.IssueCategoryCounts>(
+                        window,
+                        "issueCategoryCounts"),
+                    501,
+                    0,
+                    0,
+                    0);
+            }
+            finally
+            {
+                UnityEditor.EditorGUIUtility.systemCopyBuffer = previousClipboard;
+                UnityEngine.Object.DestroyImmediate(window);
+            }
+        }
+
+        /// <summary>未完了結果の内訳は検索や区分で表示一覧が変わっても絞り込み前のままです。</summary>
         [Test]
         public void IncompleteResult_CategoryCountsRemainUnfilteredWhenFiltersChange()
         {
@@ -501,7 +841,7 @@ namespace LocalizationKeyAudit.Tests
             }
         }
 
-        /// <summary>成功したIncomplete監査は旧cacheを新しいresultの内訳へ置き換えます。</summary>
+        /// <summary>成功した未完了監査は古い集計を新しい結果の内訳へ置き換えます。</summary>
         [Test]
         public void RunAudit_IncompleteResultReplacesStaleCategoryCounts()
         {
@@ -513,9 +853,12 @@ namespace LocalizationKeyAudit.Tests
                     window,
                     "issueCategoryCounts",
                     new AuditEditor.LocalizationKeyAuditWindow.IssueCategoryCounts(9, 8, 7, 6));
+                SetField(window, "issuePage", 1);
+                SetField(window, "issueScrollPosition", new Vector2(1f, 2f));
+                SetField(window, "detailScrollPosition", new Vector2(3f, 4f));
                 SetField(window, "requiredLocalesText", "en");
                 SetField(window, "declaredAssetPathsText", "Packages/com.example/Runtime\nAssets/Scenes");
-                SetField(window, "scopeDescription", "Mixed roots");
+                SetField(window, "scopeDescription", "異なる論理ルート");
                 SetField(window, "searchText", string.Empty);
                 SetField(
                     window,
@@ -540,6 +883,10 @@ namespace LocalizationKeyAudit.Tests
                     0,
                     0);
                 Assert.That(GetField<List<int>>(window, "visibleIssueIndices"), Is.EqualTo(new[] { 0 }));
+                Assert.That(GetField<int>(window, "issuePage"), Is.Zero);
+                Assert.That(GetField<int>(window, "selectedIssueIndex"), Is.Zero);
+                Assert.That(GetField<Vector2>(window, "issueScrollPosition"), Is.EqualTo(Vector2.zero));
+                Assert.That(GetField<Vector2>(window, "detailScrollPosition"), Is.EqualTo(Vector2.zero));
             }
             finally
             {
@@ -547,7 +894,7 @@ namespace LocalizationKeyAudit.Tests
             }
         }
 
-        /// <summary>監査開始時の例外は旧resultと4区分cacheを同時に破棄します。</summary>
+        /// <summary>監査開始時の例外は古い結果と4区分集計を同時に破棄します。</summary>
         [Test]
         public void RunAudit_InputExceptionClearsStaleCategoryCounts()
         {
@@ -562,7 +909,10 @@ namespace LocalizationKeyAudit.Tests
                     "issueCategoryCounts",
                     new AuditEditor.LocalizationKeyAuditWindow.IssueCategoryCounts(4, 3, 2, 1));
                 GetField<List<int>>(window, "visibleIssueIndices").Add(0);
+                SetField(window, "issuePage", 1);
                 SetField(window, "selectedIssueIndex", 0);
+                SetField(window, "issueScrollPosition", new Vector2(1f, 2f));
+                SetField(window, "detailScrollPosition", new Vector2(3f, 4f));
                 SetField(
                     window,
                     "requiredLocalesText",
@@ -580,7 +930,10 @@ namespace LocalizationKeyAudit.Tests
                     0,
                     0);
                 Assert.That(GetField<List<int>>(window, "visibleIssueIndices"), Is.Empty);
+                Assert.That(GetField<int>(window, "issuePage"), Is.Zero);
                 Assert.That(GetField<int>(window, "selectedIssueIndex"), Is.EqualTo(-1));
+                Assert.That(GetField<Vector2>(window, "issueScrollPosition"), Is.EqualTo(Vector2.zero));
+                Assert.That(GetField<Vector2>(window, "detailScrollPosition"), Is.EqualTo(Vector2.zero));
                 Assert.That(
                     GetField<string>(window, "interactionMessage"),
                     Is.EqualTo("監査を開始できませんでした: LocalizationKeyAuditLimitException"));
@@ -591,7 +944,7 @@ namespace LocalizationKeyAudit.Tests
             }
         }
 
-        /// <summary>current category filterのresult順、同内容duplicate、500件capをheader込みで固定します。</summary>
+        /// <summary>現在の区分に一致する結果順、同内容の重複、2ページの表示範囲を見出し込みで固定します。</summary>
         [Test]
         public void TryBuildDisplayedIssuesClipboardText_UsesCurrentFilterOrderDuplicatesAndDisplayCap()
         {
@@ -633,10 +986,20 @@ namespace LocalizationKeyAudit.Tests
                 var succeeded = AuditEditor.LocalizationKeyAuditWindow.TryBuildDisplayedIssuesClipboardText(
                     result,
                     visibleIndices,
+                    0,
                     out var clipboardText,
                     out var copiedIssueCount);
 
-                var expectedHeader = BuildExpectedClipboardHeader(true, true, 500, 501, 1002);
+                var expectedHeader = BuildExpectedClipboardHeader(
+                    true,
+                    true,
+                    1,
+                    2,
+                    1,
+                    500,
+                    500,
+                    501,
+                    1002);
                 Assert.That(succeeded, Is.True);
                 Assert.That(copiedIssueCount, Is.EqualTo(500));
                 Assert.That(
@@ -645,24 +1008,46 @@ namespace LocalizationKeyAudit.Tests
                         expectedHeader +
                         Environment.NewLine +
                         Environment.NewLine +
-                        "Kind: DanglingStaticReference" +
+                        "種別: 解決不能な静的参照" +
                         Environment.NewLine +
-                        "Message: Static-000"));
-                Assert.That(CountOccurrences(clipboardText, "Message: Duplicate"), Is.EqualTo(2));
+                        "説明: Static-000"));
+                Assert.That(CountOccurrences(clipboardText, "説明: Duplicate"), Is.EqualTo(2));
                 Assert.That(
-                    clipboardText.IndexOf("Message: Static-000", StringComparison.Ordinal),
-                    Is.LessThan(clipboardText.IndexOf("Message: Duplicate", StringComparison.Ordinal)));
+                    clipboardText.IndexOf("説明: Static-000", StringComparison.Ordinal),
+                    Is.LessThan(clipboardText.IndexOf("説明: Duplicate", StringComparison.Ordinal)));
                 Assert.That(
-                    clipboardText.IndexOf("Message: Duplicate", StringComparison.Ordinal),
-                    Is.LessThan(clipboardText.IndexOf("Message: Static-003", StringComparison.Ordinal)));
-                StringAssert.Contains("Message: Static-499", clipboardText);
-                StringAssert.DoesNotContain("Message: Static-500", clipboardText);
-                StringAssert.DoesNotContain("Message: Terminal-", clipboardText);
+                    clipboardText.IndexOf("説明: Duplicate", StringComparison.Ordinal),
+                    Is.LessThan(clipboardText.IndexOf("説明: Static-003", StringComparison.Ordinal)));
+                StringAssert.Contains("説明: Static-499", clipboardText);
+                StringAssert.DoesNotContain("説明: Static-500", clipboardText);
+                StringAssert.DoesNotContain("説明: Terminal-", clipboardText);
                 Assert.That(clipboardText.Length, Is.LessThanOrEqualTo(
                     AuditEditor.LocalizationKeyAuditWindow.MaximumDisplayedIssueClipboardCharacters));
                 Assert.That(
                     visibleIndices,
                     Is.EqualTo(Enumerable.Range(0, 501).Select(index => index * 2 + 1).ToArray()));
+
+                var pageTwoSucceeded = AuditEditor.LocalizationKeyAuditWindow.TryBuildDisplayedIssuesClipboardText(
+                    result,
+                    visibleIndices,
+                    1,
+                    out var pageTwoText,
+                    out var pageTwoCopiedCount);
+
+                Assert.That(pageTwoSucceeded, Is.True);
+                Assert.That(pageTwoCopiedCount, Is.EqualTo(1));
+                Assert.That(
+                    pageTwoText,
+                    Does.StartWith(
+                        BuildExpectedClipboardHeader(true, true, 2, 2, 501, 501, 1, 501, 1002) +
+                        Environment.NewLine +
+                        Environment.NewLine +
+                        "種別: 解決不能な静的参照" +
+                        Environment.NewLine +
+                        "説明: Static-500"));
+                StringAssert.DoesNotContain("説明: Static-499", pageTwoText);
+                StringAssert.DoesNotContain("説明: Duplicate", pageTwoText);
+                StringAssert.DoesNotContain("説明: Terminal-", pageTwoText);
             }
             finally
             {
@@ -670,7 +1055,7 @@ namespace LocalizationKeyAudit.Tests
             }
         }
 
-        /// <summary>headerとseparatorを含むUTF-16 exact 1Miを許可し、+1をtruncateせず拒否します。</summary>
+        /// <summary>見出しと区切りを含むUTF-16長ちょうど1Miを許可し、1超過を切り詰めず拒否します。</summary>
         [Test]
         public void TryBuildDisplayedIssuesClipboardText_AcceptsExactUtf16LimitAndRejectsOneOverAtomically()
         {
@@ -682,6 +1067,7 @@ namespace LocalizationKeyAudit.Tests
             var exactSucceeded = AuditEditor.LocalizationKeyAuditWindow.TryBuildDisplayedIssuesClipboardText(
                 exactResult,
                 exactIndices,
+                0,
                 out var exactText,
                 out var exactCopiedCount);
 
@@ -713,7 +1099,7 @@ namespace LocalizationKeyAudit.Tests
                 Assert.That(UnityEditor.EditorGUIUtility.systemCopyBuffer, Is.EqualTo(sentinel));
                 Assert.That(
                     GetField<string>(window, "interactionMessage"),
-                    Is.EqualTo("表示中の問題をclipboardへcopyできませんでした。監査結果とfilterを再確認してください。"));
+                    Is.EqualTo("表示中の問題をクリップボードへコピーできませんでした。監査結果と絞り込み条件を再確認してください。"));
             }
             finally
             {
@@ -722,7 +1108,7 @@ namespace LocalizationKeyAudit.Tests
             }
         }
 
-        /// <summary>null、未知kind、不正indexは部分本文・件数を返さずfail closedにします。</summary>
+        /// <summary>空参照、未知の種別、不正な添字は部分本文・件数を返さず、安全側で失敗します。</summary>
         [Test]
         public void TryBuildDisplayedIssuesClipboardText_RejectsInvalidSnapshotsAtomically()
         {
@@ -731,6 +1117,13 @@ namespace LocalizationKeyAudit.Tests
                 "Valid");
             var validResult = CreateResult(true, new[] { validIssue });
             var twoIssueResult = CreateResult(true, new[] { validIssue, validIssue });
+            var validPagedIssues = Enumerable.Repeat(validIssue, 501).ToArray();
+            var invalidOffPageIssues = Enumerable.Repeat(validIssue, 501).ToArray();
+            invalidOffPageIssues[500] = CreateMinimalIssue(
+                (AuditEditor.LocalizationKeyAuditIssueKind)int.MaxValue,
+                "別ページの不正な問題");
+            var invalidOffPageVisibleIndices = Enumerable.Range(0, 501).ToArray();
+            invalidOffPageVisibleIndices[500] = 501;
 
             AssertClipboardBuildRejected(null, new[] { 0 });
             AssertClipboardBuildRejected(validResult, null);
@@ -743,16 +1136,26 @@ namespace LocalizationKeyAudit.Tests
                 CreateResult(true, new[]
                 {
                     validIssue,
-                    CreateMinimalIssue((AuditEditor.LocalizationKeyAuditIssueKind)int.MaxValue, "Hidden invalid")
+                    CreateMinimalIssue((AuditEditor.LocalizationKeyAuditIssueKind)int.MaxValue, "非表示の不正な問題")
                 }),
                 new[] { 0 });
             AssertClipboardBuildRejected(validResult, new[] { -1 });
             AssertClipboardBuildRejected(validResult, new[] { 1 });
             AssertClipboardBuildRejected(twoIssueResult, new[] { 0, 0 });
             AssertClipboardBuildRejected(twoIssueResult, new[] { 1, 0 });
+            AssertClipboardBuildRejected(validResult, new[] { 0 }, -1);
+            AssertClipboardBuildRejected(validResult, new[] { 0 }, 1);
+            AssertClipboardBuildRejected(
+                CreateResult(true, invalidOffPageIssues),
+                Enumerable.Range(0, 501).ToArray(),
+                0);
+            AssertClipboardBuildRejected(
+                CreateResult(true, validPagedIssues),
+                invalidOffPageVisibleIndices,
+                0);
         }
 
-        /// <summary>result/visible countはmodel上限exactを受け付け、+1を要素参照前に拒否します。</summary>
+        /// <summary>処理上限ちょうどの200ページ目を受け付け、範囲外ページと件数1超過を要素参照前に拒否します。</summary>
         [Test]
         public void TryBuildDisplayedIssuesClipboardText_EnforcesResultAndVisibleCountLimits()
         {
@@ -770,14 +1173,25 @@ namespace LocalizationKeyAudit.Tests
             var exactSucceeded = AuditEditor.LocalizationKeyAuditWindow.TryBuildDisplayedIssuesClipboardText(
                 result,
                 exactVisibleIndices,
+                199,
                 out var exactText,
                 out var exactCopiedCount);
 
             Assert.That(exactSucceeded, Is.True);
             Assert.That(exactCopiedCount, Is.EqualTo(500));
-            StringAssert.Contains("Displayed Issues: 500", exactText);
-            StringAssert.Contains("Filtered Issues: 100000", exactText);
-            StringAssert.Contains("Total Issues: 100000", exactText);
+            Assert.That(
+                exactText,
+                Does.StartWith(BuildExpectedClipboardHeader(
+                    true,
+                    true,
+                    200,
+                    200,
+                    99501,
+                    100000,
+                    500,
+                    100000,
+                    100000)));
+            AssertClipboardBuildRejected(result, exactVisibleIndices, 200);
 
             AssertClipboardBuildRejected(
                 result,
@@ -790,7 +1204,7 @@ namespace LocalizationKeyAudit.Tests
             AssertClipboardBuildRejected(result, new[] { 0 });
         }
 
-        /// <summary>Incompleteでも表示sliceだけをcopyし、filter・選択・4区分cacheを変更しません。</summary>
+        /// <summary>未完了でも現在ページだけをコピーし、絞り込み・選択・4区分集計を変更しません。</summary>
         [Test]
         public void CopyDisplayedIssues_IncompleteResultPreservesFilterSelectionAndCategoryCounts()
         {
@@ -817,10 +1231,12 @@ namespace LocalizationKeyAudit.Tests
                 Invoke(window, "RebuildVisibleIssues", true);
                 var visibleIndices = GetField<List<int>>(window, "visibleIssueIndices");
                 Assert.That(visibleIndices, Is.EqualTo(new[] { 1 }));
+                Assert.That(GetField<int>(window, "issuePage"), Is.Zero);
                 Assert.That(GetField<int>(window, "selectedIssueIndex"), Is.EqualTo(1));
                 Assert.That(AuditEditor.LocalizationKeyAuditWindow.TryBuildDisplayedIssuesClipboardText(
                     result,
                     visibleIndices,
+                    0,
                     out var expectedText,
                     out var expectedCount), Is.True);
 
@@ -831,12 +1247,13 @@ namespace LocalizationKeyAudit.Tests
                 Assert.That(UnityEditor.EditorGUIUtility.systemCopyBuffer, Is.EqualTo(expectedText));
                 Assert.That(
                     expectedText,
-                    Does.StartWith(BuildExpectedClipboardHeader(false, false, 1, 1, 2)));
+                    Does.StartWith(BuildExpectedClipboardHeader(false, false, 1, 1, 1, 1, 1, 1, 2)));
                 Assert.That(
                     GetField<string>(window, "interactionMessage"),
-                    Is.EqualTo("画面に表示中の問題 1 件をclipboardへcopyしました。"));
+                    Is.EqualTo("画面に表示中の問題 1 件をクリップボードへコピーしました。"));
                 Assert.That(GetField<AuditEditor.LocalizationKeyAuditResult>(window, "result"), Is.SameAs(result));
                 Assert.That(visibleIndices, Is.EqualTo(new[] { 1 }));
+                Assert.That(GetField<int>(window, "issuePage"), Is.Zero);
                 Assert.That(GetField<int>(window, "selectedIssueIndex"), Is.EqualTo(1));
                 AssertCounts(
                     GetField<AuditEditor.LocalizationKeyAuditWindow.IssueCategoryCounts>(
@@ -854,7 +1271,7 @@ namespace LocalizationKeyAudit.Tests
             }
         }
 
-        /// <summary>invalid cache、Clear、RunAudit例外後はstale findingをclipboardへ再利用しません。</summary>
+        /// <summary>不正な表示情報、結果消去、監査例外の後は古い問題をクリップボードへ再利用しません。</summary>
         [Test]
         public void CopyDisplayedIssues_InvalidClearAndRunExceptionLeaveClipboardUnchanged()
         {
@@ -877,7 +1294,7 @@ namespace LocalizationKeyAudit.Tests
                 Assert.That(UnityEditor.EditorGUIUtility.systemCopyBuffer, Is.EqualTo(sentinel));
                 Assert.That(
                     GetField<string>(window, "interactionMessage"),
-                    Is.EqualTo("表示中の問題をclipboardへcopyできませんでした。監査結果とfilterを再確認してください。"));
+                    Is.EqualTo("表示中の問題をクリップボードへコピーできませんでした。監査結果と絞り込み条件を再確認してください。"));
 
                 Invoke(window, "ClearResult");
                 Assert.That(GetField<AuditEditor.LocalizationKeyAuditResult>(window, "result"), Is.Null);
@@ -900,7 +1317,7 @@ namespace LocalizationKeyAudit.Tests
                 Assert.That(UnityEditor.EditorGUIUtility.systemCopyBuffer, Is.EqualTo(sentinel));
                 Assert.That(
                     GetField<string>(window, "interactionMessage"),
-                    Is.EqualTo("表示中の問題をclipboardへcopyできませんでした。監査結果とfilterを再確認してください。"));
+                    Is.EqualTo("表示中の問題をクリップボードへコピーできませんでした。監査結果と絞り込み条件を再確認してください。"));
             }
             finally
             {
@@ -909,7 +1326,7 @@ namespace LocalizationKeyAudit.Tests
             }
         }
 
-        /// <summary>一括copy追加後も既存single Copy Details本文をbyte-for-byte維持します。</summary>
+        /// <summary>一括コピーと単一問題の詳細コピーが同じ日本語項目名と順序を維持します。</summary>
         [Test]
         public void BuildIssueDetails_RemainsExactAfterDisplayedCopyAddition()
         {
@@ -918,19 +1335,19 @@ namespace LocalizationKeyAudit.Tests
 
             Assert.That(details, Is.EqualTo(string.Join(Environment.NewLine, new[]
             {
-                "Kind: DanglingStaticReference",
-                "Message: Unique Message",
-                "Asset: Assets/Source.prefab",
-                "Related: Assets/Related.asset",
-                "Collection: Collection Display",
-                "Collection GUID: 11111111-2222-3333-4444-555555555555",
-                "Locale: ja-JP",
-                "Entry Key: Entry Key",
-                "Entry ID: 123456"
+                "種別: 解決不能な静的参照",
+                "説明: Unique Message",
+                "アセット: Assets/Source.prefab",
+                "関連アセット: Assets/Related.asset",
+                "コレクション: Collection Display",
+                "コレクション識別子（GUID）: 11111111-2222-3333-4444-555555555555",
+                "ロケール: ja-JP",
+                "項目キー: Entry Key",
+                "項目識別子: 123456"
             })));
         }
 
-        /// <summary>全検索 field を埋めた issue を作ります。</summary>
+        /// <summary>検索対象の全項目を埋めた問題を作ります。</summary>
         private static AuditEditor.LocalizationKeyAuditIssue CreateIssue(
             AuditEditor.LocalizationKeyAuditIssueKind kind)
         {
@@ -946,7 +1363,7 @@ namespace LocalizationKeyAudit.Tests
                 "Unique Message");
         }
 
-        /// <summary>clipboard本文の長さと順序を制御しやすい最小issueを作ります。</summary>
+        /// <summary>クリップボード本文の長さと順序を制御しやすい最小問題を作ります。</summary>
         private static AuditEditor.LocalizationKeyAuditIssue CreateMinimalIssue(
             AuditEditor.LocalizationKeyAuditIssueKind kind,
             string message)
@@ -963,26 +1380,32 @@ namespace LocalizationKeyAudit.Tests
                 message);
         }
 
-        /// <summary>clipboard headerの6行をproduction契約どおり組み立てます。</summary>
+        /// <summary>クリップボード見出しのページ・範囲を含む8行を実装契約どおり組み立てます。</summary>
         private static string BuildExpectedClipboardHeader(
             bool isComplete,
             bool isCoverageComplete,
+            int displayedPage,
+            int pageCount,
+            int displayedRangeStart,
+            int displayedRangeEnd,
             int displayedCount,
             int filteredCount,
             int totalCount)
         {
             return string.Join(Environment.NewLine, new[]
             {
-                "Localization Key Audit - Displayed Issues",
-                $"Result: {(isComplete ? "Complete" : "Incomplete")}",
-                $"Static Coverage: {(isCoverageComplete ? "Complete" : "Incomplete")}",
-                $"Displayed Issues: {displayedCount}",
-                $"Filtered Issues: {filteredCount}",
-                $"Total Issues: {totalCount}"
+                "ローカライズキー監査 - 表示中の問題",
+                $"監査結果: {(isComplete ? "完了" : "未完了")}",
+                $"静的参照網羅: {(isCoverageComplete ? "完了" : "未完了")}",
+                $"表示ページ: {displayedPage} / {pageCount}",
+                $"表示範囲: {displayedRangeStart}-{displayedRangeEnd}",
+                $"表示件数: {displayedCount}",
+                $"絞り込み後の件数: {filteredCount}",
+                $"問題総数: {totalCount}"
             });
         }
 
-        /// <summary>33 issueへmessage長を分配し、指定UTF-16長exactの候補snapshotを作ります。</summary>
+        /// <summary>33件の問題へ説明長を分配し、指定したUTF-16長ちょうどの候補結果を作ります。</summary>
         private static void CreateClipboardBoundaryFixture(
             int targetLength,
             bool includeSurrogatePair,
@@ -1000,6 +1423,7 @@ namespace LocalizationKeyAudit.Tests
             Assert.That(AuditEditor.LocalizationKeyAuditWindow.TryBuildDisplayedIssuesClipboardText(
                 seedResult,
                 visibleIndices,
+                0,
                 out var seedText,
                 out var seedCopiedCount), Is.True);
             Assert.That(seedCopiedCount, Is.EqualTo(issueCount));
@@ -1015,7 +1439,7 @@ namespace LocalizationKeyAudit.Tests
                 remainingCharacters -= addedCharacters;
             }
 
-            Assert.That(remainingCharacters, Is.Zero, "fixture capacity");
+            Assert.That(remainingCharacters, Is.Zero, "試験データの収容量");
             if (includeSurrogatePair)
             {
                 Assert.That(messages[0].Length, Is.GreaterThanOrEqualTo(2));
@@ -1035,14 +1459,16 @@ namespace LocalizationKeyAudit.Tests
                     message)).ToArray());
         }
 
-        /// <summary>失敗時out本文と件数が必ずdefaultへ戻ることを共通検証します。</summary>
+        /// <summary>失敗時の出力本文と件数が必ず初期値へ戻ることを共通検証します。</summary>
         private static void AssertClipboardBuildRejected(
             AuditEditor.LocalizationKeyAuditResult result,
-            IReadOnlyList<int> visibleIndices)
+            IReadOnlyList<int> visibleIndices,
+            int issuePage = 0)
         {
             var succeeded = AuditEditor.LocalizationKeyAuditWindow.TryBuildDisplayedIssuesClipboardText(
                 result,
                 visibleIndices,
+                issuePage,
                 out var clipboardText,
                 out var copiedIssueCount);
 
@@ -1051,7 +1477,7 @@ namespace LocalizationKeyAudit.Tests
             Assert.That(copiedIssueCount, Is.Zero);
         }
 
-        /// <summary>重複した本文断片の出現頻度をordinalで数えます。</summary>
+        /// <summary>重複した本文断片の出現回数を序数比較で数えます。</summary>
         private static int CountOccurrences(string source, string value)
         {
             Assert.That(value, Is.Not.Empty);
@@ -1072,7 +1498,7 @@ namespace LocalizationKeyAudit.Tests
             return count;
         }
 
-        /// <summary>巨大arrayを二重生成せずresult issue countの+1 guardだけを注入します。</summary>
+        /// <summary>巨大配列を二重生成せず、結果の問題件数が上限を1超える状態だけを注入します。</summary>
         private static void SetResultIssuesForTest(
             AuditEditor.LocalizationKeyAuditResult result,
             IReadOnlyList<AuditEditor.LocalizationKeyAuditIssue> issues)
@@ -1080,11 +1506,11 @@ namespace LocalizationKeyAudit.Tests
             var field = typeof(AuditEditor.LocalizationKeyAuditResult).GetField(
                 "<Issues>k__BackingField",
                 BindingFlags.Instance | BindingFlags.NonPublic);
-            Assert.That(field, Is.Not.Null, "LocalizationKeyAuditResult.Issues backing field");
+            Assert.That(field, Is.Not.Null, "LocalizationKeyAuditResult.Issuesの裏側フィールド");
             field.SetValue(result, issues);
         }
 
-        /// <summary>Clear前状態へ入れる最小complete resultを作ります。</summary>
+        /// <summary>結果消去前の状態へ入れる最小の完了結果を作ります。</summary>
         private static AuditEditor.LocalizationKeyAuditResult CreateEmptyResult()
         {
             return CreateResult(
@@ -1092,7 +1518,7 @@ namespace LocalizationKeyAudit.Tests
                 Array.Empty<AuditEditor.LocalizationKeyAuditIssue>());
         }
 
-        /// <summary>Window状態へ入れる最小resultを作ります。</summary>
+        /// <summary>画面状態へ入れる最小結果を作ります。</summary>
         private static AuditEditor.LocalizationKeyAuditResult CreateResult(
             bool isComplete,
             IReadOnlyList<AuditEditor.LocalizationKeyAuditIssue> issues,
@@ -1105,14 +1531,14 @@ namespace LocalizationKeyAudit.Tests
                     new[] { "Assets" },
                     Array.Empty<AuditEditor.LocalizationKeyAuditStaticReference>(),
                     isCoverageComplete,
-                    isCoverageComplete ? string.Empty : "Coverage incomplete"),
+                    isCoverageComplete ? string.Empty : "走査は未完了"),
                 Array.Empty<string>(),
                 Array.Empty<AuditEditor.LocalizationKeyAuditCollectionSnapshot>(),
                 issues,
                 0);
         }
 
-        /// <summary>4区分と合計のexact件数を検証します。</summary>
+        /// <summary>4区分と合計の正確な件数を検証します。</summary>
         private static void AssertCounts(
             AuditEditor.LocalizationKeyAuditWindow.IssueCategoryCounts actual,
             int terminal,
@@ -1129,14 +1555,14 @@ namespace LocalizationKeyAudit.Tests
                 Is.EqualTo(terminal + requiredLocaleCoverage + staticReferences + integrity));
         }
 
-        /// <summary>必須private fieldを取得します。</summary>
+        /// <summary>必須の非公開インスタンス項目を取得します。</summary>
         private static T GetField<T>(AuditEditor.LocalizationKeyAuditWindow window, string fieldName)
         {
             var field = GetFieldInfo(fieldName);
             return (T)field.GetValue(window);
         }
 
-        /// <summary>必須private fieldへ値を設定します。</summary>
+        /// <summary>必須の非公開インスタンス項目へ値を設定します。</summary>
         private static void SetField<T>(
             AuditEditor.LocalizationKeyAuditWindow window,
             string fieldName,
@@ -1145,7 +1571,7 @@ namespace LocalizationKeyAudit.Tests
             GetFieldInfo(fieldName).SetValue(window, value);
         }
 
-        /// <summary>必須private field metadataを取得します。</summary>
+        /// <summary>必須の非公開インスタンス項目情報を取得します。</summary>
         private static FieldInfo GetFieldInfo(string fieldName)
         {
             var field = typeof(AuditEditor.LocalizationKeyAuditWindow).GetField(
@@ -1155,7 +1581,17 @@ namespace LocalizationKeyAudit.Tests
             return field;
         }
 
-        /// <summary>private methodを指定引数で呼び出します。</summary>
+        /// <summary>必須の非公開静的項目を取得します。</summary>
+        private static T GetStaticField<T>(string fieldName)
+        {
+            var field = typeof(AuditEditor.LocalizationKeyAuditWindow).GetField(
+                fieldName,
+                BindingFlags.Static | BindingFlags.NonPublic);
+            Assert.That(field, Is.Not.Null, fieldName);
+            return (T)field.GetValue(null);
+        }
+
+        /// <summary>非公開インスタンス関数を指定引数で呼び出します。</summary>
         private static void Invoke(
             AuditEditor.LocalizationKeyAuditWindow window,
             string methodName,
@@ -1168,7 +1604,7 @@ namespace LocalizationKeyAudit.Tests
             method.Invoke(window, arguments);
         }
 
-        /// <summary>必須private static methodを呼び、既存formatの戻り値を取得します。</summary>
+        /// <summary>必須の非公開静的関数を呼び、戻り値を取得します。</summary>
         private static T InvokeStatic<T>(string methodName, params object[] arguments)
         {
             var method = typeof(AuditEditor.LocalizationKeyAuditWindow).GetMethod(
@@ -1178,7 +1614,7 @@ namespace LocalizationKeyAudit.Tests
             return (T)method.Invoke(null, arguments);
         }
 
-        /// <summary>同じ要素を指定countだけ返し、model limit fixtureのsource allocationを抑えます。</summary>
+        /// <summary>同じ要素を指定件数だけ返し、処理上限の試験データが使うメモリを抑えます。</summary>
         private sealed class RepeatedReadOnlyList<T> : IReadOnlyList<T>
         {
             private readonly T value;
@@ -1218,7 +1654,7 @@ namespace LocalizationKeyAudit.Tests
             }
         }
 
-        /// <summary>0..Count-1をallocationなしで返し、visible count exact limitを検証します。</summary>
+        /// <summary>0から件数未満までを追加確保なしで返し、表示件数の上限ちょうどを検証します。</summary>
         private sealed class SequentialIntReadOnlyList : IReadOnlyList<int>
         {
             internal SequentialIntReadOnlyList(int count)
@@ -1255,7 +1691,7 @@ namespace LocalizationKeyAudit.Tests
             }
         }
 
-        /// <summary>Count guard後にindexerを触らないことを検証する境界listです。</summary>
+        /// <summary>件数上限の確認後に要素へ触らないことを検証する境界一覧です。</summary>
         private sealed class CountOnlyReadOnlyList<T> : IReadOnlyList<T>
         {
             internal CountOnlyReadOnlyList(int count)
@@ -1265,11 +1701,11 @@ namespace LocalizationKeyAudit.Tests
 
             public int Count { get; }
 
-            public T this[int index] => throw new InvalidOperationException("Count guardより後へ進みました。");
+            public T this[int index] => throw new InvalidOperationException("件数上限の確認より後へ進みました。");
 
             public IEnumerator<T> GetEnumerator()
             {
-                throw new InvalidOperationException("Count guardより後へ進みました。");
+                throw new InvalidOperationException("件数上限の確認より後へ進みました。");
             }
 
             IEnumerator IEnumerable.GetEnumerator()

@@ -3,12 +3,12 @@
 namespace LocalizationKeyAudit.Editor
 {
     /// <summary>
-    /// raw preflight 通過後に限り String audit snapshot と Asset Table 所有境界を読み取る境界です。
+    /// 未加工事前検査の通過後に限り、文字列監査スナップショットとアセットテーブルの所有境界を読み取る境界です。
     /// </summary>
     internal interface ILocalizationKeyAuditTypedSource
     {
         /// <summary>
-        /// 公式 Localization API から完全な typed snapshot を 1 回だけ取得します。
+        /// 公式のローカライズ機能から、型として読み取った完全なスナップショットを1回だけ取得します。
         /// </summary>
         LocalizationKeyAuditTypedSnapshot ReadSnapshot();
     }

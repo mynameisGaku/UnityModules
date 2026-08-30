@@ -6,12 +6,12 @@ using AuditEditor = LocalizationKeyAudit.Editor;
 namespace LocalizationKeyAudit.Tests
 {
     /// <summary>
-    /// 入力と finding DTO が呼び出し元の変更から独立した値になることを検証します。
+    /// 入力と検出内容のデータ転送用オブジェクトが、呼び出し元の変更から独立した値になることを検証します。
     /// </summary>
     internal sealed class LocalizationKeyAuditModelTests
     {
         /// <summary>
-        /// request と coverage は元一覧と各 snapshot を防御的に copy します。
+        /// 要求と網羅情報は、元一覧と各スナップショットを防御的に複製します。
         /// </summary>
         [Test]
         public void RequestAndCoverage_DefensivelyCopyCollectionsAndReferences()
@@ -55,7 +55,7 @@ namespace LocalizationKeyAudit.Tests
         }
 
         /// <summary>
-        /// null の一覧、要素、文字列を空の読み取り専用値へ正規化します。
+        /// 参照なしの一覧、要素、文字列を空の読み取り専用値へ正規化します。
         /// </summary>
         [Test]
         public void Constructors_NormalizeNullCollectionsAndStrings()
@@ -91,7 +91,7 @@ namespace LocalizationKeyAudit.Tests
         }
 
         /// <summary>
-        /// typed snapshot は全階層を copy し、null direct value は空文字へ変換しません。
+        /// 型として読み取ったスナップショットは全階層を複製し、参照なしの直接値は空文字へ変換しません。
         /// </summary>
         [Test]
         public void TypedSnapshots_DefensivelyCopyNestedCollectionsAndPreserveNullValue()
@@ -161,7 +161,7 @@ namespace LocalizationKeyAudit.Tests
         }
 
         /// <summary>
-        /// collection に属さない table snapshot も table/entry を含めて防御的に copy します。
+        /// コレクションに属さないテーブルスナップショットも、テーブル／項目を含めて防御的に複製します。
         /// </summary>
         [Test]
         public void TypedSnapshot_DefensivelyCopiesOrphanLocaleTables()
@@ -192,7 +192,7 @@ namespace LocalizationKeyAudit.Tests
         }
 
         /// <summary>
-        /// result は coverage、typed data、issue の全てを独立した読み取り専用 snapshot にします。
+        /// 結果は網羅情報、型として読み取ったデータ、問題の全てを独立した読み取り専用スナップショットにします。
         /// </summary>
         [Test]
         public void Result_DefensivelyCopiesAllNestedValues()
@@ -224,7 +224,7 @@ namespace LocalizationKeyAudit.Tests
                     string.Empty,
                     "Start",
                     10,
-                    "scope 内で参照を検出できませんでした。")
+                    "走査範囲内で参照を検出できませんでした。")
             };
             var orphanTables = new List<AuditEditor.LocalizationKeyAuditOrphanLocaleTableSnapshot>
             {
@@ -267,7 +267,7 @@ namespace LocalizationKeyAudit.Tests
         }
 
         /// <summary>
-        /// terminal result が coverage を受け取れない場合は unavailable snapshot を補います。
+        /// 監査停止結果が網羅情報を受け取れない場合は、取得不可を示すスナップショットを補います。
         /// </summary>
         [Test]
         public void Result_NullCoverageCreatesExplicitIncompleteCoverage()
@@ -282,7 +282,7 @@ namespace LocalizationKeyAudit.Tests
 
             Assert.That(result.Coverage, Is.Not.Null);
             Assert.That(result.Coverage.IsComplete, Is.False);
-            Assert.That(result.Coverage.IncompleteReason, Is.Not.Empty);
+            Assert.That(result.Coverage.IncompleteReason, Is.EqualTo("監査条件を取得できませんでした。"));
             Assert.That(result.LocaleIdentifiers, Is.Empty);
             Assert.That(result.Collections, Is.Empty);
             Assert.That(result.OrphanLocaleTables, Is.Empty);
@@ -290,7 +290,7 @@ namespace LocalizationKeyAudit.Tests
         }
 
         /// <summary>
-        /// coverage 内の null 参照は constructor では保持し、service 境界の validation に渡します。
+        /// 網羅情報内の参照なしはコンストラクターでは保持し、サービス境界の検証に渡します。
         /// </summary>
         [Test]
         public void Coverage_PreservesNullReferenceForValidation()

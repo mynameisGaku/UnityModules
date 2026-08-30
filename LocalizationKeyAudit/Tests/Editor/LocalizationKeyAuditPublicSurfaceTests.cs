@@ -5,12 +5,12 @@ using NUnit.Framework;
 namespace LocalizationKeyAudit.Tests
 {
     /// <summary>
-    /// Editor assembly が公開 API や build callback を追加しないことを検証します。
+    /// エディターアセンブリが公開APIやビルド時コールバックを追加しないことを検証します。
     /// </summary>
     internal sealed class LocalizationKeyAuditPublicSurfaceTests
     {
         /// <summary>
-        /// package coverageを含む機能はinternalに閉じ、利用者向け型を公開しません。
+        /// パッケージ網羅情報を含む機能は内部に閉じ、利用者向け型を公開しません。
         /// </summary>
         [Test]
         public void EditorAssembly_ExportsNoPublicTypes()
@@ -21,7 +21,7 @@ namespace LocalizationKeyAudit.Tests
         }
 
         /// <summary>
-        /// 手動 advisory 監査へ build 前後の自動実行 hook を混在させません。
+        /// 手動の助言監査へ、ビルド前後の自動実行処理を混在させません。
         /// </summary>
         [Test]
         public void EditorAssembly_DefinesNoBuildCallbacks()
@@ -43,7 +43,7 @@ namespace LocalizationKeyAudit.Tests
         }
 
         /// <summary>
-        /// test assemblyを除くLocalizationKeyAudit assemblyはEditor専用の一件だけに固定します。
+        /// 試験アセンブリを除くLocalizationKeyAuditアセンブリは、エディター専用の1件だけに固定します。
         /// </summary>
         [Test]
         public void LoadedProductAssemblies_ContainNoRuntimeAssembly()
@@ -59,7 +59,7 @@ namespace LocalizationKeyAudit.Tests
             Assert.That(productAssemblyNames, Is.EqualTo(new[] { "LocalizationKeyAudit.Editor" }));
         }
 
-        /// <summary>読み込み済み assembly から監査 Editor assembly を一件だけ取得します。</summary>
+        /// <summary>読み込み済みアセンブリから、監査用エディターアセンブリを1件だけ取得します。</summary>
         private static System.Reflection.Assembly FindEditorAssembly()
         {
             return AppDomain.CurrentDomain.GetAssemblies().Single(

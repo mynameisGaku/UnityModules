@@ -6,15 +6,15 @@ using AuditEditor = LocalizationKeyAudit.Editor;
 namespace LocalizationKeyAudit.Tests
 {
     /// <summary>
-    /// project asset を作らず memory 上だけで監査入力を組み立てます。
+    /// プロジェクトアセットを作らず、メモリ上だけで監査入力を組み立てます。
     /// </summary>
     internal static class LocalizationKeyAuditTestData
     {
-        /// <summary>複数 test で共有する collection GUID です。</summary>
+        /// <summary>複数の試験で共有するコレクション識別子（GUID）です。</summary>
         internal static readonly Guid CollectionGuid =
             Guid.Parse("11111111-2222-3333-4444-555555555555");
 
-        /// <summary>正しい SharedTableData YAML を持つ raw asset を作ります。</summary>
+        /// <summary>正しい共有テーブルデータのYAMLを持つ未加工アセットを作ります。</summary>
         internal static AuditEditor.LocalizationKeyAuditRawAsset CreateValidRawAsset(
             string assetPath = "Assets/Localization/UI Shared Data.asset",
             Guid? collectionGuid = null)
@@ -23,7 +23,7 @@ namespace LocalizationKeyAudit.Tests
             return CreateRawAsset(assetPath, CreateYamlBytes(guid));
         }
 
-        /// <summary>指定 byte と状態を持つ raw asset を作ります。</summary>
+        /// <summary>指定バイト列と状態を持つ未加工アセットを作ります。</summary>
         internal static AuditEditor.LocalizationKeyAuditRawAsset CreateRawAsset(
             string assetPath,
             byte[] bytes,
@@ -43,7 +43,7 @@ namespace LocalizationKeyAudit.Tests
                 readError);
         }
 
-        /// <summary>指定 GUID を標準SharedTableData documentのdirect fieldに一件だけ持つUTF-8 YAMLを作ります。</summary>
+        /// <summary>指定GUIDを標準の共有テーブルデータ文書の直下項目に1件だけ持つ、UTF-8のYAMLを作ります。</summary>
         internal static byte[] CreateYamlBytes(
             Guid guid,
             string lineEnding = "\n",
@@ -55,7 +55,7 @@ namespace LocalizationKeyAudit.Tests
                 includeBom);
         }
 
-        /// <summary>指定direct fieldを持つ標準SharedTableData documentのUTF-8 YAMLを作ります。</summary>
+        /// <summary>指定した直下項目を持つ標準の共有テーブルデータ文書を、UTF-8のYAMLで作ります。</summary>
         internal static byte[] CreateSharedTableDataYamlBytes(
             string[] directFields,
             string lineEnding = "\n",
@@ -99,13 +99,13 @@ namespace LocalizationKeyAudit.Tests
             return withBom;
         }
 
-        /// <summary>任意文字列を raw YAML byte として符号化します。</summary>
+        /// <summary>任意文字列を未加工のYAMLバイト列として符号化します。</summary>
         internal static byte[] Utf8(string text)
         {
             return Encoding.UTF8.GetBytes(text ?? string.Empty);
         }
 
-        /// <summary>asset path ごとに衝突しない absolute test path を作ります。</summary>
+        /// <summary>アセットパスごとに衝突しない絶対試験パスを作ります。</summary>
         internal static string CreatePhysicalPath(string assetPath)
         {
             var fileName = (assetPath ?? "missing")

@@ -5,7 +5,7 @@ using System;
 namespace LocalizationKeyAudit.Editor
 {
     /// <summary>
-    /// typed adapter が snapshot 構築前に検出した入力上限超過です。
+    /// 型として読み取る変換処理が、スナップショット構築前に検出した入力上限超過です。
     /// </summary>
     internal sealed class LocalizationKeyAuditLimitException : Exception
     {

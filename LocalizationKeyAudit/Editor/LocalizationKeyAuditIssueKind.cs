@@ -7,67 +7,67 @@ namespace LocalizationKeyAudit.Editor
     /// </summary>
     internal enum LocalizationKeyAuditIssueKind
     {
-        /// <summary>raw file の安全な読み取り保証を確立できません。</summary>
+        /// <summary>未加工ファイルの安全な読み取り保証を確立できません。</summary>
         ReadOnlyGuaranteeUnavailable,
 
         /// <summary>監査設定が不正です。</summary>
         InvalidConfiguration,
 
-        /// <summary>入力または生成 graph が上限を超えています。</summary>
+        /// <summary>入力または生成した参照関係が上限を超えています。</summary>
         LimitExceeded,
 
-        /// <summary>typed source の取得または監査処理に失敗しました。</summary>
+        /// <summary>型として読み取る取得元、または監査処理に失敗しました。</summary>
         AuditFailed,
 
-        /// <summary>required Locale が Localization Settings にありません。</summary>
+        /// <summary>必須ロケールがローカライズ設定にありません。</summary>
         RequiredLocaleNotConfigured,
 
-        /// <summary>required Locale の table が collection にありません。</summary>
+        /// <summary>必須ロケールのテーブルがコレクションにありません。</summary>
         MissingLocaleTable,
 
-        /// <summary>shared entry に対応する direct locale entry がありません。</summary>
+        /// <summary>共有項目に対応する直接ロケール項目がありません。</summary>
         MissingDirectEntry,
 
-        /// <summary>direct locale entry の値が null または空です。</summary>
+        /// <summary>直接ロケール項目の値が未設定または空です。</summary>
         EmptyDirectValue,
 
-        /// <summary>認識済み static reference の GUID と entry ID を一意に解決できません。</summary>
+        /// <summary>認識済み静的参照のGUIDと項目識別子を一意に解決できません。</summary>
         DanglingStaticReference,
 
-        /// <summary>宣言済み scope の完全な走査で static reference が見つかりません。</summary>
+        /// <summary>宣言済み走査範囲の完全な走査で静的参照が見つかりません。</summary>
         NoStaticReferenceFoundWithinDeclaredScope,
 
-        /// <summary>static reference coverage が未完了です。</summary>
+        /// <summary>静的参照網羅が未完了です。</summary>
         StaticReferenceCoverageIncomplete,
 
-        /// <summary>同名の collection が複数あります。</summary>
+        /// <summary>同名のコレクションが複数あります。</summary>
         DuplicateCollectionName,
 
-        /// <summary>同じ GUID の collection が複数あります。</summary>
+        /// <summary>同じGUIDのコレクションが複数あります。</summary>
         DuplicateCollectionGuid,
 
-        /// <summary>同じ ID の shared entry が複数あります。</summary>
+        /// <summary>同じIDの共有項目が複数あります。</summary>
         DuplicateSharedEntryId,
 
-        /// <summary>同じ key の shared entry が複数あります。</summary>
+        /// <summary>同じキーの共有項目が複数あります。</summary>
         DuplicateSharedEntryKey,
 
-        /// <summary>同じ Locale の table が collection 内に複数あります。</summary>
+        /// <summary>同じロケールのテーブルがコレクション内に複数あります。</summary>
         DuplicateLocaleTable,
 
-        /// <summary>同じ ID の localized entry が table 内に複数あります。</summary>
+        /// <summary>同じIDのローカライズ済み項目がテーブル内に複数あります。</summary>
         DuplicateLocalizedEntryId,
 
-        /// <summary>shared entry に存在しない ID の localized entry があります。</summary>
+        /// <summary>共有項目に存在しないIDのローカライズ済み項目があります。</summary>
         OrphanedLocalizedEntry,
 
-        /// <summary>StringTableCollection に属さない typed StringTable があります。</summary>
+        /// <summary>文字列テーブルコレクションに属さない、型として読み取った文字列テーブルがあります。</summary>
         OrphanedLocaleTable,
 
-        /// <summary>typed String/Asset Table owner に対応しない valid SharedTableData があります。</summary>
+        /// <summary>型として読み取った文字列テーブルまたはアセットテーブルの所有元に対応しない、有効な共有テーブルデータがあります。</summary>
         OrphanedSharedTableData,
 
-        /// <summary>Localization Settings に同じ Locale identifier が複数あります。</summary>
+        /// <summary>ローカライズ設定に同じロケール識別子が複数あります。</summary>
         DuplicateLocaleIdentifier
     }
 }

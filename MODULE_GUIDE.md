@@ -17,16 +17,18 @@
 
 ## 利用者向けの名前
 
-READMEとモジュール一覧では、日本語で目的を先に示す。Package Managerの`displayName`は英語の技術名を使い、README側で日本語の利用目的と対応付ける。
+README、モジュール一覧、Unityのパッケージ管理画面に出す`displayName`では、日本語で目的を示す。互換性のため英語の技術名を残す場合は、内部識別子または日本語名に添える補助表記とし、利用者向けの主表示にはしない。
 
-ファイル名、フォルダー名、型名、メンバー名、名前空間、asmdef名、UPM識別子は英語のASCII名を使う。型・関数・fieldの役割、入力、失敗条件を説明するソース内コメントは、利用者が保守しやすい簡潔な日本語で書く。公開API名、Unity API名、規格名は原文の英語を保つ。利用者へ表示するlog、test名、sample UIは既存packageの言語を維持し、同一画面や同一test fixture内で混在させない。
+画面の見出し、項目名、選択肢、説明、状態、確認画面、クリップボードへコピーする見出し、ビルド診断、ログ、見本画面、手順書は原則として日本語で書く。内部の列挙識別子は互換性のため維持し、画面へ出す列挙値には日本語の表示名を明示的に対応付ける。同じ画面や同じ出力内で、一般語の不要な英語表記を混在させない。
+
+ファイル名、フォルダー名、型名、列挙識別子、メンバー名、名前空間、asmdef名、UPM識別子、公開API名、Unity API名、規格名、パス、JSON・YAMLの項目名など、互換性や正確さのため必要な技術表記は原文を保つ。型・関数・フィールドの役割、入力、失敗条件を説明するソース内コメントと、技術表記の周囲に置く説明は、利用者が保守しやすい簡潔な日本語で書く。テスト名はコード識別子として維持できるが、利用者へ提示する検証結果は日本語で説明する。
 
 | 利用者向け表示名 | 技術名 | 名前から分かること |
 |---|---|---|
 | モジュール導入アシスタント | Module Installer | 用途別セットから必要なモジュールをまとめて導入する。 |
 | プロジェクト初期設定 | Project Setup | 新規Projectで繰り返す設定とTag・Layer・Sorting Layer・3D/2D Layer Collisionをprofileからまとめて適用する。 |
 | Assembly依存チェック | Assembly Dependency Audit | asmdefの参照元・参照先、循環component member、宣言単位のName／GUID解決、PlayerからEditorへの逆参照、asmref target整合性、同じfolderのassembly owner候補競合をread-onlyで確認する。 |
-| Localization key監査 | Localization Key Audit | required Localeのdirect coverageとtable integrity、宣言済みscopeの静的参照をread-onlyで確認する。 |
+| ローカライズキー監査 | Localization Key Audit | 必須ロケールの直接網羅とテーブルの整合性、宣言した範囲の静的参照を読み取り専用で確認する。 |
 | シーン切り替え | SceneFlow | Scene の読込・追加・切替・解放を扱う。 |
 | 画面フェード | ScreenTransition | 画面を覆う・戻す演出を扱う。 |
 | ゲーム時間制御 | TimeControl | 一時停止・スロー・倍速を扱う。 |
@@ -81,15 +83,16 @@ asmrefは別一覧で不正JSON、欠落・未解決・曖昧なtargetを検査�
 Project Setupはasmdefの作成までを所有し、このmoduleは作成後の参照関係だけを監査するため、変更責務を分離して独立packageとして維持する。
 未使用参照やcompile時間の推定、asmdef／asmrefの書換え、build停止は行わない。
 
-### Localization key監査（Localization Key Audit）
+### ローカライズキー監査（Localization Key Audit）
 
-Unity LocalizationのShared Table Dataをtyped loadする前にraw serialized representationを検証し、String／Asset Table ownerを分類してからrequired LocaleのString direct table／entry／value、duplicate・orphan integrity、1回につき宣言済み`Assets`または1つのregistered packageだけをrootとするGUID＋key ID参照を手動で表示する。同じroot内では複数pathを宣言できる。
-Package scopeは登録名を`PackageInfo.resolvedPath`へexactに対応付け、logical pathだけを結果へ残す。bare `Packages`、直接指定した`Library/PackageCache`、未登録名、root混在、曖昧なshort-name pathをfilesystem access前に拒否し、normalized duplicate target、root／ancestor／child reparse、root escapeではpartial resultを返さない。physical pathはUI、結果、error、clipboardへ露出せず、読取errorはlogical pathとexception typeだけを示す。
-欠落または空のcollection GUIDをloadするとUnity Localization 1.5.12がassetをdirtyにし得るため、raw preflightに失敗した場合はtyped APIを呼ばず監査全体を停止する。
-監査result全体のfindingを`Terminal`、`Required Locale Coverage`、`Static References`、`Integrity`へexact 1つずつ分類し、Search、Category filter、500件表示上限に依存しない件数として示す。resultまたはcoverageがincompleteなら、0件のカテゴリも安全や問題なしの証明には使わない。
-`Copy Displayed Issues`はSearchとCategory filter後に実際に描画する先頭500件だけをresult順・重複保持でcopyし、result／coverageの完了性とDisplayed／Filtered／Total件数をheaderへ残す。Incompleteでも利用できるが、1,048,576 UTF-16 code unitを1つでも超える場合はtruncateせず全体を拒否し、clipboardを変更しない。
-fallback後のruntime翻訳可否やkeyの未使用は断定せず、build callback、autofix、entry追加、値の書換え、削除は行わない。
-Asset Tableのentryやlocalized assetはdirect coverageせず、Asset Tableだけが所有するShared Table DataをString key findingへ混在させない。
+Unity Localizationの共有テーブルデータを型指定の読み込み前に未加工の直列化表現で検証し、文字列テーブルとアセットテーブルの所有元を分類してから、必須ロケールの文字列テーブルの直接テーブル・項目・値、重複・孤立の整合性、1回につき宣言済み`Assets`または登録済みパッケージ1つだけをルートとするGUIDと項目識別子の参照を手動で表示する。同じルート内では複数パスを宣言できる。
+パッケージ範囲は登録名を`PackageInfo.resolvedPath`へ厳密に対応付け、論理パスだけを結果へ残す。単独の`Packages`、直接指定した`Library/PackageCache`、未登録名、ルート混在、曖昧な短い別名パスをファイルシステムへのアクセス前に拒否する。正規化後の対象重複、ルート・親階層・配下パスの再解析ポイント、ルート外への逸脱では部分結果を返さない。画面、結果、エラー、クリップボードへ物理パスを露出せず、読み取りエラーは論理パスと例外型だけを示す。
+欠落または空のコレクション識別子（GUID）を読み込むとUnity Localization 1.5.12がアセットを変更済みにし得るため、未加工データの事前検査に失敗した場合は型として読み取るAPIを呼ばず、監査全体を停止する。
+監査結果全体の問題を「監査停止」「必須ロケール網羅」「静的参照」「整合性」のいずれか1つへ分類し、検索、区分の絞り込み、ページに依存しない件数として示す。結果または静的参照網羅が未完了なら、0件の区分も安全や問題なしの証明には使わない。
+検索と区分の絞り込み後の問題は、結果内の順序と重複を保って500件ずつ、既存上限100,000件に対応する最大200ページまで表示する。「前へ」／「次へ」でページを移動でき、絞り込みの変更、「監査」、「結果を消去」はページを先頭へ戻す。
+「表示分をコピー」は現在のページだけをコピーし、結果と静的参照網羅の完了性、「表示ページ」「表示範囲」「表示件数」「絞り込み後の件数」「問題総数」を見出しへ残す。未完了でも利用できるが、1,048,576 UTF-16符号単位を1つでも超える場合は切り詰めず全体を拒否し、クリップボードを変更しない。不正または古い状態や0件のページでも、既存のクリップボードを変更しない。
+代替値適用後の実行時翻訳可否やキーの未使用は断定せず、ビルドコールバック、自動修正、項目追加、値の書換え、削除は行わない。
+アセットテーブルの項目やローカライズ済みアセットは直接網羅せず、アセットテーブルだけが所有する共有テーブルデータを文字列キーの問題へ混在させない。
 
 ### Player設定（Player Options）
 
@@ -143,10 +146,10 @@ GameplayRulesのstatistics群は値列だけを受け取る純粋計算であり
 1. **30 秒で分かる説明** — Unity で何が面倒で、このモジュールが何を代行するか。
 2. **できること** — 利用者が得る結果を 3〜6 項目で示す。
 3. **使わない方がよい場合** — 責務外の機能を短く示す。
-4. **3 分で試す** — Package Manager からの導入、Sample import、必要な設定を番号順で示す。
+4. **3 分で試す** — Unityのパッケージ管理画面からの導入、見本の読み込み、必要な設定を番号順で示す。
 5. **最小コード** — コピーして動かせる一つの例だけを先に示す。
 6. **実行するとどうなるか** — 成功時の Scene、Inspector、Console、生成ファイルなどを示す。
-7. **よくある問題** — Missing reference、設定不足、対応 version、他 module との違いを示す。
+7. **よくある問題** — 参照切れ、設定不足、対応版、他モジュールとの違いを示す。
 8. **詳しい契約** — 公開 API、失敗条件、非対象、テスト範囲を後半へ置く。
 
 冒頭で型名を列挙しない。最初に「何が楽になるか」を伝え、型名と厳密な契約は必要になった利用者が後半で読めるようにする。

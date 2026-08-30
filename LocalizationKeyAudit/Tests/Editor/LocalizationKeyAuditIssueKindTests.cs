@@ -5,12 +5,12 @@ using AuditEditor = LocalizationKeyAudit.Editor;
 namespace LocalizationKeyAudit.Tests
 {
     /// <summary>
-    /// v1.0.0 が区別する terminal failure と advisory finding の種別を検証します。
+    /// 版1.0.0で区別する監査停止失敗と助言検出内容の種別を検証します。
     /// </summary>
     internal sealed class LocalizationKeyAuditIssueKindTests
     {
         /// <summary>
-        /// fallback、coverage、重複、orphan を異なる問題種別として保持します。
+        /// 代替処理、網羅情報、重複、孤立を異なる問題種別として保持します。
         /// </summary>
         [Test]
         public void Values_ContainCompleteVersionOneInventory()

@@ -10,12 +10,12 @@ using UnityEngine.Localization.Tables;
 namespace LocalizationKeyAudit.Editor
 {
     /// <summary>
-    /// raw preflight 後に公式 Localization API を読み取り専用で immutable DTO へ変換します。
+    /// 未加工データの事前検査後に、公式のローカライズ機能を読み取り専用の不変な転送値へ変換します。
     /// </summary>
     internal sealed class UnityLocalizationKeyAuditTypedSource : ILocalizationKeyAuditTypedSource
     {
         /// <summary>
-        /// LocaleとString collectionはLocalizationEditorSettings、tableとAsset ownerはdirect asset enumerationで読みます。
+        /// ロケールと文字列テーブルコレクションはLocalizationEditorSettings、テーブルとアセットテーブルの所有元は直接アセット列挙で読みます。
         /// </summary>
         public LocalizationKeyAuditTypedSnapshot ReadSnapshot()
         {
@@ -30,19 +30,19 @@ namespace LocalizationKeyAudit.Editor
                 nonStringSharedDataIdentities);
         }
 
-        /// <summary>Localization Settings の Locale identifiers を読みます。</summary>
+        /// <summary>ローカライズ設定のロケール識別子を読みます。</summary>
         private static IReadOnlyList<string> ReadLocales()
         {
             var source = LocalizationEditorSettings.GetLocales();
             if (source == null)
             {
-                throw new InvalidDataException("LocalizationEditorSettings.GetLocales が null を返しました。");
+                throw new InvalidDataException("LocalizationEditorSettings.GetLocalesの戻り値がありません。");
             }
 
             if (source.Count > LocalizationKeyAuditLimits.MaximumLocales)
             {
                 throw new LocalizationKeyAuditLimitException(
-                    $"Locale 数が上限 {LocalizationKeyAuditLimits.MaximumLocales} 件を超えています。");
+                    $"ロケール数が上限 {LocalizationKeyAuditLimits.MaximumLocales} 件を超えています。");
             }
 
             var locales = new List<string>(source.Count);
@@ -51,7 +51,7 @@ namespace LocalizationKeyAudit.Editor
                 var locale = source[index];
                 if (locale == null)
                 {
-                    throw new InvalidDataException("Localization Settings の Locale 一覧に null が含まれています。");
+                    throw new InvalidDataException("ローカライズ設定のロケール一覧に未設定の要素が含まれています。");
                 }
 
                 locales.Add(locale.Identifier.Code);
@@ -61,7 +61,7 @@ namespace LocalizationKeyAudit.Editor
         }
 
         /// <summary>
-        /// mutation path を持つ StringTableCollection.StringTables/Tables/GetTable を避け、全 StringTable asset を直接読みます。
+        /// 変更経路を持つStringTableCollection.StringTables／Tables／GetTableを避け、すべての文字列テーブルアセットを直接読みます。
         /// </summary>
         private static Dictionary<string, LocaleTableGroup> ReadLocaleTables()
         {
@@ -69,7 +69,7 @@ namespace LocalizationKeyAudit.Editor
             if (guids.Length > LocalizationKeyAuditLimits.MaximumLocaleTables)
             {
                 throw new LocalizationKeyAuditLimitException(
-                    $"StringTable 数が上限 {LocalizationKeyAuditLimits.MaximumLocaleTables} 件を超えています。");
+                    $"文字列テーブル数が上限 {LocalizationKeyAuditLimits.MaximumLocaleTables} 件を超えています。");
             }
 
             Array.Sort(guids, StringComparer.Ordinal);
@@ -80,13 +80,13 @@ namespace LocalizationKeyAudit.Editor
                 var assetPath = AssetDatabase.GUIDToAssetPath(guids[index]);
                 if (string.IsNullOrEmpty(assetPath))
                 {
-                    throw new InvalidDataException($"StringTable GUID {guids[index]} の asset path を取得できません。");
+                    throw new InvalidDataException($"文字列テーブルのGUID {guids[index]} に対応するアセットパスを取得できません。");
                 }
 
                 var table = AssetDatabase.LoadAssetAtPath<StringTable>(assetPath);
                 if (table == null || table.SharedData == null)
                 {
-                    throw new InvalidDataException($"StringTable または SharedTableData を typed load できません: {assetPath}");
+                    throw new InvalidDataException($"文字列テーブルまたは共有テーブルデータを型として読み取れません: {assetPath}");
                 }
 
                 var entries = ReadSerializedEntries(table, assetPath, localizedEntryCount);
@@ -96,7 +96,7 @@ namespace LocalizationKeyAudit.Editor
                 var sharedDataAssetPath = AssetDatabase.GetAssetPath(table.SharedData);
                 if (string.IsNullOrEmpty(sharedDataAssetPath))
                 {
-                    throw new InvalidDataException($"StringTable の SharedTableData asset path を取得できません: {assetPath}");
+                    throw new InvalidDataException($"文字列テーブルが参照する共有テーブルデータのアセットパスを取得できません: {assetPath}");
                 }
 
                 if (!tables.TryGetValue(sharedDataAssetPath, out var group))
@@ -106,7 +106,7 @@ namespace LocalizationKeyAudit.Editor
                 }
                 else if (group.CollectionGuid != collectionGuid)
                 {
-                    throw new InvalidDataException($"同じ SharedTableData path に異なる collection GUID が見つかりました: {sharedDataAssetPath}");
+                    throw new InvalidDataException($"同じ共有テーブルデータのアセットパスに異なるコレクション識別子（GUID）が見つかりました: {sharedDataAssetPath}");
                 }
 
                 group.LocalizedEntryCount += entries.Count;
@@ -119,7 +119,7 @@ namespace LocalizationKeyAudit.Editor
             return tables;
         }
 
-        /// <summary>StringTableCollection と SharedTableData entries を公式 Editor API から読みます。</summary>
+        /// <summary>文字列テーブルコレクションと共有テーブルデータの項目一覧を公式のエディター機能から読みます。</summary>
         private static IReadOnlyList<LocalizationKeyAuditCollectionSnapshot> ReadCollections(
             IReadOnlyDictionary<string, LocaleTableGroup> tablesBySharedDataPath,
             out IReadOnlyList<LocalizationKeyAuditOrphanLocaleTableSnapshot> orphanLocaleTables)
@@ -128,7 +128,7 @@ namespace LocalizationKeyAudit.Editor
             if (guids.Length > LocalizationKeyAuditLimits.MaximumCollections)
             {
                 throw new LocalizationKeyAuditLimitException(
-                    $"StringTableCollection 数が上限 {LocalizationKeyAuditLimits.MaximumCollections} 件を超えています。");
+                    $"文字列テーブルコレクション数が上限 {LocalizationKeyAuditLimits.MaximumCollections} 件を超えています。");
             }
 
             Array.Sort(guids, StringComparer.Ordinal);
@@ -142,33 +142,33 @@ namespace LocalizationKeyAudit.Editor
                 var collectionAssetPath = AssetDatabase.GUIDToAssetPath(guids[index]);
                 if (string.IsNullOrEmpty(collectionAssetPath))
                 {
-                    throw new InvalidDataException($"StringTableCollection GUID {guids[index]} の asset path を取得できません。");
+                    throw new InvalidDataException($"文字列テーブルコレクションのGUID {guids[index]} に対応するアセットパスを取得できません。");
                 }
 
                 var collection = AssetDatabase.LoadAssetAtPath<StringTableCollection>(collectionAssetPath);
                 if (collection == null || collection.SharedData == null)
                 {
-                    throw new InvalidDataException($"StringTableCollection または SharedTableData を typed load できません: {collectionAssetPath}");
+                    throw new InvalidDataException($"文字列テーブルコレクションまたは共有テーブルデータを型として読み取れません: {collectionAssetPath}");
                 }
 
                 var sharedData = collection.SharedData;
                 var sharedAssetPath = AssetDatabase.GetAssetPath(sharedData);
                 if (string.IsNullOrEmpty(sharedAssetPath))
                 {
-                    throw new InvalidDataException($"SharedTableData asset path を取得できません: {collection.name}");
+                    throw new InvalidDataException($"共有テーブルデータのアセットパスを取得できません: {collection.name}");
                 }
 
                 var sourceEntries = sharedData.Entries;
                 if (sourceEntries == null)
                 {
-                    throw new InvalidDataException($"SharedTableData entries が null です: {sharedAssetPath}");
+                    throw new InvalidDataException($"共有テーブルデータの項目一覧が未設定です: {sharedAssetPath}");
                 }
 
                 sharedEntryCount += sourceEntries.Count;
                 if (sharedEntryCount > LocalizationKeyAuditLimits.MaximumSharedEntries)
                 {
                     throw new LocalizationKeyAuditLimitException(
-                        $"shared entry 総数が上限 {LocalizationKeyAuditLimits.MaximumSharedEntries} 件を超えています。");
+                        $"共有項目総数が上限 {LocalizationKeyAuditLimits.MaximumSharedEntries} 件を超えています。");
                 }
 
                 var sharedEntries = new List<LocalizationKeyAuditSharedEntrySnapshot>(sourceEntries.Count);
@@ -177,7 +177,7 @@ namespace LocalizationKeyAudit.Editor
                     var entry = sourceEntries[entryIndex];
                     if (entry == null)
                     {
-                        throw new InvalidDataException($"SharedTableData に null entry が含まれています: {sharedAssetPath}");
+                        throw new InvalidDataException($"共有テーブルデータに未設定の項目が含まれています: {sharedAssetPath}");
                     }
 
                     sharedEntries.Add(new LocalizationKeyAuditSharedEntrySnapshot(entry.Id, entry.Key));
@@ -189,7 +189,7 @@ namespace LocalizationKeyAudit.Editor
                     : new List<LocalizationKeyAuditLocaleTableSnapshot>();
                 if (foundGroup != null && foundGroup.CollectionGuid != collectionGuid)
                 {
-                    throw new InvalidDataException($"collection と direct table の GUID が一致しません: {sharedAssetPath}");
+                    throw new InvalidDataException($"コレクションと直接読み取った文字列テーブルのGUIDが一致しません: {sharedAssetPath}");
                 }
 
                 var localeTableCount = foundGroup?.Tables.Count ?? 0;
@@ -244,8 +244,8 @@ namespace LocalizationKeyAudit.Editor
         }
 
         /// <summary>
-        /// direct coverage 対象外の AssetTable/AssetTableCollection owner を読み、SharedTableData identity だけを保持します。
-        /// collection の Tables/AssetTables property は mutation path を持つため呼びません。
+        /// 直接網羅対象外のアセットテーブル／アセットテーブルコレクションの所有元を読み、共有テーブルデータの識別情報だけを保持します。
+        /// コレクションのTables／AssetTablesプロパティは変更経路を持つため呼びません。
         /// </summary>
         private static IReadOnlyList<LocalizationKeyAuditNonStringSharedDataIdentity>
             ReadNonStringSharedDataIdentities()
@@ -255,7 +255,7 @@ namespace LocalizationKeyAudit.Editor
             if (tableGuids.Length > LocalizationKeyAuditLimits.MaximumLocaleTables)
             {
                 throw new LocalizationKeyAuditLimitException(
-                    $"AssetTable 数が上限 {LocalizationKeyAuditLimits.MaximumLocaleTables} 件を超えています。");
+                    $"アセットテーブル数が上限 {LocalizationKeyAuditLimits.MaximumLocaleTables} 件を超えています。");
             }
 
             Array.Sort(tableGuids, StringComparer.Ordinal);
@@ -264,13 +264,13 @@ namespace LocalizationKeyAudit.Editor
                 var assetPath = AssetDatabase.GUIDToAssetPath(tableGuids[index]);
                 if (string.IsNullOrEmpty(assetPath))
                 {
-                    throw new InvalidDataException($"AssetTable GUID {tableGuids[index]} の asset path を取得できません。");
+                    throw new InvalidDataException($"アセットテーブルのGUID {tableGuids[index]} に対応するアセットパスを取得できません。");
                 }
 
                 var table = AssetDatabase.LoadAssetAtPath<AssetTable>(assetPath);
                 if (table == null || table.SharedData == null)
                 {
-                    throw new InvalidDataException($"AssetTable または SharedTableData を typed load できません: {assetPath}");
+                    throw new InvalidDataException($"アセットテーブルまたは共有テーブルデータを型として読み取れません: {assetPath}");
                 }
 
                 AddNonStringSharedDataIdentity(identities, table.SharedData, assetPath);
@@ -280,7 +280,7 @@ namespace LocalizationKeyAudit.Editor
             if (collectionGuids.Length > LocalizationKeyAuditLimits.MaximumCollections)
             {
                 throw new LocalizationKeyAuditLimitException(
-                    $"AssetTableCollection 数が上限 {LocalizationKeyAuditLimits.MaximumCollections} 件を超えています。");
+                    $"アセットテーブルコレクション数が上限 {LocalizationKeyAuditLimits.MaximumCollections} 件を超えています。");
             }
 
             Array.Sort(collectionGuids, StringComparer.Ordinal);
@@ -290,14 +290,14 @@ namespace LocalizationKeyAudit.Editor
                 if (string.IsNullOrEmpty(assetPath))
                 {
                     throw new InvalidDataException(
-                        $"AssetTableCollection GUID {collectionGuids[index]} の asset path を取得できません。");
+                        $"アセットテーブルコレクションのGUID {collectionGuids[index]} に対応するアセットパスを取得できません。");
                 }
 
                 var collection = AssetDatabase.LoadAssetAtPath<AssetTableCollection>(assetPath);
                 if (collection == null || collection.SharedData == null)
                 {
                     throw new InvalidDataException(
-                        $"AssetTableCollection または SharedTableData を typed load できません: {assetPath}");
+                        $"アセットテーブルコレクションまたは共有テーブルデータを型として読み取れません: {assetPath}");
                 }
 
                 AddNonStringSharedDataIdentity(identities, collection.SharedData, assetPath);
@@ -316,7 +316,7 @@ namespace LocalizationKeyAudit.Editor
             return result;
         }
 
-        /// <summary>Asset Table owner が参照する SharedTableData path/GUID を一意に保持します。</summary>
+        /// <summary>アセットテーブルの所有元が参照する共有テーブルデータのアセットパスとGUIDを一意に保持します。</summary>
         private static void AddNonStringSharedDataIdentity(
             IDictionary<string, Guid> identities,
             SharedTableData sharedData,
@@ -326,14 +326,14 @@ namespace LocalizationKeyAudit.Editor
             if (string.IsNullOrEmpty(sharedDataAssetPath))
             {
                 throw new InvalidDataException(
-                    $"Asset Table owner の SharedTableData asset path を取得できません: {ownerAssetPath}");
+                    $"アセットテーブルの所有元が参照する共有テーブルデータのアセットパスを取得できません: {ownerAssetPath}");
             }
 
             var collectionGuid = sharedData.TableCollectionNameGuid;
             if (collectionGuid == Guid.Empty)
             {
                 throw new InvalidDataException(
-                    $"Asset Table owner の SharedTableData collection GUID が空です: {sharedDataAssetPath}");
+                    $"アセットテーブルの所有元が参照する共有テーブルデータのコレクション識別子（GUID）が空です: {sharedDataAssetPath}");
             }
 
             if (identities.TryGetValue(sharedDataAssetPath, out var existing))
@@ -341,7 +341,7 @@ namespace LocalizationKeyAudit.Editor
                 if (existing != collectionGuid)
                 {
                     throw new InvalidDataException(
-                        $"同じ Asset Table SharedTableData path に異なる collection GUID が見つかりました: {sharedDataAssetPath}");
+                        $"同じアセットテーブル用共有テーブルデータのアセットパスに異なるコレクション識別子（GUID）が見つかりました: {sharedDataAssetPath}");
                 }
 
                 return;
@@ -350,13 +350,13 @@ namespace LocalizationKeyAudit.Editor
             if (identities.Count >= LocalizationKeyAuditLimits.MaximumSharedTableDataAssets)
             {
                 throw new LocalizationKeyAuditLimitException(
-                    $"Asset Table SharedTableData 数が上限 {LocalizationKeyAuditLimits.MaximumSharedTableDataAssets} 件を超えています。");
+                    $"アセットテーブルが参照する共有テーブルデータ数が上限 {LocalizationKeyAuditLimits.MaximumSharedTableDataAssets} 件を超えています。");
             }
 
             identities.Add(sharedDataAssetPath, collectionGuid);
         }
 
-        /// <summary>serialized m_TableData を直接読み、Dictionary 化で失われる重複 ID も保持します。</summary>
+        /// <summary>シリアル化されたm_TableDataを直接読み、連想配列化で失われる重複IDも保持します。</summary>
         private static List<LocalizationKeyAuditLocalizedEntrySnapshot> ReadSerializedEntries(
             StringTable table,
             string assetPath,
@@ -367,7 +367,7 @@ namespace LocalizationKeyAudit.Editor
                 var tableData = serializedObject.FindProperty("m_TableData");
                 if (tableData == null || !tableData.isArray)
                 {
-                    throw new InvalidDataException($"StringTable の serialized m_TableData を取得できません: {assetPath}");
+                    throw new InvalidDataException($"文字列テーブルのシリアル化されたm_TableDataを取得できません: {assetPath}");
                 }
 
                 EnsureLocalizedEntryBudget(
@@ -383,14 +383,14 @@ namespace LocalizationKeyAudit.Editor
                     var localized = entry?.FindPropertyRelative("m_Localized");
                     if (id == null || localized == null)
                     {
-                        throw new InvalidDataException($"StringTable entry の m_Id/m_Localized を取得できません: {assetPath}");
+                        throw new InvalidDataException($"文字列テーブル項目のm_Id／m_Localizedを取得できません: {assetPath}");
                     }
 
                     var value = localized.stringValue;
                     if (value != null && value.Length > LocalizationKeyAuditLimits.MaximumLocalizedValueCharacters)
                     {
                         throw new LocalizationKeyAuditLimitException(
-                            $"localized value が文字数上限 {LocalizationKeyAuditLimits.MaximumLocalizedValueCharacters} を超えています: {assetPath}");
+                            $"ローカライズ済みの値が文字数上限 {LocalizationKeyAuditLimits.MaximumLocalizedValueCharacters} を超えています: {assetPath}");
                     }
 
                     entries.Add(new LocalizationKeyAuditLocalizedEntrySnapshot(id.longValue, value));
@@ -400,7 +400,7 @@ namespace LocalizationKeyAudit.Editor
             }
         }
 
-        /// <summary>次のtableをcopyする前にaggregate localized entryの残budgetを検証します。</summary>
+        /// <summary>次のテーブルを複製する前に、ローカライズ済み項目総数の残り上限を検証します。</summary>
         internal static void EnsureLocalizedEntryBudget(
             int tableEntryCount,
             long localizedEntriesAlreadyRead,
@@ -412,11 +412,11 @@ namespace LocalizationKeyAudit.Editor
                 tableEntryCount > LocalizationKeyAuditLimits.MaximumLocalizedEntries - localizedEntriesAlreadyRead)
             {
                 throw new LocalizationKeyAuditLimitException(
-                    $"localized entry 総数が上限 {LocalizationKeyAuditLimits.MaximumLocalizedEntries} 件を超えています: {assetPath}");
+                    $"ローカライズ済み項目総数が上限 {LocalizationKeyAuditLimits.MaximumLocalizedEntries} 件を超えています: {assetPath}");
             }
         }
 
-        /// <summary>collection/orphan viewの防御copy前にtableとlocalized entryのaggregate残budgetを検証します。</summary>
+        /// <summary>コレクション／所属先なし表示の防御的複製前に、テーブルとローカライズ済み項目の残り上限を検証します。</summary>
         internal static void EnsureCollectionViewBudget(
             long tableCount,
             long localizedEntryCount,
@@ -430,7 +430,7 @@ namespace LocalizationKeyAudit.Editor
                 tableCount > LocalizationKeyAuditLimits.MaximumLocaleTables - tablesAlreadyAssigned)
             {
                 throw new LocalizationKeyAuditLimitException(
-                    $"collection viewのLocale table総数が上限 {LocalizationKeyAuditLimits.MaximumLocaleTables} 件を超えています: {assetPath}");
+                    $"コレクション表示のロケールテーブル総数が上限 {LocalizationKeyAuditLimits.MaximumLocaleTables} 件を超えています: {assetPath}");
             }
 
             if (localizedEntryCount < 0 ||
@@ -439,14 +439,14 @@ namespace LocalizationKeyAudit.Editor
                 localizedEntryCount > LocalizationKeyAuditLimits.MaximumLocalizedEntries - localizedEntriesAlreadyAssigned)
             {
                 throw new LocalizationKeyAuditLimitException(
-                    $"collection viewのlocalized entry総数が上限 {LocalizationKeyAuditLimits.MaximumLocalizedEntries} 件を超えています: {assetPath}");
+                    $"コレクション表示のローカライズ済み項目総数が上限 {LocalizationKeyAuditLimits.MaximumLocalizedEntries} 件を超えています: {assetPath}");
             }
         }
 
-        /// <summary>同じ SharedTableData path を参照する direct table を保持します。</summary>
+        /// <summary>同じ共有テーブルデータのアセットパスを参照する直接テーブルを保持します。</summary>
         private sealed class LocaleTableGroup
         {
-            /// <summary>identity と空 table 一覧を初期化します。</summary>
+            /// <summary>識別情報と空のテーブル一覧を初期化します。</summary>
             internal LocaleTableGroup(string sharedDataAssetPath, Guid collectionGuid)
             {
                 SharedDataAssetPath = sharedDataAssetPath;
@@ -454,16 +454,16 @@ namespace LocalizationKeyAudit.Editor
                 Tables = new List<LocalizationKeyAuditLocaleTableSnapshot>();
             }
 
-            /// <summary>SharedTableData asset path です。</summary>
+            /// <summary>共有テーブルデータのアセットパスです。</summary>
             internal string SharedDataAssetPath { get; }
 
-            /// <summary>SharedTableData の collection GUID です。</summary>
+            /// <summary>共有テーブルデータのコレクション識別子（GUID）です。</summary>
             internal Guid CollectionGuid { get; }
 
-            /// <summary>この SharedTableData を参照する direct tables です。</summary>
+            /// <summary>この共有テーブルデータを参照する直接テーブルです。</summary>
             internal List<LocalizationKeyAuditLocaleTableSnapshot> Tables { get; }
 
-            /// <summary>このgroupに一度だけ読み込まれたlocalized entry総数です。</summary>
+            /// <summary>このまとまりへ一度だけ読み込まれたローカライズ済み項目総数です。</summary>
             internal long LocalizedEntryCount { get; set; }
         }
     }

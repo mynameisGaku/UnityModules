@@ -6,11 +6,11 @@ using System.Collections.ObjectModel;
 namespace LocalizationKeyAudit.Editor
 {
     /// <summary>
-    /// 公式 Localization API から読み取ったString audit dataとAsset Table所有境界のsnapshotです。
+    /// 公式のローカライズ機能から読み取った文字列監査データと、アセットテーブルの所有境界を保持するスナップショットです。
     /// </summary>
     internal sealed class LocalizationKeyAuditTypedSnapshot
     {
-        /// <summary>typed source の全出力を防御的に copy します。</summary>
+        /// <summary>型として読み取る取得元の全出力を防御的に複製します。</summary>
         internal LocalizationKeyAuditTypedSnapshot(
             IReadOnlyList<string> localeIdentifiers,
             IReadOnlyList<LocalizationKeyAuditCollectionSnapshot> collections,
@@ -70,16 +70,16 @@ namespace LocalizationKeyAudit.Editor
                 new ReadOnlyCollection<LocalizationKeyAuditNonStringSharedDataIdentity>(nonStringCopy);
         }
 
-        /// <summary>Localization Settings に登録済みの Locale identifiers です。</summary>
+        /// <summary>ローカライズ設定に登録済みのロケール識別子です。</summary>
         internal IReadOnlyList<string> LocaleIdentifiers { get; }
 
-        /// <summary>公式 API が返した全 StringTableCollection です。</summary>
+        /// <summary>公式機能が返した全文字列テーブルコレクションです。</summary>
         internal IReadOnlyList<LocalizationKeyAuditCollectionSnapshot> Collections { get; }
 
-        /// <summary>どの StringTableCollection にも対応しなかった direct StringTable です。</summary>
+        /// <summary>どの文字列テーブルコレクションにも対応しなかった直接の文字列テーブルです。</summary>
         internal IReadOnlyList<LocalizationKeyAuditOrphanLocaleTableSnapshot> OrphanLocaleTables { get; }
 
-        /// <summary>Asset Table owner が参照し、String key の direct coverage から除外する SharedTableData です。</summary>
+        /// <summary>アセットテーブルの所有元が参照し、文字列キーの直接網羅から除外する共有テーブルデータです。</summary>
         internal IReadOnlyList<LocalizationKeyAuditNonStringSharedDataIdentity> NonStringSharedDataIdentities { get; }
     }
 }

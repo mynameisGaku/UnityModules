@@ -3,10 +3,10 @@ using AuditEditor = LocalizationKeyAudit.Editor;
 
 namespace LocalizationKeyAudit.Tests
 {
-    /// <summary>typed Localization assetをDTOへcopyする前のhard limitを検証します。</summary>
+    /// <summary>型として読み取ったローカライズ用アセットを転送値へ複製する前の上限を検証します。</summary>
     internal sealed class UnityLocalizationKeyAuditTypedSourceTests
     {
-        /// <summary>aggregate上限exactを許し、残budget超過をallocation前に拒否します。</summary>
+        /// <summary>総数が上限と同じ場合を許し、残り上限の超過を割り当て前に拒否します。</summary>
         [Test]
         public void EnsureLocalizedEntryBudget_RejectsBeforeCopyingPastAggregateLimit()
         {
@@ -22,21 +22,26 @@ namespace LocalizationKeyAudit.Tests
                     maximum - 1L,
                     "Assets/Localization/B.asset"));
 
-            Assert.That(
+            var exhausted = Assert.Throws<AuditEditor.LocalizationKeyAuditLimitException>(
                 () => AuditEditor.UnityLocalizationKeyAuditTypedSource.EnsureLocalizedEntryBudget(
                     1,
                     maximum,
-                    "Assets/Localization/C.asset"),
-                Throws.TypeOf<AuditEditor.LocalizationKeyAuditLimitException>());
-            Assert.That(
+                    "Assets/Localization/C.asset"));
+            var oversized = Assert.Throws<AuditEditor.LocalizationKeyAuditLimitException>(
                 () => AuditEditor.UnityLocalizationKeyAuditTypedSource.EnsureLocalizedEntryBudget(
                     maximum + 1,
                     0,
-                    "Assets/Localization/D.asset"),
-                Throws.TypeOf<AuditEditor.LocalizationKeyAuditLimitException>());
+                    "Assets/Localization/D.asset"));
+
+            Assert.That(
+                exhausted.Message,
+                Is.EqualTo($"ローカライズ済み項目総数が上限 {maximum} 件を超えています: Assets/Localization/C.asset"));
+            Assert.That(
+                oversized.Message,
+                Is.EqualTo($"ローカライズ済み項目総数が上限 {maximum} 件を超えています: Assets/Localization/D.asset"));
         }
 
-        /// <summary>同じtable groupを複数collectionへ割り当てるcopy増幅を事前に拒否します。</summary>
+        /// <summary>同じテーブル群を複数コレクションへ割り当てる複製増幅を事前に拒否します。</summary>
         [Test]
         public void EnsureCollectionViewBudget_RejectsDuplicateViewBeforeCopy()
         {
@@ -49,22 +54,27 @@ namespace LocalizationKeyAudit.Tests
                     maximumTables - 1L,
                     maximumEntries - 1L,
                     "Assets/Localization/UI Shared Data.asset"));
-            Assert.That(
+            var tableLimit = Assert.Throws<AuditEditor.LocalizationKeyAuditLimitException>(
                 () => AuditEditor.UnityLocalizationKeyAuditTypedSource.EnsureCollectionViewBudget(
                     1,
                     0,
                     maximumTables,
                     0,
-                    "Assets/Localization/UI Shared Data.asset"),
-                Throws.TypeOf<AuditEditor.LocalizationKeyAuditLimitException>());
-            Assert.That(
+                    "Assets/Localization/UI Shared Data.asset"));
+            var entryLimit = Assert.Throws<AuditEditor.LocalizationKeyAuditLimitException>(
                 () => AuditEditor.UnityLocalizationKeyAuditTypedSource.EnsureCollectionViewBudget(
                     0,
                     1,
                     0,
                     maximumEntries,
-                    "Assets/Localization/UI Shared Data.asset"),
-                Throws.TypeOf<AuditEditor.LocalizationKeyAuditLimitException>());
+                    "Assets/Localization/UI Shared Data.asset"));
+
+            Assert.That(
+                tableLimit.Message,
+                Is.EqualTo($"コレクション表示のロケールテーブル総数が上限 {maximumTables} 件を超えています: Assets/Localization/UI Shared Data.asset"));
+            Assert.That(
+                entryLimit.Message,
+                Is.EqualTo($"コレクション表示のローカライズ済み項目総数が上限 {maximumEntries} 件を超えています: Assets/Localization/UI Shared Data.asset"));
         }
     }
 }

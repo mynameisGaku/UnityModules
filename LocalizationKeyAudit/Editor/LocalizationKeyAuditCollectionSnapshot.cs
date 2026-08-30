@@ -7,11 +7,11 @@ using System.Collections.ObjectModel;
 namespace LocalizationKeyAudit.Editor
 {
     /// <summary>
-    /// StringTableCollection の identity、shared entries、Locale tables を保持します。
+    /// 文字列テーブルコレクションの識別情報、共有項目、ロケールテーブルを保持します。
     /// </summary>
     internal sealed class LocalizationKeyAuditCollectionSnapshot
     {
-        /// <summary>collection 全体を防御的に copy します。</summary>
+        /// <summary>コレクション全体を防御的に複製します。</summary>
         internal LocalizationKeyAuditCollectionSnapshot(
             string collectionName,
             Guid collectionGuid,
@@ -26,22 +26,22 @@ namespace LocalizationKeyAudit.Editor
             LocaleTables = CopyLocaleTables(localeTables);
         }
 
-        /// <summary>StringTableCollection 名です。</summary>
+        /// <summary>文字列テーブルコレクション名です。</summary>
         internal string CollectionName { get; }
 
-        /// <summary>SharedTableData が保持する collection GUID です。</summary>
+        /// <summary>共有テーブルデータが保持するコレクション識別子（GUID）です。</summary>
         internal Guid CollectionGuid { get; }
 
-        /// <summary>対応する SharedTableData asset path です。</summary>
+        /// <summary>対応する共有テーブルデータのアセットパスです。</summary>
         internal string SharedDataAssetPath { get; }
 
-        /// <summary>SharedTableData の全 entry です。</summary>
+        /// <summary>共有テーブルデータの全項目です。</summary>
         internal IReadOnlyList<LocalizationKeyAuditSharedEntrySnapshot> SharedEntries { get; }
 
-        /// <summary>collection に直接属する StringTable 一覧です。</summary>
+        /// <summary>コレクションに直接属する文字列テーブル一覧です。</summary>
         internal IReadOnlyList<LocalizationKeyAuditLocaleTableSnapshot> LocaleTables { get; }
 
-        /// <summary>shared entry 一覧を読み取り専用 copy にします。</summary>
+        /// <summary>共有項目一覧を読み取り専用の複製にします。</summary>
         private static IReadOnlyList<LocalizationKeyAuditSharedEntrySnapshot> CopySharedEntries(
             IReadOnlyList<LocalizationKeyAuditSharedEntrySnapshot> entries)
         {
@@ -55,7 +55,7 @@ namespace LocalizationKeyAudit.Editor
             return new ReadOnlyCollection<LocalizationKeyAuditSharedEntrySnapshot>(copy);
         }
 
-        /// <summary>Locale table 一覧を読み取り専用 copy にします。</summary>
+        /// <summary>ロケールテーブル一覧を読み取り専用の複製にします。</summary>
         private static IReadOnlyList<LocalizationKeyAuditLocaleTableSnapshot> CopyLocaleTables(
             IReadOnlyList<LocalizationKeyAuditLocaleTableSnapshot> tables)
         {
@@ -75,4 +75,3 @@ namespace LocalizationKeyAudit.Editor
         }
     }
 }
-

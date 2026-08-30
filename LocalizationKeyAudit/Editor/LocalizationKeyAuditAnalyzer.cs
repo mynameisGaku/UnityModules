@@ -7,11 +7,11 @@ using System.IO;
 namespace LocalizationKeyAudit.Editor
 {
     /// <summary>
-    /// request と typed snapshot を検証し、direct coverage graph と advisory issues を構築します。
+    /// 監査条件と型として読み取ったスナップショットを検証し、直接網羅グラフと参考問題を構築します。
     /// </summary>
     internal static class LocalizationKeyAuditAnalyzer
     {
-        /// <summary>typed API を呼ぶ前に request 全体を検証します。</summary>
+        /// <summary>型としての読み取り処理を呼ぶ前に監査条件全体を検証します。</summary>
         internal static bool TryValidateRequest(
             LocalizationKeyAuditRequest request,
             out LocalizationKeyAuditIssue failure)
@@ -19,19 +19,19 @@ namespace LocalizationKeyAudit.Editor
             failure = null;
             if (request == null || request.Coverage == null)
             {
-                failure = CreateConfigurationFailure("required Locale と coverage を明示してください。");
+                failure = CreateConfigurationFailure("必須ロケールと静的参照網羅情報を指定してください。");
                 return false;
             }
 
             if (request.RequiredLocaleIdentifiers.Count == 0)
             {
-                failure = CreateConfigurationFailure("required Locale を 1 件以上明示してください。");
+                failure = CreateConfigurationFailure("必須ロケールを1件以上指定してください。");
                 return false;
             }
 
             if (request.RequiredLocaleIdentifiers.Count > LocalizationKeyAuditLimits.MaximumRequiredLocales)
             {
-                failure = CreateLimitFailure($"required Locale 数が上限 {LocalizationKeyAuditLimits.MaximumRequiredLocales} 件を超えています。");
+                failure = CreateLimitFailure($"必須ロケール数が上限 {LocalizationKeyAuditLimits.MaximumRequiredLocales} 件を超えています。");
                 return false;
             }
 
@@ -41,7 +41,7 @@ namespace LocalizationKeyAudit.Editor
                 var locale = request.RequiredLocaleIdentifiers[index];
                 if (!IsExactNonEmptyText(locale) || !locales.Add(locale))
                 {
-                    failure = CreateConfigurationFailure("required Locale identifier が空、長すぎる、前後空白付き、または重複しています。");
+                    failure = CreateConfigurationFailure("必須ロケール識別子が空、長すぎる、前後に空白を含む、または重複しています。");
                     return false;
                 }
             }
@@ -49,31 +49,31 @@ namespace LocalizationKeyAudit.Editor
             var coverage = request.Coverage;
             if (!IsExactNonEmptyText(coverage.ScopeDescription))
             {
-                failure = CreateConfigurationFailure("static reference scope の説明を明示してください。");
+                failure = CreateConfigurationFailure("静的参照の走査範囲を説明してください。");
                 return false;
             }
 
             if (coverage.IsComplete == !string.IsNullOrEmpty(coverage.IncompleteReason))
             {
-                failure = CreateConfigurationFailure("coverage 完了状態と incomplete reason が矛盾しています。");
+                failure = CreateConfigurationFailure("静的参照網羅の完了状態と未完了理由が矛盾しています。");
                 return false;
             }
 
             if (!coverage.IsComplete && !IsExactNonEmptyText(coverage.IncompleteReason))
             {
-                failure = CreateConfigurationFailure("未完了 coverage には理由を明示してください。");
+                failure = CreateConfigurationFailure("未完了の静的参照網羅には理由を指定してください。");
                 return false;
             }
 
             if (coverage.DeclaredAssetPaths.Count == 0)
             {
-                failure = CreateConfigurationFailure("static reference の監査 scope path を 1 件以上宣言してください。");
+                failure = CreateConfigurationFailure("静的参照の走査対象パスを1件以上宣言してください。");
                 return false;
             }
 
             if (coverage.DeclaredAssetPaths.Count > LocalizationKeyAuditLimits.MaximumDeclaredAssetPaths)
             {
-                failure = CreateLimitFailure($"declared asset path 数が上限 {LocalizationKeyAuditLimits.MaximumDeclaredAssetPaths} 件を超えています。");
+                failure = CreateLimitFailure($"宣言済みアセットパス数が上限 {LocalizationKeyAuditLimits.MaximumDeclaredAssetPaths} 件を超えています。");
                 return false;
             }
 
@@ -84,7 +84,7 @@ namespace LocalizationKeyAudit.Editor
                 var path = coverage.DeclaredAssetPaths[index];
                 if (!IsProjectAssetPath(path, true) || !declaredPaths.Add(path))
                 {
-                    failure = CreateConfigurationFailure("declared asset path が不正または重複しています。");
+                    failure = CreateConfigurationFailure("宣言済みアセットパスが不正または重複しています。");
                     return false;
                 }
 
@@ -96,14 +96,14 @@ namespace LocalizationKeyAudit.Editor
                 else if (!string.Equals(declaredRoot, candidateRoot, StringComparison.Ordinal))
                 {
                     failure = CreateConfigurationFailure(
-                        "1 回の監査で宣言できるlogical rootはAssetsまたは1つのregistered packageだけです。");
+                        "1回の監査で宣言できる論理ルートはAssetsまたは登録済みパッケージのいずれか1つだけです。");
                     return false;
                 }
             }
 
             if (coverage.RecognizedReferences.Count > LocalizationKeyAuditLimits.MaximumStaticReferences)
             {
-                failure = CreateLimitFailure($"static reference 数が上限 {LocalizationKeyAuditLimits.MaximumStaticReferences} 件を超えています。");
+                failure = CreateLimitFailure($"静的参照数が上限 {LocalizationKeyAuditLimits.MaximumStaticReferences} 件を超えています。");
                 return false;
             }
 
@@ -119,7 +119,7 @@ namespace LocalizationKeyAudit.Editor
                     !IsOptionalText(reference.CollectionName) ||
                     !IsOptionalText(reference.EntryKey))
                 {
-                    failure = CreateConfigurationFailure("static reference に不正な path、GUID、entry ID、または表示文字列があります。");
+                    failure = CreateConfigurationFailure("静的参照に不正なパス、GUID、項目識別子、または表示文字列があります。");
                     return false;
                 }
 
@@ -128,7 +128,7 @@ namespace LocalizationKeyAudit.Editor
                     reference.EntryId;
                 if (!referenceIdentities.Add(identity))
                 {
-                    failure = CreateConfigurationFailure("同じ static reference が複数回含まれています。");
+                    failure = CreateConfigurationFailure("同じ静的参照が複数回含まれています。");
                     return false;
                 }
             }
@@ -136,7 +136,7 @@ namespace LocalizationKeyAudit.Editor
             return true;
         }
 
-        /// <summary>typed snapshot 全体を検証してから完全な advisory result を構築します。</summary>
+        /// <summary>型として読み取ったスナップショット全体を検証してから完全な参考結果を構築します。</summary>
         internal static LocalizationKeyAuditResult Analyze(
             LocalizationKeyAuditRequest request,
             LocalizationKeyAuditTypedSnapshot snapshot,
@@ -144,7 +144,7 @@ namespace LocalizationKeyAudit.Editor
         {
             if (request == null || snapshot == null || rawIdentities == null)
             {
-                throw new InvalidDataException("request、typed snapshot、または raw identity がありません。");
+                throw new InvalidDataException("監査条件、型として読み取ったスナップショット、または未加工の識別情報がありません。");
             }
 
             var locales = NormalizeLocales(snapshot.LocaleIdentifiers);
@@ -190,7 +190,7 @@ namespace LocalizationKeyAudit.Editor
                 orphanLocaleTables);
         }
 
-        /// <summary>raw identity を独立 copy にして asset path、GUID の順に並べます。</summary>
+        /// <summary>未加工識別情報を独立した複製にしてアセットパス、GUIDの順に並べます。</summary>
         private static List<LocalizationKeyAuditRawIdentity> NormalizeRawIdentities(
             IReadOnlyList<LocalizationKeyAuditRawIdentity> source)
         {
@@ -207,20 +207,20 @@ namespace LocalizationKeyAudit.Editor
             return normalized;
         }
 
-        /// <summary>Asset Table owner の SharedTableData identity を独立copyにして決定論的に並べます。</summary>
+        /// <summary>アセットテーブルが所有する共有テーブルデータの識別情報を独立した複製にして決定論的に並べます。</summary>
         private static List<LocalizationKeyAuditNonStringSharedDataIdentity>
             NormalizeNonStringSharedDataIdentities(
                 IReadOnlyList<LocalizationKeyAuditNonStringSharedDataIdentity> source)
         {
             if (source == null)
             {
-                throw new InvalidDataException("typed Asset Table SharedTableData identity 一覧が null です。");
+                throw new InvalidDataException("型として読み取ったアセットテーブルの共有テーブルデータ識別情報一覧が未設定です。");
             }
 
             if (source.Count > LocalizationKeyAuditLimits.MaximumSharedTableDataAssets)
             {
                 throw new LocalizationKeyAuditLimitException(
-                    $"Asset Table SharedTableData identity 数が上限 {LocalizationKeyAuditLimits.MaximumSharedTableDataAssets} 件を超えています。");
+                    $"アセットテーブルの共有テーブルデータ識別情報数が上限 {LocalizationKeyAuditLimits.MaximumSharedTableDataAssets} 件を超えています。");
             }
 
             var normalized = new List<LocalizationKeyAuditNonStringSharedDataIdentity>(source.Count);
@@ -231,7 +231,7 @@ namespace LocalizationKeyAudit.Editor
                     !IsUnityAssetPath(identity.AssetPath, false) ||
                     identity.CollectionGuid == Guid.Empty)
                 {
-                    throw new InvalidDataException("typed Asset Table SharedTableData identity が null または不正です。");
+                    throw new InvalidDataException("型として読み取ったアセットテーブルの共有テーブルデータ識別情報が未設定または不正です。");
                 }
 
                 normalized.Add(new LocalizationKeyAuditNonStringSharedDataIdentity(
@@ -243,13 +243,13 @@ namespace LocalizationKeyAudit.Editor
             return normalized;
         }
 
-        /// <summary>collection に属さない typed table を検証して決定論的に並べます。</summary>
+        /// <summary>コレクションに属さない、型として読み取ったテーブルを検証して決定論的に並べます。</summary>
         private static List<LocalizationKeyAuditOrphanLocaleTableSnapshot> NormalizeOrphanLocaleTables(
             IReadOnlyList<LocalizationKeyAuditOrphanLocaleTableSnapshot> source)
         {
             if (source == null)
             {
-                throw new InvalidDataException("typed orphan Locale table 一覧が null です。");
+                throw new InvalidDataException("型として読み取った所属先なしロケールテーブル一覧が未設定です。");
             }
 
             var normalized = new List<LocalizationKeyAuditOrphanLocaleTableSnapshot>(source.Count);
@@ -265,7 +265,7 @@ namespace LocalizationKeyAudit.Editor
                     !IsUnityAssetPath(table.AssetPath, false) ||
                     table.Entries == null)
                 {
-                    throw new InvalidDataException("typed orphan Locale table identity が null または不正です。");
+                    throw new InvalidDataException("型として読み取った所属先なしロケールテーブルの識別情報が未設定または不正です。");
                 }
 
                 var entries = new List<LocalizationKeyAuditLocalizedEntrySnapshot>(table.Entries.Count);
@@ -275,7 +275,7 @@ namespace LocalizationKeyAudit.Editor
                     if (entry == null || entry.Id == 0 ||
                         (entry.Value != null && entry.Value.Length > LocalizationKeyAuditLimits.MaximumLocalizedValueCharacters))
                     {
-                        throw new InvalidDataException($"orphan localized entry が null、不正、または長すぎます: {table.AssetPath}");
+                        throw new InvalidDataException($"所属先なしのローカライズ済み項目が未設定、不正、または長すぎます: {table.AssetPath}");
                     }
 
                     entries.Add(new LocalizationKeyAuditLocalizedEntrySnapshot(entry.Id, entry.Value));
@@ -295,7 +295,7 @@ namespace LocalizationKeyAudit.Editor
             return normalized;
         }
 
-        /// <summary>collection と orphan を合わせた typed table/entry 上限を検証します。</summary>
+        /// <summary>コレクションと所属先なし項目を合わせ、型として読み取ったテーブルおよび項目の上限を検証します。</summary>
         private static void ValidateAggregateTableLimits(
             IReadOnlyList<LocalizationKeyAuditCollectionSnapshot> collections,
             IReadOnlyList<LocalizationKeyAuditOrphanLocaleTableSnapshot> orphanLocaleTables)
@@ -320,22 +320,22 @@ namespace LocalizationKeyAudit.Editor
             if (tableCount > LocalizationKeyAuditLimits.MaximumLocaleTables ||
                 entryCount > LocalizationKeyAuditLimits.MaximumLocalizedEntries)
             {
-                throw new LocalizationKeyAuditLimitException("collection と orphan を合わせた typed table または entry 数が上限を超えています。");
+                throw new LocalizationKeyAuditLimitException("コレクションと所属先なし項目を合わせた、型として読み取ったテーブル数または項目数が上限を超えています。");
             }
         }
 
-        /// <summary>Locale identifiers を検証して決定論的に並べます。</summary>
+        /// <summary>ロケール識別子を検証して決定論的に並べます。</summary>
         private static List<string> NormalizeLocales(IReadOnlyList<string> source)
         {
             if (source == null)
             {
-                throw new InvalidDataException("typed Locale 一覧が null です。");
+                throw new InvalidDataException("型として読み取ったロケール一覧が未設定です。");
             }
 
             if (source.Count > LocalizationKeyAuditLimits.MaximumLocales)
             {
                 throw new LocalizationKeyAuditLimitException(
-                    $"Locale 数が上限 {LocalizationKeyAuditLimits.MaximumLocales} 件を超えています。");
+                    $"ロケール数が上限 {LocalizationKeyAuditLimits.MaximumLocales} 件を超えています。");
             }
 
             var locales = new List<string>(source.Count);
@@ -344,7 +344,7 @@ namespace LocalizationKeyAudit.Editor
                 var locale = source[index];
                 if (!IsExactNonEmptyText(locale))
                 {
-                    throw new InvalidDataException("typed Locale identifier が空、不正、または長すぎます。");
+                    throw new InvalidDataException("型として読み取ったロケール識別子が空、不正、または長すぎます。");
                 }
 
                 locales.Add(locale);
@@ -354,19 +354,19 @@ namespace LocalizationKeyAudit.Editor
             return locales;
         }
 
-        /// <summary>collection tree を検証し、全階層を決定論的な copy にします。</summary>
+        /// <summary>コレクション階層を検証し、全階層を決定論的な複製にします。</summary>
         private static List<LocalizationKeyAuditCollectionSnapshot> NormalizeCollections(
             IReadOnlyList<LocalizationKeyAuditCollectionSnapshot> source)
         {
             if (source == null)
             {
-                throw new InvalidDataException("typed collection 一覧が null です。");
+                throw new InvalidDataException("型として読み取ったコレクション一覧が未設定です。");
             }
 
             if (source.Count > LocalizationKeyAuditLimits.MaximumCollections)
             {
                 throw new LocalizationKeyAuditLimitException(
-                    $"collection 数が上限 {LocalizationKeyAuditLimits.MaximumCollections} 件を超えています。");
+                    $"コレクション数が上限 {LocalizationKeyAuditLimits.MaximumCollections} 件を超えています。");
             }
 
             var collections = new List<LocalizationKeyAuditCollectionSnapshot>(source.Count);
@@ -381,19 +381,19 @@ namespace LocalizationKeyAudit.Editor
                     collection.CollectionGuid == Guid.Empty ||
                     !IsUnityAssetPath(collection.SharedDataAssetPath, false))
                 {
-                    throw new InvalidDataException("typed collection identity が空、不正、または長すぎます。");
+                    throw new InvalidDataException("型として読み取ったコレクション識別情報が空、不正、または長すぎます。");
                 }
 
                 if (collection.SharedEntries == null || collection.LocaleTables == null)
                 {
-                    throw new InvalidDataException($"typed collection child 一覧が null です: {collection.CollectionName}");
+                    throw new InvalidDataException($"型として読み取ったコレクションの子要素一覧が未設定です: {collection.CollectionName}");
                 }
 
                 sharedEntryCount += collection.SharedEntries.Count;
                 if (sharedEntryCount > LocalizationKeyAuditLimits.MaximumSharedEntries)
                 {
                     throw new LocalizationKeyAuditLimitException(
-                        $"shared entry 総数が上限 {LocalizationKeyAuditLimits.MaximumSharedEntries} 件を超えています。");
+                        $"共有項目総数が上限 {LocalizationKeyAuditLimits.MaximumSharedEntries} 件を超えています。");
                 }
 
                 var sharedEntries = new List<LocalizationKeyAuditSharedEntrySnapshot>(collection.SharedEntries.Count);
@@ -403,7 +403,7 @@ namespace LocalizationKeyAudit.Editor
                     if (entry == null || entry.Id == 0 || string.IsNullOrEmpty(entry.Key) ||
                         entry.Key.Length > LocalizationKeyAuditLimits.MaximumTextCharacters)
                     {
-                        throw new InvalidDataException($"shared entry が null または不正です: {collection.CollectionName}");
+                        throw new InvalidDataException($"共有項目が未設定または不正です: {collection.CollectionName}");
                     }
 
                     sharedEntries.Add(new LocalizationKeyAuditSharedEntrySnapshot(entry.Id, entry.Key));
@@ -414,7 +414,7 @@ namespace LocalizationKeyAudit.Editor
                 if (tableCount > LocalizationKeyAuditLimits.MaximumLocaleTables)
                 {
                     throw new LocalizationKeyAuditLimitException(
-                        $"Locale table 総数が上限 {LocalizationKeyAuditLimits.MaximumLocaleTables} 件を超えています。");
+                        $"ロケールテーブル総数が上限 {LocalizationKeyAuditLimits.MaximumLocaleTables} 件を超えています。");
                 }
 
                 var tables = new List<LocalizationKeyAuditLocaleTableSnapshot>(collection.LocaleTables.Count);
@@ -426,14 +426,14 @@ namespace LocalizationKeyAudit.Editor
                         !IsUnityAssetPath(table.AssetPath, false) ||
                         table.Entries == null)
                     {
-                        throw new InvalidDataException($"typed Locale table が null または不正です: {collection.CollectionName}");
+                        throw new InvalidDataException($"型として読み取ったロケールテーブルが未設定または不正です: {collection.CollectionName}");
                     }
 
                     localizedEntryCount += table.Entries.Count;
                     if (localizedEntryCount > LocalizationKeyAuditLimits.MaximumLocalizedEntries)
                     {
                         throw new LocalizationKeyAuditLimitException(
-                            $"localized entry 総数が上限 {LocalizationKeyAuditLimits.MaximumLocalizedEntries} 件を超えています。");
+                            $"ローカライズ済み項目総数が上限 {LocalizationKeyAuditLimits.MaximumLocalizedEntries} 件を超えています。");
                     }
 
                     var entries = new List<LocalizationKeyAuditLocalizedEntrySnapshot>(table.Entries.Count);
@@ -443,7 +443,7 @@ namespace LocalizationKeyAudit.Editor
                         if (entry == null || entry.Id == 0 ||
                             (entry.Value != null && entry.Value.Length > LocalizationKeyAuditLimits.MaximumLocalizedValueCharacters))
                         {
-                            throw new InvalidDataException($"localized entry が null、不正、または長すぎます: {table.AssetPath}");
+                            throw new InvalidDataException($"ローカライズ済み項目が未設定、不正、または長すぎます: {table.AssetPath}");
                         }
 
                         entries.Add(new LocalizationKeyAuditLocalizedEntrySnapshot(entry.Id, entry.Value));
@@ -469,7 +469,7 @@ namespace LocalizationKeyAudit.Editor
             return collections;
         }
 
-        /// <summary>typed collection identity が raw preflight 成功 asset と完全一致するかを調べます。</summary>
+        /// <summary>型として読み取ったコレクション識別情報が未加工の事前検査済みアセットと完全一致するかを調べます。</summary>
         private static void ValidateRawIdentities(
             IReadOnlyList<LocalizationKeyAuditCollectionSnapshot> collections,
             IReadOnlyList<LocalizationKeyAuditOrphanLocaleTableSnapshot> orphanLocaleTables,
@@ -479,7 +479,7 @@ namespace LocalizationKeyAudit.Editor
             if (rawIdentities.Count > LocalizationKeyAuditLimits.MaximumSharedTableDataAssets)
             {
                 throw new LocalizationKeyAuditLimitException(
-                    $"raw identity 数が上限 {LocalizationKeyAuditLimits.MaximumSharedTableDataAssets} 件を超えています。");
+                    $"未加工識別情報数が上限 {LocalizationKeyAuditLimits.MaximumSharedTableDataAssets} 件を超えています。");
             }
 
             var byPath = new Dictionary<string, LocalizationKeyAuditRawIdentity>(StringComparer.Ordinal);
@@ -491,7 +491,7 @@ namespace LocalizationKeyAudit.Editor
                     identity.CollectionGuid == Guid.Empty ||
                     byPath.ContainsKey(identity.AssetPath))
                 {
-                    throw new InvalidDataException("raw preflight identity が null、不正、または asset path 重複です。");
+                    throw new InvalidDataException("未加工事前検査の識別情報が未設定、不正、またはアセットパス重複です。");
                 }
 
                 byPath.Add(identity.AssetPath, identity);
@@ -504,7 +504,7 @@ namespace LocalizationKeyAudit.Editor
                     identity.CollectionGuid != collection.CollectionGuid)
                 {
                     throw new InvalidDataException(
-                        $"typed collection identity が raw preflight と一致しません: {collection.SharedDataAssetPath}");
+                        $"型として読み取ったコレクション識別情報が未加工の事前検査結果と一致しません: {collection.SharedDataAssetPath}");
                 }
             }
 
@@ -519,14 +519,14 @@ namespace LocalizationKeyAudit.Editor
                 var orphan = orphanLocaleTables[index];
                 if (collectionPaths.Contains(orphan.SharedDataAssetPath))
                 {
-                    throw new InvalidDataException($"collection 所属 table が orphan として重複しています: {orphan.LocaleTable.AssetPath}");
+                    throw new InvalidDataException($"コレクション所属テーブルが所属先なしテーブルとして重複しています: {orphan.LocaleTable.AssetPath}");
                 }
 
                 if (!byPath.TryGetValue(orphan.SharedDataAssetPath, out var identity) ||
                     identity.CollectionGuid != orphan.CollectionGuid)
                 {
                     throw new InvalidDataException(
-                        $"typed orphan table identity が raw preflight と一致しません: {orphan.SharedDataAssetPath}");
+                        $"型として読み取った所属先なしテーブル識別情報が未加工の事前検査結果と一致しません: {orphan.SharedDataAssetPath}");
                 }
             }
 
@@ -548,28 +548,28 @@ namespace LocalizationKeyAudit.Editor
                 if (!nonStringPaths.Add(nonString.AssetPath))
                 {
                     throw new InvalidDataException(
-                        $"typed Asset Table SharedTableData identity の asset path が重複しています: {nonString.AssetPath}");
+                        $"型として読み取ったアセットテーブルの共有テーブルデータ識別情報でアセットパスが重複しています: {nonString.AssetPath}");
                 }
 
                 if (!byPath.TryGetValue(nonString.AssetPath, out var identity) ||
                     identity.CollectionGuid != nonString.CollectionGuid)
                 {
                     throw new InvalidDataException(
-                        $"typed Asset Table SharedTableData identity が raw preflight と一致しません: {nonString.AssetPath}");
+                        $"型として読み取ったアセットテーブルの共有テーブルデータ識別情報が未加工の事前検査結果と一致しません: {nonString.AssetPath}");
                 }
 
                 if (stringOwnedGuids.Contains(nonString.CollectionGuid))
                 {
                     throw new InvalidDataException(
-                        $"String Table と Asset Table が同じ collection GUID を使用しているためstatic reference typeを一意に判定できません: {nonString.CollectionGuid:N}");
+                        $"文字列テーブルとアセットテーブルが同じコレクション識別子（GUID）を使用しているため静的参照の種類を一意に判定できません: {nonString.CollectionGuid:N}");
                 }
             }
 
         }
 
         /// <summary>
-        /// Asset Table owner だけが確認された raw identity をString keyの重複・orphan・static解決から除外します。
-        /// owner不明のraw identityは保守的に残し、String/Asset共用GUIDはこの処理より前にfail-closedにします。
+        /// アセットテーブルだけが所有すると確認された未加工の識別情報を、文字列キーの重複・所属先なし・静的参照解決から除外します。
+        /// 所有元不明の未加工識別情報は保守的に残し、文字列／アセット共用GUIDはこの処理より前に安全側で停止します。
         /// </summary>
         private static List<LocalizationKeyAuditRawIdentity> FilterStringRelevantRawIdentities(
             IReadOnlyList<LocalizationKeyAuditCollectionSnapshot> collections,
@@ -612,7 +612,7 @@ namespace LocalizationKeyAudit.Editor
             return relevant;
         }
 
-        /// <summary>direct coverage、table membership、static reference の edge 数を上限内で数えます。</summary>
+        /// <summary>直接網羅、テーブル所属、静的参照の辺数を上限内で数えます。</summary>
         private static long CountGraphEdges(
             LocalizationKeyAuditRequest request,
             IReadOnlyList<LocalizationKeyAuditCollectionSnapshot> collections,
@@ -641,7 +641,7 @@ namespace LocalizationKeyAudit.Editor
             return edgeCount;
         }
 
-        /// <summary>掛け算 overflow と graph 上限を検証します。</summary>
+        /// <summary>乗算のオーバーフローとグラフ上限を検証します。</summary>
         private static long MultiplyGraphEdges(int left, int right)
         {
             try
@@ -650,11 +650,11 @@ namespace LocalizationKeyAudit.Editor
             }
             catch (OverflowException exception)
             {
-                throw new LocalizationKeyAuditLimitException("direct coverage edge 数が数値上限を超えています。", exception);
+                throw new LocalizationKeyAuditLimitException("直接網羅の参照関係数が数値上限を超えています。", exception);
             }
         }
 
-        /// <summary>加算 overflow と graph 上限を検証します。</summary>
+        /// <summary>加算のオーバーフローとグラフ上限を検証します。</summary>
         private static void AddGraphEdges(ref long edgeCount, long addition)
         {
             try
@@ -663,17 +663,17 @@ namespace LocalizationKeyAudit.Editor
             }
             catch (OverflowException exception)
             {
-                throw new LocalizationKeyAuditLimitException("graph edge 数が数値上限を超えています。", exception);
+                throw new LocalizationKeyAuditLimitException("参照関係数が数値上限を超えています。", exception);
             }
 
             if (edgeCount > LocalizationKeyAuditLimits.MaximumGraphEdges)
             {
                 throw new LocalizationKeyAuditLimitException(
-                    $"graph edge 数が上限 {LocalizationKeyAuditLimits.MaximumGraphEdges} 件を超えています。");
+                    $"参照関係数が上限 {LocalizationKeyAuditLimits.MaximumGraphEdges} 件を超えています。");
             }
         }
 
-        /// <summary>configured Locale の重複と required Locale 不足を追加します。</summary>
+        /// <summary>設定済みロケールの重複と必須ロケール不足を追加します。</summary>
         private static void AddLocaleIssues(
             LocalizationKeyAuditRequest request,
             IReadOnlyList<string> locales,
@@ -699,7 +699,7 @@ namespace LocalizationKeyAudit.Editor
                         pair.Key,
                         string.Empty,
                         0,
-                        $"Localization Settings に Locale {pair.Key} が {pair.Value} 件あります。"));
+                        $"ローカライズ設定にロケール「{pair.Key}」が {pair.Value} 件登録されています。"));
                 }
             }
 
@@ -717,12 +717,12 @@ namespace LocalizationKeyAudit.Editor
                         required,
                         string.Empty,
                         0,
-                        $"required Locale {required} が Localization Settings に登録されていません。"));
+                        $"必須ロケール「{required}」がローカライズ設定に登録されていません。"));
                 }
             }
         }
 
-        /// <summary>collection/table/entry の重複と orphan localized entry を追加します。</summary>
+        /// <summary>コレクション、テーブル、項目の重複と所属先なしのローカライズ済み項目を追加します。</summary>
         private static void AddCollectionIntegrityIssues(
             IReadOnlyList<LocalizationKeyAuditCollectionSnapshot> collections,
             IReadOnlyList<LocalizationKeyAuditRawIdentity> rawIdentities,
@@ -756,7 +756,7 @@ namespace LocalizationKeyAudit.Editor
                         string.Empty,
                         string.Empty,
                         0,
-                        $"typed collection GUID が {pair.Value.Count} 件の collection で重複しています。"));
+                        $"型として読み取ったコレクションの識別子（GUID）が {pair.Value.Count} 件のコレクションで重複しています。"));
                 }
             }
 
@@ -778,7 +778,7 @@ namespace LocalizationKeyAudit.Editor
                             string.Empty,
                             entry.Key,
                             entry.Id,
-                            $"shared entry ID {entry.Id} が {pair.Value.Count} 件あります。"));
+                            $"共有項目識別子「{entry.Id}」が {pair.Value.Count} 件あります。"));
                     }
                 }
 
@@ -795,7 +795,7 @@ namespace LocalizationKeyAudit.Editor
                             string.Empty,
                             entry.Key,
                             entry.Id,
-                            $"shared entry key {entry.Key} が {pair.Value.Count} 件あります。"));
+                            $"共有項目キー「{entry.Key}」が {pair.Value.Count} 件あります。"));
                     }
                 }
 
@@ -814,7 +814,7 @@ namespace LocalizationKeyAudit.Editor
                             first.LocaleIdentifier,
                             string.Empty,
                             0,
-                            $"Locale {first.LocaleIdentifier} の table が {pair.Value.Count} 件あります。direct coverage は一意に判定しません。"));
+                            $"ロケール「{first.LocaleIdentifier}」のテーブルが {pair.Value.Count} 件あります。直接網羅は一意に判定しません。"));
                     }
                 }
 
@@ -835,7 +835,7 @@ namespace LocalizationKeyAudit.Editor
                                 table.LocaleIdentifier,
                                 string.Empty,
                                 pair.Key,
-                                $"localized entry ID {pair.Key} が {pair.Value.Count} 件あります。direct coverage は一意に判定しません。"));
+                                $"ローカライズ済み項目識別子「{pair.Key}」が {pair.Value.Count} 件あります。直接網羅は一意に判定しません。"));
                         }
 
                         if (!sharedIdSet.Contains(pair.Key))
@@ -848,14 +848,14 @@ namespace LocalizationKeyAudit.Editor
                                 table.LocaleIdentifier,
                                 string.Empty,
                                 pair.Key,
-                                "localized entry ID が SharedTableData に存在しません。"));
+                                "ローカライズ済み項目識別子が共有テーブルデータに存在しません。"));
                         }
                     }
                 }
             }
         }
 
-        /// <summary>collection に属さない table と、typed object に未対応の raw SharedTableData を追加します。</summary>
+        /// <summary>コレクションに属さないテーブルと、型として読み取ったオブジェクトに対応しない未加工の共有テーブルデータを追加します。</summary>
         private static void AddOrphanIssues(
             IReadOnlyList<LocalizationKeyAuditCollectionSnapshot> collections,
             IReadOnlyList<LocalizationKeyAuditOrphanLocaleTableSnapshot> orphanLocaleTables,
@@ -881,7 +881,7 @@ namespace LocalizationKeyAudit.Editor
                     orphan.LocaleTable.LocaleIdentifier,
                     string.Empty,
                     0,
-                    "typed StringTable に対応する StringTableCollection が見つかりません。"));
+                    "型として読み取った文字列テーブルに対応する文字列テーブルコレクションが見つかりません。"));
             }
 
             for (var index = 0; index < rawIdentities.Count; index++)
@@ -901,12 +901,12 @@ namespace LocalizationKeyAudit.Editor
                     string.Empty,
                     string.Empty,
                     0,
-                    "valid raw SharedTableData に対応する typed collection または table が見つかりません。"));
+                    "有効な未加工の共有テーブルデータに対応する、型として読み取ったコレクションまたはテーブルが見つかりません。"));
             }
 
         }
 
-        /// <summary>異なる raw path が同じ collection GUID を持つ曖昧性を path ごとに追加します。</summary>
+        /// <summary>異なる未加工パスが同じコレクション識別子（GUID）を持つ曖昧性をパスごとに追加します。</summary>
         private static void AddRawGuidIntegrityIssues(
             IReadOnlyList<LocalizationKeyAuditRawIdentity> rawIdentities,
             List<LocalizationKeyAuditIssue> issues)
@@ -932,12 +932,12 @@ namespace LocalizationKeyAudit.Editor
                         string.Empty,
                         string.Empty,
                         0,
-                        $"異なる SharedTableData path {pair.Value.Count} 件に同じ collection GUID が記録されています。"));
+                        $"異なる共有テーブルデータのパス {pair.Value.Count} 件に同じコレクション識別子（GUID）が記録されています。"));
                 }
             }
         }
 
-        /// <summary>required Locale ごとの missing table/entry と null-or-empty direct value を追加します。</summary>
+        /// <summary>必須ロケールごとの不足テーブル、不足項目、未設定または空の直接値を追加します。</summary>
         private static void AddDirectCoverageIssues(
             LocalizationKeyAuditRequest request,
             IReadOnlyList<LocalizationKeyAuditCollectionSnapshot> collections,
@@ -963,7 +963,7 @@ namespace LocalizationKeyAudit.Editor
                             locale,
                             string.Empty,
                             0,
-                            $"required Locale {locale} の direct StringTable がありません。runtime fallback 結果は判定していません。"));
+                            $"必須ロケール「{locale}」の直接の文字列テーブルがありません。実行時の代替処理結果は判定していません。"));
                         continue;
                     }
 
@@ -992,7 +992,7 @@ namespace LocalizationKeyAudit.Editor
                                 locale,
                                 sharedEntry.Key,
                                 sharedEntry.Id,
-                                "required Locale table に shared entry ID の direct entry がありません。runtime fallback 結果は判定していません。"));
+                                "必須ロケールテーブルに共有項目識別子と対応する直接項目がありません。実行時の代替処理結果は判定していません。"));
                             continue;
                         }
 
@@ -1012,14 +1012,14 @@ namespace LocalizationKeyAudit.Editor
                                 locale,
                                 sharedEntry.Key,
                                 sharedEntry.Id,
-                                "direct localized value が null または空です。空白文字だけの値と runtime fallback 結果は別扱いです。"));
+                                "直接のローカライズ値が未設定または空です。空白文字だけの値と実行時の代替処理結果は別扱いです。"));
                         }
                     }
                 }
             }
         }
 
-        /// <summary>coverage 完了状態と認識済み GUID/entry ID reference を検証します。</summary>
+        /// <summary>静的参照網羅の完了状態と認識済みGUIDおよび項目識別子参照を検証します。</summary>
         private static void AddStaticReferenceIssues(
             LocalizationKeyAuditCoverage coverage,
             IReadOnlyList<LocalizationKeyAuditCollectionSnapshot> collections,
@@ -1038,7 +1038,7 @@ namespace LocalizationKeyAudit.Editor
                     string.Empty,
                     string.Empty,
                     0,
-                    $"宣言済み scope の static reference coverage は未完了です: {coverage.IncompleteReason}"));
+                    $"宣言済み走査範囲の静的参照網羅は未完了です: {coverage.IncompleteReason}"));
 
                 return;
             }
@@ -1086,7 +1086,7 @@ namespace LocalizationKeyAudit.Editor
                         string.Empty,
                         reference.EntryKey,
                         reference.EntryId,
-                        "static reference の collection GUID を一意に解決できません。"));
+                        "静的参照のコレクション識別子（GUID）を一意に解決できません。"));
                     continue;
                 }
 
@@ -1103,7 +1103,7 @@ namespace LocalizationKeyAudit.Editor
                         string.Empty,
                         reference.EntryKey,
                         reference.EntryId,
-                    "static reference の entry ID を SharedTableData で一意に解決できません。"));
+                    "静的参照の項目識別子を共有テーブルデータで一意に解決できません。"));
                 }
             }
 
@@ -1140,12 +1140,12 @@ namespace LocalizationKeyAudit.Editor
                         string.Empty,
                         entry.Key,
                         entry.Id,
-                        $"宣言済み scope「{coverage.ScopeDescription}」内で、この一意な GUID/entry ID への認識対象 static reference が見つかりません。entry の未使用は断定していません。"));
+                        $"宣言済み走査範囲「{coverage.ScopeDescription}」内で、この一意なGUIDと項目識別子への認識済み静的参照が見つかりません。項目が未使用とは断定していません。"));
                 }
             }
         }
 
-        /// <summary>collection name から全 index への重複保持 map を作ります。</summary>
+        /// <summary>コレクション名から全添字への重複保持対応表を作ります。</summary>
         private static Dictionary<string, List<int>> BuildCollectionNameIndex(
             IReadOnlyList<LocalizationKeyAuditCollectionSnapshot> collections)
         {
@@ -1158,7 +1158,7 @@ namespace LocalizationKeyAudit.Editor
             return index;
         }
 
-        /// <summary>collection GUID から全 index への重複保持 map を作ります。</summary>
+        /// <summary>コレクション識別子（GUID）から全添字への重複保持対応表を作ります。</summary>
         private static Dictionary<Guid, List<int>> BuildCollectionGuidIndex(
             IReadOnlyList<LocalizationKeyAuditCollectionSnapshot> collections)
         {
@@ -1171,7 +1171,7 @@ namespace LocalizationKeyAudit.Editor
             return index;
         }
 
-        /// <summary>raw collection GUID から全 identity index への重複保持 map を作ります。</summary>
+        /// <summary>未加工コレクション識別子（GUID）から全識別情報添字への重複保持対応表を作ります。</summary>
         private static Dictionary<Guid, List<int>> BuildRawGuidIndex(
             IReadOnlyList<LocalizationKeyAuditRawIdentity> rawIdentities)
         {
@@ -1184,7 +1184,7 @@ namespace LocalizationKeyAudit.Editor
             return index;
         }
 
-        /// <summary>shared entry ID から全 index への重複保持 map を作ります。</summary>
+        /// <summary>共有項目識別子から全添字への重複保持対応表を作ります。</summary>
         private static Dictionary<long, List<int>> BuildSharedIdIndex(
             IReadOnlyList<LocalizationKeyAuditSharedEntrySnapshot> entries)
         {
@@ -1197,7 +1197,7 @@ namespace LocalizationKeyAudit.Editor
             return index;
         }
 
-        /// <summary>shared entry key から全 index への重複保持 map を作ります。</summary>
+        /// <summary>共有項目キーから全添字への重複保持対応表を作ります。</summary>
         private static Dictionary<string, List<int>> BuildSharedKeyIndex(
             IReadOnlyList<LocalizationKeyAuditSharedEntrySnapshot> entries)
         {
@@ -1210,7 +1210,7 @@ namespace LocalizationKeyAudit.Editor
             return index;
         }
 
-        /// <summary>Locale identifier から全 table index への重複保持 map を作ります。</summary>
+        /// <summary>ロケール識別子から全テーブル添字への重複保持対応表を作ります。</summary>
         private static Dictionary<string, List<int>> BuildLocaleTableIndex(
             IReadOnlyList<LocalizationKeyAuditLocaleTableSnapshot> tables)
         {
@@ -1223,7 +1223,7 @@ namespace LocalizationKeyAudit.Editor
             return index;
         }
 
-        /// <summary>localized entry ID から全 index への重複保持 map を作ります。</summary>
+        /// <summary>ローカライズ済み項目識別子から全添字への重複保持対応表を作ります。</summary>
         private static Dictionary<long, List<int>> BuildLocalizedIdIndex(
             IReadOnlyList<LocalizationKeyAuditLocalizedEntrySnapshot> entries)
         {
@@ -1236,7 +1236,7 @@ namespace LocalizationKeyAudit.Editor
             return index;
         }
 
-        /// <summary>重複保持 index へ 1 item index を追加します。</summary>
+        /// <summary>重複保持添字へ項目添字を1件追加します。</summary>
         private static void AddIndex<TKey>(Dictionary<TKey, List<int>> index, TKey key, int itemIndex)
         {
             if (!index.TryGetValue(key, out var values))
@@ -1248,7 +1248,7 @@ namespace LocalizationKeyAudit.Editor
             values.Add(itemIndex);
         }
 
-        /// <summary>name/GUID 重複に属する各 collection へ issue を追加します。</summary>
+        /// <summary>名前またはGUIDの重複に属する各コレクションへ問題を追加します。</summary>
         private static void AddDuplicateCollectionIssues<TKey>(
             IReadOnlyList<LocalizationKeyAuditCollectionSnapshot> collections,
             IReadOnlyDictionary<TKey, List<int>> index,
@@ -1275,13 +1275,13 @@ namespace LocalizationKeyAudit.Editor
                         string.Empty,
                         0,
                         kind == LocalizationKeyAuditIssueKind.DuplicateCollectionName
-                            ? $"collection 名 {collection.CollectionName} が一意ではありません。"
-                            : $"collection GUID {collection.CollectionGuid:N} が一意ではありません。"));
+                            ? $"コレクション名「{collection.CollectionName}」が一意ではありません。"
+                            : $"コレクション識別子（GUID）「{collection.CollectionGuid:N}」が一意ではありません。"));
                 }
             }
         }
 
-        /// <summary>collection identity を補った issue を作ります。</summary>
+        /// <summary>コレクション識別情報を補った問題を作ります。</summary>
         private static LocalizationKeyAuditIssue CreateCollectionIssue(
             LocalizationKeyAuditIssueKind kind,
             LocalizationKeyAuditCollectionSnapshot collection,
@@ -1304,19 +1304,19 @@ namespace LocalizationKeyAudit.Editor
                 message);
         }
 
-        /// <summary>issue 上限を超えない場合だけ追加します。</summary>
+        /// <summary>問題数の上限を超えない場合だけ追加します。</summary>
         private static void AddIssue(List<LocalizationKeyAuditIssue> issues, LocalizationKeyAuditIssue issue)
         {
             if (issues.Count >= LocalizationKeyAuditLimits.MaximumIssues)
             {
                 throw new LocalizationKeyAuditLimitException(
-                    $"issue 数が上限 {LocalizationKeyAuditLimits.MaximumIssues} 件を超えています。");
+                    $"問題数が上限 {LocalizationKeyAuditLimits.MaximumIssues} 件を超えています。");
             }
 
             issues.Add(issue);
         }
 
-        /// <summary>Locale identifier を case-insensitive、case-sensitive の順に並べます。</summary>
+        /// <summary>ロケール識別子を大文字小文字を区別しない順、区別する順で並べます。</summary>
         private static int CompareLocaleIdentifiers(string left, string right)
         {
             var comparison = string.Compare(left, right, StringComparison.OrdinalIgnoreCase);
@@ -1325,7 +1325,7 @@ namespace LocalizationKeyAudit.Editor
                 : string.Compare(left, right, StringComparison.Ordinal);
         }
 
-        /// <summary>shared entries を ID、key の順に並べます。</summary>
+        /// <summary>共有項目をID、キーの順に並べます。</summary>
         private static int CompareSharedEntries(
             LocalizationKeyAuditSharedEntrySnapshot left,
             LocalizationKeyAuditSharedEntrySnapshot right)
@@ -1336,7 +1336,7 @@ namespace LocalizationKeyAudit.Editor
                 : string.Compare(left.Key, right.Key, StringComparison.Ordinal);
         }
 
-        /// <summary>localized entries を ID、value の順に並べます。</summary>
+        /// <summary>ローカライズ済み項目をID、値の順に並べます。</summary>
         private static int CompareLocalizedEntries(
             LocalizationKeyAuditLocalizedEntrySnapshot left,
             LocalizationKeyAuditLocalizedEntrySnapshot right)
@@ -1347,7 +1347,7 @@ namespace LocalizationKeyAudit.Editor
                 : string.Compare(left.Value, right.Value, StringComparison.Ordinal);
         }
 
-        /// <summary>orphan table を SharedData path、Locale、table path、GUID の順に並べます。</summary>
+        /// <summary>所属先なしテーブルを共有データのパス、ロケール、テーブルパス、GUIDの順に並べます。</summary>
         private static int CompareOrphanLocaleTables(
             LocalizationKeyAuditOrphanLocaleTableSnapshot left,
             LocalizationKeyAuditOrphanLocaleTableSnapshot right)
@@ -1370,7 +1370,7 @@ namespace LocalizationKeyAudit.Editor
                 : left.CollectionGuid.CompareTo(right.CollectionGuid);
         }
 
-        /// <summary>raw identity を null、asset path、GUID の順に並べます。</summary>
+        /// <summary>未加工識別情報を未設定、アセットパス、GUIDの順に並べます。</summary>
         private static int CompareRawIdentities(
             LocalizationKeyAuditRawIdentity left,
             LocalizationKeyAuditRawIdentity right)
@@ -1394,7 +1394,7 @@ namespace LocalizationKeyAudit.Editor
             return comparison != 0 ? comparison : left.CollectionGuid.CompareTo(right.CollectionGuid);
         }
 
-        /// <summary>Asset Table SharedData identity をasset path、GUIDの順に並べます。</summary>
+        /// <summary>アセットテーブルの共有データ識別情報をアセットパス、GUIDの順に並べます。</summary>
         private static int CompareNonStringSharedDataIdentities(
             LocalizationKeyAuditNonStringSharedDataIdentity left,
             LocalizationKeyAuditNonStringSharedDataIdentity right)
@@ -1403,7 +1403,7 @@ namespace LocalizationKeyAudit.Editor
             return comparison != 0 ? comparison : left.CollectionGuid.CompareTo(right.CollectionGuid);
         }
 
-        /// <summary>Locale tables を Locale、asset path の順に並べます。</summary>
+        /// <summary>ロケールテーブルをロケール、アセットパスの順に並べます。</summary>
         private static int CompareLocaleTables(
             LocalizationKeyAuditLocaleTableSnapshot left,
             LocalizationKeyAuditLocaleTableSnapshot right)
@@ -1414,7 +1414,7 @@ namespace LocalizationKeyAudit.Editor
                 : string.Compare(left.AssetPath, right.AssetPath, StringComparison.Ordinal);
         }
 
-        /// <summary>collections を name、GUID、SharedData path の順に並べます。</summary>
+        /// <summary>コレクションを名前、GUID、共有データのパスの順に並べます。</summary>
         private static int CompareCollections(
             LocalizationKeyAuditCollectionSnapshot left,
             LocalizationKeyAuditCollectionSnapshot right)
@@ -1431,7 +1431,7 @@ namespace LocalizationKeyAudit.Editor
                 : string.Compare(left.SharedDataAssetPath, right.SharedDataAssetPath, StringComparison.Ordinal);
         }
 
-        /// <summary>issues を全表示 field の固定順に並べます。</summary>
+        /// <summary>問題を全表示項目の固定順に並べます。</summary>
         private static int CompareIssues(LocalizationKeyAuditIssue left, LocalizationKeyAuditIssue right)
         {
             var comparison = left.Kind.CompareTo(right.Kind);
@@ -1496,7 +1496,7 @@ namespace LocalizationKeyAudit.Editor
             return value != null && value.Length <= LocalizationKeyAuditLimits.MaximumTextCharacters;
         }
 
-        /// <summary>Unity relative path として安全な segment だけを持つかを調べます。</summary>
+        /// <summary>Unity相対パスとして安全な区間だけを持つかを調べます。</summary>
         private static bool IsUnityAssetPath(string path, bool allowRoot)
         {
             if (string.IsNullOrWhiteSpace(path) ||
@@ -1530,7 +1530,7 @@ namespace LocalizationKeyAudit.Editor
             return true;
         }
 
-        /// <summary>static reference coverageが対応するAssets/Packages pathかを調べます。</summary>
+        /// <summary>静的参照網羅が対応するAssetsまたはPackagesパスかを調べます。</summary>
         private static bool IsProjectAssetPath(string path, bool allowRoot)
         {
             if (!IsUnityAssetPath(path, allowRoot))
@@ -1568,7 +1568,7 @@ namespace LocalizationKeyAudit.Editor
             return true;
         }
 
-        /// <summary>coverage pathをAssetsまたはPackages/package-name rootへ正規化します。</summary>
+        /// <summary>網羅対象パスをAssetsまたはPackages内のパッケージ名ルートへ正規化します。</summary>
         private static string GetCoverageRoot(string path)
         {
             if (path == "Assets" || path.StartsWith("Assets/", StringComparison.Ordinal))
@@ -1580,7 +1580,7 @@ namespace LocalizationKeyAudit.Editor
             return separator < 0 ? path : path.Substring(0, separator);
         }
 
-        /// <summary>source path が宣言済み asset または folder の内側かを調べます。</summary>
+        /// <summary>参照元パスが宣言済みアセットまたはフォルダーの内側かを調べます。</summary>
         private static bool IsInsideDeclaredScope(string sourcePath, IReadOnlyList<string> declaredPaths)
         {
             for (var index = 0; index < declaredPaths.Count; index++)
@@ -1596,19 +1596,19 @@ namespace LocalizationKeyAudit.Editor
             return false;
         }
 
-        /// <summary>設定不正の terminal issue を作ります。</summary>
+        /// <summary>設定不正を表す監査停止問題を作ります。</summary>
         private static LocalizationKeyAuditIssue CreateConfigurationFailure(string message)
         {
             return CreateTerminalIssue(LocalizationKeyAuditIssueKind.InvalidConfiguration, message);
         }
 
-        /// <summary>上限超過の terminal issue を作ります。</summary>
+        /// <summary>上限超過を表す監査停止問題を作ります。</summary>
         private static LocalizationKeyAuditIssue CreateLimitFailure(string message)
         {
             return CreateTerminalIssue(LocalizationKeyAuditIssueKind.LimitExceeded, message);
         }
 
-        /// <summary>共通 field が空の terminal issue を作ります。</summary>
+        /// <summary>共通項目が空の監査停止問題を作ります。</summary>
         private static LocalizationKeyAuditIssue CreateTerminalIssue(LocalizationKeyAuditIssueKind kind, string message)
         {
             return new LocalizationKeyAuditIssue(

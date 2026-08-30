@@ -6,12 +6,12 @@ using AuditEditor = LocalizationKeyAudit.Editor;
 namespace LocalizationKeyAudit.Tests
 {
     /// <summary>
-    /// 実用的な allocation で到達できる request、typed、graph、issue の hard limit 分岐を検証します。
+    /// 実用的なメモリ確保で到達できる要求、型として読み取ったデータ、参照関係、問題の固定上限分岐を検証します。
     /// </summary>
     internal sealed class LocalizationKeyAuditLimitBehaviorTests
     {
         /// <summary>
-        /// typed Locale と collection の件数超過を LimitExceeded terminal result にします。
+        /// 型として読み取ったロケールとコレクションの件数超過を、LimitExceededの監査停止結果にします。
         /// </summary>
         [Test]
         public void Audit_TypedTopLevelCountsAboveLimitReturnLimitExceeded()
@@ -56,7 +56,7 @@ namespace LocalizationKeyAudit.Tests
         }
 
         /// <summary>
-        /// direct coverage 積で graph edge 上限を超える snapshot を部分結果なしで拒否します。
+        /// 直接網羅の組合せ数でグラフ辺上限を超えるスナップショットを、部分結果なしで拒否します。
         /// </summary>
         [Test]
         public void Audit_GraphEdgeCountAboveLimitReturnsLimitExceeded()
@@ -84,11 +84,11 @@ namespace LocalizationKeyAudit.Tests
                 typed);
 
             AssertTerminalKind(result, AuditEditor.LocalizationKeyAuditIssueKind.LimitExceeded);
-            StringAssert.Contains("graph edge 数", result.Issues[0].Message);
+            StringAssert.Contains("参照関係数", result.Issues[0].Message);
         }
 
         /// <summary>
-        /// 4096 collection と 256 required Locale から issue 上限を超え、partial issue を破棄します。
+        /// 4096コレクションと256必須ロケールから問題上限を超え、部分的な問題を破棄します。
         /// </summary>
         [Test]
         public void Audit_IssueCountAboveLimitReturnsLimitExceeded()
@@ -124,11 +124,11 @@ namespace LocalizationKeyAudit.Tests
                 typed);
 
             AssertTerminalKind(result, AuditEditor.LocalizationKeyAuditIssueKind.LimitExceeded);
-            StringAssert.Contains("issue 数", result.Issues[0].Message);
+            StringAssert.Contains("問題数", result.Issues[0].Message);
         }
 
         /// <summary>
-        /// request text と typed text/value の文字数上限超過を各所有境界で拒否します。
+        /// 要求文字列と、型として読み取った文字列や値の文字数上限超過を、各所有境界で拒否します。
         /// </summary>
         [Test]
         public void Audit_TextLengthsAboveLimitFailAtOwningBoundary()
@@ -188,7 +188,7 @@ namespace LocalizationKeyAudit.Tests
             AssertTerminalKind(valueResult, AuditEditor.LocalizationKeyAuditIssueKind.AuditFailed);
         }
 
-        /// <summary>指定 required Locale を持つ valid request を作ります。</summary>
+        /// <summary>指定した必須ロケールを持つ正常な要求を作ります。</summary>
         private static AuditEditor.LocalizationKeyAuditRequest CreateRequest(string[] locales)
         {
             return new AuditEditor.LocalizationKeyAuditRequest(
@@ -201,7 +201,7 @@ namespace LocalizationKeyAudit.Tests
                     string.Empty));
         }
 
-        /// <summary>既知の SharedTableData 一件を返す raw source を作ります。</summary>
+        /// <summary>既知の共有テーブルデータを1件返す未加工データ取得元を作ります。</summary>
         private static FakeLocalizationKeyAuditRawSource CreateSingleRawSource()
         {
             return new FakeLocalizationKeyAuditRawSource
@@ -210,7 +210,7 @@ namespace LocalizationKeyAudit.Tests
             };
         }
 
-        /// <summary>指定 children を持つ collection を作ります。</summary>
+        /// <summary>指定した子要素を持つコレクションを作ります。</summary>
         private static AuditEditor.LocalizationKeyAuditCollectionSnapshot CreateCollection(
             string name,
             Guid guid,
@@ -226,7 +226,7 @@ namespace LocalizationKeyAudit.Tests
                 tables);
         }
 
-        /// <summary>連番から non-empty unique GUID を作ります。</summary>
+        /// <summary>連番から空でない一意のGUIDを作ります。</summary>
         private static Guid GuidForIndex(int index)
         {
             var bytes = new byte[16];
@@ -234,7 +234,7 @@ namespace LocalizationKeyAudit.Tests
             return new Guid(bytes);
         }
 
-        /// <summary>terminal result が指定 kind 一件だけを持つことを検証します。</summary>
+        /// <summary>監査停止結果が指定種別を1件だけ持つことを検証します。</summary>
         private static void AssertTerminalKind(
             AuditEditor.LocalizationKeyAuditResult result,
             AuditEditor.LocalizationKeyAuditIssueKind kind)

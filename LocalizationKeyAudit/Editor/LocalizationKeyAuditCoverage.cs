@@ -7,12 +7,12 @@ using System.Collections.ObjectModel;
 namespace LocalizationKeyAudit.Editor
 {
     /// <summary>
-    /// static reference を探した範囲、認識結果、走査完了状態を明示します。
+    /// 静的参照を探した範囲、認識結果、走査完了状態を明示します。
     /// </summary>
     internal sealed class LocalizationKeyAuditCoverage
     {
         /// <summary>
-        /// 宣言済み scope と、その範囲で認識できた参照を防御的に copy します。
+        /// 宣言済み走査範囲と、その範囲で認識できた参照を防御的に複製します。
         /// </summary>
         internal LocalizationKeyAuditCoverage(
             string scopeDescription,
@@ -28,22 +28,22 @@ namespace LocalizationKeyAudit.Editor
             IncompleteReason = incompleteReason ?? string.Empty;
         }
 
-        /// <summary>利用者が宣言した static reference scope の説明です。</summary>
+        /// <summary>利用者が宣言した静的参照走査範囲の説明です。</summary>
         internal string ScopeDescription { get; }
 
-        /// <summary>走査対象として宣言した asset または folder path です。</summary>
+        /// <summary>走査対象として宣言したアセットまたはフォルダーパスです。</summary>
         internal IReadOnlyList<string> DeclaredAssetPaths { get; }
 
-        /// <summary>宣言済み scope 内で認識できた直接参照です。</summary>
+        /// <summary>宣言済み走査範囲内で認識できた直接参照です。</summary>
         internal IReadOnlyList<LocalizationKeyAuditStaticReference> RecognizedReferences { get; }
 
-        /// <summary>宣言済み scope の走査が打ち切りなく完了したかを示します。</summary>
+        /// <summary>宣言済み走査範囲の走査が打ち切りなく完了したかを示します。</summary>
         internal bool IsComplete { get; }
 
         /// <summary>未完了時の打ち切りまたは取得失敗理由です。</summary>
         internal string IncompleteReason { get; }
 
-        /// <summary>結果 DTO 用に同じ内容の独立 snapshot を作ります。</summary>
+        /// <summary>結果のデータ転送用に、同じ内容の独立したスナップショットを作ります。</summary>
         internal LocalizationKeyAuditCoverage Copy()
         {
             return new LocalizationKeyAuditCoverage(
@@ -54,7 +54,7 @@ namespace LocalizationKeyAudit.Editor
                 IncompleteReason);
         }
 
-        /// <summary>文字列一覧を読み取り専用 copy にします。</summary>
+        /// <summary>文字列一覧を読み取り専用の複製にします。</summary>
         private static IReadOnlyList<string> CopyStrings(IReadOnlyList<string> values)
         {
             var copy = new string[values?.Count ?? 0];
@@ -67,7 +67,7 @@ namespace LocalizationKeyAudit.Editor
             return new ReadOnlyCollection<string>(copy);
         }
 
-        /// <summary>参照一覧を各要素も含めて読み取り専用 copy にします。</summary>
+        /// <summary>参照一覧を各要素も含めて読み取り専用の複製にします。</summary>
         private static IReadOnlyList<LocalizationKeyAuditStaticReference> CopyReferences(
             IReadOnlyList<LocalizationKeyAuditStaticReference> values)
         {
@@ -89,7 +89,7 @@ namespace LocalizationKeyAudit.Editor
             return new ReadOnlyCollection<LocalizationKeyAuditStaticReference>(copy);
         }
 
-        /// <summary>null、source path、GUID、entry ID の順に参照を並べます。</summary>
+        /// <summary>未設定、参照元パス、GUID、項目識別子の順に参照を並べます。</summary>
         private static int CompareReferences(
             LocalizationKeyAuditStaticReference left,
             LocalizationKeyAuditStaticReference right)

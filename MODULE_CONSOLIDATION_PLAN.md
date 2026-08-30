@@ -275,14 +275,15 @@ BuildAssistantは通常の`BuildPipeline.BuildPlayer`を呼ぶため、BuildGuar
 BuildAssistantのPreviewへ別moduleの結果を集約すると、package間のhard dependency、staleな重複scan、blockerとadvisoryの混在を招くため追加実装は見送る。
 AssetImportAuditは期待するimport policy、ProjectSetupは利用者が選んだprofileを前提とするmanual Previewとして独立を維持し、Structural Prefab Overrideもbuild blockerへ昇格しない。
 
-**7. Localization keyのdirect coverage／integrity監査（LocalizationKeyAudit 1.3.0で実装）**
+**7. ローカライズキーの直接網羅／整合性監査（LocalizationKeyAudit 1.4.0で実装）**
 
-当初案の「未翻訳・未使用keyをbuild前に検出」は、locale fallback、dynamic lookup、Smart String内のnested参照、Addressablesや外部dataを網羅できず、安全に断定できないため採用しなかった。
-代わりにUnity Localization 1.5.12をhard dependencyとするEditor専用moduleを追加し、明示されたrequired Localeのdirect table／entry／value、duplicate・orphan integrity、宣言済み`Assets` scopeで認識できるGUID＋key ID参照だけを手動監査する。
-1.1.0では静的参照coverageを、明示した`Packages/<registered-name>[/...]`へ拡張した。1回の監査は`Assets`または1つのregistered packageというexact 1 logical rootに限定し、同じroot内だけ複数pathを許可する。登録名は`PackageInfo.resolvedPath`へexactに対応付け、physical pathをUI、結果、error、clipboardへ残さない。bare `Packages`、直接指定した`Library/PackageCache`、未登録名、root混在、`~`／colon／dotまたはspaceで終わるsegmentを含む明示pathをfilesystem access前に拒否する。normalized duplicate target、root／ancestor／child reparse、root escapeではfail closedとしてpartial resultを返さず、読取errorはlogical pathとexception typeだけを示す。
-1.2.0では監査result全体のfindingを`Terminal`、`Required Locale Coverage`、`Static References`、`Integrity`へexact 1つずつ分類し、Search、Category filter、500件表示上限に依存しない件数を追加した。件数はunique asset／collection／key数ではなくfinding数であり、resultまたはcoverageがincompleteなら0件も安全や問題なしの証明にはしない。issue taxonomy、read-only、Editor-only、advisory、Runtime／public API 0件の境界は変えない。
-1.3.0ではSearchとCategory filter後に一覧へ実際に描画する先頭500件だけを、result順とduplicateを保ったまま`Copy Displayed Issues`でcopyできるようにした。payload headerへresult／coverageの完了性とDisplayed／Filtered／Total件数を残すため、Incomplete resultや500件超のfilter結果も全件copyと誤読しない。Incompleteでも表示中findingのcopyは許可するが、生成payloadが1,048,576 UTF-16 code unitを1つでも超えた場合はtruncateやpartial copyをせず、既存clipboardを変更しない。既存`Copy Details`、category summary、Analyzer、Service、model、public／Runtime surface、build callbackは変更しない。
-Shared Table Dataはtyped load前にraw serialized representationを全件preflightし、read-only保証を確立できない場合はtyped APIを呼ばず全体を停止する。結果はadvisoryであり、runtime翻訳可否やkeyの未使用を断定せず、build blocker、autofix、削除を行わない。
+当初案の「未翻訳・未使用キーをビルド前に検出」は、ロケールの代替値、動的検索、Smart String内の入れ子参照、Addressablesや外部データを網羅できず、安全に断定できないため採用しなかった。
+代わりにUnity Localization 1.5.12を必須依存とするエディター専用モジュールを追加し、明示した必須ロケールの直接テーブル・項目・値、重複・孤立の整合性、宣言済み`Assets`範囲で認識できるGUIDと項目識別子の参照だけを手動監査する。
+1.1.0では静的参照の網羅範囲を、明示した`Packages/<登録済みパッケージ名>[/...]`へ拡張した。1回の監査は`Assets`または登録済みパッケージ1つという、ちょうど1つの論理ルートに限定し、同じルート内だけ複数パスを許可する。登録名は`PackageInfo.resolvedPath`へ厳密に対応付け、物理パスを画面、結果、エラー、クリップボードへ残さない。単独の`Packages`、直接指定した`Library/PackageCache`、未登録名、ルート混在、`~`、`:`、または末尾がピリオドか空白の部分を含む明示パスを、ファイルシステムへのアクセス前に拒否する。正規化後の対象重複、ルート・親階層・配下パスの再解析ポイント、ルート外への逸脱では安全側で停止して部分結果を返さず、読み取りエラーは論理パスと例外型だけを示す。
+1.2.0では監査結果全体の問題を「監査停止」「必須ロケール網羅」「静的参照」「整合性」のいずれか1つへ分類し、検索、区分の絞り込み、500件表示上限に依存しない件数を追加した。件数は重複を除いたアセット数、コレクション数、キー数ではなく問題数であり、結果または静的参照網羅が未完了なら、0件も安全や問題なしの証明にはしない。問題種別、読み取り専用、エディター専用、判断用監査、実行時向け機能と公開APIが0件という境界は変えない。
+1.3.0では検索と区分の絞り込み後に一覧へ実際に描画する先頭500件だけを、結果内の順序と重複を保ったまま、当時の「表示分をコピー（`Copy Displayed`）」でコピーできるようにした。本文の監査結果、静的参照網羅、表示件数、絞り込み後の件数、問題総数に完了性や件数を残すため、未完了の結果や500件を超える絞り込み結果も全件コピーと誤読しない。未完了でも表示中の問題のコピーは許可するが、生成する本文が1,048,576 UTF-16符号単位を1つでも超えた場合は、切り詰めや一部コピーをせず、既存のクリップボードを変更しない。既存の「詳細をコピー」、区分集計、解析処理、サービス、モデル、公開範囲、実行時向け範囲、ビルドコールバックは変更しない。
+1.4.0では検索と区分の絞り込み後の問題を、結果内の順序と重複を保って500件ずつ、既存上限100,000件に対応する最大200ページまで到達可能にした。「前へ」／「次へ」は現在のページを切り替え、絞り込みの変更、「監査」、「結果を消去」はページを先頭へ戻す。「表示分をコピー」は現在のページだけをコピーし、本文へ「表示ページ: 現在ページ / 総ページ数」と、1から始まる「表示範囲: 開始番号-終了番号」を追加する。未完了でもコピーを許可し、1,048,576 UTF-16符号単位ちょうど、1符号単位超過、不正または古い状態、0件の状態に対する原子的なクリップボード契約を維持する。画面、メニュー、全21問題種別の表示名、コピー本文の項目名、パッケージ生成の問題説明と未完了理由を日本語化し、検索は日本語表示名と従来の列挙識別子の双方を受け付ける。旧版の英語の既定範囲説明は完全一致時だけ日本語へ移し、独自入力を保持する。「詳細をコピー」は対象、識別値、項目順、コピー動作を維持し、項目名、問題種別表示、パッケージ生成の説明を日本語化する。解析の判定条件、問題種別・件数・識別値・並び順、上限、部分結果を返さない失敗時契約、問題種別の列挙識別子、公開範囲、実行時向け範囲、ビルドコールバックは変更しない。
+共有テーブルデータは型として読み取る前に未加工の直列化表現を全件事前検査し、読み取り専用を保証できない場合は型として読み取るAPIを呼ばず全体を停止する。結果は判断材料であり、実行時の翻訳可否やキーの未使用を断定せず、ビルド停止、自動修正、削除を行わない。
 
 ### 見送り
 
