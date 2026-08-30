@@ -78,21 +78,21 @@ folderを選択した場合は、そのfolder以下のPrefabをまとめて対�
 
 対象Sceneが既に開いていれば現在のGameObjectを選択します。閉じていれば一時的にadditiveで再scanした後、Sceneを必ず閉じ直してScene assetを選択します。findingが変化していればstaleと案内します。Apply、Revert、Undo登録、Scene保存、dirty化は行わず、review結果はPlayer buildを止めません。
 
-### 6. いつもどおりbuildする
+### 6. いつもどおりビルドする
 
-Player build時は操作不要です。buildへ実際に渡されたSceneを同じruleで再検査します。問題がなければ何も出力せず続行し、問題があれば次のようなmessageで開始前に止めます。
+プレイヤービルド時は操作不要です。ビルドへ実際に渡されたシーンを同じ規則で再検査します。問題がなければ何も出力せず続行し、問題があれば次のような診断文を示して開始前に止めます。
 
 ```text
-Build Guard found build-blocking issues in a Player build Scene.
-Scene: Assets/Scenes/Game.unity
-Missing Scripts: 1
+プレイヤービルド対象のシーンで、ビルドを停止する問題が見つかりました。
+シーン: Assets/Scenes/Game.unity
+欠落スクリプト: 1
 - Root[0]/Inactive Child[1]: 1
-Missing Object References: 1
+欠落オブジェクト参照: 1
 - Camera Root[1] :: UnityEngine.Camera[1].m_TargetTexture
-Repair or remove the listed missing references before building again.
+再度ビルドする前に、一覧の欠落スクリプトまたはオブジェクト参照を修復するか、該当箇所を削除してください。
 ```
 
-`Root[0]`などの数字は同じ親の中での並び順です。`UnityEngine.Camera[1].m_TargetTexture`は、対象GameObjectの2番目のComponentにある`m_TargetTexture` fieldが壊れていることを表します。
+`Root[0]`などの数字は同じ親の中での並び順です。`UnityEngine.Camera[1].m_TargetTexture`は、対象ゲームオブジェクトの2番目の部品にある`m_TargetTexture`プロパティが壊れていることを表します。
 
 ## 検査する範囲
 

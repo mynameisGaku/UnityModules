@@ -9,13 +9,13 @@ using UnityEngine.SceneManagement;
 namespace BuildGuard.Tests
 {
     /// <summary>
-    /// Verifies build callback scope and failure contracts.
+    /// ビルド処理の対象範囲と失敗時の契約を検証します。
     /// </summary>
     [Parallelizable(ParallelScope.None)]
     internal sealed class BuildGuardSceneProcessorTests
     {
         /// <summary>
-        /// Verifies that non-build callbacks with a null report skip validation.
+        /// ビルド外で報告情報がない呼び出しは検証しないことを確認します。
         /// </summary>
         [Test]
         public void OnProcessScene_NullReport_DoesNotValidate()
@@ -34,7 +34,7 @@ namespace BuildGuard.Tests
         }
 
         /// <summary>
-        /// Verifies that explicit validation rejects missing scripts with actionable details.
+        /// 明示検証が欠落スクリプトを操作可能な詳細付きで拒否することを確認します。
         /// </summary>
         [Test]
         public void ValidateScene_BrokenScene_ThrowsBuildFailedException()
@@ -45,7 +45,13 @@ namespace BuildGuard.Tests
             {
                 var scene = fixture.OpenSceneFixture();
                 var exception = Assert.Throws<BuildFailedException>(() => BuildGuardSceneProcessor.ValidateScene(scene));
-                Assert.That(exception.Message, Does.Contain("Broken\\/Root[0]").And.Contain("Inactive Child[0]").And.Contain("Missing Scripts: 3"));
+                Assert.That(exception.Message, Is.EqualTo(
+                    "プレイヤービルド対象のシーンで、ビルドを停止する問題が見つかりました。\n" +
+                    $"シーン: {scene.path}\n" +
+                    "欠落スクリプト: 3\n" +
+                    "- Broken\\/Root[0]: 1\n" +
+                    "- Broken\\/Root[0]/Inactive Child[0]: 2\n" +
+                    "再度ビルドする前に、一覧の欠落スクリプトまたはオブジェクト参照を修復するか、該当箇所を削除してください。"));
             }
             finally
             {
@@ -54,7 +60,7 @@ namespace BuildGuard.Tests
         }
 
         /// <summary>
-        /// Verifies that explicit validation accepts a valid Scene.
+        /// 明示検証が有効なシーンを受け入れることを確認します。
         /// </summary>
         [Test]
         public void ValidateScene_ValidScene_DoesNotThrow()
@@ -64,7 +70,7 @@ namespace BuildGuard.Tests
         }
 
         /// <summary>
-        /// Verifies that explicit validation rejects missing serialized object references.
+        /// 明示検証が直列化された欠落オブジェクト参照を拒否することを確認します。
         /// </summary>
         [Test]
         public void ValidateScene_MissingObjectReference_ThrowsBuildFailedException()
@@ -75,9 +81,12 @@ namespace BuildGuard.Tests
             {
                 var scene = fixture.CreateSceneWithMissingCameraTargetTexture();
                 var exception = Assert.Throws<BuildFailedException>(() => BuildGuardSceneProcessor.ValidateScene(scene));
-                Assert.That(exception.Message, Does.Contain("Missing Object References: 1")
-                    .And.Contain("Camera Root[0]")
-                    .And.Contain("UnityEngine.Camera[1].m_TargetTexture"));
+                Assert.That(exception.Message, Is.EqualTo(
+                    "プレイヤービルド対象のシーンで、ビルドを停止する問題が見つかりました。\n" +
+                    $"シーン: {scene.path}\n" +
+                    "欠落オブジェクト参照: 1\n" +
+                    "- Camera Root[0] :: UnityEngine.Camera[1].m_TargetTexture\n" +
+                    "再度ビルドする前に、一覧の欠落スクリプトまたはオブジェクト参照を修復するか、該当箇所を削除してください。"));
             }
             finally
             {
@@ -86,7 +95,7 @@ namespace BuildGuard.Tests
         }
 
         /// <summary>
-        /// Verifies that preflight validation restores a closed Scene and preserves the active Scene.
+        /// 事前検証が閉じていたシーンを閉じた状態へ戻し、作業中シーンを維持することを確認します。
         /// </summary>
         [Test]
         public void Preflight_ClosedBrokenScene_PreservesActiveScene()
@@ -114,7 +123,7 @@ namespace BuildGuard.Tests
         }
 
         /// <summary>
-        /// Verifies that duplicate Scene paths are scanned once and restored to a closed state.
+        /// 重複したシーンパスを1回だけ走査し、閉じた状態へ戻すことを確認します。
         /// </summary>
         [Test]
         public void Preflight_DuplicateValidScenePath_LeavesSceneClosed()
@@ -138,7 +147,7 @@ namespace BuildGuard.Tests
         }
 
         /// <summary>
-        /// Verifies the stable early callback order used before Scene conversion.
+        /// シーン変換前に使う早期処理の順序が固定されていることを確認します。
         /// </summary>
         [Test]
         public void CallbackOrder_IsEarlyAndStable()

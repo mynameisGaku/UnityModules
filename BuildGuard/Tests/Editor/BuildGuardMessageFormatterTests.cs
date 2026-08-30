@@ -8,10 +8,11 @@ using UnityEditor.SceneManagement;
 namespace BuildGuard.Tests
 {
     /// <summary>
-    /// Verifies deterministic combined build failure messages.
+    /// 複数種の問題をまとめたビルド失敗文が決定論的であることを検証します。
     /// </summary>
     internal sealed class BuildGuardMessageFormatterTests
     {
+        /// <summary>混在する問題の並び、件数、改行、末尾案内を診断文全体で検証します。</summary>
         [Test]
         public void Format_MixedFindings_IsSortedAndComplete()
         {
@@ -31,26 +32,29 @@ namespace BuildGuard.Tests
             var message = BuildGuardMessageFormatter.Format(scene, scripts, references);
 
             Assert.That(message, Is.EqualTo(
-                "Build Guard found build-blocking issues in a Player build Scene.\n" +
-                "Scene: <unsaved:Message Scene>\n" +
-                "Missing Scripts: 3\n" +
+                "プレイヤービルド対象のシーンで、ビルドを停止する問題が見つかりました。\n" +
+                "シーン: <未保存:Message Scene>\n" +
+                "欠落スクリプト: 3\n" +
                 "- Root[0]: 1\n" +
                 "- Root[1]: 2\n" +
-                "Missing Object References: 2\n" +
+                "欠落オブジェクト参照: 2\n" +
                 "- Root[0] :: Example.First[1].m_A\n" +
                 "- Root[1] :: Example.Second[2].m_Z\n" +
-                "Repair or remove the listed missing references before building again."));
+                "再度ビルドする前に、一覧の欠落スクリプトまたはオブジェクト参照を修復するか、該当箇所を削除してください。"));
         }
 
+        /// <summary>問題がない入力を日本語の理由付きで拒否することを検証します。</summary>
         [Test]
         public void Format_NoFindings_ThrowsArgumentException()
         {
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
-            Assert.Throws<ArgumentException>(() => BuildGuardMessageFormatter.Format(
+            var exception = Assert.Throws<ArgumentException>(() => BuildGuardMessageFormatter.Format(
                 scene,
                 Array.Empty<MissingScriptFinding>(),
                 Array.Empty<MissingObjectReferenceFinding>()));
+
+            Assert.That(exception.Message, Is.EqualTo("ビルドを停止する問題が1件以上必要です。"));
         }
     }
 }
