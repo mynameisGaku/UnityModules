@@ -95,8 +95,9 @@ namespace ModuleInstaller.Editor.Tests
                 var assetImportLabel = assetImportRow.Q<Label>();
                 var assetImportReadmeButton = assetImportRow.Q<Button>("readme-package-com.studiogaku.asset-import-audit");
                 var assetImportInstallButton = assetImportRow.Q<Button>("install-package-com.studiogaku.asset-import-audit");
-                Assert.That(assetImportLabel.text, Does.Contain("テクスチャー取込設定監査").And.Contain("Standalone").And.Contain("Android").And.Contain("iOS"));
-                Assert.That(assetImportReadmeButton.tooltip, Does.Contain("asset-import-audit-v1.1.0/AssetImportAudit/README.md"));
+                Assert.That(assetImportLabel.text, Does.Contain("テクスチャー取込設定監査").And.Contain("パソコン").And.Contain("Android").And.Contain("iOS"));
+                Assert.That(assetImportLabel.text, Does.Not.Contain("Standalone"));
+                Assert.That(assetImportReadmeButton.tooltip, Does.Contain("asset-import-audit-v1.2.0/AssetImportAudit/README.md"));
                 Assert.That(assetImportInstallButton, Is.Not.Null);
 
                 var buildAssistantRow = window.rootVisualElement.Q<VisualElement>("package-com.studiogaku.build-assistant");

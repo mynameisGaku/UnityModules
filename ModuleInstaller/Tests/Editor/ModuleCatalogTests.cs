@@ -127,7 +127,8 @@ namespace ModuleInstaller.Editor.Tests
                 "com.studiogaku.reference-finder",
                 "com.studiogaku.build-assistant"
             }));
-            Assert.That(bundle.FirstStep, Does.Contain("Tools > ビルド実行アシスタント > 開く"));
+            Assert.That(bundle.FirstStep, Is.EqualTo("まず Tools > Project Setup > Open で初期設定を行い、Tools > テクスチャー取込設定監査 > 開く でテクスチャーの差分を確認し、最後に Tools > ビルド実行アシスタント > 開く で公開用ビルド計画を確認します。"));
+            Assert.That(bundle.FirstStep, Does.Not.Contain("Tools > Asset Import Audit > Open"));
         }
 
         [Test]
@@ -164,9 +165,10 @@ namespace ModuleInstaller.Editor.Tests
         {
             Assert.That(ModuleCatalog.TryFindEntry("com.studiogaku.asset-import-audit", out var entry), Is.True);
             Assert.That(entry.FolderName, Is.EqualTo("AssetImportAudit"));
-            Assert.That(entry.Tag, Is.EqualTo("asset-import-audit-v1.1.0"));
+            Assert.That(entry.Tag, Is.EqualTo("asset-import-audit-v1.2.0"));
             Assert.That(entry.DisplayName, Is.EqualTo("テクスチャー取込設定監査"));
-            Assert.That(entry.Summary, Does.Contain("共通設定").And.Contain("Standalone").And.Contain("Android").And.Contain("iOS").And.Contain("差分を確認"));
+            Assert.That(entry.Summary, Does.Contain("共通設定").And.Contain("パソコン").And.Contain("Android").And.Contain("iOS").And.Contain("差分を確認").And.Contain("選択対象の設定が変わっていれば"));
+            Assert.That(entry.Summary, Does.Not.Contain("Standalone"));
         }
 
         [Test]
@@ -447,6 +449,8 @@ namespace ModuleInstaller.Editor.Tests
             Assert.That(value, Does.Not.Contain("Library履歴"), context);
             Assert.That(value, Does.Not.Contain("Package Manager"), context);
             Assert.That(value, Does.Not.Contain("README"), context);
+            Assert.That(value, Does.Not.Contain("Asset Import Audit"), context);
+            Assert.That(value, Does.Not.Contain("Standalone"), context);
         }
     }
 }

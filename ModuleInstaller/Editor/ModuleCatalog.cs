@@ -134,7 +134,7 @@ namespace ModuleInstaller.Editor
             Entry("com.studiogaku.drawing", "Drawing", "drawing-v1.0.0", "デバッグ描画", "実行中に線、図形、経路、文字を描画します。"),
             Entry("com.studiogaku.build-guard", "BuildGuard", "build-guard-v1.4.0", "プロジェクト不備確認・修復", "シーンとプレハブの欠落参照を検出し、修復します。"),
             Entry("com.studiogaku.reference-finder", "ReferenceFinder", "reference-finder-v1.3.0", "アセット参照整理", "アセット参照の検索・置換と名前の一括変更を行います。"),
-            Entry("com.studiogaku.asset-import-audit", "AssetImportAudit", "asset-import-audit-v1.1.0", "テクスチャー取込設定監査", "テクスチャーの共通設定と、Standalone、Android、iOS向け設定の差分を確認してから一括反映します。"),
+            Entry("com.studiogaku.asset-import-audit", "AssetImportAudit", "asset-import-audit-v1.2.0", "テクスチャー取込設定監査", "テクスチャーの共通設定と、パソコン、Android、iOS向け設定の差分を確認してから反映します。差分確認後に選択対象の設定が変わっていれば、選択対象を一件も変更せず停止します。"),
             Entry("com.studiogaku.build-assistant", "BuildAssistant", "build-assistant-v1.1.0", "ビルド実行アシスタント", "デスクトップ向けビルド計画を確認して新しい出力フォルダーへ実行し、件数を制限した履歴、容量差、JSON形式の報告を記録します。"),
             Entry("com.studiogaku.scene-workspace", "SceneWorkspace", "scene-workspace-v1.0.0", "シーン作業セット", "複数シーンの順番と読込状態を記録し、差分確認、計画の有効性確認、切り替え後の検証、失敗時の復元報告を伴って安全に切り替えます。"),
             Entry("com.studiogaku.play-mode-tuning", "PlayModeTuning", "play-mode-tuning-v1.0.0", "実行中調整", "再生中に選んで記録したプロパティー変更を、差分確認、計画の有効性確認、失敗時の復元報告を経て保存済みシーンへ反映します。"),
@@ -165,7 +165,7 @@ namespace ModuleInstaller.Editor
         {
             Bundle("project-maintenance", "プロジェクト整備", "新しいプロジェクトを初期設定し、アセットとテクスチャー取込設定を整理し、確認済みのデスクトップ向けビルドを実行します。", ModuleBundleTier.Recommended,
                 "プロジェクトの開始時、全体設定やアセットの整理時、デスクトップ向け単体ビルドの準備時に使います。",
-                "まず Tools > Project Setup > Open で初期設定を行い、Tools > Asset Import Audit > Open でテクスチャーを検査し、最後に Tools > ビルド実行アシスタント > 開く で公開用ビルド計画を確認します。",
+                "まず Tools > Project Setup > Open で初期設定を行い、Tools > テクスチャー取込設定監査 > 開く でテクスチャーの差分を確認し、最後に Tools > ビルド実行アシスタント > 開く で公開用ビルド計画を確認します。",
                 "導入操作が変更するのはパッケージ設定だけです。プロジェクト一括設定とテクスチャー取込設定監査は、明示的な差分確認と反映操作の後にだけ選択項目を変更します。ビルド実行アシスタントは、内容確認と実行確認の後にだけ新しいビルド出力とプロジェクト内の件数制限付き履歴を書き出します。",
                 "com.studiogaku.project-setup", "com.studiogaku.asset-import-audit", "com.studiogaku.inspector", "com.studiogaku.drawing", "com.studiogaku.build-guard", "com.studiogaku.reference-finder", "com.studiogaku.build-assistant"),
             Bundle("scene-and-ui", "シーンと画面", "再利用できるエディターのシーン作業構成と、確認済みの再生中調整を用意し、実行時のシーン切り替え、画面演出、一時停止、起動手順を整えます。", ModuleBundleTier.Recommended,
