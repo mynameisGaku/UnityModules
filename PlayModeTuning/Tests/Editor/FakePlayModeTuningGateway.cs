@@ -9,14 +9,20 @@ namespace PlayModeTuning.Editor.Tests
         private readonly Dictionary<string, PlayModeTuningEncodedValue> values = new Dictionary<string, PlayModeTuningEncodedValue>(StringComparer.Ordinal);
         private readonly Dictionary<string, string> unselected = new Dictionary<string, string>(StringComparer.Ordinal);
         private readonly List<string> firstApplyOrder = new List<string>();
+        private Dictionary<string, PlayModeTuningEncodedValue> valuesBeforeApply;
+        private Dictionary<string, string> unselectedBeforeApply;
 
         internal PlayModeTuningEnvironment Environment { get; set; } = EditEnvironment();
         internal int ApplyCalls { get; private set; }
+        internal int CompleteApplyCalls { get; private set; }
+        internal int ReleaseApplyCalls { get; private set; }
+        internal int RevertApplyCalls { get; private set; }
         internal IReadOnlyList<string> FirstApplyOrder => Array.AsReadOnly(firstApplyOrder.ToArray());
         internal int MarkDirtyCalls { get; private set; }
         internal int FailApplyCall { get; set; }
         internal bool FailCapture { get; set; }
         internal bool FailMarkDirty { get; set; }
+        internal bool FailCompleteApply { get; set; }
         internal bool ChangeUnselectedOnFirstApply { get; set; }
         internal bool KeepUnselectedResidualOnRollback { get; set; }
         internal string SelectedSideEffectComponent { get; set; } = string.Empty;
@@ -79,7 +85,11 @@ namespace PlayModeTuning.Editor.Tests
 
         public PlayModeTuningMutationResult Apply(IReadOnlyList<PlayModeTuningWrite> writes)
         {
+            if (valuesBeforeApply != null)
+                return PlayModeTuningMutationResult.Failure(PlayModeTuningError.ApplyInProgress, "Injected transaction overlap.");
             ApplyCalls++;
+            valuesBeforeApply = new Dictionary<string, PlayModeTuningEncodedValue>(values, StringComparer.Ordinal);
+            unselectedBeforeApply = new Dictionary<string, string>(unselected, StringComparer.Ordinal);
             foreach (var write in writes ?? Array.Empty<PlayModeTuningWrite>())
             {
                 if (ApplyCalls == 1)
@@ -93,13 +103,42 @@ namespace PlayModeTuning.Editor.Tests
                 foreach (var component in (writes ?? Array.Empty<PlayModeTuningWrite>()).Select(item => item.Record.componentKey).Distinct(StringComparer.Ordinal))
                     unselected[component] = "onvalidate-side-effect";
             }
-            if (ApplyCalls == 2 && ChangeUnselectedOnFirstApply && !KeepUnselectedResidualOnRollback)
-            {
-                foreach (var component in (writes ?? Array.Empty<PlayModeTuningWrite>()).Select(item => item.Record.componentKey).Distinct(StringComparer.Ordinal))
-                    unselected[component] = UnselectedBaseline(FindComponentName(component));
-            }
             if (FailApplyCall == ApplyCalls)
                 return PlayModeTuningMutationResult.Failure(PlayModeTuningError.ApplyFailed, "Injected apply failure.");
+            return PlayModeTuningMutationResult.Success();
+        }
+
+        public PlayModeTuningMutationResult CompleteApply()
+        {
+            CompleteApplyCalls++;
+            if (FailCompleteApply)
+                return PlayModeTuningMutationResult.Failure(PlayModeTuningError.ApplyFailed, "Injected completion failure.");
+            return PlayModeTuningMutationResult.Success();
+        }
+
+        public void ReleaseApply()
+        {
+            ReleaseApplyCalls++;
+            valuesBeforeApply = null;
+            unselectedBeforeApply = null;
+        }
+
+        public PlayModeTuningMutationResult RevertApply()
+        {
+            RevertApplyCalls++;
+            if (valuesBeforeApply == null)
+                return PlayModeTuningMutationResult.Success();
+            values.Clear();
+            foreach (var pair in valuesBeforeApply)
+                values.Add(pair.Key, pair.Value);
+            if (!KeepUnselectedResidualOnRollback)
+            {
+                unselected.Clear();
+                foreach (var pair in unselectedBeforeApply)
+                    unselected.Add(pair.Key, pair.Value);
+            }
+            valuesBeforeApply = null;
+            unselectedBeforeApply = null;
             return PlayModeTuningMutationResult.Success();
         }
 

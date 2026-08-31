@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace PlayModeTuning.Editor
 {
-    /// <summary>Persists one JSON session in Unity SessionState without writing project assets.</summary>
+    /// <summary>プロジェクト資産を書き換えず、一つの調整作業をJSONとしてUnityのSessionStateへ保持します。</summary>
     internal sealed class UnityPlayModeTuningSessionStore : IPlayModeTuningSessionStore
     {
         private const string SessionKey = "PlayModeTuning.Session.v1";
@@ -17,8 +17,9 @@ namespace PlayModeTuning.Editor
             {
                 return JsonUtility.FromJson<PlayModeTuningPersistedSession>(json) ?? InvalidSessionData();
             }
-            catch (System.Exception)
+            catch (System.Exception exception)
             {
+                Debug.LogException(exception);
                 return InvalidSessionData();
             }
         }

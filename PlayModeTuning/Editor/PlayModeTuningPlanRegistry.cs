@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace PlayModeTuning.Editor
 {
-    /// <summary>Accepts only the exact registered plan object and consumes it before any engine mutation.</summary>
+    /// <summary>登録した同一の反映予定だけを受け入れ、エンジン変更前に使用済みへ移します。</summary>
     internal sealed class PlayModeTuningPlanRegistry
     {
         private const int MaximumEntries = 64;
@@ -13,7 +13,7 @@ namespace PlayModeTuning.Editor
         internal void Register(PlayModeTuningPlan plan)
         {
             if (plan == null || plan.Nonce == Guid.Empty)
-                throw new ArgumentException("A registered plan requires a non-empty nonce.", nameof(plan));
+                throw new ArgumentException("登録する反映予定には空でない一回限りの識別子が必要です。", nameof(plan));
             entries[plan.Nonce] = new Entry(plan);
             order.Enqueue(plan.Nonce);
             while (order.Count > MaximumEntries)
@@ -33,6 +33,14 @@ namespace PlayModeTuning.Editor
                 return PlayModeTuningError.PlanAlreadyConsumed;
             entry.Consumed = true;
             return PlayModeTuningError.None;
+        }
+
+        /// <summary>エンジン変更前の保存失敗に限り、同一の反映予定を未使用へ戻します。</summary>
+        internal void RestoreBeforeMutation(PlayModeTuningPlan plan)
+        {
+            if (plan == null || !entries.TryGetValue(plan.Nonce, out var entry) || !ReferenceEquals(plan, entry.Plan))
+                return;
+            entry.Consumed = false;
         }
 
         internal void RemoveSession(Guid sessionId)

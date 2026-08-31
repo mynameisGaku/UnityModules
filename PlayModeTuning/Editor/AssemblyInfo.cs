@@ -1,3 +1,3 @@
 using System.Runtime.CompilerServices;
 
-[assembly: InternalsVisibleTo("PlayModeTuning.Tests")]
+[assembly: InternalsVisibleTo("PlayModeTuning.Editor.Tests")]

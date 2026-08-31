@@ -6,7 +6,7 @@ using System.Text;
 
 namespace PlayModeTuning.Editor
 {
-    /// <summary>Validates every persisted field that can influence session state, preview, apply, or rollback.</summary>
+    /// <summary>作業状態、差分表示、反映、復元へ影響する保存項目をすべて検証します。</summary>
     internal static class PlayModeTuningSessionValidator
     {
         private static readonly UTF8Encoding StrictUtf8 = new UTF8Encoding(false, true);
@@ -15,45 +15,45 @@ namespace PlayModeTuning.Editor
         {
             message = string.Empty;
             if (session == null)
-                return Fail("The stored session is missing.", out message);
+                return Fail("保存された調整データがありません。", out message);
             if (session.schemaVersion != PlayModeTuningPersistedSession.CurrentSchemaVersion)
-                return Fail("The stored session schema is unsupported.", out message);
+                return Fail("保存された調整データの形式には対応していません。", out message);
             if (!Guid.TryParseExact(session.sessionId, "N", out var sessionId))
-                return Fail("The stored session identity is invalid.", out message);
+                return Fail("保存された作業識別子が無効です。", out message);
             if (!Enum.IsDefined(typeof(PlayModeTuningPhase), session.phase) || (PlayModeTuningPhase)session.phase == PlayModeTuningPhase.Idle)
-                return Fail("The stored session phase is invalid.", out message);
+                return Fail("保存された作業段階が無効です。", out message);
             if (!Enum.IsDefined(typeof(PlayModeTuningError), session.error))
-                return Fail("The stored session error is invalid.", out message);
+                return Fail("保存された失敗理由が無効です。", out message);
             if (!StringsArePresent(session) || session.properties == null || session.components == null)
-                return Fail("The stored session contains null fields.", out message);
+                return Fail("保存された調整データに欠けた項目があります。", out message);
 
             var phase = (PlayModeTuningPhase)session.phase;
             if (IsNormalizedInvalidSession(sessionId, phase, (PlayModeTuningError)session.error, session))
                 return true;
             if (sessionId == Guid.Empty)
-                return Fail("An active stored session cannot use the empty identity.", out message);
+                return Fail("進行中の調整には空でない作業識別子が必要です。", out message);
             if (session.properties.Count == 0 || session.components.Count == 0)
-                return Fail("The stored session has no target properties.", out message);
+                return Fail("保存された調整データに対象項目がありません。", out message);
             if (session.properties.Count > PlayModeTuningOperations.MaximumProperties)
-                return Fail("The stored session exceeds the 256-property limit.", out message);
+                return Fail("保存された対象項目が256件の上限を超えています。", out message);
             if (session.components.Count > PlayModeTuningOperations.MaximumComponents)
-                return Fail("The stored session exceeds the 32-component limit.", out message);
+                return Fail("保存された対象コンポーネントが32件の上限を超えています。", out message);
             if (string.IsNullOrEmpty(session.startDomainToken))
-                return Fail("The stored start domain token is missing.", out message);
+                return Fail("調整開始時のスクリプト領域識別子がありません。", out message);
             if ((phase == PlayModeTuningPhase.Capturable || phase == PlayModeTuningPhase.Captured || phase == PlayModeTuningPhase.ReadyToPreview || phase == PlayModeTuningPhase.Previewed) && string.IsNullOrEmpty(session.playDomainToken))
-                return Fail("The stored Play Mode domain token is missing.", out message);
+                return Fail("再生中のスクリプト領域識別子がありません。", out message);
 
             var componentByKey = new Dictionary<string, PlayModeTuningComponentRecord>(StringComparer.Ordinal);
             foreach (var component in session.components)
             {
                 if (component == null || string.IsNullOrEmpty(component.componentKey) || string.IsNullOrEmpty(component.scenePath) || string.IsNullOrEmpty(component.baselineUnselectedFingerprint))
-                    return Fail("A stored component record is incomplete.", out message);
+                    return Fail("保存されたコンポーネント情報が不完全です。", out message);
                 if (!IsLowerHex(component.componentKey, 64) || !IsLowerHex(component.baselineUnselectedFingerprint, 64))
-                    return Fail("A stored component fingerprint is invalid.", out message);
+                    return Fail("保存されたコンポーネントの照合値が無効です。", out message);
                 if (!IsSavedScenePath(component.scenePath))
-                    return Fail("A stored component Scene path is invalid.", out message);
+                    return Fail("保存されたコンポーネントのシーンパスが無効です。", out message);
                 if (!componentByKey.TryAdd(component.componentKey, component))
-                    return Fail("A stored component identity is duplicated.", out message);
+                    return Fail("保存されたコンポーネントの識別情報が重複しています。", out message);
             }
 
             var capturedRequired = phase == PlayModeTuningPhase.Captured || phase == PlayModeTuningPhase.ReadyToPreview || phase == PlayModeTuningPhase.Previewed;
@@ -65,22 +65,22 @@ namespace PlayModeTuning.Editor
                 if (!TryValidateProperty(property, componentByKey, capturedRequired, out var propertyHasCaptured, out message))
                     return false;
                 if (!seenProperties.Add(property.PropertyKey))
-                    return Fail("A stored property identity is duplicated.", out message);
+                    return Fail("保存された項目の識別情報が重複しています。", out message);
                 usedComponents.Add(property.componentKey);
                 payloadBytes += Encoding.UTF8.GetByteCount(property.PropertyKey);
                 payloadBytes += Encoding.UTF8.GetByteCount(property.baselinePayload);
                 if (propertyHasCaptured)
                     payloadBytes += Encoding.UTF8.GetByteCount(property.capturedPayload);
                 if (payloadBytes > PlayModeTuningOperations.MaximumPayloadBytes)
-                    return Fail("The stored value payload exceeds the 256 KiB limit.", out message);
+                    return Fail("保存された値データが256 KiBの上限を超えています。", out message);
             }
             if (usedComponents.Count != componentByKey.Count)
-                return Fail("A stored component has no matching selected property.", out message);
+                return Fail("保存されたコンポーネントに対応する選択項目がありません。", out message);
 
             if (phase == PlayModeTuningPhase.Previewed)
             {
                 if (!Guid.TryParseExact(session.planNonce, "N", out var nonce) || nonce == Guid.Empty || !IsLowerHex(session.planRevision, 64) || string.IsNullOrEmpty(session.planDomainToken))
-                    return Fail("The previewed plan identity is incomplete.", out message);
+                    return Fail("確認済みの反映予定を識別する情報が不完全です。", out message);
             }
             return true;
         }
@@ -90,33 +90,33 @@ namespace PlayModeTuning.Editor
             hasCaptured = false;
             message = string.Empty;
             if (property == null || !PropertyStringsArePresent(property))
-                return Fail("A stored property record is incomplete.", out message);
+                return Fail("保存された項目情報が不完全です。", out message);
             if (!componentByKey.TryGetValue(property.componentKey, out var component) || !StringComparer.Ordinal.Equals(component.scenePath, property.scenePath))
-                return Fail("A stored property does not match its component Scene.", out message);
+                return Fail("保存された項目のシーンがコンポーネント情報と一致しません。", out message);
             if (!IsSavedScenePath(property.scenePath) || string.IsNullOrEmpty(property.globalObjectId) || string.IsNullOrEmpty(property.sceneGuid) || string.IsNullOrEmpty(property.scriptGuid) || string.IsNullOrEmpty(property.typeName) || string.IsNullOrEmpty(property.propertyPath) || string.IsNullOrEmpty(property.propertyType))
-                return Fail("A stored property identity is incomplete.", out message);
+                return Fail("保存された項目の識別情報が不完全です。", out message);
 
             var expectedComponentKey = PlayModeTuningFingerprint.Compute(new[] { property.globalObjectId, property.sceneGuid, property.scenePath, property.scriptGuid, property.typeName });
             if (!StringComparer.Ordinal.Equals(expectedComponentKey, property.componentKey))
-                return Fail("A stored component key does not match its direct identity fields.", out message);
+                return Fail("保存されたコンポーネント照合値が元の識別情報と一致しません。", out message);
             if (!Enum.IsDefined(typeof(PlayModeTuningValueKind), property.baselineKind))
-                return Fail("A stored baseline value kind is invalid.", out message);
+                return Fail("保存された変更前値の種類が無効です。", out message);
             var baselineKind = (PlayModeTuningValueKind)property.baselineKind;
             if (!KindMatchesDescriptor(baselineKind, property.propertyType, property.numericType) || !TryValidatePayload(baselineKind, property.baselinePayload, out message))
                 return false;
             if (!PlayModeTuningValueCodec.TryCreateCanonicalDisplay(property.Baseline, out var baselineDisplay) || !StringComparer.Ordinal.Equals(property.baselineDisplay, baselineDisplay))
-                return Fail("A stored baseline display does not match its exact payload.", out message);
+                return Fail("保存された変更前値の表示が正確な値データと一致しません。", out message);
 
             hasCaptured = capturedRequired || property.capturedKind != 0 || !string.IsNullOrEmpty(property.capturedPayload) || !string.IsNullOrEmpty(property.capturedDisplay);
             if (!hasCaptured)
                 return true;
             if (!Enum.IsDefined(typeof(PlayModeTuningValueKind), property.capturedKind))
-                return Fail("A stored captured value kind is invalid.", out message);
+                return Fail("保存された記録値の種類が無効です。", out message);
             var capturedKind = (PlayModeTuningValueKind)property.capturedKind;
             if (capturedKind != baselineKind || !KindMatchesDescriptor(capturedKind, property.propertyType, property.numericType) || !TryValidatePayload(capturedKind, property.capturedPayload, out message))
                 return false;
             if (!PlayModeTuningValueCodec.TryCreateCanonicalDisplay(property.Captured, out var capturedDisplay) || !StringComparer.Ordinal.Equals(property.capturedDisplay, capturedDisplay))
-                return Fail("A stored captured display does not match its exact payload.", out message);
+                return Fail("保存された記録値の表示が正確な値データと一致しません。", out message);
             return true;
         }
 
@@ -128,48 +128,48 @@ namespace PlayModeTuning.Editor
                 switch (kind)
                 {
                     case PlayModeTuningValueKind.Boolean:
-                        return StringComparer.Ordinal.Equals(payload, "0") || StringComparer.Ordinal.Equals(payload, "1") || Fail("A stored Boolean payload is invalid.", out message);
+                        return StringComparer.Ordinal.Equals(payload, "0") || StringComparer.Ordinal.Equals(payload, "1") || Fail("保存された真偽値データが無効です。", out message);
                     case PlayModeTuningValueKind.SignedInteger:
-                        return long.TryParse(payload, NumberStyles.Integer, CultureInfo.InvariantCulture, out _) || Fail("A stored signed integer payload is invalid.", out message);
+                        return long.TryParse(payload, NumberStyles.Integer, CultureInfo.InvariantCulture, out _) || Fail("保存された符号付き整数データが無効です。", out message);
                     case PlayModeTuningValueKind.UnsignedInteger:
-                        return ulong.TryParse(payload, NumberStyles.Integer, CultureInfo.InvariantCulture, out _) || Fail("A stored unsigned integer payload is invalid.", out message);
+                        return ulong.TryParse(payload, NumberStyles.Integer, CultureInfo.InvariantCulture, out _) || Fail("保存された符号なし整数データが無効です。", out message);
                     case PlayModeTuningValueKind.Character:
-                        return int.TryParse(payload, NumberStyles.Integer, CultureInfo.InvariantCulture, out var character) && character >= char.MinValue && character <= char.MaxValue || Fail("A stored Character payload is invalid.", out message);
+                        return int.TryParse(payload, NumberStyles.Integer, CultureInfo.InvariantCulture, out var character) && character >= char.MinValue && character <= char.MaxValue || Fail("保存された文字データが無効です。", out message);
                     case PlayModeTuningValueKind.Float:
-                        return TryValidateFloatToken(payload) || Fail("A stored Float payload is invalid or non-finite.", out message);
+                        return TryValidateFloatToken(payload) || Fail("保存された単精度小数データが無効か、有限ではありません。", out message);
                     case PlayModeTuningValueKind.Double:
-                        return TryValidateDoubleToken(payload) || Fail("A stored Double payload is invalid or non-finite.", out message);
+                        return TryValidateDoubleToken(payload) || Fail("保存された倍精度小数データが無効か、有限ではありません。", out message);
                     case PlayModeTuningValueKind.String:
-                        return TryValidateString(payload) || Fail("A stored String payload is invalid or exceeds 4096 UTF-8 bytes.", out message);
+                        return TryValidateString(payload) || Fail("保存された文字列データが無効か、UTF-8で4096バイトを超えています。", out message);
                     case PlayModeTuningValueKind.Enum:
                     case PlayModeTuningValueKind.LayerMask:
-                        return int.TryParse(payload, NumberStyles.Integer, CultureInfo.InvariantCulture, out _) || Fail("A stored integer payload is invalid.", out message);
+                        return int.TryParse(payload, NumberStyles.Integer, CultureInfo.InvariantCulture, out _) || Fail("保存された整数データが無効です。", out message);
                     case PlayModeTuningValueKind.Color:
                     case PlayModeTuningValueKind.Vector4:
                     case PlayModeTuningValueKind.Rect:
                     case PlayModeTuningValueKind.Quaternion:
-                        return TryValidateFloatTuple(payload, 4) || Fail("A stored four-value payload is invalid or non-finite.", out message);
+                        return TryValidateFloatTuple(payload, 4) || Fail("保存された4要素データが無効か、有限ではありません。", out message);
                     case PlayModeTuningValueKind.Vector2:
-                        return TryValidateFloatTuple(payload, 2) || Fail("A stored Vector2 payload is invalid or non-finite.", out message);
+                        return TryValidateFloatTuple(payload, 2) || Fail("保存された2次元ベクトルデータが無効か、有限ではありません。", out message);
                     case PlayModeTuningValueKind.Vector3:
-                        return TryValidateFloatTuple(payload, 3) || Fail("A stored Vector3 payload is invalid or non-finite.", out message);
+                        return TryValidateFloatTuple(payload, 3) || Fail("保存された3次元ベクトルデータが無効か、有限ではありません。", out message);
                     case PlayModeTuningValueKind.Bounds:
-                        return TryValidateFloatTuple(payload, 6) || Fail("A stored Bounds payload is invalid or non-finite.", out message);
+                        return TryValidateFloatTuple(payload, 6) || Fail("保存された境界範囲データが無効か、有限ではありません。", out message);
                     case PlayModeTuningValueKind.Vector2Int:
-                        return TryValidateIntegerTuple(payload, 2) || Fail("A stored Vector2Int payload is invalid.", out message);
+                        return TryValidateIntegerTuple(payload, 2) || Fail("保存された2次元整数ベクトルデータが無効です。", out message);
                     case PlayModeTuningValueKind.Vector3Int:
-                        return TryValidateIntegerTuple(payload, 3) || Fail("A stored Vector3Int payload is invalid.", out message);
+                        return TryValidateIntegerTuple(payload, 3) || Fail("保存された3次元整数ベクトルデータが無効です。", out message);
                     case PlayModeTuningValueKind.RectInt:
-                        return TryValidateIntegerTuple(payload, 4) || Fail("A stored RectInt payload is invalid.", out message);
+                        return TryValidateIntegerTuple(payload, 4) || Fail("保存された整数長方形データが無効です。", out message);
                     case PlayModeTuningValueKind.BoundsInt:
-                        return TryValidateIntegerTuple(payload, 6) || Fail("A stored BoundsInt payload is invalid.", out message);
+                        return TryValidateIntegerTuple(payload, 6) || Fail("保存された整数境界範囲データが無効です。", out message);
                     default:
-                        return Fail("A stored value kind is unsupported.", out message);
+                        return Fail("保存された値の種類には対応していません。", out message);
                 }
             }
             catch (Exception)
             {
-                return Fail("A stored value payload could not be decoded.", out message);
+                return Fail("保存された値データを読み取れませんでした。", out message);
             }
         }
 

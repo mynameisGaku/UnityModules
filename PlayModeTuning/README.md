@@ -1,65 +1,81 @@
-# プレイ中の調整を反映（Play Mode Tuning）
+# 実行中調整
 
-## 30 秒で分かる説明
+## 30秒で分かる説明
 
-Play Mode 中に Inspector の値を調整しても、Play Mode を終了すると通常は元へ戻ります。このモジュールは、残したい Component の項目だけを先に選び、調整後に手動で取り込み、Play Mode 終了後に差分を確認してから Scene へ反映する Editor 専用ツールです。
+再生モード中にインスペクターの値を調整しても、再生を終了すると通常は元へ戻ります。このモジュールは、残したい動作部品（`MonoBehaviour`）の項目だけを先に選び、調整後の値を手動で記録し、再生終了後に差分を確認してからシーンへ反映するエディター専用ツールです。
 
-操作は必ず ①対象、②Play 中の取り込み、③Play 終了後の Preview、④確認、⑤反映結果の順です。取り込みも反映も自動では行いません。
+操作は必ず、①対象を選ぶ、②再生中の値を記録する、③再生終了後に差分を見る、④変更内容を確認する、⑤変更を反映して結果を見る、の順です。値の記録、反映、シーン保存は自動で行いません。
 
-![Play Mode Tuning の操作順](Documentation~/play-mode-tuning-guide.png)
+![実行中調整の操作順](Documentation~/play-mode-tuning-guide.png)
 
 ## 何が便利になるか
 
-- Play Mode で試した数値をメモして Inspector へ入力し直す手間を減らせます。
-- 残したい Component と項目を先に限定できます。
-- Play Mode 終了後、元の値と取り込んだ値を項目ごとに比較できます。
-- Preview と同じ計画だけを 1 回だけ反映します。
-- Preview 後に対象や値が変わった場合は、反映前に停止します。
-- 反映後に選択項目の完全一致と、未選択の最上位項目が変わっていないことを確認します。
-- 途中失敗時は選択項目を反映前の値へ戻し、反映結果と復元結果を分けて表示します。
+- 再生中に試した数値を控え、終了後に入力し直す手間を減らせます。
+- 残したいコンポーネントと項目を事前に限定できます。
+- 再生終了後、変更前と記録した値を項目ごとに比較できます。
+- 差分画面で確定した同じ計画だけを1回反映します。
+- 差分表示後に対象や値が変わった場合は、書き込み前に停止します。
+- 反映後に、選択項目の完全一致と、対象シーン階層の選択外項目が変わっていないことを確認します。
+- 成功した反映は、一つの取り消し操作として元へ戻せます。
+- 途中で失敗した場合は反映前の値へ復元を試み、反映結果と復元結果を分けて表示します。
+- 調整データを保存できない場合は保存失敗（`SessionStorageFailed`）として返し、内部の例外文や環境依存パスを画面へ表示しません。
 
 ## 使い方
 
-Unity メニューの `Tools > Play Mode Tuning > Open` を開き、上から順に操作します。
+Unityメニューの`Tools > 実行中調整 > 開く`を開き、上から順に操作します。
 
-### ① `Targets`
+### ① 対象を選ぶ
 
-各行で、保存済み Scene にある `MonoBehaviour` と、残したい最上位の serialized property path を 1 件指定します。たとえば `moveSpeed` や `cameraOffset` です。
+各行で、プロジェクト内（`Assets`）の保存済みシーンにある動作部品（`MonoBehaviour`）と、残したい最上位のシリアル化項目識別名（`SerializedProperty.propertyPath`）を1件指定します。たとえば`moveSpeed`や`cameraOffset`です。画面では「項目の識別名」と表示されます。正確な識別名を入力してください。
 
-`Start Session` を押した時点の値と対象 identity を記録します。まだ Play Mode には入りません。
+「調整を開始」を押した時点の値と対象識別情報を記録します。この操作だけでは再生モードへ入りません。
 
-### ② `Capture During Play`
+### ② 再生中の値を記録する
 
-通常どおり Play Mode に入り、ゲームを動かしながら Inspector の値を調整します。残したい状態になった時点で `Capture Selected Values` を押します。
+通常どおり再生モードへ入り、ゲームを動かしながらインスペクターの値を調整します。残したい状態になった時点で「選んだ値を記録」を押します。
 
-このボタンを押さずに Play Mode を終了した場合、その session は古いものとして終了します。
+このボタンを押さずに再生を終了した場合、その調整作業は古いものとして終了します。
 
-![Play Mode 中の手動取り込み](Documentation~/play-mode-tuning-capture.png)
+![再生中の手動記録](Documentation~/play-mode-tuning-capture.png)
 
-### ③ `Preview After Play`
+### ③ 再生終了後に差分を見る
 
-Play Mode を終了してから `Preview Captured Differences` を押します。この段階では Scene の値を変更しません。
+再生モードを終了してから「記録した差分を表示」を押します。この段階ではシーンの値を変更しません。
 
-![Play Mode 終了後の Preview](Documentation~/play-mode-tuning-preview.png)
+![再生終了後の差分表示](Documentation~/play-mode-tuning-preview.png)
 
-### ④ `Review and Confirm`
+### ④ 変更内容を確認する
 
-対象 GameObject、property path、元の値、取り込んだ値をすべて確認します。target 名は解決済みの実体から取得し、浮動小数点と複合値は exact payload から round-trip 形式で表示します。問題がなければ確認欄をオンにします。
+対象のシーン物体（`GameObject`）、項目識別名、変更前の値、記録した値をすべて確認します。対象名は保存済みの文字列ではなく、現在解決できた実体から取得します。浮動小数点数と複合値は、正確な符号化値から往復変換できる形式で表示します。
 
-### ⑤ `Apply Tuning / Result`
+内容に問題がなければ、「すべての対象、項目、変更前の値、記録した値を確認しました。」を有効にします。
 
-`Apply Tuning` を押します。Preview 後の対象 identity、現在値、未選択項目が変わっていない場合だけ、同じ計画を 1 回反映します。
+### ⑤ 変更を反映して結果を見る
 
-成功時は対象 Scene を明示的に変更済みにします。保存は通常の Unity 操作で内容を確認してから行ってください。
+「変更を反映」を押します。差分表示後の対象識別情報、現在値、対象シーン階層の選択外項目が変わっていない場合だけ、同じ計画を1回反映します。
+
+成功時は対象シーンを変更済みにし、一つの取り消し履歴を残します。シーンは自動保存しません。内容を確認してから通常のUnity操作で保存してください。
+
+失敗時は、反映結果と復元結果を別々に表示します。復元後に選択項目または対象シーン階層の選択外項目の差が残る場合は、成功として扱いません。
+
+再生開始または終了に伴う状態更新で保存領域の読み書きが一時的に失敗した場合は、現在の再生状態を確かめながら状態更新だけを最大3回再試行します。復旧しない場合は画面に「状態更新を再試行」を表示します。値の記録や反映を自動で再実行することはありません。
+
+反映を取り消し履歴として確定する前に、古い成功表示を残さないための無効状態を保存します。反映結果の保存と失敗状態の保存が続けて失敗した場合は、保存されていた調整データの消去を試みます。画面に調整データの保存失敗（`SessionStorageFailed`）が表示された場合は、対象シーンの値、変更済み状態、取り消し履歴を確認してください。
+
+安全確認では、選択対象があるシーンの階層構造と階層内のシリアル化値を検査します。自動復元を保証するのは、反映前にUnityの取り消し記録へ含めた既存オブジェクトのシリアル化値です。オブジェクトやコンポーネントの追加・削除、親子関係の変更など、階層構造の副作用は検出して反映失敗にしますが、自動復元できない場合は復元失敗として明示します。
+
+選択対象のない別シーン、`ScriptableObject`などのプロジェクト資産、`RenderSettings`などシーン階層外の設定、シリアル化されない状態は、検出や復元を保証しません。
+
+調整開始、再生中の記録、差分表示、反映後確認、失敗後確認では、対象シーンの全階層を走査します。大きなシーンでは各操作に時間がかかる場合があります。
 
 ## 対応する値
 
-選択できるのは、`MonoBehaviour` の最上位にある次の serialized property です。
+選択できるのは、動作部品（`MonoBehaviour`）の最上位にある次のシリアル化項目（`SerializedProperty`）です。
 
 - `bool`
 - 符号付き・符号なし整数、`char`
-- 有限の `float`、`double`
-- UTF-8 で 4096 byte 以下の `string`
+- 有限の`float`、`double`
+- UTF-8で4096バイト以下の`string`
 - `enum`、`LayerMask`
 - `Color`
 - `Vector2`、`Vector3`、`Vector4`
@@ -68,34 +84,37 @@ Play Mode を終了してから `Preview Captured Differences` を押します�
 - `Bounds`、`BoundsInt`
 - `Quaternion`
 
-配列、List、入れ子の field、Object reference、AnimationCurve、Gradient、NaN、Infinity は対象外です。Unity では `string` も `isArray == true` と報告されるため、文字列だけは property type を先に判定して対応します。
+配列、`List`、入れ子のフィールド、オブジェクト参照、`AnimationCurve`、`Gradient`、`NaN`、`Infinity`は対象外です。Unityでは`string`も`SerializedProperty.isArray == true`と報告されるため、文字列だけは型を先に判定して対応します。
 
 ## 上限と利用条件
 
-- 1 session は最大 32 Component
-- 選択項目は最大 256 件
-- 元の値と取り込んだ値を合わせた payload は最大 256 KiB
-- 対象は `Assets` 以下の保存済み Scene にある、Prefab ではない `MonoBehaviour`
-- `MonoScript` も `Assets` 以下にあり、GUID を取得できること
-- Scene Reload は有効であること
-- 通常の Domain Reload と `Disable Domain Reload` の両方に対応
-- `Disable Scene Reload` は非対応で、session 開始時または Play Mode 進入時に停止
+- 1回の調整作業は最大32コンポーネント
+- 選択項目は最大256件
+- 変更前と記録後を合わせた符号化値は最大256 KiB
+- 対象はプロジェクト内（`Assets`）の保存済みシーンにある、プレハブではない動作部品（`MonoBehaviour`）
+- 動作スクリプト（`MonoScript`）がプロジェクト内（`Assets`または`Packages`）にあり、資産識別子（`GUID`）を取得できること
+- シーン再読み込み（`Scene Reload`）は有効であること
+- 通常のスクリプト領域再読み込み（`Domain Reload`）と、その無効設定（`Disable Domain Reload`）の両方に対応
+- シーン再読み込みの無効設定（`Disable Scene Reload`）は非対応で、調整開始時または再生モード進入時に停止
+- 選択外状態の検査と、既存オブジェクトのシリアル化値に対する取り消し記録は、選択対象があるシーンの全階層が対象
 
 ## 自動では行わないこと
 
-- Play Mode 進入時や終了時の自動取り込み
-- Preview 後の自動反映
-- Scene や Asset の自動保存
+- 再生モード進入時や終了時の自動記録
+- 差分表示後の自動反映
+- シーンやアセットの自動保存
 - 選択していない値の意図的な変更
-- InstanceID や Hierarchy path を使った代替検索
+- 選択対象のない別シーン、プロジェクト資産、シーン階層外設定の副作用検出と復元
+- オブジェクトやコンポーネントの追加・削除、親子関係変更など、階層構造の副作用に対する自動復元
+- `InstanceID`やヒエラルキーパスを使った代替検索
 
-identity には `GlobalObjectId`、Scene GUID/path、MonoScript GUID、assembly-qualified type、property path/type を使います。詳しい失敗条件と検証範囲は [詳細仕様](Documentation~/index.md) を参照してください。
+識別情報には、大域識別子（`GlobalObjectId`）、シーンの資産識別子（`GUID`）とパス、動作スクリプト（`MonoScript`）の資産識別子、アセンブリ修飾型名、項目識別名と項目型を使います。詳しい失敗条件と検証範囲は[詳細仕様](Documentation~/index.md)を参照してください。
 
-Preview と反映の項目順は `GlobalObjectId` の ordinal 順、同じ対象内では property path の ordinal 順です。選択した順番や identity hash の並びには依存しません。
+差分表示と反映の項目順は大域識別子（`GlobalObjectId`）の文字列序数順、同じ対象内では項目識別名の文字列序数順です。選択順や識別指紋の並びには依存しません。
 
 ## スクリプトから使う場合
 
-公開入口は `PlayModeTuning.Editor.PlayModeTuningService` です。
+公開入口は`PlayModeTuning.Editor.PlayModeTuningService`です。
 
 - `Start(IReadOnlyList<PlayModeTuningPropertySelection>)`
 - `GetCurrentSession()`
@@ -104,4 +123,4 @@ Preview と反映の項目順は `GlobalObjectId` の ordinal 順、同じ対象
 - `Apply(PlayModeTuningPlan plan)`
 - `Discard(Guid sessionId)`
 
-公開 DTO は immutable で、collection は defensive copy です。Plan は生成した同じ Object、nonce、revision がそろった場合に 1 回だけ使用できます。
+公開データ型は作成後に変更できず、コレクションは防御的に複製されます。`PlayModeTuningPlan`は、生成された同じオブジェクト、`Nonce`、`Revision`がそろう場合に1回だけ使用できます。

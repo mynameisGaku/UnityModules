@@ -1,6 +1,6 @@
 namespace PlayModeTuning.Editor
 {
-    /// <summary>Stores one bounded session across default and disabled Domain Reload configurations.</summary>
+    /// <summary>通常設定と実行領域の再読込を無効にした設定の両方で、一つの有界な調整作業を保持します。</summary>
     internal interface IPlayModeTuningSessionStore
     {
         PlayModeTuningPersistedSession Load();

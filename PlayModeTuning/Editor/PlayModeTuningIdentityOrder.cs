@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace PlayModeTuning.Editor
 {
-    /// <summary>Orders property work by direct identity fields instead of hash values or caller selection order.</summary>
+    /// <summary>ハッシュ値や呼び出し側の選択順ではなく、直接の識別情報で項目処理の順序を固定します。</summary>
     internal static class PlayModeTuningIdentityOrder
     {
         internal static IOrderedEnumerable<T> OrderProperties<T>(IEnumerable<T> source, Func<T, PlayModeTuningPropertyRecord> recordSelector)

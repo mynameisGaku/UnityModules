@@ -1,8 +1,9 @@
 {
-    "name": "PlayModeTuning.Tests",
-    "rootNamespace": "PlayModeTuning.Tests",
+    "name": "PlayModeTuning.Editor.Tests",
+    "rootNamespace": "PlayModeTuning.Editor.Tests",
     "references": [
         "PlayModeTuning.Editor",
+        "PlayModeTuning.TestFixtures",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],

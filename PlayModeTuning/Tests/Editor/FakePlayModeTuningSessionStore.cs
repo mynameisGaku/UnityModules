@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace PlayModeTuning.Editor.Tests
@@ -6,18 +8,33 @@ namespace PlayModeTuning.Editor.Tests
     {
         private PlayModeTuningPersistedSession current;
 
+        internal Exception LoadFailure { get; set; }
+        internal int SaveCalls { get; private set; }
+        internal int SaveFailureCall { get; set; }
+        internal ISet<int> SaveFailureCalls { get; } = new HashSet<int>();
+        internal string SaveFailureDetail { get; set; } = "Injected save failure.";
+        internal bool ClearFailure { get; set; }
+        internal string ClearFailureDetail { get; set; } = "Injected clear failure.";
+
         public PlayModeTuningPersistedSession Load()
         {
+            if (LoadFailure != null)
+                throw LoadFailure;
             return Clone(current);
         }
 
         public void Save(PlayModeTuningPersistedSession session)
         {
+            SaveCalls++;
+            if (SaveCalls == SaveFailureCall || SaveFailureCalls.Contains(SaveCalls))
+                throw new InvalidOperationException(SaveFailureDetail);
             current = Clone(session);
         }
 
         public void Clear()
         {
+            if (ClearFailure)
+                throw new InvalidOperationException(ClearFailureDetail);
             current = null;
         }
 

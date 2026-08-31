@@ -5,13 +5,13 @@ using System.Linq;
 
 namespace PlayModeTuning.Editor
 {
-    /// <summary>Builds one deterministic plan from immutable baseline and captured values.</summary>
+    /// <summary>変更前の値と記録値から、一つの決定論的な反映予定を作成します。</summary>
     internal static class PlayModeTuningPlanner
     {
         internal static PlayModeTuningPlan Create(PlayModeTuningPersistedSession session, Guid nonce)
         {
             if (session == null || !Guid.TryParseExact(session.sessionId, "N", out var sessionId) || sessionId == Guid.Empty)
-                return Failure(PlayModeTuningError.SessionDataInvalid, "The stored session identity is invalid.");
+                return Failure(PlayModeTuningError.SessionDataInvalid, "保存された作業識別子が無効です。");
 
             var ordered = PlayModeTuningIdentityOrder.OrderProperties(session.properties, item => item).ToArray();
             var changes = new List<PlayModeTuningChange>();
@@ -20,12 +20,12 @@ namespace PlayModeTuning.Editor
                 if (!property.Baseline.EqualsExact(property.Captured))
                 {
                     if (!PlayModeTuningValueCodec.TryCreateCanonicalDisplay(property.Baseline, out var beforeDisplay) || !PlayModeTuningValueCodec.TryCreateCanonicalDisplay(property.Captured, out var afterDisplay))
-                        return Failure(PlayModeTuningError.SessionDataInvalid, "A stored value cannot produce an exact preview display.", sessionId);
+                        return Failure(PlayModeTuningError.SessionDataInvalid, "保存された値を正確な差分表示へ変換できません。", sessionId);
                     changes.Add(new PlayModeTuningChange(property.targetName, property.typeName, property.propertyPath, property.Captured.Kind, beforeDisplay, afterDisplay));
                 }
             }
             if (changes.Count == 0)
-                return Failure(PlayModeTuningError.NoChanges, "The captured values match the Edit Mode baseline.", sessionId);
+                return Failure(PlayModeTuningError.NoChanges, "記録した値は編集状態の変更前値と同じです。", sessionId);
 
             var revisionTokens = new List<string>
             {

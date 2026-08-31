@@ -7,7 +7,7 @@ using System.Text;
 
 namespace PlayModeTuning.Editor
 {
-    /// <summary>Computes canonical ordinal SHA-256 values from length-prefixed UTF-8 tokens.</summary>
+    /// <summary>長さを付けたUTF-8文字列から、文字列序数に基づく正規のSHA-256値を計算します。</summary>
     internal static class PlayModeTuningFingerprint
     {
         internal static string Compute(IEnumerable<string> tokens)

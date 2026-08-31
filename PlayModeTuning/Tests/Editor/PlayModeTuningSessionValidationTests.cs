@@ -1,11 +1,30 @@
 using System;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using NUnit.Framework;
+using UnityEngine;
+using UnityEngine.TestTools;
 
 namespace PlayModeTuning.Editor.Tests
 {
     public sealed class PlayModeTuningSessionValidationTests
     {
+        [Test]
+        public void StoredSessionReadFailureHidesExceptionDetailFromResult()
+        {
+            const string secretDetail = "PRIVATE_PATH_DO_NOT_DISPLAY";
+            var gateway = new FakePlayModeTuningGateway();
+            var store = new FakePlayModeTuningSessionStore { LoadFailure = new InvalidOperationException(secretDetail) };
+            var operations = new PlayModeTuningOperations(gateway, store, new PlayModeTuningPlanRegistry(), "domain-a");
+            LogAssert.Expect(LogType.Exception, new Regex("InvalidOperationException: " + secretDetail));
+
+            var session = operations.GetCurrentSession();
+
+            Assert.That(session.Error, Is.EqualTo(PlayModeTuningError.SessionStorageFailed));
+            Assert.That(session.Message, Does.Not.Contain(secretDetail));
+            Assert.That(session.Message, Does.Contain("コンソール"));
+        }
+
         [Test]
         public void InvalidPhaseBecomesRecoverableStaleSession()
         {

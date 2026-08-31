@@ -1,1 +1,1 @@
-Play Mode Tuning does not include third-party source code.
+本モジュールには第三者のソースコードを含みません。

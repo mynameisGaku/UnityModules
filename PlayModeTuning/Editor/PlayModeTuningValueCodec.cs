@@ -7,7 +7,7 @@ using UnityEngine;
 
 namespace PlayModeTuning.Editor
 {
-    /// <summary>Encodes and writes the bounded top-level SerializedProperty allow-list without lossy float conversion.</summary>
+    /// <summary>対応する最上位SerializedPropertyを、浮動小数点の情報を失わず符号化して書き戻します。</summary>
     internal static class PlayModeTuningValueCodec
     {
         internal const int MaximumStringUtf8Bytes = 4096;
@@ -63,14 +63,14 @@ namespace PlayModeTuning.Editor
             error = PlayModeTuningError.None;
             message = string.Empty;
             if (property == null || !IsSupportedShape(property.propertyType, property.depth, property.isArray))
-                return Fail(PlayModeTuningError.UnsupportedProperty, "Only supported top-level scalar and value properties can be captured.", out error, out message);
+                return Fail(PlayModeTuningError.UnsupportedProperty, "対応する最上位の単一値または値型項目だけを記録できます。", out error, out message);
 
             try
             {
                 switch (property.propertyType)
                 {
                     case SerializedPropertyType.Boolean:
-                        encoded = new PlayModeTuningEncodedValue(PlayModeTuningValueKind.Boolean, property.boolValue ? "1" : "0", property.boolValue ? "true" : "false");
+                        encoded = new PlayModeTuningEncodedValue(PlayModeTuningValueKind.Boolean, property.boolValue ? "1" : "0", property.boolValue ? "真" : "偽");
                         return true;
                     case SerializedPropertyType.Integer:
                         return TryEncodeInteger(property, out encoded, out error, out message);
@@ -82,7 +82,7 @@ namespace PlayModeTuning.Editor
                     case SerializedPropertyType.String:
                         var text = property.stringValue ?? string.Empty;
                         if (Encoding.UTF8.GetByteCount(text) > MaximumStringUtf8Bytes)
-                            return Fail(PlayModeTuningError.StringTooLong, "A selected string exceeds the 4096-byte UTF-8 limit.", out error, out message);
+                            return Fail(PlayModeTuningError.StringTooLong, "選んだ文字列がUTF-8で4096バイトの上限を超えています。", out error, out message);
                         encoded = new PlayModeTuningEncodedValue(PlayModeTuningValueKind.String, Convert.ToBase64String(Encoding.UTF8.GetBytes(text)), text);
                         return true;
                     case SerializedPropertyType.Enum:
@@ -125,12 +125,13 @@ namespace PlayModeTuning.Editor
                         var quaternion = property.quaternionValue;
                         return TryEncodeFloats(PlayModeTuningValueKind.Quaternion, new[] { quaternion.x, quaternion.y, quaternion.z, quaternion.w }, out encoded, out error, out message);
                     default:
-                        return Fail(PlayModeTuningError.UnsupportedProperty, "The serialized property type is not in the allow-list.", out error, out message);
+                        return Fail(PlayModeTuningError.UnsupportedProperty, "このシリアル化項目の型には対応していません。", out error, out message);
                 }
             }
             catch (Exception exception)
             {
-                return Fail(PlayModeTuningError.CaptureFailed, "The selected value could not be encoded: " + exception.Message, out error, out message);
+                Debug.LogException(exception);
+                return Fail(PlayModeTuningError.CaptureFailed, "選んだ値を記録形式へ変換できませんでした。詳しくはコンソールを確認してください。", out error, out message);
             }
         }
 
@@ -139,12 +140,12 @@ namespace PlayModeTuning.Editor
             message = string.Empty;
             if (property == null || encoded == null || !IsSupportedShape(property.propertyType, property.depth, property.isArray))
             {
-                message = "The destination property is unavailable or unsupported.";
+                message = "反映先の項目が見つからないか、対応していない型です。";
                 return false;
             }
             if (!KindMatchesProperty(property, encoded.Kind))
             {
-                message = "The encoded value kind does not match the destination property type.";
+                message = "記録した値の種類が反映先の項目型と一致しません。";
                 return false;
             }
 
@@ -212,13 +213,14 @@ namespace PlayModeTuning.Editor
                         property.quaternionValue = new Quaternion(DecodeFloat(parts[0]), DecodeFloat(parts[1]), DecodeFloat(parts[2]), DecodeFloat(parts[3]));
                         return property.propertyType == SerializedPropertyType.Quaternion;
                     default:
-                        message = "The encoded value kind is unsupported.";
+                        message = "記録した値の種類には対応していません。";
                         return false;
                 }
             }
             catch (Exception exception)
             {
-                message = "The encoded value could not be written: " + exception.Message;
+                Debug.LogException(exception);
+                message = "記録した値を書き込めませんでした。詳しくはコンソールを確認してください。";
                 return false;
             }
         }
@@ -259,7 +261,7 @@ namespace PlayModeTuning.Editor
                     case PlayModeTuningValueKind.Boolean:
                         if (!StringComparer.Ordinal.Equals(encoded.Payload, "0") && !StringComparer.Ordinal.Equals(encoded.Payload, "1"))
                             return false;
-                        display = StringComparer.Ordinal.Equals(encoded.Payload, "1") ? "true" : "false";
+                        display = StringComparer.Ordinal.Equals(encoded.Payload, "1") ? "真" : "偽";
                         return true;
                     case PlayModeTuningValueKind.SignedInteger:
                         display = long.Parse(encoded.Payload, CultureInfo.InvariantCulture).ToString(CultureInfo.InvariantCulture);
@@ -343,7 +345,7 @@ namespace PlayModeTuning.Editor
                     encoded = new PlayModeTuningEncodedValue(PlayModeTuningValueKind.UnsignedInteger, property.ulongValue.ToString(CultureInfo.InvariantCulture), property.ulongValue.ToString(CultureInfo.InvariantCulture));
                     return true;
                 default:
-                    return Fail(PlayModeTuningError.UnsupportedProperty, "The integer numeric type is unsupported.", out error, out message);
+                    return Fail(PlayModeTuningError.UnsupportedProperty, "この整数型には対応していません。", out error, out message);
             }
         }
 
@@ -356,7 +358,7 @@ namespace PlayModeTuning.Editor
             {
                 var value = property.floatValue;
                 if (!IsFinite(value))
-                    return Fail(PlayModeTuningError.NonFiniteValue, "NaN and infinity are not supported.", out error, out message);
+                    return Fail(PlayModeTuningError.NonFiniteValue, "非数と無限大には対応していません。", out error, out message);
                 encoded = new PlayModeTuningEncodedValue(PlayModeTuningValueKind.Float, EncodeFloat(value), DisplayFloat(value));
                 return true;
             }
@@ -364,11 +366,11 @@ namespace PlayModeTuning.Editor
             {
                 var value = property.doubleValue;
                 if (!IsFinite(value))
-                    return Fail(PlayModeTuningError.NonFiniteValue, "NaN and infinity are not supported.", out error, out message);
+                    return Fail(PlayModeTuningError.NonFiniteValue, "非数と無限大には対応していません。", out error, out message);
                 encoded = new PlayModeTuningEncodedValue(PlayModeTuningValueKind.Double, EncodeDouble(value), DisplayDouble(value));
                 return true;
             }
-            return Fail(PlayModeTuningError.UnsupportedProperty, "The floating-point numeric type is unsupported.", out error, out message);
+            return Fail(PlayModeTuningError.UnsupportedProperty, "この浮動小数点型には対応していません。", out error, out message);
         }
 
         private static bool TryEncodeColor(Color value, out PlayModeTuningEncodedValue encoded, out PlayModeTuningError error, out string message)
@@ -397,7 +399,7 @@ namespace PlayModeTuning.Editor
             error = PlayModeTuningError.None;
             message = string.Empty;
             if (values.Any(value => !IsFinite(value)))
-                return Fail(PlayModeTuningError.NonFiniteValue, "NaN and infinity are not supported.", out error, out message);
+                return Fail(PlayModeTuningError.NonFiniteValue, "非数と無限大には対応していません。", out error, out message);
             encoded = new PlayModeTuningEncodedValue(kind, string.Join(",", values.Select(EncodeFloat)), string.Join(", ", values.Select(DisplayFloat)));
             return true;
         }
