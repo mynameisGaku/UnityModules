@@ -14,17 +14,21 @@ namespace AssetImportAudit.Editor.Tests
     [Parallelizable(ParallelScope.None)]
     public sealed class AssetImportAuditPlatformIntegrationTests
     {
-        private const string FolderPath = "Assets/AssetImportAuditPlatformTests";
-        private const string FirstAssetPath = FolderPath + "/First.png";
-        private const string SecondAssetPath = FolderPath + "/Second.png";
-        private const string ThirdAssetPath = FolderPath + "/Third.png";
+        private const string FolderPathBase = "Assets/AssetImportAuditPlatformTests";
         private const string PngBase64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
+        private string _folderGuid;
+        private string FolderPath { get; set; }
+        private string FirstAssetPath => FolderPath + "/First.png";
+        private string SecondAssetPath => FolderPath + "/Second.png";
+        private string ThirdAssetPath => FolderPath + "/Third.png";
 
         [SetUp]
         public void SetUp()
         {
-            AssetDatabase.DeleteAsset(FolderPath);
-            Directory.CreateDirectory(Path.Combine(Application.dataPath, "AssetImportAuditPlatformTests"));
+            FolderPath = AssetDatabase.GenerateUniqueAssetPath(FolderPathBase);
+            _folderGuid = AssetDatabase.CreateFolder("Assets", FolderPath.Substring("Assets/".Length));
+            Assert.That(_folderGuid, Is.Not.Empty);
+            Assert.That(AssetDatabase.GUIDToAssetPath(_folderGuid), Is.EqualTo(FolderPath));
             CreateTextureAsset(FirstAssetPath);
             CreateTextureAsset(SecondAssetPath);
         }
@@ -32,7 +36,9 @@ namespace AssetImportAudit.Editor.Tests
         [TearDown]
         public void TearDown()
         {
-            AssetDatabase.DeleteAsset(FolderPath);
+            var ownedFolderPath = string.IsNullOrEmpty(_folderGuid) ? string.Empty : AssetDatabase.GUIDToAssetPath(_folderGuid);
+            if (!string.IsNullOrEmpty(ownedFolderPath))
+                AssetDatabase.DeleteAsset(ownedFolderPath);
             AssetDatabase.Refresh();
         }
 
@@ -177,7 +183,6 @@ namespace AssetImportAudit.Editor.Tests
             var thirdBefore = GetPlatformSettings(ThirdAssetPath, "Android");
             var expected = CreateAndroidAuditSettings(firstImporter, true, 2048);
             var plan = AssetImportAuditService.Preview(FolderPath, expected);
-            Undo.ClearAll();
             LogAssert.Expect(LogType.Exception, new Regex("InvalidOperationException: 再取込失敗試験"));
 
             var result = AssetImportAuditService.Apply(plan, null, importer =>
@@ -371,8 +376,9 @@ namespace AssetImportAudit.Editor.Tests
             var before = GetPlatformSettings(FirstAssetPath, "Android");
             var expected = CreateAndroidAuditSettings(importer, true, 2048);
             var plan = AssetImportAuditService.Preview(FolderPath, expected);
-            Undo.ClearAll();
+            var groupBeforeApply = Undo.GetCurrentGroup();
             Assert.That(AssetImportAuditService.Apply(plan, new[] { FirstAssetPath }).Succeeded, Is.True);
+            Assert.That(Undo.GetCurrentGroup(), Is.GreaterThan(groupBeforeApply));
 
             Undo.PerformUndo();
             AssetDatabase.ImportAsset(FirstAssetPath, ImportAssetOptions.ForceSynchronousImport);
@@ -395,8 +401,6 @@ namespace AssetImportAudit.Editor.Tests
             var expectedPlatform = new AssetImportAuditTexturePlatformSettings(true, 2048, platformBefore.textureCompression);
             var expected = AssetImportAuditTextureAuditSettings.ForSharedAndPlatform(expectedShared, AssetImportAuditTexturePlatform.iOS, expectedPlatform);
             var plan = AssetImportAuditService.Preview(FolderPath, expected);
-            Undo.ClearAll();
-
             var result = AssetImportAuditService.Apply(plan, new[] { FirstAssetPath });
             Assert.That(result.Succeeded, Is.True);
             Assert.That(GetImporter(FirstAssetPath).mipmapEnabled, Is.False);

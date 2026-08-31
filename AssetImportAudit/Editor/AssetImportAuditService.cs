@@ -103,6 +103,8 @@ namespace AssetImportAudit.Editor
             if (stale.Count > 0)
                 return new AssetImportAuditApplyResult(false, AssetImportAuditError.StalePlan, 0, stale.OrderBy(path => path, StringComparer.Ordinal).ToArray());
 
+            // 直前の利用者操作を巻き込まない専用の取り消し単位を開始します。
+            Undo.IncrementCurrentGroup();
             var group = Undo.GetCurrentGroup();
             Undo.SetCurrentGroupName("テクスチャー取込設定を反映");
             var appliedAssetCount = 0;

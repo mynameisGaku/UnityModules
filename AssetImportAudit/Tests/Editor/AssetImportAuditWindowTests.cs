@@ -9,15 +9,19 @@ namespace AssetImportAudit.Editor.Tests
 {
     public sealed class AssetImportAuditWindowTests
     {
-        private const string FolderPath = "Assets/AssetImportAuditWindowTests";
+        private const string FolderPathBase = "Assets/AssetImportAuditWindowTests";
         private const BindingFlags InstancePrivate = BindingFlags.Instance | BindingFlags.NonPublic;
         private AssetImportAuditWindow _window;
+        private string _folderGuid;
+        private string FolderPath { get; set; }
 
         [SetUp]
         public void SetUp()
         {
-            if (!AssetDatabase.IsValidFolder(FolderPath))
-                AssetDatabase.CreateFolder("Assets", "AssetImportAuditWindowTests");
+            FolderPath = AssetDatabase.GenerateUniqueAssetPath(FolderPathBase);
+            _folderGuid = AssetDatabase.CreateFolder("Assets", FolderPath.Substring("Assets/".Length));
+            Assert.That(_folderGuid, Is.Not.Empty);
+            Assert.That(AssetDatabase.GUIDToAssetPath(_folderGuid), Is.EqualTo(FolderPath));
 
             _window = ScriptableObject.CreateInstance<AssetImportAuditWindow>();
             SetField("_rootFolder", FolderPath);
@@ -28,7 +32,10 @@ namespace AssetImportAudit.Editor.Tests
         {
             if (_window != null)
                 UnityEngine.Object.DestroyImmediate(_window);
-            AssetDatabase.DeleteAsset(FolderPath);
+
+            var ownedFolderPath = string.IsNullOrEmpty(_folderGuid) ? string.Empty : AssetDatabase.GUIDToAssetPath(_folderGuid);
+            if (!string.IsNullOrEmpty(ownedFolderPath))
+                AssetDatabase.DeleteAsset(ownedFolderPath);
         }
 
         [Test]
