@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace AssetImportAudit.Editor
 {
-    /// <summary>Immutable preview result that can be rechecked before applying changes.</summary>
+    /// <summary>反映前に再確認できる、変更不可の差分確認結果を表します。</summary>
     public sealed class AssetImportAuditPlan
     {
         internal AssetImportAuditPlan(string rootFolder, AssetImportAuditTextureSettings expectedSettings, IReadOnlyList<AssetImportAuditIssue> issues, IReadOnlyList<AssetImportAuditPlanEntry> entries)
@@ -19,36 +19,38 @@ namespace AssetImportAudit.Editor
             Entries = new List<AssetImportAuditPlanEntry>(entries).AsReadOnly();
         }
 
-        /// <summary>Folder used for the preview.</summary>
+        /// <summary>差分確認対象のフォルダー。</summary>
         public string RootFolder { get; }
 
-        /// <summary>Shared settings requested by the preview, or the practical default when IncludesShared is false.</summary>
+        /// <summary>差分確認で要求された共通設定。共通設定を含まない場合は実用上の既定値。</summary>
         public AssetImportAuditTextureSettings ExpectedSettings => IncludesShared ? ExpectedAuditSettings.SharedSettings : AssetImportAuditTextureSettings.Default;
 
-        /// <summary>Settings requested by the preview, including platform overrides.</summary>
+        /// <summary>対象機種別設定を含む、差分確認で要求された設定。</summary>
         public AssetImportAuditTextureAuditSettings ExpectedAuditSettings { get; }
 
-        /// <summary>Whether the preview includes shared importer fields.</summary>
+        /// <summary>共通の取込設定項目を差分確認対象に含むかどうか。</summary>
         public bool IncludesShared => ExpectedAuditSettings.IncludesShared;
 
-        /// <summary>Whether the preview includes one platform override.</summary>
+        /// <summary>1つの対象機種別設定を差分確認対象に含むかどうか。</summary>
         public bool IncludesPlatform => ExpectedAuditSettings.IncludesPlatform;
 
-        /// <summary>Platform included by the preview, or None for shared-only previews.</summary>
+        /// <summary>差分確認対象の機種。共通設定だけの場合は、対象機種なしを示す列挙値。</summary>
         public AssetImportAuditTexturePlatform Platform => ExpectedAuditSettings.Platform;
 
-        /// <summary>Platform settings requested by the preview. Consume this value only when IncludesPlatform is true.</summary>
+        /// <summary>差分確認で要求された対象機種別設定。対象機種別設定を含む場合だけ使用します。</summary>
         public AssetImportAuditTexturePlatformSettings ExpectedPlatformSettings => ExpectedAuditSettings.PlatformSettings;
 
-        /// <summary>Sorted mismatch list.</summary>
+        /// <summary>並び替え済みの不一致一覧。</summary>
         public IReadOnlyList<AssetImportAuditIssue> Issues { get; }
 
-        /// <summary>Whether the preview found no differences.</summary>
+        /// <summary>差分確認で不一致が見つからなかったかどうか。</summary>
         public bool IsEmpty => Entries.Count == 0;
 
+        /// <summary>反映前の再確認に使う対象別記録です。</summary>
         internal IReadOnlyList<AssetImportAuditPlanEntry> Entries { get; }
     }
 
+    /// <summary>1件のアセットについて差分確認時点の状態を保持します。</summary>
     internal readonly struct AssetImportAuditPlanEntry
     {
         public AssetImportAuditPlanEntry(string assetPath, string snapshot)
@@ -63,11 +65,16 @@ namespace AssetImportAudit.Editor
             Platforms = platforms == null ? Array.AsReadOnly(Array.Empty<AssetImportAuditTexturePlatform>()) : new List<AssetImportAuditTexturePlatform>(platforms).AsReadOnly();
         }
 
+        /// <summary>対象アセットのプロジェクト相対パスです。</summary>
         public string AssetPath { get; }
+
+        /// <summary>管理対象値を一定形式で並べた差分確認時点の記録です。</summary>
         public string Snapshot { get; }
 
+        /// <summary>記録へ含めた対象機種です。</summary>
         public IReadOnlyList<AssetImportAuditTexturePlatform> Platforms { get; }
 
+        /// <summary>最初の対象機種です。対象機種を含まない場合は未指定値です。</summary>
         public AssetImportAuditTexturePlatform Platform => Platforms.Count == 0 ? AssetImportAuditTexturePlatform.None : Platforms[0];
     }
 }

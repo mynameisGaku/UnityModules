@@ -6,7 +6,7 @@ using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
 
-namespace AssetImportAudit.Tests
+namespace AssetImportAudit.Editor.Tests
 {
     [TestFixture]
     [Parallelizable(ParallelScope.None)]

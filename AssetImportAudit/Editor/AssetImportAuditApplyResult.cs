@@ -2,10 +2,14 @@ using System.Collections.Generic;
 
 namespace AssetImportAudit.Editor
 {
-    /// <summary>Reports the result of applying a preview plan.</summary>
+    /// <summary>差分確認計画の反映結果を表します。</summary>
     public readonly struct AssetImportAuditApplyResult
     {
-        /// <summary>Creates an application result.</summary>
+        /// <summary>成否、失敗理由、反映数、差分確認後に変わったアセットから反映結果を作成します。</summary>
+        /// <param name="succeeded">要求されたすべてのアセットへ反映できたかどうか。</param>
+        /// <param name="error">処理を完了できなかった理由です。成功時は失敗なしを指定します。</param>
+        /// <param name="appliedAssetCount">再取込まで完了したアセット数です。</param>
+        /// <param name="staleAssetPaths">差分確認後に取込設定が変わったアセットのパスです。</param>
         public AssetImportAuditApplyResult(bool succeeded, AssetImportAuditError error, int appliedAssetCount, IReadOnlyList<string> staleAssetPaths)
         {
             Succeeded = succeeded;
@@ -14,16 +18,16 @@ namespace AssetImportAudit.Editor
             StaleAssetPaths = staleAssetPaths ?? new string[0];
         }
 
-        /// <summary>Whether all requested assets were applied.</summary>
+        /// <summary>要求されたすべてのアセットへ反映できたかどうか。</summary>
         public bool Succeeded { get; }
 
-        /// <summary>Failure reason, or None.</summary>
+        /// <summary>失敗理由。失敗していない場合は、失敗なしを示す列挙値。</summary>
         public AssetImportAuditError Error { get; }
 
-        /// <summary>Number of assets reimported.</summary>
+        /// <summary>再取込まで完了したアセット数。</summary>
         public int AppliedAssetCount { get; }
 
-        /// <summary>Assets that changed after preview.</summary>
+        /// <summary>差分確認後に変更されたアセット。</summary>
         public IReadOnlyList<string> StaleAssetPaths { get; }
     }
 }

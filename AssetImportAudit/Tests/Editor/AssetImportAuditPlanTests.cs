@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using NUnit.Framework;
 
-namespace AssetImportAudit.Tests
+namespace AssetImportAudit.Editor.Tests
 {
     public sealed class AssetImportAuditPlanTests
     {

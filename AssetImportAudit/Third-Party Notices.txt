@@ -1,1 +1,1 @@
-Asset Import Audit does not include third-party source code.
+このパッケージには、第三者が制作したソースコードを同梱していません。

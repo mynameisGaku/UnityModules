@@ -1,16 +1,25 @@
-# Changelog
+# 変更履歴
+
+## [1.2.0] - 2026-08-31
+
+- 画面名、メニュー、見出し、ボタン、状態案内を日本語へ統一しました。
+- 検査範囲、圧縮方法、画素の補間方法、対象機種、差分一覧の設定名と値を日本語表示にしました。
+- 利用者が修正できる入力不備は日本語で案内し、予期しない例外の詳細はコンソールだけへ記録するようにしました。
+- パッケージの表示名、説明、導入手順、利用手引きを日本語表示へ合わせました。
+- 公開APIの引数と戻り値を日本語で説明し、編集用テストをUnityの推奨配置とアセンブリ名へ整理しました。
+- 旧メニュー`Tools > Asset Import Audit > Open`を、日本語メニュー`Tools > テクスチャー取込設定監査 > 開く`へ変更しました。
 
 ## [1.1.0] - 2026-08-23
 
-- Added Standalone, Android, and iOS Texture Import Settings override preview and apply.
-- Added shared-only, platform-only, and combined audit scopes.
-- Added all-or-nothing stale preflight for selected platform settings.
-- Reworked the Editor window and documentation into a fixed five-step workflow.
-- Added wide and narrow Editor look-development coverage with an annotated workflow guide.
-- Deferred GUI style creation until drawing so the window reopens safely after a domain reload.
-- Restricted maximum texture sizes to Unity importer presets so apply and re-preview converge.
+- パソコン、Android、iOSの対象機種別テクスチャー取込設定について、差分確認と反映を追加しました。
+- 共通設定だけ、対象機種別設定だけ、両方をまとめて扱う3種類の検査範囲を追加しました。
+- 選択した対象機種別設定を反映する前に、全件を再確認して一部反映を防ぐ処理を追加しました。
+- エディター画面と文書を、固定された5段階の操作順へ整理しました。
+- 幅広・幅狭のエディター画面を確認し、注釈付きの操作手引きを追加しました。
+- 領域再読込後も画面を安全に開けるよう、画面様式の作成を描画時まで遅らせました。
+- 反映後の再確認で確実に差分がなくなるよう、最大寸法をUnity取込設定の選択肢へ限定しました。
 
 ## [1.0.0] - 2026-08-23
 
-- Added deterministic Texture Import Settings preview and apply for Assets folders.
-- Added stale-plan rejection, selected/all apply, and Undo integration.
+- `Assets`フォルダー以下のテクスチャー取込設定について、順序が一定の差分確認と反映を追加しました。
+- 古くなった計画の拒否、選択対象または全対象への反映、元に戻す操作への対応を追加しました。

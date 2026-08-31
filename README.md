@@ -26,7 +26,7 @@ Unity で繰り返し発生する設定、実装、確認作業を減らすた�
 | セーブ枠、破損、バックアップを毎回実装したくない | [セーブデータ管理（SaveSystem）](SaveSystem/) | 型付き JSON、複数 slot、破損検出、backup 復旧を使う。 |
 | 音量・quality・resolution・window mode・target frame rateの保存と適用を毎回書きたくない | [Player設定（Player Options）](PlayerOptions/) | 型付きsnapshotをLoad・Set・Apply・Saveに分け、未来schemaや破損値を自動上書きせず扱う。 |
 | シーンやプレハブの欠落スクリプトを除去し、削除済み参照とプレハブの構造差分を確認したい | [プロジェクト不備確認・修復](BuildGuard/) | ビルド対象シーン、直接選択した保存済みシーン、選択プレハブの壊れた参照を検査し、欠落スクリプトは元に戻せる操作として除去する。欠落オブジェクト参照は場所を確認して手動で修正し、プレハブへ追加・削除したゲームオブジェクト／コンポーネントは、ビルドを止めない確認専用画面で確認する。 |
-| Texture Import Settingsを大量のAssetへ一括確認・適用したい | [アセット設定チェック（Asset Import Audit）](AssetImportAudit/) | Assets配下をPreviewし、共通設定とStandalone・Android・iOS別Overrideを選択または全件へ適用する。Preview後の外部変更は拒否する。 |
+| テクスチャー取込設定を多数のアセットへまとめて確認・反映したい | [テクスチャー取込設定監査](AssetImportAudit/) | `Assets`配下を事前確認し、共通設定とパソコン・Android・iOS別設定を選択対象または全対象へ反映する。差分確認後の外部変更は拒否する。 |
 | Assetの利用箇所を確認・置換し、複数の名前もまとめて整理したい | [アセット整理・参照管理（Reference Finder）](ReferenceFinder/) | 直接・間接参照の検索、安全な参照置換、GUIDを維持する一括RenameをPreview後に実行する。 |
 | 不具合調査用の状態とログを手動保存したい | [不具合レポート保存（DiagnosticsContext）](DiagnosticsContext/) | context、breadcrumb、Unity log を有界 JSON に書き出す。 |
 | スティック補正とTap・Hold・Repeatをまとめて扱いたい | [入力補助（Input Assist）](InputAssist/) | dead zone、感度curve、滑らかさ、4/8方向、button gestureを1つの導入で処理する。 |
@@ -77,7 +77,7 @@ Unity で繰り返し発生する設定、実装、確認作業を減らすた�
 | [ゲーム時間制御（TimeControl）](TimeControl/) | Scene所有のControllerが複数leaseの相対倍率を最小値で集約し、pause・slow motion・単独fast-forwardをTime.timeScaleへ安全に反映する。**Unity 6000.5.7f1以降**。 | com.unity.modules.uielements 1.0.0 |
 | [不具合レポート保存（DiagnosticsContext）](DiagnosticsContext/) | 明示追加したcontext・breadcrumbと実行中のUnity Warning・Error・Assert・Exceptionを有界に保持し、手動操作時だけJSON reportへ書き出す。**Unity 6000.5.7f1以降**。 | com.unity.modules.uielements 1.0.0 |
 | [プロジェクト不備確認・修復](BuildGuard/) | ビルド対象シーン、プロジェクトウィンドウで直接選択した`Assets/`配下の保存済みシーン、選択プレハブの欠落スクリプト・削除済みオブジェクト参照を一覧から開き、欠落スクリプトだけを確認後に元に戻せる操作として除去できる。選択シーンはビルドプロファイル未登録・無効でもパス順の検査時点一覧として扱い、古い場合は途中結果を返さない。別画面では有効なビルド対象シーンのプレハブへ追加・削除したゲームオブジェクト／コンポーネントを確認し、古い結果を再確認した後だけ安全に対象へ移動する。プロパティ値の変更は含めず、確認結果はプレイヤービルドを止めないエディター専用モジュール。**Unity 6000.5.7f1以降**。 | なし |
-| [アセット設定チェック（Asset Import Audit）](AssetImportAudit/) | `Assets`配下のTexture2Dを決定論的に検査し、共通設定とStandalone・Android・iOS別OverrideをShared・Platform・両方のscopeでPreview・選択適用・全件適用する。Preview後のstale importerは拒否するEditor専用module。**Unity 6000.5.7f1以降**。 | なし |
+| [テクスチャー取込設定監査](AssetImportAudit/) | `Assets`配下の`Texture2D`を一定の順序で検査し、共通設定とパソコン・Android・iOS別設定を単独またはまとめて事前確認する。選択対象・全対象への反映に対応し、差分確認後に変わった取込設定は拒否するエディター専用モジュール。**Unity 6000.5.7f1以降**。 | なし |
 | [アセット整理・参照管理（Reference Finder）](ReferenceFinder/) | 選択Assetの直接・間接参照元を検索し、安全に特定できた参照だけをUndo付きで置換する。さらに複数Assetへ文字置換・prefix・suffixをまとめて適用し、GUIDを維持してRenameするEditor専用module。**Unity 6000.5.7f1以降**。 | なし |
 | [入力補助（Input Assist）](InputAssist/) | 2D入力へradial dead zone、応答curve、増減速度制限、方向量子化、重み付き合成を適用し、button入力からTap・Hold・Repeat・multi-tapを判定する。Unity向けの`float`+`deltaTime`契約と、確保を伴わない`double`契約を同じpackageが持つ。入力値と経過時間は利用側から渡すため、Input System・AI・Replayのどれでも使える。**Unity 6000.5.7f1以降**。 | com.unity.modules.uielements 1.0.0 |
 | [入力デバイス表示（Input Device Display）](InputDeviceDisplay/) | Input Systemのglobalな実入力から最後に操作されたdeviceをKeyboard／Mouse、Xbox、PlayStation、Switch、一般Gamepad、Touchの表示familyへ分類する。厳密layout overrideと明示fallbackを備え、glyph asset、rebind、pairing、player別追跡は扱わない。**Unity 6000.5.7f1以降**。 | com.unity.inputsystem 1.20.0 / com.unity.modules.uielements 1.0.0 |
@@ -133,7 +133,7 @@ Assets/
     │   └── Tests/Editor/    BuildGuard.Editor.Tests
     ├── AssetImportAudit/
     │   ├── Editor/          AssetImportAudit.Editor
-    │   └── Tests/           AssetImportAudit.Tests
+    │   └── Tests/Editor/    AssetImportAudit.Editor.Tests
     ├── ReferenceFinder/
     │   ├── Editor/          ReferenceFinder.Editor
     │   ├── Tests/           ReferenceFinder.Tests

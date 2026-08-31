@@ -1,7 +1,7 @@
 using NUnit.Framework;
 using UnityEditor;
 
-namespace AssetImportAudit.Tests
+namespace AssetImportAudit.Editor.Tests
 {
     public sealed class AssetImportAuditTexturePlatformSettingsTests
     {

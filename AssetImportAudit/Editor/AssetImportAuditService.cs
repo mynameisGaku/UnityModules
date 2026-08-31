@@ -5,16 +5,24 @@ using UnityEditor;
 
 namespace AssetImportAudit.Editor
 {
-    /// <summary>Previews and safely applies bounded Texture Import Settings changes under Assets.</summary>
+    /// <summary>Assets以下のテクスチャー取込設定を確認し、対象を限定して安全に反映します。</summary>
     public static class AssetImportAuditService
     {
-        /// <summary>Creates a deterministic preview for shared texture importer fields.</summary>
+        /// <summary>共通のテクスチャー取込設定について、順序が一定の差分確認結果を作成します。</summary>
+        /// <param name="rootFolder">検査を始める、Assets以下のフォルダーです。</param>
+        /// <param name="expectedSettings">共通設定として要求する取込設定です。</param>
+        /// <returns>対象パス順に並べた設定差分と、反映前の再確認に使う記録です。</returns>
+        /// <exception cref="ArgumentException">対象フォルダーまたは要求する取込設定が不正です。</exception>
         public static AssetImportAuditPlan Preview(string rootFolder, AssetImportAuditTextureSettings expectedSettings)
         {
             return Preview(rootFolder, AssetImportAuditTextureAuditSettings.ForShared(expectedSettings));
         }
 
-        /// <summary>Creates a deterministic preview for shared or selected platform fields.</summary>
+        /// <summary>共通設定または指定した対象機種の設定について、順序が一定の差分確認結果を作成します。</summary>
+        /// <param name="rootFolder">検査を始める、Assets以下のフォルダーです。</param>
+        /// <param name="expectedSettings">検査範囲と要求値をまとめた設定です。</param>
+        /// <returns>対象パス順に並べた設定差分と、反映前の再確認に使う記録です。</returns>
+        /// <exception cref="ArgumentException">対象フォルダー、検査範囲、または要求する取込設定が不正です。</exception>
         public static AssetImportAuditPlan Preview(string rootFolder, AssetImportAuditTextureAuditSettings expectedSettings)
         {
             expectedSettings.Validate();
@@ -43,17 +51,24 @@ namespace AssetImportAudit.Editor
             return new AssetImportAuditPlan(rootFolder, expectedSettings, issues, entries);
         }
 
-        /// <summary>Applies every asset in a preview after checking for stale importer values.</summary>
+        /// <summary>差分確認後に取込設定が変わっていないことを確かめ、全対象へ反映します。</summary>
+        /// <param name="plan">差分確認で作成した反映計画です。</param>
+        /// <returns>反映の成否、完了数、古くなった対象を含む処理結果です。</returns>
+        /// <exception cref="ArgumentNullException">差分確認計画が未指定です。</exception>
         public static AssetImportAuditApplyResult Apply(AssetImportAuditPlan plan)
         {
             return Apply(plan, null);
         }
 
-        /// <summary>Applies selected assets in a preview after checking all selected assets for stale values.</summary>
+        /// <summary>選択対象の取込設定が差分確認後に変わっていないことを確かめ、まとめて反映します。</summary>
+        /// <param name="plan">差分確認で作成した反映計画です。</param>
+        /// <param name="selectedAssetPaths">反映するアセットのプロジェクト相対パスです。未指定値の場合は全対象、空の列挙の場合は対象なしとして扱います。</param>
+        /// <returns>反映の成否、完了数、古くなった対象を含む処理結果です。</returns>
+        /// <exception cref="ArgumentNullException">差分確認計画が未指定です。</exception>
         public static AssetImportAuditApplyResult Apply(AssetImportAuditPlan plan, IEnumerable<string> selectedAssetPaths)
         {
             if (plan == null)
-                throw new ArgumentNullException(nameof(plan));
+                throw new ArgumentNullException(nameof(plan), "差分確認計画を指定してください。");
 
             var selected = selectedAssetPaths == null
                 ? null
@@ -80,14 +95,14 @@ namespace AssetImportAudit.Editor
                 return new AssetImportAuditApplyResult(false, AssetImportAuditError.StalePlan, 0, stale.OrderBy(path => path, StringComparer.Ordinal).ToArray());
 
             var group = Undo.GetCurrentGroup();
-            Undo.SetCurrentGroupName("Apply Asset Import Audit");
+            Undo.SetCurrentGroupName("テクスチャー取込設定を反映");
             var appliedAssetCount = 0;
             try
             {
                 for (var index = 0; index < entries.Length; index++)
                 {
                     var importer = importers[index];
-                    Undo.RecordObject(importer, "Apply Asset Import Audit");
+                    Undo.RecordObject(importer, "テクスチャー取込設定を反映");
                     Write(importer, plan.ExpectedAuditSettings);
                     importer.SaveAndReimport();
                     appliedAssetCount++;
@@ -108,9 +123,9 @@ namespace AssetImportAudit.Editor
             if (rootFolder.Length == 0)
                 rootFolder = "Assets";
             if (!rootFolder.Equals("Assets", StringComparison.Ordinal) && !rootFolder.StartsWith("Assets/", StringComparison.Ordinal))
-                throw new ArgumentException("Root folder must be under Assets.", nameof(rootFolder));
+                throw new ArgumentException("対象フォルダーはAssets以下を指定してください。", nameof(rootFolder));
             if (!AssetDatabase.IsValidFolder(rootFolder))
-                throw new ArgumentException("Root folder does not exist.", nameof(rootFolder));
+                throw new ArgumentException("対象フォルダーが存在しません。", nameof(rootFolder));
             return rootFolder;
         }
 

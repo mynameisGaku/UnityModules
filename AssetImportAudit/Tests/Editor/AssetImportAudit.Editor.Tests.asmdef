@@ -1,6 +1,6 @@
 {
-    "name": "AssetImportAudit.Tests",
-    "rootNamespace": "AssetImportAudit.Tests",
+    "name": "AssetImportAudit.Editor.Tests",
+    "rootNamespace": "AssetImportAudit.Editor.Tests",
     "references": [
         "AssetImportAudit.Editor",
         "UnityEngine.TestRunner",

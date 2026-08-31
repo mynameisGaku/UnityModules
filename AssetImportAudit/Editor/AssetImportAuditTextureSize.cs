@@ -30,7 +30,7 @@ namespace AssetImportAudit.Editor
                 case 16384:
                     return;
                 default:
-                    throw new ArgumentOutOfRangeException(parameterName, value, "Max texture size must be a Unity importer preset from 32 through 16384.");
+                    throw new ArgumentOutOfRangeException(parameterName, value, "最大テクスチャー寸法には、32、64、128、256、512、1024、2048、4096、8192、16384のいずれかを指定してください。");
             }
         }
     }
