@@ -1,10 +1,12 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using AssetImportAudit.Editor;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.TestTools;
 
 namespace AssetImportAudit.Editor.Tests
 {
@@ -15,6 +17,7 @@ namespace AssetImportAudit.Editor.Tests
         private const string FolderPath = "Assets/AssetImportAuditPlatformTests";
         private const string FirstAssetPath = FolderPath + "/First.png";
         private const string SecondAssetPath = FolderPath + "/Second.png";
+        private const string ThirdAssetPath = FolderPath + "/Third.png";
         private const string PngBase64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
 
         [SetUp]
@@ -22,11 +25,8 @@ namespace AssetImportAudit.Editor.Tests
         {
             AssetDatabase.DeleteAsset(FolderPath);
             Directory.CreateDirectory(Path.Combine(Application.dataPath, "AssetImportAuditPlatformTests"));
-            var bytes = Convert.FromBase64String(PngBase64);
-            File.WriteAllBytes(ToAbsolutePath(FirstAssetPath), bytes);
-            File.WriteAllBytes(ToAbsolutePath(SecondAssetPath), bytes);
-            AssetDatabase.ImportAsset(FirstAssetPath, ImportAssetOptions.ForceSynchronousImport);
-            AssetDatabase.ImportAsset(SecondAssetPath, ImportAssetOptions.ForceSynchronousImport);
+            CreateTextureAsset(FirstAssetPath);
+            CreateTextureAsset(SecondAssetPath);
         }
 
         [TearDown]
@@ -159,6 +159,116 @@ namespace AssetImportAudit.Editor.Tests
             Assert.That(GetPlatformSettings(FirstAssetPath, "Android").overridden, Is.False);
             Assert.That(GetPlatformSettings(FirstAssetPath, "Android").maxTextureSize, Is.EqualTo(512));
             Assert.That(GetPlatformSettings(SecondAssetPath, "Android").maxTextureSize, Is.EqualTo(1024));
+        }
+
+        // 一件の再取込後、次の再取込開始前に失敗しても、完了数と取り消し単位を保つことを確認します。
+        [Test]
+        public void Apply_FailureBeforeSecondReimportReportsPartialProgressAndKeepsRecordedChangesUndoable()
+        {
+            CreateTextureAsset(ThirdAssetPath);
+            var firstImporter = GetImporter(FirstAssetPath);
+            var secondImporter = GetImporter(SecondAssetPath);
+            var thirdImporter = GetImporter(ThirdAssetPath);
+            SetPlatformOverride(firstImporter, "Android", false, 512);
+            SetPlatformOverride(secondImporter, "Android", false, 512);
+            SetPlatformOverride(thirdImporter, "Android", false, 512);
+            var firstBefore = GetPlatformSettings(FirstAssetPath, "Android");
+            var secondBefore = GetPlatformSettings(SecondAssetPath, "Android");
+            var thirdBefore = GetPlatformSettings(ThirdAssetPath, "Android");
+            var expected = CreateAndroidAuditSettings(firstImporter, true, 2048);
+            var plan = AssetImportAuditService.Preview(FolderPath, expected);
+            Undo.ClearAll();
+            LogAssert.Expect(LogType.Exception, new Regex("InvalidOperationException: 再取込失敗試験"));
+
+            var result = AssetImportAuditService.Apply(plan, null, importer =>
+            {
+                if (importer.assetPath == SecondAssetPath)
+                    throw new InvalidOperationException("再取込失敗試験");
+                importer.SaveAndReimport();
+            });
+
+            Assert.That(result.Succeeded, Is.False);
+            Assert.That(result.Error, Is.EqualTo(AssetImportAuditError.ApplyFailed));
+            Assert.That(result.AppliedAssetCount, Is.EqualTo(1));
+            Assert.That(GetPlatformSettings(FirstAssetPath, "Android").overridden, Is.True);
+            AssertPlatformValuesEqual(thirdBefore, GetPlatformSettings(ThirdAssetPath, "Android"));
+            Assert.DoesNotThrow(() => AssetImportAuditService.Preview(FolderPath, expected));
+
+            Undo.PerformUndo();
+            AssetDatabase.ImportAsset(FirstAssetPath, ImportAssetOptions.ForceSynchronousImport);
+            AssetDatabase.ImportAsset(SecondAssetPath, ImportAssetOptions.ForceSynchronousImport);
+            AssetDatabase.ImportAsset(ThirdAssetPath, ImportAssetOptions.ForceSynchronousImport);
+            AssertPlatformValuesEqual(firstBefore, GetPlatformSettings(FirstAssetPath, "Android"));
+            AssertPlatformValuesEqual(secondBefore, GetPlatformSettings(SecondAssetPath, "Android"));
+            AssertPlatformValuesEqual(thirdBefore, GetPlatformSettings(ThirdAssetPath, "Android"));
+        }
+
+        // 対象が削除された更新済み計画は、残る対象へ一件も書き込まず拒否することを確認します。
+        [Test]
+        public void Apply_DeletedSelectedEntryRejectsAllSelectedEntriesWithoutWrites()
+        {
+            var firstImporter = GetImporter(FirstAssetPath);
+            var secondImporter = GetImporter(SecondAssetPath);
+            SetPlatformOverride(firstImporter, "Android", false, 512);
+            SetPlatformOverride(secondImporter, "Android", false, 512);
+            var firstBefore = GetPlatformSettings(FirstAssetPath, "Android");
+            var expected = CreateAndroidAuditSettings(firstImporter, true, 2048);
+            var plan = AssetImportAuditService.Preview(FolderPath, expected);
+            Assert.That(AssetDatabase.DeleteAsset(SecondAssetPath), Is.True);
+
+            var result = AssetImportAuditService.Apply(plan, new[] { FirstAssetPath, SecondAssetPath });
+
+            Assert.That(result.Succeeded, Is.False);
+            Assert.That(result.Error, Is.EqualTo(AssetImportAuditError.StalePlan));
+            Assert.That(result.AppliedAssetCount, Is.EqualTo(0));
+            Assert.That(result.StaleAssetPaths, Is.EqualTo(new[] { SecondAssetPath }));
+            AssertPlatformValuesEqual(firstBefore, GetPlatformSettings(FirstAssetPath, "Android"));
+        }
+
+        // 共通設定と対象機種別設定を含む計画でも、事後変更を検出して全変更を止めることを確認します。
+        [Test]
+        public void Apply_StaleSharedAndPlatformPlanRejectsAllWrites()
+        {
+            var importer = GetImporter(FirstAssetPath);
+            importer.mipmapEnabled = true;
+            importer.SaveAndReimport();
+            SetPlatformOverride(importer, "Android", false, 512);
+            var platformBefore = GetPlatformSettings(FirstAssetPath, "Android");
+            var shared = AssetImportAuditService.Read(importer);
+            var expectedShared = new AssetImportAuditTextureSettings(shared.MaxTextureSize, shared.Compression, false, shared.SRgbTexture, shared.Readable, shared.FilterMode, shared.AnisoLevel);
+            var expectedPlatform = new AssetImportAuditTexturePlatformSettings(true, 2048, platformBefore.textureCompression);
+            var expected = AssetImportAuditTextureAuditSettings.ForSharedAndPlatform(expectedShared, AssetImportAuditTexturePlatform.Android, expectedPlatform);
+            var plan = AssetImportAuditService.Preview(FolderPath, expected);
+            importer.mipmapEnabled = false;
+            importer.SaveAndReimport();
+
+            var result = AssetImportAuditService.Apply(plan, new[] { FirstAssetPath });
+
+            Assert.That(result.Succeeded, Is.False);
+            Assert.That(result.Error, Is.EqualTo(AssetImportAuditError.StalePlan));
+            Assert.That(result.AppliedAssetCount, Is.EqualTo(0));
+            Assert.That(result.StaleAssetPaths, Is.EqualTo(new[] { FirstAssetPath }));
+            AssertPlatformValuesEqual(platformBefore, GetPlatformSettings(FirstAssetPath, "Android"));
+        }
+
+        // パソコン向け設定を反映した対象は、同じ条件の再確認で差分が消えることを確認します。
+        [Test]
+        public void Apply_StandaloneSettingsLeavesNoRemainingIssuesForAppliedAsset()
+        {
+            var importer = GetImporter(FirstAssetPath);
+            SetPlatformOverride(importer, "Standalone", false, 512);
+            var compression = GetPlatformSettings(FirstAssetPath, "Standalone").textureCompression;
+            var expectedPlatform = new AssetImportAuditTexturePlatformSettings(true, 2048, compression);
+            var expected = AssetImportAuditTextureAuditSettings.ForPlatform(AssetImportAuditTexturePlatform.Standalone, expectedPlatform);
+            var plan = AssetImportAuditService.Preview(FolderPath, expected);
+
+            var result = AssetImportAuditService.Apply(plan, new[] { FirstAssetPath });
+            var remaining = AssetImportAuditService.Preview(FolderPath, expected);
+
+            Assert.That(result.Succeeded, Is.True);
+            Assert.That(GetPlatformSettings(FirstAssetPath, "Standalone").overridden, Is.True);
+            Assert.That(GetPlatformSettings(FirstAssetPath, "Standalone").maxTextureSize, Is.EqualTo(2048));
+            Assert.That(remaining.Issues.Any(issue => issue.AssetPath == FirstAssetPath), Is.False);
         }
 
         [Test]
@@ -382,6 +492,13 @@ namespace AssetImportAudit.Editor.Tests
             settings.maxTextureSize = maxTextureSize;
             importer.SetPlatformTextureSettings(settings);
             importer.SaveAndReimport();
+        }
+
+        // 指定した相対パスへ最小の画像を作成し、同期取込して実取込試験の対象にします。
+        private static void CreateTextureAsset(string assetPath)
+        {
+            File.WriteAllBytes(ToAbsolutePath(assetPath), Convert.FromBase64String(PngBase64));
+            AssetDatabase.ImportAsset(assetPath, ImportAssetOptions.ForceSynchronousImport);
         }
 
         private static string ToAbsolutePath(string assetPath)

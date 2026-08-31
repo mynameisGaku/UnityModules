@@ -67,8 +67,17 @@ namespace AssetImportAudit.Editor
         /// <exception cref="ArgumentNullException">差分確認計画が未指定です。</exception>
         public static AssetImportAuditApplyResult Apply(AssetImportAuditPlan plan, IEnumerable<string> selectedAssetPaths)
         {
+            return Apply(plan, selectedAssetPaths, SaveAndReimport);
+        }
+
+        // 再取込処理を差し替え、途中失敗時の完了数と取り消し単位を実取込試験で確認します。
+        // 第三引数が未指定の場合は、反映を始める前に入力不備として停止します。
+        internal static AssetImportAuditApplyResult Apply(AssetImportAuditPlan plan, IEnumerable<string> selectedAssetPaths, Action<TextureImporter> saveAndReimport)
+        {
             if (plan == null)
                 throw new ArgumentNullException(nameof(plan), "差分確認計画を指定してください。");
+            if (saveAndReimport == null)
+                throw new ArgumentNullException(nameof(saveAndReimport), "再取込処理を指定してください。");
 
             var selected = selectedAssetPaths == null
                 ? null
@@ -104,17 +113,27 @@ namespace AssetImportAudit.Editor
                     var importer = importers[index];
                     Undo.RecordObject(importer, "テクスチャー取込設定を反映");
                     Write(importer, plan.ExpectedAuditSettings);
-                    importer.SaveAndReimport();
+                    saveAndReimport(importer);
                     appliedAssetCount++;
                 }
 
-                Undo.CollapseUndoOperations(group);
                 return new AssetImportAuditApplyResult(true, AssetImportAuditError.None, appliedAssetCount, Array.Empty<string>());
             }
-            catch (Exception)
+            catch (Exception exception)
             {
+                UnityEngine.Debug.LogException(exception);
                 return new AssetImportAuditApplyResult(false, AssetImportAuditError.ApplyFailed, appliedAssetCount, Array.Empty<string>());
             }
+            finally
+            {
+                Undo.CollapseUndoOperations(group);
+            }
+        }
+
+        // 書き込んだ取込設定を保存し、対象アセットをUnityの通常手順で再取込します。
+        private static void SaveAndReimport(TextureImporter importer)
+        {
+            importer.SaveAndReimport();
         }
 
         internal static string NormalizeRootFolder(string rootFolder)
