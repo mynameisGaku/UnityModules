@@ -6,7 +6,7 @@ using System.Collections.Generic;
 namespace BuildGuard.Editor
 {
     /// <summary>
-    /// Stores the immutable, all-or-nothing outcome of one structural Prefab override scan.
+    /// プレハブ構造差分検査1回分の、途中結果を含まない不変な結果を保持します。
     /// </summary>
     internal readonly struct BuildGuardPrefabOverrideScanResult
     {
@@ -26,19 +26,25 @@ namespace BuildGuard.Editor
             ScannedPrefabInstanceCount = scannedPrefabInstanceCount;
         }
 
+        /// <summary>検査が完全に成功したかを表します。</summary>
         internal bool Succeeded { get; }
 
+        /// <summary>検査に失敗した原因の種類です。</summary>
         internal BuildGuardPrefabOverrideScanError Error { get; }
 
+        /// <summary>検査に失敗した理由です。</summary>
         internal string ErrorMessage { get; }
 
+        /// <summary>検査で見つかった構造差分の不変な一覧です。</summary>
         internal IReadOnlyList<BuildGuardPrefabOverrideFinding> Findings { get; }
 
+        /// <summary>検査中に確認したゲームオブジェクトの総数です。</summary>
         internal int VisitedGameObjectCount { get; }
 
+        /// <summary>検査した最上位プレハブ実体の総数です。</summary>
         internal int ScannedPrefabInstanceCount { get; }
 
-        /// <summary>Creates a successful result with a detached finding snapshot.</summary>
+        /// <summary>呼出元の一覧から切り離した、成功結果を作成します。</summary>
         internal static BuildGuardPrefabOverrideScanResult Success(
             IReadOnlyList<BuildGuardPrefabOverrideFinding> findings,
             int visitedGameObjectCount,
@@ -64,7 +70,7 @@ namespace BuildGuard.Editor
                 scannedPrefabInstanceCount);
         }
 
-        /// <summary>Creates a failed result without exposing partial findings.</summary>
+        /// <summary>途中の構造差分を公開しない失敗結果を作成します。</summary>
         internal static BuildGuardPrefabOverrideScanResult Failure(
             BuildGuardPrefabOverrideScanError error,
             string errorMessage,
@@ -73,7 +79,7 @@ namespace BuildGuard.Editor
         {
             if (error == BuildGuardPrefabOverrideScanError.None)
             {
-                throw new ArgumentException("A failed scan requires a non-success error.", nameof(error));
+                throw new ArgumentException("失敗結果には、成功以外の原因が必要です。", nameof(error));
             }
 
             return new BuildGuardPrefabOverrideScanResult(

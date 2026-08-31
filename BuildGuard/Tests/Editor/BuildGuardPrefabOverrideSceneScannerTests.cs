@@ -10,7 +10,7 @@ using UnityEngine.SceneManagement;
 namespace BuildGuard.Tests
 {
     /// <summary>
-    /// Verifies read-only structural override scanning against temporary Unity Prefabs and Scenes.
+    /// 一時作成したUnityプレハブとシーンを使い、変更しない構造差分検査を検証します。
     /// </summary>
     [Parallelizable(ParallelScope.None)]
     internal sealed class BuildGuardPrefabOverrideSceneScannerTests

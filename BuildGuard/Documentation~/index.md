@@ -33,13 +33,13 @@ Build Guardは、プレイヤービルド対象シーン、プロジェクトウ
 
 `プレハブを開く`はプレハブモードを開き、兄弟順を含む階層パスと検査時の対象識別値が現在も一致すればゲームオブジェクトを選択します。欠落スクリプトの`開いて除去`は、現在のプレハブを再検査し、同じ対象に同じ問題が残っている場合だけ、元に戻す操作へ記録して欠落した枠を除去します。同名・同順でも別の対象へ置き換わっている古い結果からは変更しません。変更の保存はプレハブモードの自動保存設定に従うため、確認画面と除去後の状態欄で保存条件を案内します。`内容をコピー`は問題種別、プレハブ、ゲームオブジェクト、詳細を1行でクリップボードへコピーします。
 
-### Prefab structural override review
+### プレハブ構造差分の確認
 
-**Tools > Build Guard > Review Prefab Overrides** は、active Build Profileで有効なSceneのoutermost connected Prefab instanceを検査します。Added／Removed GameObjectとAdded／Removed ComponentだけをScene、instance、path、Component、sourceの安定順で表示します。Transformを含むProperty Modificationは対象外です。
+**Tools > ビルドガード > プレハブ構造差分を確認** は、現在のBuild Profileで有効なシーンにある、最も外側で接続中のプレハブ実体を検査します。ゲームオブジェクトとコンポーネントの追加・削除だけを、シーン、プレハブの実体、対象パス、コンポーネント、参照元の安定した順番で表示します。`Transform`を含むプロパティ値の変更は対象外です。
 
-`Refresh / Scan`は最大1,000件のimmutable snapshotを作ります。Cancelまたは1 Sceneでもscan failureが発生した場合はpartial findingsを全て破棄します。これはMissing Script／Missing Object Referenceのbuild blockerとは接続されず、findingがあってもPlayer buildを停止しません。
+`更新して検査`は最大1,000件の不変な検査結果を作ります。中止、または1件でもシーン検査に失敗した場合は途中の構造差分を全て破棄します。この結果は欠落スクリプトおよび欠落オブジェクト参照によるビルド停止処理とは切り離されており、構造差分があってもプレイヤービルドを停止しません。
 
-`Open & Select`はScene GUIDとfinding identityを同じscannerで再確認します。loaded Sceneでは一致するGameObjectだけを選択します。closed Sceneはadditiveで一時確認して必ず閉じ直し、currentならScene assetを選択します。変更済みfindingはstaleと案内します。Apply、Revert、Undo、保存、dirty化は行いません。
+`開いて選択`はシーンのGUIDと構造差分の識別情報を、検査時と同じ処理で再確認します。読込済みシーンでは一致するゲームオブジェクトだけを選択します。閉じたシーンは一時的に追加読込して確認した後に閉じ直し、正常に閉じられて構造差分が現在も存在する場合はシーンアセットを選択します。閉じ直せない場合はエラーを表示します。変更済みの構造差分は、結果が古くなったことを案内します。適用、取り消し、元に戻す操作、保存、未保存状態への変更は行いません。
 
 ### 自動ビルド検査
 
@@ -62,9 +62,9 @@ Build Guardは、プレイヤービルド対象シーン、プロジェクトウ
 
 プレハブの実体も展開済みシーン階層として同じ規則で扱います。選択プレハブの検査も一時的に展開したプレハブ内容のシーンへ同じ規則を適用します。結果はアセットのパス、階層パス、コンポーネント順、プロパティのパスの順へ並べます。
 
-### Structural Prefab Override
+### プレハブ構造差分
 
-Sceneにあるoutermost connected Prefab instanceごとにUnityのadded／removed GameObject・Component APIを読み、追加・削除したsubtreeを1件へ正規化します。nested PrefabとVariantのsource identityを保持し、property override APIは読みません。結果はreview専用で、build callbackやMissing Script／Missing Object Referenceのinspectionへ渡しません。
+シーンにある、最も外側で接続中のプレハブ実体ごとに、Unityのゲームオブジェクト・コンポーネント追加／削除APIを読み、追加・削除した部分階層を1件へ正規化します。入れ子のプレハブとプレハブバリアントの参照元識別情報を保持し、プロパティ値の差分APIは読みません。結果は確認専用で、ビルド処理や欠落スクリプト／欠落オブジェクト参照の検査へ渡しません。
 
 ## シーンの扱い
 
@@ -74,7 +74,7 @@ Sceneにあるoutermost connected Prefab instanceごとにUnityのadded／remove
 - 同じシーンパスが重複している場合は、大小文字を区別せず1回だけ検査します。
 - 空のパスやシーンアセットとして解決できないパスは、Unity本体のビルド診断へ委ねます。
 - 検査はシーン、プレハブの実体、ゲームオブジェクト、コンポーネントを変更しません。
-- 構造差分からの移動で一時的に開いたシーンも必ず閉じ、元の有効・開閉・未保存状態を維持します。
+- 構造差分からの移動で一時的に開いたシーンは閉じて元の有効・開閉・未保存状態へ戻し、復元できない場合はエラーを表示します。
 
 選択シーンの検査は記録済みパスを開始前に全件再検証します。古い記録では走査を始めず、走査中の外部変更で全件完了できなかった場合も途中結果を返しません。この追加は手動検査だけに閉じており、ビルド処理、ビルド対象シーンの検査、選択プレハブの検査、欠落スクリプト修復、プレハブ構造差分の確認の対象と動作を変更しません。
 
@@ -85,7 +85,7 @@ Sceneにあるoutermost connected Prefab instanceごとにUnityのadded／remove
 `OnProcessScene`へ`BuildReport`が渡されないプレイモード読込と、`BuildPipeline.isBuildingPlayer`が`false`のアセットバンドルビルドは拒否しません。次も対象外です。
 
 - 欠落オブジェクト参照の自動修復
-- Prefab structural overrideのProperty Modification表示、Apply、Revert、自動修復、build停止
+- プレハブ構造差分のプロパティ値変更表示、適用、取り消し、自動修復、ビルド停止
 - 複数シーンの一括修復と自動保存
 - プロジェクト内の全プレハブ・シーン・`ScriptableObject`の常時検査（シーンとプレハブは利用者が明示選択した範囲だけ）
 - Runtimeで後から設定するnull fieldの必須判定

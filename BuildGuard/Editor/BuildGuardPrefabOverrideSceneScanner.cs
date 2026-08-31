@@ -9,17 +9,17 @@ using UnityEngine.SceneManagement;
 namespace BuildGuard.Editor
 {
     /// <summary>
-    /// Scans connected outermost Scene Prefab instances for structural overrides without modifying them.
+    /// 接続済みの最上位プレハブ実体を変更せず、その構造差分を検査します。
     /// </summary>
     internal static class BuildGuardPrefabOverrideSceneScanner
     {
-        /// <summary>Scans one loaded Scene with production limits.</summary>
+        /// <summary>製品用の上限を使って、読込済みシーン1件を検査します。</summary>
         internal static BuildGuardPrefabOverrideScanResult Scan(Scene scene)
         {
             return Scan(scene, BuildGuardPrefabOverrideScanLimits.Default);
         }
 
-        /// <summary>Scans one loaded Scene with injectable limits used by deterministic tests.</summary>
+        /// <summary>決定論的な試験で差し替えられる上限を使い、読込済みシーン1件を検査します。</summary>
         internal static BuildGuardPrefabOverrideScanResult Scan(
             Scene scene,
             BuildGuardPrefabOverrideScanLimits limits)
@@ -28,7 +28,7 @@ namespace BuildGuard.Editor
             {
                 return BuildGuardPrefabOverrideScanResult.Failure(
                     BuildGuardPrefabOverrideScanError.InvalidScene,
-                    "The Scene to scan is invalid.",
+                    "検査対象のシーンが無効です。",
                     0,
                     0);
             }
@@ -37,7 +37,7 @@ namespace BuildGuard.Editor
             {
                 return BuildGuardPrefabOverrideScanResult.Failure(
                     BuildGuardPrefabOverrideScanError.SceneNotLoaded,
-                    "The Scene to scan is not loaded.",
+                    "検査対象のシーンが読み込まれていません。",
                     0,
                     0);
             }
@@ -71,15 +71,16 @@ namespace BuildGuard.Editor
             }
             catch (Exception exception)
             {
+                Debug.LogException(exception);
                 return BuildGuardPrefabOverrideScanResult.Failure(
                     BuildGuardPrefabOverrideScanError.UnityApiFailure,
-                    $"Unity could not inspect the Scene Prefab overrides: {exception.Message}",
+                    "プレハブ構造差分を検査できませんでした。Unityのログで原因を確認してください。",
                     state.VisitedGameObjectCount,
                     state.ScannedPrefabInstanceCount);
             }
         }
 
-        /// <summary>Classifies the source state before any override data is accepted.</summary>
+        /// <summary>構造差分を受け付ける前に、プレハブ参照元の状態を分類します。</summary>
         internal static BuildGuardPrefabOverrideScanError ClassifyPrefabSource(
             PrefabInstanceStatus instanceStatus,
             PrefabAssetType assetType,
@@ -97,7 +98,7 @@ namespace BuildGuard.Editor
                 : BuildGuardPrefabOverrideScanError.None;
         }
 
-        /// <summary>Compares findings by stable display fields without depending on Unity enumeration order.</summary>
+        /// <summary>Unityの列挙順に依存せず、表示用の安定項目で構造差分を比較します。</summary>
         internal static int CompareFindings(
             BuildGuardPrefabOverrideFinding left,
             BuildGuardPrefabOverrideFinding right)
@@ -180,7 +181,7 @@ namespace BuildGuard.Editor
             {
                 throw new ScanFailedException(
                     BuildGuardPrefabOverrideScanError.UnsupportedPrefabInstanceStatus,
-                    $"Prefab object {BuildGuardHierarchyPath.Create(instanceRoot.transform)} has unsupported status {instanceStatus}.");
+                    $"プレハブオブジェクト {BuildGuardHierarchyPath.Create(instanceRoot.transform)} の状態には対応していません（状態値: {(int)instanceStatus}）。");
             }
 
             if (!PrefabUtility.IsOutermostPrefabInstanceRoot(instanceRoot))
@@ -202,8 +203,8 @@ namespace BuildGuard.Editor
             if (sourceError != BuildGuardPrefabOverrideScanError.None)
             {
                 var message = sourceError == BuildGuardPrefabOverrideScanError.MissingPrefabSource
-                    ? $"Prefab source is unavailable for {BuildGuardHierarchyPath.Create(instanceRoot.transform)}."
-                    : $"Prefab instance {BuildGuardHierarchyPath.Create(instanceRoot.transform)} has unsupported status {instanceStatus}.";
+                    ? $"プレハブ参照元を利用できません: {BuildGuardHierarchyPath.Create(instanceRoot.transform)}"
+                    : $"プレハブ実体 {BuildGuardHierarchyPath.Create(instanceRoot.transform)} の状態には対応していません（状態値: {(int)instanceStatus}）。";
                 throw new ScanFailedException(sourceError, message);
             }
 
@@ -233,7 +234,7 @@ namespace BuildGuard.Editor
             {
                 throw new ScanFailedException(
                     BuildGuardPrefabOverrideScanError.UnityApiFailure,
-                    $"Unity returned no added-component collection for {context.InstanceRootHierarchyPath}.");
+                    $"Unityから追加コンポーネントの一覧を取得できませんでした: {context.InstanceRootHierarchyPath}");
             }
 
             for (var index = 0; index < overrides.Count; index++)
@@ -249,7 +250,7 @@ namespace BuildGuard.Editor
                 {
                     throw new ScanFailedException(
                         BuildGuardPrefabOverrideScanError.UnityApiFailure,
-                        $"Unity returned an unattached added component for {context.InstanceRootHierarchyPath}.");
+                        $"Unityが、ゲームオブジェクトに属さない追加コンポーネントを返しました: {context.InstanceRootHierarchyPath}");
                 }
 
                 state.AppendFinding(CreateFinding(
@@ -275,7 +276,7 @@ namespace BuildGuard.Editor
             {
                 throw new ScanFailedException(
                     BuildGuardPrefabOverrideScanError.UnityApiFailure,
-                    $"Unity returned no removed-component collection for {context.InstanceRootHierarchyPath}.");
+                    $"Unityから削除コンポーネントの一覧を取得できませんでした: {context.InstanceRootHierarchyPath}");
             }
 
             for (var index = 0; index < overrides.Count; index++)
@@ -295,7 +296,7 @@ namespace BuildGuard.Editor
                 {
                     throw new ScanFailedException(
                         BuildGuardPrefabOverrideScanError.UnityApiFailure,
-                        $"Unity returned an unattached removed component for {context.InstanceRootHierarchyPath}.");
+                        $"Unityが、ゲームオブジェクトに属さない削除コンポーネントを返しました: {context.InstanceRootHierarchyPath}");
                 }
 
                 state.AppendFinding(CreateFinding(
@@ -320,7 +321,7 @@ namespace BuildGuard.Editor
             {
                 throw new ScanFailedException(
                     BuildGuardPrefabOverrideScanError.UnityApiFailure,
-                    $"Unity returned no added-GameObject collection for {BuildGuardHierarchyPath.Create(instanceRoot.transform)}.");
+                    $"Unityから追加ゲームオブジェクトの一覧を取得できませんでした: {BuildGuardHierarchyPath.Create(instanceRoot.transform)}");
             }
 
             var candidates = new List<GameObject>(overrides.Count);
@@ -332,7 +333,7 @@ namespace BuildGuard.Editor
                 {
                     throw new ScanFailedException(
                         BuildGuardPrefabOverrideScanError.UnityApiFailure,
-                        $"Unity returned an invalid added GameObject for {BuildGuardHierarchyPath.Create(instanceRoot.transform)}.");
+                        $"Unityが無効な追加ゲームオブジェクトを返しました: {BuildGuardHierarchyPath.Create(instanceRoot.transform)}");
                 }
 
                 candidates.Add(candidate);
@@ -373,7 +374,7 @@ namespace BuildGuard.Editor
             {
                 throw new ScanFailedException(
                     BuildGuardPrefabOverrideScanError.UnityApiFailure,
-                    $"Unity returned no removed-GameObject collection for {BuildGuardHierarchyPath.Create(instanceRoot.transform)}.");
+                    $"Unityから削除ゲームオブジェクトの一覧を取得できませんでした: {BuildGuardHierarchyPath.Create(instanceRoot.transform)}");
             }
 
             var candidates = new List<RemovedGameObjectEntry>(overrides.Count);
@@ -385,7 +386,7 @@ namespace BuildGuard.Editor
                 {
                     throw new ScanFailedException(
                         BuildGuardPrefabOverrideScanError.MissingPrefabSource,
-                        $"Unity returned an unresolved removed GameObject for {BuildGuardHierarchyPath.Create(instanceRoot.transform)}.");
+                        $"Unityが参照元を解決できない削除ゲームオブジェクトを返しました: {BuildGuardHierarchyPath.Create(instanceRoot.transform)}");
                 }
 
                 var candidate = new RemovedGameObjectEntry(
@@ -532,7 +533,7 @@ namespace BuildGuard.Editor
                 {
                     throw new ScanFailedException(
                         BuildGuardPrefabOverrideScanError.TooManyGameObjects,
-                        $"Scene contains more than {Limits.MaxVisitedGameObjects} GameObjects.");
+                        $"シーン内のゲームオブジェクトが検査上限{Limits.MaxVisitedGameObjects}件を超えています。");
                 }
             }
 
@@ -543,7 +544,7 @@ namespace BuildGuard.Editor
                 {
                     throw new ScanFailedException(
                         BuildGuardPrefabOverrideScanError.TooManyPrefabInstances,
-                        $"Scene contains more than {Limits.MaxPrefabInstances} outermost Prefab instances.");
+                        $"シーン内の最上位プレハブ実体が検査上限{Limits.MaxPrefabInstances}件を超えています。");
                 }
             }
 
@@ -553,7 +554,7 @@ namespace BuildGuard.Editor
                 {
                     throw new ScanFailedException(
                         BuildGuardPrefabOverrideScanError.TooManyFindings,
-                        $"Scene contains more than {Limits.MaxFindings} structural Prefab overrides.");
+                        $"シーン内のプレハブ構造差分が検査上限{Limits.MaxFindings}件を超えています。");
                 }
 
                 Findings.Add(finding);

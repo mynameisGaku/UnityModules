@@ -2,17 +2,19 @@
 
 using System;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using BuildGuard.Editor;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.TestTools;
 
 namespace BuildGuard.Tests
 {
     /// <summary>
-    /// Verifies all-or-nothing review snapshots, formatting and safe refreshed navigation.
+    /// 途中結果を含まない検査結果、日本語の表示文、安全な再検査後の移動を検証します。
     /// </summary>
     [Parallelizable(ParallelScope.None)]
     internal sealed class BuildGuardPrefabOverrideReviewServiceTests
@@ -133,10 +135,10 @@ namespace BuildGuard.Tests
                     .Or.EqualTo(BuildGuardPrefabOverrideScanError.MissingPrefabSource));
         }
 
-        [TestCase(SceneStateMismatch.ExtraLoadedScene, "Loaded Scene count changed")]
-        [TestCase(SceneStateMismatch.ActiveScene, "Active Scene changed")]
-        [TestCase(SceneStateMismatch.DirtyScene, "dirty state changed")]
-        [TestCase(SceneStateMismatch.ScenePath, "Loaded Scene path changed")]
+        [TestCase(SceneStateMismatch.ExtraLoadedScene, "読込済みシーンの数が")]
+        [TestCase(SceneStateMismatch.ActiveScene, "アクティブシーンが変化")]
+        [TestCase(SceneStateMismatch.DirtyScene, "未保存状態が変化")]
+        [TestCase(SceneStateMismatch.ScenePath, "読込済みシーンのパスが")]
         public void Scan_InjectedSceneStateMismatch_FailsAndDiscardsSuccessfulFindings(
             SceneStateMismatch mismatch,
             string expectedMessage)
@@ -169,6 +171,59 @@ namespace BuildGuard.Tests
             Assert.That(result.Findings, Is.Empty);
             Assert.That(result.Failures, Has.Count.EqualTo(1));
             Assert.That(result.Failures[0].Message, Does.Contain(expectedMessage));
+        }
+
+        [Test]
+        public void Scan_InitialSceneStateCaptureException_HidesExceptionDetailFromResult()
+        {
+            LogAssert.Expect(LogType.Exception, new Regex("INTERNAL_ENGLISH_DETAIL"));
+
+            var result = BuildGuardPrefabOverrideReviewService.Scan(
+                Array.Empty<string>(),
+                1000,
+                null,
+                () => throw new InvalidOperationException("INTERNAL_ENGLISH_DETAIL"));
+
+            Assert.That(result.Succeeded, Is.False);
+            Assert.That(result.Findings, Is.Empty);
+            Assert.That(result.Failures, Has.Count.EqualTo(1));
+            Assert.That(
+                result.Failures[0].Message,
+                Is.EqualTo("検査前のシーン状態を取得できませんでした。Unityのログで原因を確認してください。"));
+            Assert.That(result.Failures[0].Message, Does.Not.Contain("INTERNAL_ENGLISH_DETAIL"));
+        }
+
+        [Test]
+        public void Scan_FinalSceneStateCaptureException_HidesExceptionDetailFromResult()
+        {
+            var stableState = CreateSceneState(
+                11,
+                "Assets/Host.unity",
+                false,
+                22,
+                "Assets/Secondary.unity",
+                false,
+                11,
+                "Assets/Host.unity");
+            var captureCount = 0;
+            LogAssert.Expect(LogType.Exception, new Regex("INTERNAL_ENGLISH_DETAIL"));
+
+            var result = BuildGuardPrefabOverrideReviewService.Scan(
+                Array.Empty<string>(),
+                1000,
+                null,
+                () => captureCount++ == 0
+                    ? stableState
+                    : throw new InvalidOperationException("INTERNAL_ENGLISH_DETAIL"));
+
+            Assert.That(captureCount, Is.EqualTo(2));
+            Assert.That(result.Succeeded, Is.False);
+            Assert.That(result.Findings, Is.Empty);
+            Assert.That(result.Failures, Has.Count.EqualTo(1));
+            Assert.That(
+                result.Failures[0].Message,
+                Is.EqualTo("検査後のシーン状態を確認できませんでした。Unityのログで原因を確認してください。"));
+            Assert.That(result.Failures[0].Message, Does.Not.Contain("INTERNAL_ENGLISH_DETAIL"));
         }
 
         [Test]
@@ -205,7 +260,7 @@ namespace BuildGuard.Tests
                     reordered,
                     out var failureMessage),
                 Is.False);
-            Assert.That(failureMessage, Does.Contain("handle or order changed"));
+            Assert.That(failureMessage, Does.Contain("識別子または並び順が"));
         }
 
         [Test]
@@ -236,7 +291,7 @@ namespace BuildGuard.Tests
             Assert.That(result.Cancelled, Is.False);
             Assert.That(result.Findings, Is.Empty);
             Assert.That(result.Failures, Has.Count.EqualTo(1));
-            Assert.That(result.Failures[0].Message, Does.Contain("Active Scene changed"));
+            Assert.That(result.Failures[0].Message, Does.Contain("アクティブシーンが変化"));
         }
 
         [Test]
@@ -254,7 +309,7 @@ namespace BuildGuard.Tests
                 new BuildGuardPrefabOverrideReviewFailure(
                     "Assets/Broken.unity",
                     BuildGuardPrefabOverrideScanError.UnityApiFailure,
-                    "failure"),
+                    "試験用の失敗"),
             };
             var failure = BuildGuardPrefabOverrideReviewScanResult.Failure(failureSource, 0);
             failureSource.Clear();
@@ -279,15 +334,32 @@ namespace BuildGuard.Tests
             Assert.That(BuildGuardPrefabOverrideReviewService.MatchesSnapshot(snapshot, changedIndex), Is.False);
         }
 
-        [TestCase(BuildGuardPrefabOverrideKind.AddedGameObject, "Added GameObject")]
-        [TestCase(BuildGuardPrefabOverrideKind.RemovedGameObject, "Removed GameObject")]
-        [TestCase(BuildGuardPrefabOverrideKind.AddedComponent, "Added Component")]
-        [TestCase(BuildGuardPrefabOverrideKind.RemovedComponent, "Removed Component")]
+        [TestCase(BuildGuardPrefabOverrideKind.AddedGameObject, "ゲームオブジェクトの追加")]
+        [TestCase(BuildGuardPrefabOverrideKind.RemovedGameObject, "ゲームオブジェクトの削除")]
+        [TestCase(BuildGuardPrefabOverrideKind.AddedComponent, "コンポーネントの追加")]
+        [TestCase(BuildGuardPrefabOverrideKind.RemovedComponent, "コンポーネントの削除")]
         public void Presentation_FormatsEverySupportedKind(
             BuildGuardPrefabOverrideKind kind,
             string expected)
         {
             Assert.That(BuildGuardPrefabOverrideReviewPresentation.FormatKind(kind), Is.EqualTo(expected));
+        }
+
+        [TestCase(BuildGuardPrefabOverrideScanError.None, "なし")]
+        [TestCase(BuildGuardPrefabOverrideScanError.InvalidScene, "無効なシーン")]
+        [TestCase(BuildGuardPrefabOverrideScanError.SceneNotLoaded, "未読込のシーン")]
+        [TestCase(BuildGuardPrefabOverrideScanError.InvalidLimits, "検査上限が不正")]
+        [TestCase(BuildGuardPrefabOverrideScanError.UnsupportedPrefabInstanceStatus, "未対応のプレハブ状態")]
+        [TestCase(BuildGuardPrefabOverrideScanError.MissingPrefabSource, "プレハブ参照元が見つからない")]
+        [TestCase(BuildGuardPrefabOverrideScanError.TooManyGameObjects, "ゲームオブジェクト数が上限超過")]
+        [TestCase(BuildGuardPrefabOverrideScanError.TooManyPrefabInstances, "プレハブ実体数が上限超過")]
+        [TestCase(BuildGuardPrefabOverrideScanError.TooManyFindings, "構造差分数が上限超過")]
+        [TestCase(BuildGuardPrefabOverrideScanError.UnityApiFailure, "Unity APIの処理に失敗")]
+        public void Presentation_FormatsEveryScanErrorInJapanese(
+            BuildGuardPrefabOverrideScanError error,
+            string expected)
+        {
+            Assert.That(BuildGuardPrefabOverrideReviewPresentation.FormatScanError(error), Is.EqualTo(expected));
         }
 
         [Test]
@@ -308,8 +380,9 @@ namespace BuildGuard.Tests
             Assert.That(
                 BuildGuardPrefabOverrideReviewPresentation.FormatClipboardText(finding),
                 Is.EqualTo(
-                    "Removed Component | Assets/Scene.unity | Root[0]/Target[0] | "
-                    + "UnityEngine.BoxCollider[2] | Assets/Inner.prefab :: Root[0]/Source[0]"));
+                    "種類: コンポーネントの削除 | シーン: Assets/Scene.unity | "
+                    + "対象パス: Root[0]/Target[0] | コンポーネント: UnityEngine.BoxCollider[2] | "
+                    + "参照元: Assets/Inner.prefab :: Root[0]/Source[0]"));
         }
 
         [Test]
@@ -328,7 +401,7 @@ namespace BuildGuard.Tests
             var outcome = BuildGuardPrefabOverrideReviewService.Locate(snapshot, out var message);
 
             Assert.That(outcome, Is.EqualTo(BuildGuardPrefabOverrideNavigationOutcome.SelectedSceneObject));
-            Assert.That(message, Does.Contain("Selected current override target"));
+            Assert.That(message, Does.Contain("現在の構造差分の対象を選択しました"));
             Assert.That(Selection.activeGameObject, Is.EqualTo(instance));
             Assert.That(SceneManager.GetActiveScene(), Is.EqualTo(hostScene));
             Assert.That(SceneManager.sceneCount, Is.EqualTo(sceneCount));
@@ -351,7 +424,7 @@ namespace BuildGuard.Tests
             var outcome = BuildGuardPrefabOverrideReviewService.Locate(snapshot, out var message);
 
             Assert.That(outcome, Is.EqualTo(BuildGuardPrefabOverrideNavigationOutcome.PingedSceneAsset));
-            Assert.That(message, Does.Contain("Scene was kept closed"));
+            Assert.That(message, Does.Contain("シーンは閉じたまま"));
             Assert.That(SceneManager.GetSceneByPath(snapshot.ScenePath).isLoaded, Is.False);
             Assert.That(SceneManager.GetActiveScene(), Is.EqualTo(hostScene));
             Assert.That(SceneManager.sceneCount, Is.EqualTo(sceneCount));
@@ -381,7 +454,7 @@ namespace BuildGuard.Tests
                 out var message);
 
             Assert.That(outcome, Is.EqualTo(BuildGuardPrefabOverrideNavigationOutcome.Stale));
-            Assert.That(message, Does.Contain("stale"));
+            Assert.That(message, Does.Contain("古くなっています"));
             Assert.That(SceneManager.GetSceneByPath(staleSnapshot.ScenePath).isLoaded, Is.False);
             Assert.That(SceneManager.GetActiveScene(), Is.EqualTo(hostScene));
             Assert.That(SceneManager.sceneCount, Is.EqualTo(sceneCount));
@@ -406,7 +479,7 @@ namespace BuildGuard.Tests
             var outcome = BuildGuardPrefabOverrideReviewService.Locate(snapshot, out var message);
 
             Assert.That(outcome, Is.EqualTo(BuildGuardPrefabOverrideNavigationOutcome.Stale));
-            Assert.That(message, Does.Contain("stale"));
+            Assert.That(message, Does.Contain("古くなっています"));
             Assert.That(Selection.activeObject, Is.EqualTo(sentinel));
             Assert.That(SceneManager.GetActiveScene(), Is.EqualTo(activeScene));
             Assert.That(SceneManager.sceneCount, Is.EqualTo(sceneCount));

@@ -3,7 +3,7 @@
 namespace BuildGuard.Editor
 {
     /// <summary>
-    /// Describes one Scene whose structural Prefab override snapshot could not be produced.
+    /// プレハブ構造差分を取得できなかった1件のシーンを表します。
     /// </summary>
     internal readonly struct BuildGuardPrefabOverrideReviewFailure
     {
@@ -17,10 +17,13 @@ namespace BuildGuard.Editor
             Message = message ?? string.Empty;
         }
 
+        /// <summary>検査に失敗したシーンのアセットパスです。</summary>
         internal string ScenePath { get; }
 
+        /// <summary>検査に失敗した原因の種類です。</summary>
         internal BuildGuardPrefabOverrideScanError Error { get; }
 
+        /// <summary>利用者へ提示する日本語の失敗理由です。</summary>
         internal string Message { get; }
     }
 }

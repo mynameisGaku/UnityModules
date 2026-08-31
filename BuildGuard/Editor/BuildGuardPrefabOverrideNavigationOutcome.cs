@@ -3,7 +3,7 @@
 namespace BuildGuard.Editor
 {
     /// <summary>
-    /// Identifies the safe navigation action taken after refreshing one finding.
+    /// 1件の差分を再検査した後に行った、安全な移動結果を表します。
     /// </summary>
     internal enum BuildGuardPrefabOverrideNavigationOutcome
     {

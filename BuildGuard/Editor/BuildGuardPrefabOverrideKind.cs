@@ -3,7 +3,7 @@
 namespace BuildGuard.Editor
 {
     /// <summary>
-    /// Identifies one structural Prefab instance override.
+    /// プレハブ実体にある1件の構造差分の種類を表します。
     /// </summary>
     internal enum BuildGuardPrefabOverrideKind
     {

@@ -10,7 +10,7 @@ using UnityEngine;
 namespace BuildGuard.Tests
 {
     /// <summary>
-    /// Verifies the separate review Window menu, snapshot state and stale-result guidance.
+    /// 独立した構造差分画面のメニュー、結果保持、古い結果への案内を検証します。
     /// </summary>
     [Parallelizable(ParallelScope.None)]
     internal sealed class BuildGuardPrefabOverrideReviewWindowTests
@@ -51,7 +51,7 @@ namespace BuildGuard.Tests
             var attribute = method?.GetCustomAttribute<MenuItem>();
 
             Assert.That(BuildGuardPrefabOverrideReviewWindow.MenuPath, Is.EqualTo(
-                "Tools/Build Guard/Review Prefab Overrides"));
+                "Tools/ビルドガード/プレハブ構造差分を確認"));
             Assert.That(attribute, Is.Not.Null);
             Assert.That(attribute.menuItem, Is.EqualTo(BuildGuardPrefabOverrideReviewWindow.MenuPath));
             Assert.That(attribute.priority, Is.EqualTo(2002));
@@ -67,7 +67,8 @@ namespace BuildGuard.Tests
 
             Assert.That(_window.FindingCount, Is.Zero);
             Assert.That(_window.FailureCount, Is.Zero);
-            Assert.That(_window.StatusText, Does.Contain("No enabled Scenes"));
+            Assert.That(_window.StatusText, Is.EqualTo(
+                "現在のビルドプロファイルに、有効なビルド対象シーンがありません。"));
         }
 
         [Test]
@@ -82,7 +83,8 @@ namespace BuildGuard.Tests
 
             Assert.That(_window.FindingCount, Is.EqualTo(1));
             Assert.That(_window.FailureCount, Is.Zero);
-            Assert.That(_window.StatusText, Does.Contain("Found 1 structural Prefab override"));
+            Assert.That(_window.StatusText, Is.EqualTo(
+                "シーンを1件検査し、1件のプレハブ構造差分を見つけました。"));
             Assert.That(
                 _window.GetFinding(0).Kind,
                 Is.EqualTo(BuildGuardPrefabOverrideKind.AddedComponent));
@@ -106,7 +108,8 @@ namespace BuildGuard.Tests
 
             Assert.That(_window.FindingCount, Is.Zero);
             Assert.That(_window.FailureCount, Is.Zero);
-            Assert.That(_window.StatusText, Does.Contain("Partial findings were discarded"));
+            Assert.That(_window.StatusText, Is.EqualTo(
+                "シーンを1件検査した時点で中止しました。途中結果は破棄しました。"));
         }
 
         [Test]
@@ -126,7 +129,8 @@ namespace BuildGuard.Tests
 
             Assert.That(outcome, Is.EqualTo(BuildGuardPrefabOverrideNavigationOutcome.Stale));
             Assert.That(_window.FindingCount, Is.EqualTo(1));
-            Assert.That(_window.StatusText, Does.Contain("stale"));
+            Assert.That(_window.StatusText, Is.EqualTo(
+                "プレハブ構造差分が変化したため、この結果は古くなっています。「更新して検査」を押してください。"));
             Assert.That(scene.isDirty, Is.EqualTo(wasDirty));
         }
 
@@ -144,8 +148,43 @@ namespace BuildGuard.Tests
 
             Assert.That(_window.FindingCount, Is.Zero);
             Assert.That(_window.FailureCount, Is.Zero);
-            Assert.That(_window.StatusText, Does.Contain("Results cleared"));
+            Assert.That(_window.StatusText, Is.EqualTo(
+                "結果を消去しました。「更新して検査」を押すと、最新の結果を作成できます。"));
             Assert.That(scene.isDirty, Is.EqualTo(wasDirty));
+        }
+
+        [Test]
+        public void JapaneseMenuAndVisibleLabels_AreConfiguredExactly()
+        {
+            Assert.That(_window.StatusText, Is.EqualTo(
+                "「更新して検査」を押すと、ビルド対象として有効なシーンのプレハブ構造差分を確認できます。"));
+            Assert.That(GetPrivateStaticField<string>("WindowTitleText"), Is.EqualTo(
+                "ビルドガード - プレハブ構造差分"));
+            Assert.That(GetPrivateStaticField<string>("HeadingText"), Is.EqualTo(
+                "ビルド対象シーンのプレハブ構造差分"));
+            Assert.That(GetPrivateStaticField<string>("DescriptionText"), Is.EqualTo(
+                "追加または削除されたプレハブ内のゲームオブジェクトとコンポーネントを表示します。プロパティ値の変更は対象外で、結果がプレイヤービルドを停止することはありません。"));
+            Assert.That(GetPrivateStaticField<GUIContent>("ScanButtonContent").text, Is.EqualTo(
+                "更新して検査"));
+            Assert.That(GetPrivateStaticField<GUIContent>("ClearButtonContent").text, Is.EqualTo(
+                "結果を消去"));
+            Assert.That(GetPrivateStaticField<string>("LocateButtonText"), Is.EqualTo(
+                "開いて選択"));
+            Assert.That(GetPrivateStaticField<string>("CopyButtonText"), Is.EqualTo(
+                "内容をコピー"));
+            Assert.That(GetPrivateStaticField<string>("ProgressTitleText"), Is.EqualTo(
+                "ビルドガード - プレハブ構造差分"));
+            Assert.That(GetPrivateStaticField<Vector2>("MinimumWindowSize"), Is.EqualTo(
+                new Vector2(760f, 360f)));
+        }
+
+        private static T GetPrivateStaticField<T>(string fieldName)
+        {
+            var field = typeof(BuildGuardPrefabOverrideReviewWindow).GetField(
+                fieldName,
+                BindingFlags.Static | BindingFlags.NonPublic);
+            Assert.That(field, Is.Not.Null, $"対象の内部項目が見つかりません: {fieldName}");
+            return (T)field.GetValue(null);
         }
     }
 }

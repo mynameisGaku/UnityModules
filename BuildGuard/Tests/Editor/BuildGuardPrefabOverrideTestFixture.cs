@@ -12,7 +12,7 @@ using UnityEngine.SceneManagement;
 namespace BuildGuard.Tests
 {
     /// <summary>
-    /// Owns temporary Prefab assets and Scenes used by structural override tests.
+    /// 構造差分試験で使う一時プレハブアセットとシーンを所有します。
     /// </summary>
     internal sealed class BuildGuardPrefabOverrideTestFixture
     {
@@ -45,7 +45,7 @@ namespace BuildGuard.Tests
                     Assert.That(
                         EditorSceneManager.SaveScene(_originalActiveScene, _bootstrapScenePath),
                         Is.True,
-                        "Failed to move the empty fresh Untitled Scene into the test-owned folder.");
+                        "新規の空シーンを試験所有フォルダーへ移動できませんでした。");
                 }
 
                 _assetAuthoringScene = EditorSceneManager.NewScene(
@@ -57,7 +57,7 @@ namespace BuildGuard.Tests
                         _assetAuthoringScene,
                         $"{TemporaryFolder}/{AssetAuthoringSceneFileName}"),
                     Is.True,
-                    "Failed to save the test-owned asset-authoring Scene.");
+                    "試験所有のアセット作成用シーンを保存できませんでした。");
                 Assert.That(IsActiveOrSetActive(_assetAuthoringScene), Is.True);
                 _setUpCompleted = true;
             }
@@ -114,12 +114,12 @@ namespace BuildGuard.Tests
                 }
             }
 
-            Assert.That(scenesClosed, Is.True, "Failed to close an owned test Scene.");
-            Assert.That(folderDeleted, Is.True, $"Failed to delete test folder {TemporaryFolder}.");
+            Assert.That(scenesClosed, Is.True, "試験が所有するシーンを閉じられませんでした。");
+            Assert.That(folderDeleted, Is.True, $"試験用フォルダーを削除できませんでした: {TemporaryFolder}");
             Assert.That(
                 originalSetupRestored,
                 Is.True,
-                "Failed to restore the pre-existing Scene setup safely.");
+                "試験前のシーン構成を安全に復元できませんでした。");
         }
 
         internal Scene CreateSavedScene(string fileName = "OverrideScene.unity")
@@ -260,8 +260,8 @@ namespace BuildGuard.Tests
                 if (_usesFreshUntitledBootstrap && scene == _originalActiveScene) continue;
 
                 Assert.Inconclusive(
-                    "Prefab override tests did not run because an unsaved Scene is already open. "
-                    + "Save or close it explicitly; the fixture will not save or discard arbitrary user Scenes.");
+                    "未保存のシーンが開いているため、プレハブ構造差分の試験を実行しませんでした。"
+                    + "そのシーンを明示的に保存するか閉じてください。試験は利用者のシーンを保存または破棄しません。");
             }
         }
 

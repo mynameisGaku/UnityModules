@@ -6,7 +6,7 @@ using System.Collections.Generic;
 namespace BuildGuard.Editor
 {
     /// <summary>
-    /// Stores the exact loaded Scene order, active Scene and dirty flags around a review scan.
+    /// 検査前後の読込済みシーンの並び、アクティブシーン、未保存状態を正確に保持します。
     /// </summary>
     internal readonly struct BuildGuardPrefabOverrideReviewSceneState
     {
@@ -31,13 +31,16 @@ namespace BuildGuard.Editor
             ActiveScenePath = activeScenePath ?? string.Empty;
         }
 
+        /// <summary>読込順を保ったシーン状態の不変な一覧です。</summary>
         internal IReadOnlyList<SceneEntry> Scenes { get; }
 
+        /// <summary>検査前後で照合するアクティブシーンの識別子です。</summary>
         internal ulong ActiveSceneHandle { get; }
 
+        /// <summary>検査前後で照合するアクティブシーンのアセットパスです。</summary>
         internal string ActiveScenePath { get; }
 
-        /// <summary>Compares two captured states without reading or changing Unity state.</summary>
+        /// <summary>Unityの状態を読み書きせず、取得済みの2状態を比較します。</summary>
         internal static bool TryValidate(
             BuildGuardPrefabOverrideReviewSceneState expected,
             BuildGuardPrefabOverrideReviewSceneState current,
@@ -45,13 +48,13 @@ namespace BuildGuard.Editor
         {
             if (expected.Scenes == null || current.Scenes == null)
             {
-                message = "Loaded Scene state capture was incomplete.";
+                message = "読込済みシーンの状態取得が不完全です。";
                 return false;
             }
 
             if (expected.Scenes.Count != current.Scenes.Count)
             {
-                message = $"Loaded Scene count changed from {expected.Scenes.Count} to {current.Scenes.Count}.";
+                message = $"読込済みシーンの数が{expected.Scenes.Count}件から{current.Scenes.Count}件へ変化しました。";
                 return false;
             }
 
@@ -61,22 +64,22 @@ namespace BuildGuard.Editor
                 var currentScene = current.Scenes[index];
                 if (expectedScene.Handle != currentScene.Handle)
                 {
-                    message = $"Loaded Scene handle or order changed at index {index}.";
+                    message = $"読込済みシーンの識別子または並び順が位置{index}で変化しました。";
                     return false;
                 }
 
                 if (!string.Equals(expectedScene.Path, currentScene.Path, StringComparison.Ordinal))
                 {
-                    message = $"Loaded Scene path changed at index {index}.";
+                    message = $"読込済みシーンのパスが位置{index}で変化しました。";
                     return false;
                 }
 
                 if (expectedScene.IsDirty != currentScene.IsDirty)
                 {
                     var identity = string.IsNullOrEmpty(expectedScene.Path)
-                        ? $"handle {expectedScene.Handle}"
+                        ? $"識別子 {expectedScene.Handle}"
                         : expectedScene.Path;
-                    message = $"Loaded Scene dirty state changed for {identity}.";
+                    message = $"{identity} の未保存状態が変化しました。";
                     return false;
                 }
             }
@@ -87,7 +90,7 @@ namespace BuildGuard.Editor
                     current.ActiveScenePath,
                     StringComparison.Ordinal))
             {
-                message = "Active Scene changed during the review scan.";
+                message = "検査中にアクティブシーンが変化しました。";
                 return false;
             }
 
@@ -95,7 +98,7 @@ namespace BuildGuard.Editor
             return true;
         }
 
-        /// <summary>Stores one loaded Scene identity and its unsaved-change flag.</summary>
+        /// <summary>読込済みシーン1件の識別情報と未保存状態を保持します。</summary>
         internal readonly struct SceneEntry
         {
             internal SceneEntry(ulong handle, string path, bool isDirty)

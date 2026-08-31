@@ -1,95 +1,95 @@
-# Changelog
+# 変更履歴
 
 このパッケージの変更履歴。書式は [Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) に、バージョン番号は [Semantic Versioning](https://semver.org/lang/ja/) に従います。
 
 ## [1.6.0] - 2026-08-26
 
-### Added
+### 追加
 
-- Project windowで直接選択した`Assets/`配下の保存済みSceneを、Build Profileへの登録や有効状態に関係なく検査する手動scan。
-- 最大4,096件の選択asset候補から最大256件のSceneをpath順で重複除去し、`Use Current Selection`で固定するsnapshot flow。
-- capture後に移動・削除されたSceneをstaleとして拒否し、partial resultを返さず再選択を案内する安全境界。
+- プロジェクトウィンドウで直接選択した`Assets/`配下の保存済みシーンを、Build Profileへの登録や有効状態に関係なく検査する手動機能。
+- 最大4,096件の選択アセット候補から最大256件のシーンをパス順で重複除去し、`現在の選択を使用`で固定する検査対象一覧。
+- 記録後に移動・削除されたシーンを古い対象として拒否し、途中結果を返さず再選択を案内する安全境界。
 
-### Changed
+### 変更
 
-- loaded Sceneは未保存のcurrent in-memory状態を検査し、closed Sceneはadditiveで一時的に開いて保存せず閉じる既存のScene走査を選択Sceneへ共有。
-- build callback、build Scene scan、Missing Script修復、選択Prefab scan、Prefab structural override reviewの契約は変更せず維持。
+- 読込済みシーンは未保存の現在のメモリ上の状態を検査し、閉じたシーンは一時的に追加読込して保存せず閉じる既存処理を選択シーンへ共有。
+- ビルド処理、ビルド対象シーン検査、欠落スクリプト修復、選択プレハブ検査、プレハブ構造差分確認の契約は変更せず維持。
 
 ## [1.5.0] - 2026-08-25
 
-### Added
+### 追加
 
-- active Build Profileで有効なSceneのPrefab structural overrideを一覧化する、build blockerとは独立したreview window。
-- Added／Removed GameObject・Componentだけを最大1,000件のsnapshotとして安定表示するmanual review flow。
-- finding選択前の再scanとidentity照合、loaded Sceneでのobject選択、closed Sceneを開いたままにしないScene asset案内。
-- cancel／scan failure時のpartial result破棄、stale finding、表示上限、Scene open／active／dirty状態保全に対するEditor回帰検証。
+- 現在のBuild Profileで有効なシーンのプレハブ構造差分を一覧化する、ビルド停止とは独立した確認画面。
+- ゲームオブジェクトとコンポーネントの追加・削除だけを、最大1,000件の不変な結果として安定表示する手動確認処理。
+- 構造差分の選択前に行う再検査と識別情報の照合、読込済みシーンでの対象選択、閉じたシーンを開いたままにしないシーンアセット案内。
+- 中止・検査失敗時の途中結果破棄、古い結果、表示上限、シーンの開閉・有効・未保存状態保全に対するエディター回帰検証。
 
-### Changed
+### 変更
 
-- package説明と利用手順へ、Property Modificationを除外し、Apply／Revert／保存やPlayer build停止を行わないreview境界を追加。
+- パッケージ説明と利用手順へ、プロパティ値の変更を除外し、適用・取り消し・保存やプレイヤービルド停止を行わない確認境界を追加。
 
 ## [1.4.0] - 2026-08-22
 
-### Added
+### 追加
 
-- Project windowで選択したPrefabを一時展開し、Missing ScriptとMissing Object Referenceを一覧化する手動scan。
-- Prefab Modeで対象GameObjectを開き、Missing ScriptだけをUndo付きで除去して未保存状態へ残す明示操作。
-- path順、重複除去、cancel、Prefab非変更、navigation、Undo復元に対するEditor回帰検証。
-- 壊れたPrefabを共有branchへ残さず試せるtext template。
+- プロジェクトウィンドウで選択したプレハブを一時展開し、欠落スクリプトと欠落オブジェクト参照を一覧化する手動検査。
+- プレハブモードで対象ゲームオブジェクトを開き、欠落スクリプトだけを元に戻せる形で除去して未保存状態へ残す明示操作。
+- パス順、重複除去、中止、プレハブ非変更、対象への移動、元に戻す操作に対するエディター回帰検証。
+- 壊れたプレハブを共有ブランチへ残さず試せるテキストひな形。
 
-### Changed
+### 変更
 
-- 利用者向け名称を「プロジェクト不備確認・修復」へ広げ、SceneとPrefabの操作手順をREADME冒頭で分離。
+- 利用者向け名称を「プロジェクト不備確認・修復」へ広げ、シーンとプレハブの操作手順をREADME冒頭で分離。
 
 ## [1.3.0] - 2026-08-22
 
-### Added
+### 追加
 
-- manual scanのMissing Script結果から対象SceneとGameObjectを開き、missing MonoBehaviour slotだけを除去する明示操作。
-- 除去前の確認、Hierarchy全体のUndo記録、Sceneを自動保存しないreview境界。
-- 除去後のdirty状態とUndo復元、Missing Object Referenceを変更しないEditor回帰検証。
+- 手動検査の欠落スクリプト結果から対象シーンとゲームオブジェクトを開き、欠落した`MonoBehaviour`の枠だけを除去する明示操作。
+- 除去前の確認、階層全体の元に戻す操作への記録、シーンを自動保存しない確認境界。
+- 除去後の未保存状態と元に戻す操作、欠落オブジェクト参照を変更しないエディター回帰検証。
 
-### Changed
+### 変更
 
-- READMEとSample手順を、問題の検出から安全な修復確認まで一続きで分かる構成へ更新。
+- READMEとサンプル手順を、問題の検出から安全な修復確認まで一続きで分かる構成へ更新。
 
 ## [1.2.0] - 2026-08-22
 
-### Added
+### 追加
 
-- active Build Profileで有効なSceneをbuild前に手動scanするEditorWindow。
-- Missing ScriptとMissing Object Referenceを同じ一覧へ表示し、対象SceneとGameObjectを開く操作。
-- scanの取消、結果copy、閉じたSceneの一時読込、元のactive Scene復元に対するEditor回帰検証。
+- 現在のBuild Profileで有効なシーンをビルド前に手動検査するエディター画面。
+- 欠落スクリプトと欠落オブジェクト参照を同じ一覧へ表示し、対象シーンとゲームオブジェクトを開く操作。
+- 検査の中止、結果の複写、閉じたシーンの一時読込、元のアクティブシーン復元に対するエディター回帰検証。
 
-### Changed
+### 変更
 
-- 自動build検査と手動scanが同じScene走査・階層path・ruleを共有する構造へ整理。
-- READMEを、手動scan、自動build停止、担当範囲の順で利用手順が分かる構成へ更新。
+- 自動ビルド検査と手動検査が同じシーン走査・階層パス・規則を共有する構造へ整理。
+- READMEを、手動検査、自動ビルド停止、担当範囲の順で利用手順が分かる構成へ更新。
 
 ## [1.1.0] - 2026-08-22
 
-### Added
+### 追加
 
-- Scene保存後に削除されたTexture、Material、Prefabなどを指すObject Reference fieldの検出。
-- GameObject階層、Component型と順番、serialized property pathを示す統合失敗message。
-- 削除済みRenderTextureとCameraの参照を使った決定論的なEditor回帰検証。
+- シーン保存後に削除されたテクスチャ、マテリアル、プレハブなどを指すオブジェクト参照項目の検出。
+- ゲームオブジェクト階層、コンポーネント型と順番、直列化プロパティのパスを示す統合失敗文。
+- 削除済み`RenderTexture`と`Camera`の参照を使った決定論的なエディター回帰検証。
 
-### Changed
+### 変更
 
-- READMEを、用途、3分の導入手順、messageの読み方、対象外が先に分かる構成へ更新。
-- 実装code、test code、診断message内の説明を英語へ統一。
+- READMEを、用途、3分の導入手順、診断文の読み方、対象外が先に分かる構成へ更新。
+- 当時の実装、試験、診断文内の説明を英語へ統一。
 
 ## [1.0.0] - 2026-08-14
 
-### Added
+### 追加
 
-- 実際のPlayer build Scene一覧を毎回確認するbuild開始前preflight。
-- Unityが処理する一時Sceneを確認する`IProcessSceneWithReport` callback。
-- active・inactive階層とPrefab instanceを対象にしたMissing MonoBehaviour検出。
-- Scene path、兄弟index付き階層path、GameObject別件数、合計件数を示す決定論的な失敗message。
-- 元のScene開閉状態とactive Sceneを維持し、自動修復や保存を行わない検査境界。
-- build可能Sceneと安全な失敗用text templateを含む **Build Guard Basics** サンプル。
+- 実際のプレイヤービルド対象シーン一覧を毎回確認するビルド開始前検査。
+- Unityが処理する一時シーンを確認する`IProcessSceneWithReport`処理。
+- 有効・無効の階層とプレハブ実体を対象にした欠落`MonoBehaviour`検出。
+- シーンパス、兄弟順付き階層パス、ゲームオブジェクト別件数、合計件数を示す決定論的な失敗文。
+- 元のシーン開閉状態とアクティブシーンを維持し、自動修復や保存を行わない検査境界。
+- ビルド可能なシーンと安全な失敗用テキストひな形を含む **ビルドガード基本例** サンプル。
 
-### Notes
+### 備考
 
-- Runtime code、一般asset scan、自動修復、project固有build policyは含みません。
+- 実行時用コード、一般アセット検査、自動修復、プロジェクト固有のビルド方針は含みません。

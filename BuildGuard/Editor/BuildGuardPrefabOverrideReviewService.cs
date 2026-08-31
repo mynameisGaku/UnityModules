@@ -10,11 +10,11 @@ using UnityEngine.SceneManagement;
 namespace BuildGuard.Editor
 {
     /// <summary>
-    /// Produces review-only snapshots and safely locates findings without changing Scene content.
+    /// 確認専用のプレハブ構造差分一覧を作り、シーン内容を変えず安全に対象を特定します。
     /// </summary>
     internal static class BuildGuardPrefabOverrideReviewService
     {
-        /// <summary>Scans Scene paths and returns findings only when every requested visit completes.</summary>
+        /// <summary>指定した全シーンを検査できた場合だけ、構造差分一覧を返します。</summary>
         internal static BuildGuardPrefabOverrideReviewScanResult Scan(
             IReadOnlyList<string> scenePaths,
             int maximumDisplayedFindings,
@@ -27,7 +27,7 @@ namespace BuildGuard.Editor
                 CaptureSceneState);
         }
 
-        /// <summary>Scans with an injectable Scene-state capture seam for deterministic validation.</summary>
+        /// <summary>決定論的な試験でシーン状態取得処理を差し替えられる検査入口です。</summary>
         internal static BuildGuardPrefabOverrideReviewScanResult Scan(
             IReadOnlyList<string> scenePaths,
             int maximumDisplayedFindings,
@@ -56,9 +56,10 @@ namespace BuildGuard.Editor
             }
             catch (Exception exception)
             {
+                Debug.LogException(exception);
                 return CreateStateFailure(
                     default,
-                    $"Unity could not capture the initial loaded Scene state: {exception.Message}");
+                    "検査前のシーン状態を取得できませんでした。Unityのログで原因を確認してください。");
             }
 
             var scanResult = ExecuteScan(
@@ -73,7 +74,6 @@ namespace BuildGuard.Editor
             int maximumDisplayedFindings,
             Func<int, int, string, bool> shouldCancel)
         {
-
             var findings = new List<BuildGuardPrefabOverrideFinding>(
                 Math.Min(maximumDisplayedFindings, 256));
             var scannedSceneCount = 0;
@@ -126,13 +126,14 @@ namespace BuildGuard.Editor
             }
             catch (Exception exception)
             {
+                Debug.LogException(exception);
                 return BuildGuardPrefabOverrideReviewScanResult.Failure(
                     new[]
                     {
                         new BuildGuardPrefabOverrideReviewFailure(
                             currentScenePath,
                             BuildGuardPrefabOverrideScanError.UnityApiFailure,
-                            $"Unity could not review structural Prefab overrides: {exception.Message}"),
+                            "プレハブ構造差分を検査できませんでした。Unityのログで原因を確認してください。"),
                     },
                     scannedSceneCount);
             }
@@ -160,13 +161,16 @@ namespace BuildGuard.Editor
                     currentState,
                     out var validationMessage)
                     ? scanResult
-                    : CreateStateFailure(scanResult, validationMessage);
+                    : CreateStateFailure(
+                        scanResult,
+                        $"検査前の読込済みシーン状態を保てませんでした: {validationMessage}");
             }
             catch (Exception exception)
             {
+                Debug.LogException(exception);
                 return CreateStateFailure(
                     scanResult,
-                    $"Unity could not verify the final loaded Scene state: {exception.Message}");
+                    "検査後のシーン状態を確認できませんでした。Unityのログで原因を確認してください。");
             }
         }
 
@@ -181,9 +185,9 @@ namespace BuildGuard.Editor
             }
 
             failures.Add(new BuildGuardPrefabOverrideReviewFailure(
-                "<loaded Scene state>",
+                "<読込済みシーンの状態>",
                 BuildGuardPrefabOverrideScanError.UnityApiFailure,
-                $"Review did not preserve the loaded Scene state: {message}"));
+                message));
             return BuildGuardPrefabOverrideReviewScanResult.Failure(
                 failures,
                 scanResult.ScannedSceneCount);
@@ -208,7 +212,7 @@ namespace BuildGuard.Editor
                 activeScene.IsValid() ? NormalizePath(activeScene.path) : string.Empty);
         }
 
-        /// <summary>Returns true only when every persisted identity field still matches.</summary>
+        /// <summary>保存済みの識別項目がすべて現在値と一致する場合だけ真を返します。</summary>
         internal static bool MatchesSnapshot(
             BuildGuardPrefabOverrideFinding snapshot,
             BuildGuardPrefabOverrideFinding current)
@@ -233,7 +237,7 @@ namespace BuildGuard.Editor
         }
 
         /// <summary>
-        /// Refreshes one finding, selects a loaded Scene object, or pings a closed Scene asset.
+        /// 1件の差分を再検査し、読込済みシーンの対象、または閉じたシーンアセットを選択します。
         /// </summary>
         internal static BuildGuardPrefabOverrideNavigationOutcome Locate(
             BuildGuardPrefabOverrideFinding snapshot,
@@ -242,14 +246,14 @@ namespace BuildGuard.Editor
             var sceneAsset = AssetDatabase.LoadAssetAtPath<SceneAsset>(snapshot.ScenePath);
             if (sceneAsset == null)
             {
-                message = $"Scene is unavailable: {snapshot.ScenePath}";
+                message = $"シーンを利用できません: {snapshot.ScenePath}";
                 return BuildGuardPrefabOverrideNavigationOutcome.SceneUnavailable;
             }
 
             var currentSceneGuid = AssetDatabase.AssetPathToGUID(snapshot.ScenePath);
             if (!StringEquals(snapshot.SceneGuid, currentSceneGuid))
             {
-                message = "This result is stale because the Scene asset identity changed. Refresh the review.";
+                message = "シーンアセットの識別情報が変化したため、この結果は古くなっています。「更新して検査」を押してください。";
                 return BuildGuardPrefabOverrideNavigationOutcome.Stale;
             }
 
@@ -258,7 +262,7 @@ namespace BuildGuard.Editor
             var wasLoaded = scene.IsValid() && scene.isLoaded;
             GameObject navigationTarget = null;
             var outcome = BuildGuardPrefabOverrideNavigationOutcome.Stale;
-            message = "This result is stale because the structural override changed. Refresh the review.";
+            message = "プレハブ構造差分が変化したため、この結果は古くなっています。「更新して検査」を押してください。";
             var restoreSucceeded = true;
             var restoreMessage = string.Empty;
 
@@ -273,7 +277,7 @@ namespace BuildGuard.Editor
                 if (!refreshed.Succeeded)
                 {
                     outcome = BuildGuardPrefabOverrideNavigationOutcome.ScanFailed;
-                    message = $"Could not refresh {snapshot.ScenePath}: {refreshed.ErrorMessage}";
+                    message = $"{snapshot.ScenePath} を再検査できませんでした: {refreshed.ErrorMessage}";
                 }
                 else if (TryFindMatchingFinding(snapshot, refreshed.Findings, out var current))
                 {
@@ -291,8 +295,9 @@ namespace BuildGuard.Editor
             }
             catch (Exception exception)
             {
+                Debug.LogException(exception);
                 outcome = BuildGuardPrefabOverrideNavigationOutcome.SceneUnavailable;
-                message = $"Unity could not refresh {snapshot.ScenePath}: {exception.Message}";
+                message = $"{snapshot.ScenePath} を再検査できませんでした。Unityのログで原因を確認してください。";
             }
             finally
             {
@@ -306,13 +311,14 @@ namespace BuildGuard.Editor
                             restoreSucceeded = EditorSceneManager.CloseScene(openedScene, true);
                             if (!restoreSucceeded)
                             {
-                                restoreMessage = $"Unity could not close the temporary Scene {snapshot.ScenePath}.";
+                                restoreMessage = $"一時的に開いたシーンを閉じられませんでした: {snapshot.ScenePath}";
                             }
                         }
                         catch (Exception exception)
                         {
+                            Debug.LogException(exception);
                             restoreSucceeded = false;
-                            restoreMessage = $"Unity could not close the temporary Scene: {exception.Message}";
+                            restoreMessage = "一時的に開いたシーンを閉じられませんでした。Unityのログで原因を確認してください。";
                         }
                     }
 
@@ -322,7 +328,7 @@ namespace BuildGuard.Editor
                         && !SceneManager.SetActiveScene(originalActiveScene))
                     {
                         restoreSucceeded = false;
-                        restoreMessage = "Unity could not restore the original active Scene.";
+                        restoreMessage = "検査前のアクティブシーンへ戻せませんでした。";
                     }
                 }
             }
@@ -337,13 +343,13 @@ namespace BuildGuard.Editor
             {
                 if (!scene.IsValid() || !scene.isLoaded || navigationTarget == null)
                 {
-                    message = "This result became stale before the Scene object could be selected.";
+                    message = "シーン内の対象を選択する前に結果が古くなりました。「更新して検査」を押してください。";
                     return BuildGuardPrefabOverrideNavigationOutcome.Stale;
                 }
 
                 Selection.activeGameObject = navigationTarget;
                 EditorGUIUtility.PingObject(navigationTarget);
-                message = $"Selected current override target: {snapshot.TargetHierarchyPath}";
+                message = $"現在の構造差分の対象を選択しました: {snapshot.TargetHierarchyPath}";
                 return outcome;
             }
 
@@ -351,7 +357,7 @@ namespace BuildGuard.Editor
             {
                 Selection.activeObject = sceneAsset;
                 EditorGUIUtility.PingObject(sceneAsset);
-                message = "The finding is current. The Scene was kept closed, so its Scene asset was selected.";
+                message = "構造差分が現在も存在することを確認しました。シーンは閉じたまま、そのシーンアセットを選択しました。";
             }
 
             return outcome;

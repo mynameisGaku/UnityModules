@@ -8,7 +8,7 @@ using UnityEditor;
 namespace BuildGuard.Tests
 {
     /// <summary>
-    /// Verifies pure limits, source classification, snapshot and ordering contracts.
+    /// 検査上限、参照元の分類、結果の固定、並び順の契約を副作用なしで検証します。
     /// </summary>
     internal sealed class BuildGuardPrefabOverrideScanContractTests
     {
@@ -24,9 +24,9 @@ namespace BuildGuard.Tests
             Assert.That(message, Is.Empty);
         }
 
-        [TestCase(0, 1, 1, "MaxVisitedGameObjects")]
-        [TestCase(1, 0, 1, "MaxPrefabInstances")]
-        [TestCase(1, 1, 0, "MaxFindings")]
+        [TestCase(0, 1, 1, "検査するゲームオブジェクト数の上限")]
+        [TestCase(1, 0, 1, "検査するプレハブ実体数の上限")]
+        [TestCase(1, 1, 0, "取得する構造差分数の上限")]
         public void TryValidate_NonPositiveLimit_ReturnsExactOwner(
             int maxGameObjects,
             int maxInstances,

@@ -3,7 +3,7 @@
 namespace BuildGuard.Editor
 {
     /// <summary>
-    /// Bounds one loaded Scene structural Prefab override scan.
+    /// 読込済みシーン1件のプレハブ構造差分検査に上限を設けます。
     /// </summary>
     internal readonly struct BuildGuardPrefabOverrideScanLimits
     {
@@ -32,24 +32,24 @@ namespace BuildGuard.Editor
 
         internal int MaxFindings { get; }
 
-        /// <summary>Validates that every limit can admit at least one item.</summary>
+        /// <summary>すべての上限が1件以上を受け付けられるか確認します。</summary>
         internal bool TryValidate(out string errorMessage)
         {
             if (MaxVisitedGameObjects <= 0)
             {
-                errorMessage = "MaxVisitedGameObjects must be greater than zero.";
+                errorMessage = "検査するゲームオブジェクト数の上限は1以上である必要があります。";
                 return false;
             }
 
             if (MaxPrefabInstances <= 0)
             {
-                errorMessage = "MaxPrefabInstances must be greater than zero.";
+                errorMessage = "検査するプレハブ実体数の上限は1以上である必要があります。";
                 return false;
             }
 
             if (MaxFindings <= 0)
             {
-                errorMessage = "MaxFindings must be greater than zero.";
+                errorMessage = "取得する構造差分数の上限は1以上である必要があります。";
                 return false;
             }
 

@@ -5,7 +5,7 @@ using UnityEditor;
 namespace BuildGuard.Editor
 {
     /// <summary>
-    /// Describes one read-only structural override on a connected Scene Prefab instance.
+    /// シーン内の接続済みプレハブ実体にある、読取専用の構造差分1件を表します。
     /// </summary>
     internal readonly struct BuildGuardPrefabOverrideFinding
     {

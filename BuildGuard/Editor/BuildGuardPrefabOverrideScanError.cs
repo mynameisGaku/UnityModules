@@ -3,7 +3,7 @@
 namespace BuildGuard.Editor
 {
     /// <summary>
-    /// Identifies why a structural Prefab override scan could not produce a complete result.
+    /// プレハブ構造差分の検査が完全な結果を作れなかった原因を表します。
     /// </summary>
     internal enum BuildGuardPrefabOverrideScanError
     {
