@@ -8,7 +8,7 @@
 - 削除したテクスチャ、マテリアル、プレハブなどを指したままの **欠落オブジェクト参照**
 - プレハブの実体へ追加・削除したゲームオブジェクトまたはコンポーネントの **構造差分**
 
-ビルド対象シーンは **Tools > ビルドガード > ビルド対象シーンを検査**、選択シーンは **Assets > ビルドガード > 選択シーンを検査**、選択プレハブは **Assets > Build Guard > Scan Selected Prefabs** から検査します。プレハブの構造差分は **Tools > Build Guard > Review Prefab Overrides** で確認します。欠落スクリプトと欠落オブジェクト参照だけがプレイヤービルドを停止し、構造差分は確認結果に留まります。どの流れも自動保存しません。
+ビルド対象シーンは **Tools > ビルドガード > ビルド対象シーンを検査**、選択シーンは **Assets > ビルドガード > 選択シーンを検査**、選択プレハブは **Assets > ビルドガード > 選択プレハブを検査** から検査します。プレハブの構造差分は **Tools > Build Guard > Review Prefab Overrides** で確認します。欠落スクリプトと欠落オブジェクト参照だけがプレイヤービルドを停止し、構造差分は確認結果に留まります。検査だけではシーンやプレハブを変更・保存しません。
 
 ## こんな面倒を減らす
 
@@ -56,16 +56,16 @@ Assetsメニューは画面を開いて現在の選択を記録します。既�
 
 一度に扱える上限は選択アセット候補4,096件、シーン256件です。シーンはパス順へ並べて重複を除き、記録時点の一覧として保持します。記録後にシーンを移動・削除した場合は途中結果を返さず、`現在の選択を使用`での再選択を案内します。途中でキャンセルした場合は完了済みシーンの結果を残します。
 
-### 4. 選択Prefabを確認する
+### 4. 選択プレハブを確認する
 
-1. Project windowで1個以上のPrefab Asset、またはPrefabを含むfolderを選択します。
-2. 右クリックして **Build Guard > Scan Selected Prefabs** を選びます。
-3. `Scan Selected Prefabs`を押します。
-4. Missing Scriptなら`Open and Remove`を押します。
-5. Prefab Modeで対象GameObjectと変更内容を確認し、保存するかUndoで戻します。
-6. Missing Object Referenceは`Open Prefab`で対象へ移動し、正しい参照を手動設定します。
+1. プロジェクトウィンドウで1個以上のプレハブアセット、またはプレハブを含むフォルダーを選択します。
+2. 右クリックして **ビルドガード > 選択プレハブを検査** を選びます。
+3. `記録済みの選択プレハブ`の件数を確認し、`選択プレハブを検査`を押します。
+4. 欠落スクリプトなら`開いて除去`を押します。
+5. プレハブモードで対象ゲームオブジェクトと自動保存の状態を確認し、必要に応じて保存するか元に戻します。
+6. 欠落オブジェクト参照は`プレハブを開く`で対象へ移動し、正しい参照を手動設定します。
 
-folderを選択した場合は、そのfolder以下のPrefabをまとめて対象にします。scanはPrefabを一時的に読み込んで閉じるため、scanだけではPrefabを変更しません。複数選択時はpath順に検査し、途中でCancelしても完了済みPrefabの結果を残します。
+フォルダーを選択した場合は、そのフォルダー以下のプレハブをまとめて対象にします。選択元とフォルダー展開で扱うアセット候補は合計4,096件、記録するプレハブは重複を除いて256件が上限です。メニューの有効判定ではフォルダーを展開せず、`現在の選択を使用`で記録するときだけ上限内で展開します。検査はプレハブを一時的に読み込んで閉じるため、検査だけではプレハブを変更しません。複数選択時はパス順に検査し、途中でキャンセルしても完了済みプレハブの結果を残します。`内容をコピー`では、問題種別、プレハブ、ゲームオブジェクト、詳細を1行でクリップボードへコピーできます。
 
 ### 5. Prefabの構造変更をreviewする
 
@@ -96,32 +96,32 @@ folderを選択した場合は、そのfolder以下のPrefabをまとめて対�
 
 ## 検査する範囲
 
-- active Build Profileで有効なScene（手動scan）
-- Project windowで直接選択した`Assets/`配下の保存済みScene Asset（手動scan、Build Profileへの登録・有効状態は不問）
-- Player buildへ実際に渡されたScene（自動検査）
-- active・inactiveを問わない全GameObject
-- Scene内のPrefab instance
-- UnityがSceneへ保存したObject Reference field
-- build開始前の元Sceneと、Unityがbuild中に処理する一時Scene
-- Project windowで利用者が明示選択したPrefab Asset（手動scan）
-- active Build Profileで有効なSceneのoutermost connected Prefab instance（structural override review）
-- Added／Removed GameObject・Component（property値のoverrideは除外）
+- 現在のBuild Profileで有効なシーン（手動検査）
+- プロジェクトウィンドウで直接選択した`Assets/`配下の保存済みシーンアセット（手動検査、Build Profileへの登録・有効状態は不問）
+- プレイヤービルドへ実際に渡されたシーン（自動検査）
+- 有効・無効を問わない全ゲームオブジェクト
+- シーン内のプレハブの実体
+- Unityがシーンへ保存したオブジェクト参照プロパティ
+- ビルド開始前の元シーンと、Unityがビルド中に処理する一時シーン
+- プロジェクトウィンドウで利用者が明示選択したプレハブアセット（手動検査）
+- 現在のBuild Profileで有効なシーンにある、最も外側で接続中のプレハブの実体（構造差分の確認）
+- 追加・削除されたゲームオブジェクトとコンポーネント（プロパティ値の差分は除外）
 
-既に読み込まれているSceneはcurrent in-memory状態を検査するため、未保存の変更も対象です。閉じたSceneは一時的にadditiveで開き、Prefabは`LoadPrefabContents`で一時展開し、scan後に保存せず閉じます。scanだけでは元のactive Scene、開閉状態、dirty状態を維持し、修復、保存、削除を行いません。structural override findingのnavigationも再scan後に元のScene開閉状態を復元します。`Open and Remove`を利用者が明示実行した場合だけSceneまたはPrefab Modeへ移動し、そのGameObjectのMissing ScriptをUndoへ記録して除去します。SceneとPrefabは自動保存しません。
+既に読み込まれているシーンは現在のメモリ上の状態を検査するため、未保存の変更も対象です。閉じたシーンは一時的に追加読込し、プレハブは`LoadPrefabContents`で一時展開して、検査後に保存せず閉じます。検査だけでは元の有効シーン、開閉状態、未保存状態を維持し、修復、保存、削除を行いません。構造差分の移動処理も再検査後に元のシーン開閉状態を復元します。`開いて除去`を利用者が明示実行した場合だけシーンまたはプレハブモードへ移動し、検査時の対象識別値と現在の対象が一致して同じ問題が残っている場合だけ、欠落スクリプトを元に戻す操作へ記録して除去します。シーンは未保存状態で残り、プレハブはプレハブモードの自動保存設定に従います。確認画面と除去後の状態欄にも、この保存条件を表示します。
 
 ## 対象外
 
-このmoduleはbuild対象Scene、直接選択した保存済みScene、明示選択したPrefab内の壊れたComponent参照、およびbuild対象SceneのPrefab構造変更reviewだけを扱います。project全体やfolder単位のScene常時scan、未使用asset検索、Runtimeで後から代入するnull fieldの必須判定、AddressablesやResources内assetの一括検査、PlayerSettings policy、test実行は行いません。structural overrideのProperty Modification、Apply／Revert、自動修復、Player build停止も対象外です。Missing Object Referenceの置換、Scene・Prefabの自動保存、複数Assetの一括修復もしません。Runtime assemblyとPlayerへ含まれるcodeもありません。
+このモジュールは、ビルド対象シーン、直接選択した保存済みシーン、明示選択したプレハブ内の壊れたコンポーネント参照、およびビルド対象シーンのプレハブ構造差分だけを扱います。プロジェクト全体やフォルダー単位のシーン常時検査、未使用アセット検索、実行時に後から設定する空のプロパティの必須判定、AddressablesやResources内アセットの一括検査、`PlayerSettings`の方針判定、試験実行は行いません。構造差分におけるプロパティ値の変更、適用、差し戻し、自動修復、プレイヤービルド停止も対象外です。欠落オブジェクト参照の置換、シーン・プレハブの自動保存、複数アセットの一括修復もしません。実行時用アセンブリとプレイヤーへ含まれるコードもありません。
 
-Assetを削除する前に利用箇所を探し、既存参照をまとめて切り替える用途は、別moduleの **アセット整理・参照管理（Reference Finder）** が担当します。Build Guardは、削除後などに壊れたScene・Prefabを見つけ、Missing Scriptだけを確認付きで除去する用途へ絞っています。
+アセットを削除する前に利用箇所を探し、既存参照をまとめて切り替える用途は、別モジュールの **アセット整理・参照管理（Reference Finder）** が担当します。Build Guardは、削除後などに壊れたシーン・プレハブを見つけ、欠落スクリプトだけを確認付きで除去する用途へ絞っています。
 
 ## サンプル
 
-Package ManagerのSamplesから **Build Guard Basics** をImportしてください。
+Package ManagerのSamplesから **ビルドガード基本例** を取り込んでください。
 
-- `BuildGuardBasics.unity`: そのままscan・buildできるScene
-- `BrokenSceneExample.unity.txt`: Missing Scriptの失敗を安全に試すtext template
-- `BrokenPrefabExample.prefab.txt`: Prefab scanと修復を安全に試すtext template
-- `Samples~/Basics/README.md`: build対象・選択SceneとPrefabの手動scan、自動build停止を確認する手順
+- `BuildGuardBasics.unity`: そのまま検査・ビルドできるシーン
+- `BrokenSceneExample.unity.txt`: 欠落スクリプトの失敗を安全に試すテキストのひな形
+- `BrokenPrefabExample.prefab.txt`: プレハブ検査と修復を安全に試すテキストのひな形
+- `Samples~/Basics/README.md`: ビルド対象・選択シーンとプレハブの手動検査、自動ビルド停止を確認する手順
 
-共有branchへ壊れたSceneを残さないよう、失敗確認はscratch copyか使い捨てprojectで行ってください。
+共有ブランチへ壊れたシーンを残さないよう、失敗確認は作業用の複製か使い捨てプロジェクトで行ってください。

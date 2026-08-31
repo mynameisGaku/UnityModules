@@ -1,4 +1,4 @@
-# Build Guard Basics
+# ビルドガード基本例
 
 ## 1. 正常な手動検査とビルドを確認する
 
@@ -51,17 +51,18 @@
 
 Build Guardは欠落スクリプトだけを明示操作で除去できます。欠落オブジェクト参照の推測修復、シーンの自動保存、アセット削除は行いません。`内容をコピー`で1件の修復情報を共有できます。
 
-## 5. PrefabのMissing Scriptを確認する
+## 5. プレハブの欠落スクリプトを確認する
 
-`BrokenPrefabExample.prefab.txt`はMissing Scriptを1件持つPrefab YAMLです。`.txt`なのでImportしただけではPrefabとして読み込まれません。
+`BrokenPrefabExample.prefab.txt`は欠落スクリプトを1件持つプレハブのYAMLです。`.txt`なので取り込んだだけではプレハブとして読み込まれません。
 
-1. scratch branchか使い捨てprojectでtemplateを複製します。
+1. 作業用ブランチか使い捨てプロジェクトでひな形を複製します。
 2. 複製先の拡張子を`.prefab`へ変更します。
-3. Project windowでそのPrefabを選択します。
-4. 右クリックして **Build Guard > Scan Selected Prefabs** を選びます。
-5. `BrokenPrefabExample[0]`と`Missing Scripts: 1`を確認します。
-6. `Open and Remove`を押し、Prefab ModeでMissing Scriptが除去されることを確認します。
-7. Prefabが未保存のまま残ることと、UndoでMissing Scriptが戻ることを確認します。
-8. 確認後は複製したPrefabを削除します。
+3. プロジェクトウィンドウでそのプレハブを選択します。
+4. 右クリックして **ビルドガード > 選択プレハブを検査** を選びます。
+5. `記録済みの選択プレハブ`が`1件`であることを確認し、`選択プレハブを検査`を押します。
+6. `BrokenPrefabExample[0]`と`欠落スクリプト: 1`を確認します。
+7. `開いて除去`を押し、プレハブモードで欠落スクリプトが除去されることを確認します。
+8. プレハブモードの自動保存設定に応じた保存状態を確認し、元に戻す操作で欠落スクリプトが戻ることも確認します。
+9. 確認後は複製したプレハブを削除します。
 
-Prefab scanもMissing Object Referenceを表示しますが、参照先は推測しません。`Open Prefab`で対象fieldへ移動し、利用者が正しいAssetを指定してください。
+プレハブの検査も欠落オブジェクト参照を表示しますが、参照先は推測しません。`プレハブを開く`で対象ゲームオブジェクトを選択し、インスペクターで該当項目へ正しいアセットを指定してください。`内容をコピー`では1件の修復情報を共有できます。
