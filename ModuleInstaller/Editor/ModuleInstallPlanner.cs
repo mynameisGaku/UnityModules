@@ -36,7 +36,7 @@ namespace ModuleInstaller.Editor
                     issues.Add(new ModuleInstallIssue(
                         ModuleInstallIssueKind.UnknownPackage,
                         packageName,
-                        $"Unknown package: {packageName}"));
+                        $"一覧にないパッケージです：{packageName}"));
                     continue;
                 }
 
@@ -94,7 +94,7 @@ namespace ModuleInstaller.Editor
                     issues.Add(new ModuleInstallIssue(
                         ModuleInstallIssueKind.UnknownPackage,
                         packageName,
-                        $"Unknown package: {packageName}"));
+                        $"一覧にないパッケージです：{packageName}"));
                     continue;
                 }
 
@@ -132,7 +132,7 @@ namespace ModuleInstaller.Editor
             return new ModuleInstallIssue(
                 ModuleInstallIssueKind.AssetCopyConflict,
                 folderName,
-                $"Assets/Modules/{folderName} already exists. Remove that copy before installing or updating the UPM package.");
+                $"Assets/Modules/{folderName} が存在します。パッケージを導入または更新する前に、この複製を確認して手動で取り除いてください。");
         }
 
         private static bool TryCreateLegacyConflict(
@@ -166,7 +166,7 @@ namespace ModuleInstaller.Editor
             issue = new ModuleInstallIssue(
                 ModuleInstallIssueKind.LegacyModuleConflict,
                 entry.PackageName,
-                $"{entry.DisplayName} conflicts with legacy module(s): {string.Join(", ", conflicts)}. Remove them manually before retrying; Module Manager never removes legacy modules automatically.");
+                $"{entry.DisplayName} は旧モジュールと競合します：{string.Join("、", conflicts)}。内容を確認して手動で取り除いてから、もう一度実行してください。モジュール管理は旧モジュールを自動削除しません。");
             return true;
         }
 

@@ -25,7 +25,7 @@ README、モジュール一覧、Unityのパッケージ管理画面に出す`di
 
 | 利用者向け表示名 | 技術名 | 名前から分かること |
 |---|---|---|
-| モジュール導入アシスタント | Module Installer | 用途別セットから必要なモジュールをまとめて導入する。 |
+| モジュール管理 | ModuleInstaller | 用途別セットから必要なモジュールをまとめて導入・更新する。 |
 | プロジェクト初期設定 | Project Setup | 新規Projectで繰り返す設定とTag・Layer・Sorting Layer・3D/2D Layer Collisionをprofileからまとめて適用する。 |
 | Assembly依存チェック | Assembly Dependency Audit | asmdefの参照元・参照先、循環component member、宣言単位のName／GUID解決、PlayerからEditorへの逆参照、asmref target整合性、同じfolderのassembly owner候補競合をread-onlyで確認する。 |
 | ローカライズキー監査 | Localization Key Audit | 必須ロケールの直接網羅とテーブルの整合性、宣言した範囲の静的参照を読み取り専用で確認する。 |

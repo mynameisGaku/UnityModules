@@ -329,7 +329,7 @@ backupはUTF-8 BOMなしのJSONです。schema v16はProject設定、Application
 - packageの導入・更新
 - Play Modeやbuild時の自動適用
 
-packageの導入・更新には`Tools > Module Manager > Open`を使います。SceneのRuntime切替にはScene Flowを使います。
+パッケージの導入・更新には`Tools > モジュール管理 > 開く`を使います。実行時のシーン切り替えにはScene Flowを使います。
 
 ## よくある問題
 

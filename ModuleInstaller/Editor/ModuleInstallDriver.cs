@@ -52,7 +52,7 @@ namespace ModuleInstaller.Editor
         {
             if (!ModuleCatalog.TryFindBundle(bundleId, out var bundle))
             {
-                message = $"Unknown bundle: {bundleId}";
+                message = $"一覧にない機能セットです：{bundleId}";
                 return false;
             }
 
@@ -80,10 +80,14 @@ namespace ModuleInstaller.Editor
 
         private static void Update()
         {
-            var wasBusy = Coordinator.IsBusy;
+            if (!Coordinator.IsBusy)
+            {
+                return;
+            }
+
             var previousMessage = Coordinator.LastMessage;
             Coordinator.Tick();
-            if (wasBusy != Coordinator.IsBusy
+            if (!Coordinator.IsBusy
                 || !string.Equals(previousMessage, Coordinator.LastMessage, StringComparison.Ordinal))
             {
                 Changed?.Invoke();

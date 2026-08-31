@@ -14,18 +14,27 @@ namespace ModuleInstaller.Editor
             string displayName,
             string summary,
             IReadOnlyList<string> legacyPackageNames,
-            IReadOnlyList<string> legacyFolderNames)
+            IReadOnlyList<string> legacyFolderNames,
+            string guideRelativePath)
         {
             PackageName = packageName ?? throw new ArgumentNullException(nameof(packageName));
             FolderName = folderName ?? throw new ArgumentNullException(nameof(folderName));
             Tag = tag ?? throw new ArgumentNullException(nameof(tag));
             DisplayName = displayName ?? throw new ArgumentNullException(nameof(displayName));
             Summary = summary ?? throw new ArgumentNullException(nameof(summary));
+            if (string.IsNullOrEmpty(guideRelativePath)
+                || guideRelativePath.StartsWith("/", StringComparison.Ordinal)
+                || guideRelativePath.IndexOf("..", StringComparison.Ordinal) >= 0)
+            {
+                throw new ArgumentException("説明文書の相対パスには、安全なパッケージ内パスが必要です。", nameof(guideRelativePath));
+            }
+
+            GuideRelativePath = guideRelativePath;
             LegacyPackageNames = Copy(legacyPackageNames);
             LegacyFolderNames = Copy(legacyFolderNames);
             if (LegacyPackageNames.Count != LegacyFolderNames.Count)
             {
-                throw new ArgumentException("Legacy package and folder counts must match.");
+                throw new ArgumentException("旧パッケージと旧フォルダーの件数が一致している必要があります。");
             }
         }
 
@@ -34,6 +43,7 @@ namespace ModuleInstaller.Editor
         internal string Tag { get; }
         internal string DisplayName { get; }
         internal string Summary { get; }
+        internal string GuideRelativePath { get; }
         internal IReadOnlyList<string> LegacyPackageNames { get; }
         internal IReadOnlyList<string> LegacyFolderNames { get; }
         internal string Version
@@ -48,8 +58,8 @@ namespace ModuleInstaller.Editor
         internal string GitUrl =>
             $"https://github.com/mynameisGaku/UnityModules.git?path=/{FolderName}#{Tag}";
 
-        internal string ReadmeUrl =>
-            $"https://github.com/mynameisGaku/UnityModules/blob/{Tag}/{FolderName}/README.md";
+        internal string GuideUrl =>
+            $"https://github.com/mynameisGaku/UnityModules/blob/{Tag}/{FolderName}/{GuideRelativePath}";
 
         private static IReadOnlyList<string> Copy(IReadOnlyList<string> source)
         {
@@ -63,7 +73,7 @@ namespace ModuleInstaller.Editor
             {
                 if (string.IsNullOrEmpty(source[index]))
                 {
-                    throw new ArgumentException("Legacy identifiers cannot be null or empty.");
+                    throw new ArgumentException("旧識別子に未設定または空の値は使えません。");
                 }
 
                 copy[index] = source[index];

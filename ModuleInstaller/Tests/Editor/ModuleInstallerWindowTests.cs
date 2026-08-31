@@ -34,6 +34,12 @@ namespace ModuleInstaller.Editor.Tests
                 Assert.That(window.rootVisualElement.Q<Foldout>("guide-bundle-project-maintenance"), Is.Not.Null);
                 Assert.That(window.rootVisualElement.Q<Label>(ModuleInstallerWindow.UpdateSummaryElementName), Is.Not.Null);
                 Assert.That(window.rootVisualElement.Q<Button>(ModuleInstallerWindow.UpdateButtonElementName), Is.Not.Null);
+                Assert.That(ModuleInstallerWindow.WindowTitle, Is.EqualTo("モジュール管理"));
+                Assert.That(ModuleInstallerWindow.MenuPath, Is.EqualTo("Tools/モジュール管理/開く"));
+                Assert.That(window.rootVisualElement.Q<Label>(ModuleInstallerWindow.TitleElementName).text, Does.Contain("必要なモジュールだけを導入"));
+                Assert.That(window.rootVisualElement.Q<Label>(ModuleInstallerWindow.DescriptionElementName).text, Does.Contain("四つの用途別セット"));
+                Assert.That(specialized.text, Does.Contain("専門機能").And.Contain("ゲーム規則"));
+                Assert.That(packages.text, Does.Contain("個別導入").And.Contain("説明を読む"));
 
                 var projectMaintenanceCard = window.rootVisualElement.Q<VisualElement>("bundle-project-maintenance");
                 Assert.That(projectMaintenanceCard, Is.Not.Null);
@@ -47,7 +53,7 @@ namespace ModuleInstaller.Editor.Tests
                 Assert.That(projectMaintenanceGuide, Is.Not.Null);
                 Assert.That(projectMaintenancePackages, Is.Not.Null);
                 Assert.That(projectMaintenanceInstall, Is.Not.Null);
-                Assert.That(projectMaintenancePackages.text, Does.Contain("Texture Import Settings").And.Contain("Build Assistant"));
+                Assert.That(projectMaintenancePackages.text, Does.Contain("テクスチャー取込設定監査").And.Contain("ビルド実行アシスタント"));
                 Assert.That(projectMaintenanceCard.childCount, Is.EqualTo(5));
                 Assert.That(projectMaintenanceCard.hierarchy.IndexOf(projectMaintenanceHeading), Is.EqualTo(0));
                 Assert.That(projectMaintenanceCard.hierarchy.IndexOf(projectMaintenanceSummary), Is.EqualTo(1));
@@ -67,7 +73,7 @@ namespace ModuleInstaller.Editor.Tests
                 Assert.That(sceneAndUiGuide, Is.Not.Null);
                 Assert.That(sceneAndUiPackages, Is.Not.Null);
                 Assert.That(sceneAndUiInstall, Is.Not.Null);
-                Assert.That(sceneAndUiPackages.text, Does.Contain("Scene Workspace").And.Contain("Play Mode Tuning").And.Contain("Scene Switching"));
+                Assert.That(sceneAndUiPackages.text, Does.Contain("シーン作業セット").And.Contain("実行中調整").And.Contain("シーン切り替え"));
                 Assert.That(sceneAndUiCard.childCount, Is.EqualTo(5));
                 Assert.That(sceneAndUiCard.hierarchy.IndexOf(sceneAndUiHeading), Is.EqualTo(0));
                 Assert.That(sceneAndUiCard.hierarchy.IndexOf(sceneAndUiSummary), Is.EqualTo(1));
@@ -83,13 +89,13 @@ namespace ModuleInstaller.Editor.Tests
                 Assert.That(projectSetupLabel.style.flexShrink.value, Is.EqualTo(1f));
                 Assert.That(projectSetupReadmeButton.style.flexShrink.value, Is.EqualTo(0f));
                 Assert.That(projectSetupInstallButton.style.flexShrink.value, Is.EqualTo(0f));
-                Assert.That(projectSetupReadmeButton.tooltip, Does.Contain("project-setup-v1.15.0/ProjectSetup/README.md"));
+                Assert.That(projectSetupReadmeButton.tooltip, Does.Contain("project-setup-v1.15.0/ProjectSetup/Documentation~/index.md"));
 
                 var assetImportRow = window.rootVisualElement.Q<VisualElement>("package-com.studiogaku.asset-import-audit");
                 var assetImportLabel = assetImportRow.Q<Label>();
                 var assetImportReadmeButton = assetImportRow.Q<Button>("readme-package-com.studiogaku.asset-import-audit");
                 var assetImportInstallButton = assetImportRow.Q<Button>("install-package-com.studiogaku.asset-import-audit");
-                Assert.That(assetImportLabel.text, Does.Contain("Texture Import Settings").And.Contain("Standalone").And.Contain("Android").And.Contain("iOS"));
+                Assert.That(assetImportLabel.text, Does.Contain("テクスチャー取込設定監査").And.Contain("Standalone").And.Contain("Android").And.Contain("iOS"));
                 Assert.That(assetImportReadmeButton.tooltip, Does.Contain("asset-import-audit-v1.1.0/AssetImportAudit/README.md"));
                 Assert.That(assetImportInstallButton, Is.Not.Null);
 
@@ -98,7 +104,7 @@ namespace ModuleInstaller.Editor.Tests
                 var buildAssistantLabel = buildAssistantRow.Q<Label>();
                 var buildAssistantReadmeButton = buildAssistantRow.Q<Button>("readme-package-com.studiogaku.build-assistant");
                 var buildAssistantInstallButton = buildAssistantRow.Q<Button>("install-package-com.studiogaku.build-assistant");
-                Assert.That(buildAssistantLabel.text, Does.Contain("Build Assistant").And.Contain("desktop standalone builds").And.Contain("bounded history"));
+                Assert.That(buildAssistantLabel.text, Does.Contain("ビルド実行アシスタント").And.Contain("デスクトップ向けビルド計画").And.Contain("件数を制限した履歴"));
                 Assert.That(buildAssistantReadmeButton.tooltip, Does.Contain("build-assistant-v1.0.0/BuildAssistant/README.md"));
                 Assert.That(buildAssistantInstallButton, Is.Not.Null);
                 Assert.That(packages.contentContainer.hierarchy.IndexOf(buildAssistantRow), Is.EqualTo(packages.contentContainer.hierarchy.IndexOf(assetImportRow) + 1));
@@ -108,7 +114,7 @@ namespace ModuleInstaller.Editor.Tests
                 var sceneWorkspaceLabel = sceneWorkspaceRow.Q<Label>();
                 var sceneWorkspaceReadmeButton = sceneWorkspaceRow.Q<Button>("readme-package-com.studiogaku.scene-workspace");
                 var sceneWorkspaceInstallButton = sceneWorkspaceRow.Q<Button>("install-package-com.studiogaku.scene-workspace");
-                Assert.That(sceneWorkspaceLabel.text, Does.Contain("Scene Workspace").And.Contain("multi-scene editor workspaces").And.Contain("stale-plan checks"));
+                Assert.That(sceneWorkspaceLabel.text, Does.Contain("シーン作業セット").And.Contain("複数シーンの順番").And.Contain("計画の有効性確認"));
                 Assert.That(sceneWorkspaceReadmeButton.tooltip, Does.Contain("scene-workspace-v1.0.0/SceneWorkspace/README.md"));
                 Assert.That(sceneWorkspaceInstallButton, Is.Not.Null);
                 Assert.That(sceneWorkspaceRow.childCount, Is.EqualTo(3));
@@ -121,7 +127,7 @@ namespace ModuleInstaller.Editor.Tests
                 var playModeTuningLabel = playModeTuningRow.Q<Label>();
                 var playModeTuningReadmeButton = playModeTuningRow.Q<Button>("readme-package-com.studiogaku.play-mode-tuning");
                 var playModeTuningInstallButton = playModeTuningRow.Q<Button>("install-package-com.studiogaku.play-mode-tuning");
-                Assert.That(playModeTuningLabel.text, Does.Contain("Play Mode Tuning").And.Contain("Play Mode property edits").And.Contain("stale-plan check"));
+                Assert.That(playModeTuningLabel.text, Does.Contain("実行中調整").And.Contain("プロパティー変更").And.Contain("計画の有効性確認"));
                 Assert.That(playModeTuningReadmeButton.tooltip, Does.Contain("play-mode-tuning-v1.0.0/PlayModeTuning/README.md"));
                 Assert.That(playModeTuningInstallButton, Is.Not.Null);
                 Assert.That(playModeTuningRow.childCount, Is.EqualTo(3));

@@ -1,143 +1,108 @@
-# Module Manager 1.5.0
+# モジュール管理 1.6.0
 
 ## 目的
 
-公開済みUnityModules 22件を4つの実用workflowと2つの専門向けcollectionへまとめ、固定tagのGit URLとして追加し、導入済みの古いversionをまとめて更新するEditor toolです。6 bundleの件数は`7 / 7 / 3 / 3 / 1 / 1`です。利用者が似たmodule名、URL、最新公開versionを暗記する必要をなくします。
+公開タグへ固定した22件のUnityモジュールを、六つの用途別セットまたは個別一覧から導入・更新します。画面名、機能名、説明、状態表示、競合理由は日本語で表示します。
 
-## 操作
+一覧はリモートから実際に取得できる公開タグだけを参照します。開発ブランチ側の版が先行していても、新しいタグが公開されるまでは固定版を変更しません。
 
-`Tools > Module Manager > Open`を開き、次の順番で操作します。
+## 操作順
 
-① やりたい作業に合うworkflowを選びます。画像では`Scene and UI`を選んでいます。
+`Tools > モジュール管理 > 開く`を選び、次の順で確認します。
 
-② card上部の概要を読み、`Quick guide`を開いて用途、最初の操作、変更範囲を確認します。
+1. 「プロジェクト整備」「シーンと画面」「ゲーム共通機能」「入力処理」から、目的に合うセットを選びます。
+2. 概要を読み、「簡単な案内」を開きます。
+3. 「向いている状況」「最初の操作」「変更される範囲」を確認します。
+4. 導入するモジュール名と件数を確認します。
+5. 最下部の「N件を導入」を押し、Package Managerの処理を待ちます。
 
-③ `Quick guide`の下に表示されるmodule名と追加件数を確認します。
+![「シーンと画面」の案内と導入対象を確認する操作順](module-manager-guide.png)
 
-④ card最下部の`Install N`を押し、Package Managerの解決とdomain reloadを待ちます。
+実画面でも、概要、簡単な案内、導入対象、導入ボタンが上から下へ並びます。
 
-⑤ 1件だけ導入する場合は、さらに下の個別一覧を開きます。
+![日本語化した「シーンと画面」の実画面](module-manager-window.png)
 
-![7件のScene and UIを選び、Quick guideからInstall 7までを上から確認するModule Managerの操作順](module-manager-guide.png)
+一件だけ導入する場合は、下部の「個別導入：説明を読む、または一つだけ導入する」を開きます。プロジェクト一括設定 1.15.0だけは、同タグのREADMEに旧導入URLが残るため、正しい同タグ内の詳細文書を開きます。
 
-実画面でも、概要、`Quick guide`、Play Mode Tuningを含む7件、card最下部の`Install 7`、個別一覧が上から下へ並びます。
+![日本語化した個別モジュール一覧](module-manager-advanced.png)
 
-![Play Mode Tuningを含むScene and UI 7件とInstall 7を表示したModule Managerの実画面](module-manager-window.png)
+## 用途別セット
 
-個別導入は`Advanced: read about or install one module`から実行します。`Read guide`はcatalogに固定した公開tagのREADMEを開きます。
-
-![統合後の個別module一覧でScene WorkspaceからDeterministic Simulationまでを確認する実画面](module-manager-advanced.png)
-
-導入済みmoduleに更新がある場合は、上部に`Module Name -> target version`が表示されます。対象を確認して`Update N`を押すと、古いversionだけを1回のPackage Manager要求で更新します。
-
-最初に22件の個別一覧を読む必要はありません。新規Projectの基本フォルダー、C#生成既定値、条件付きコンパイル記号、Texture import設定、Asset整理、desktop向けbuildは7件の`Project Maintenance`、編集作業ごとの複数Scene構成、Play Mode調整の反映、Scene切り替え、UIは7件の`Scene and UI`、save・音声・reportは3件の`Game Services`、入力補助・command認識・Gameplay入力停止は3件の`Input Support`から確認します。決定論と細かなゲーム計算は各1件の`Specialized collections`へ分離しています。個別一覧は必要なpackageが明確な場合の入口です。
-
-## 統合packageと旧packageの競合
-
-v1.5.0では、旧44 packageを公開namespaceと型名を維持したまま4 packageへ集約しています。
-
-| 統合先 | 旧package数 | catalog version |
+| セット | 件数 | 主な用途 |
 |---|---:|---|
-| `com.studiogaku.input-assist` | 12 | 2.0.0 |
-| `com.studiogaku.input-command` | 6 | 1.0.0 |
-| `com.studiogaku.gameplay-rules` | 19 | 1.0.0 |
-| `com.studiogaku.deterministic-simulation` | 7 | 1.0.0 |
+| プロジェクト整備 | 7 | 初期設定、テクスチャー取込設定、インスペクター補助、デバッグ描画、欠落参照、アセット参照整理、デスクトップ向けビルド |
+| シーンと画面 | 7 | 複数シーンの編集構成、再生中調整の反映、シーン切り替え、画面演出、安全領域、ゲーム時間、起動手順 |
+| ゲーム共通機能 | 3 | セーブ、音声、不具合報告 |
+| 入力処理 | 3 | 入力値補正、入力コマンド認識、ゲーム操作の一時停止 |
+| 決定論的シミュレーション | 1 | 固定刻み、再現乱数、再生記録、状態照合 |
+| ゲーム規則と計算 | 1 | 資源、能力値、選択、時間、損害の決定論的計算 |
 
-旧UPM package IDや`Assets/Modules/<旧Folder>`と統合先を併用すると、同じnamespace・型・asmdefが重複します。導入計画と更新計画は、対象packageの現行folderだけでなく、4統合先に登録したすべての旧package IDと旧folderを検査します。1件でも見つかった場合はissueだけを返し、`Client.AddAndRemove`やmanifest変更より前に停止します。
+最初の四つは通常用途として常に表示します。残り二つは、再現性や小さな決定論的計算が具体的な要件になった場合だけ、専門機能から選びます。
 
-Module Managerは旧package、source copy、asmdef参照を自動で移動・削除・書き換えません。利用者がversion controlで差分を確認し、asmdef参照を統合先へ書き換えてから、Package Managerで旧packageをRemoveするか、旧source copyを手動で退避・削除します。競合を解消した後、windowを再度開いて導入または更新を計画します。旧tagへ固定したprojectは、統合先と併用しない限りそのversionを継続利用できます。
+## 固定している版
 
-Project Maintenanceの「プロジェクト一括設定」はv1.15.0へ固定されています。基本フォルダー、Runtime・Editor・test用asmdef、Unity向け`.gitignore`と`.gitattributes`をまとめて作成できます。既存fileは上書きせず、復元ではこのツールが作成して内容が変わっていないfileだけを削除します。利用者が編集したfile、既存フォルダー、Assetを追加したフォルダーは維持します。build target別Application Identifier・Scripting Backend・API Compatibility Level・Managed Stripping Level・IL2CPP Code Generation、C# Root Namespace、新規scriptの改行方式、複製時のGameObject・Asset命名規則、条件付きコンパイル記号、Tag・Layer・Sorting Layer、Player Build Scenes、Play Mode開始Sceneも同じprofileから適用・復元できます。
+- プロジェクト一括設定 1.15.0
+- テクスチャー取込設定監査 1.1.0
+- インスペクター入力補助 1.0.0
+- デバッグ描画 1.0.0
+- プロジェクト不備確認・修復 1.4.0
+- アセット参照整理 1.3.0
+- ビルド実行アシスタント 1.0.0
+- シーン作業セット 1.0.0
+- 実行中調整 1.0.0
+- シーン切り替え 1.0.0
+- 画面切り替え演出 1.0.1
+- 安全領域レイアウト 1.0.0
+- ゲーム時間制御 1.0.0
+- 起動手順 1.0.0
+- セーブデータ 1.0.0
+- 音声再生 1.0.0
+- 不具合報告記録 1.0.0
+- 入力補助 2.0.0
+- 入力コマンド 1.0.0
+- 入力一時停止 1.0.0
+- ゲーム規則 1.0.0
+- 決定論的シミュレーション 1.0.0
 
-同じworkflowの「アセット設定チェック」はv1.1.0へ固定されています。Textureの共通設定とStandalone・Android・iOSのOverride、最大size、圧縮方針を対象ごとに比較します。`Preview`は差分を表示するだけで、確認後に`Apply`した選択済みTexture importerだけを更新・再importします。Preview後に対象が変わった場合は適用を中止します。
-
-同じworkflowの「ビルド実行アシスタント」はv1.0.0へ固定されています。desktop向けStandalone buildを次の順で実行します。
-
-`Tools > Build Assistant > Open`を開き、次の5区分を上から順に進めます。
-
-① `Profile`で現在のBuild ProfileとEditor Active Targetを確認します。変更が必要な場合は`Open Build Profiles`からUnityの画面を開きます。
-
-② `Output`でbuildを保存する絶対pathのroot folderを選びます。既存の実行結果を上書きするpathは指定しません。
-
-③ `Preview`の`Preview Build`でScene、Build Options、Scripting Backend、出力先を記録します。folder、file、Unity設定は変更しません。
-
-④ `Confirm`でpreview結果を読み、問題がなければ確認欄をオンにします。
-
-⑤ `Build / Result / Export`の`Build Confirmed Plan`で確認済みの同じ計画だけを実行します。状態が変わっていればbuildを開始しません。完了後に結果、容量差、最大20件の履歴を確認し、必要な結果だけをJSONへ書き出します。
-
-Scene and UIの「シーン作業セット」はv1.0.0へ固定しています。複数Sceneの順番、Loaded、Activeを作業用Profileとして保存し、現在との差を確認してからEditorのScene構成を切り替えます。RuntimeのScene遷移は扱いません。
-
-`Tools > Scene Workspace > Open`を開き、次の5区分を上から順に進めます。
-
-① `Workspace Profile`で既存のProfileを選ぶか、`Create New Profile`で`Assets`以下へ新しく作ります。
-
-② `Scene Setup/Capture`でSceneを希望順に並べ、LoadedとActiveを設定します。現在開いている構成を使う場合は`Capture Current Setup Into Profile`で取り込みます。編集またはCaptureはProfileを変更済みにしますが、自動保存しません。
-
-③ `Preview Changes`で現在との差を確認します。この時点ではSceneを開閉せず、順番、Loaded、Activeも変更しません。
-
-④ `Review and Confirm`で閉じる、開く、読み込む、読み込み解除、並べ替える、Activeにする変更を確認し、確認欄をオンにします。Preview後に現在の構成またはProfileが変わった場合は③からやり直します。
-
-⑤ `Switch Workspace/Result`の`Switch Workspace`で、確認済みの同じ計画だけを1回適用します。結果欄では`Apply`と`Rollback`を分けて確認できます。Dirty Scene、無題Scene、欠損Scene、重複Sceneなどがある場合はSceneを変更する前に停止し、未保存変更を自動で保存・破棄しません。
-
-同じworkflowの「プレイ中の調整を反映」はv1.0.0へ固定されています。Play Mode中にInspectorで調整した値のうち、先に選んだ項目だけを手動で取り込み、Play Mode終了後のPreviewと確認を経て保存済みSceneへ反映します。
-
-`Tools > Play Mode Tuning > Open`を開き、次の5区分を上から順に進めます。
-
-① `Targets`で、保存済みSceneにある`MonoBehaviour`と残したい最上位serialized propertyを選びます。`Start Session`は対象identityとEdit Modeの元の値を記録しますが、Play Modeを開始しません。
-
-② `Capture During Play`で、通常どおりPlay Modeへ入り、値を調整します。残したい状態になった時点で`Capture Selected Values`を押します。Play Mode進入時や終了時に値を自動取り込みしません。
-
-③ `Preview After Play`で、Play Mode終了後に元の値と取り込んだ値を比較します。`Preview Captured Differences`はScene、Component、Asset、保存状態を変更しません。
-
-④ `Review and Confirm`で、対象GameObject、property path、元の値、取り込んだ値を確認し、確認欄をオンにします。Preview後に対象identity、現在値、未選択項目、session、revisionが変わったplanは古いものとして⑤の前に停止します。
-
-⑤ `Apply Tuning / Result`で、Previewを生成した同じ未使用plan Objectだけを1回反映します。複製plan、再使用、domain reload後、revision不一致は反映しません。成功時は対象Sceneを明示的に変更済み（dirty）へしますが、Sceneを自動保存しません。反映または反映後確認に失敗した場合は反映前の選択値へ復元を試み、`Apply`と`Rollback`の成否を独立した結果として表示します。
+パッケージ識別子、フォルダー名、タグ、固定版のメニュー名は、正確な照合と互換性のため元の表記を維持します。
 
 ## 変更される範囲
 
-- Module Managerの導入操作は`Packages/manifest.json`と`Packages/packages-lock.json`へ固定tagのpackageを追加します。
-- workflowを導入しただけでは、Project Settings、Scene、Prefab、Asset importerを変更しません。
-- 導入後の各toolは、それぞれの画面で対象とPreview結果を確認し、適用、build、Scene切り替えを明示した範囲だけを変更します。
-- Build Assistantは確認済みbuildの実行時だけ選択した出力先へ新しい実行folderを作り、`Library/BuildAssistant`へ履歴を保存します。JSONは利用者が明示的に書き出した場合だけ作成します。
-- Scene Workspaceは`Create New Profile`を選んだ場合だけ`Assets`以下へ`SceneWorkspaceProfile`を作ります。Profileを編集するか現在の構成をCaptureした場合は選択Profileを変更済みにしますが、自動保存しません。PreviewはSceneを変更せず、確認後に`Switch Workspace`した場合だけEditorで開くScene、順番、Loaded、Activeを変更します。Dirty Scene、無題Scene、欠損Scene、重複Sceneなどがあれば変更前に停止し、Sceneの保存や変更破棄は行いません。
-- Play Mode TuningはPlay Mode中に`Capture Selected Values`を押した選択項目だけを一時保持します。PreviewはSceneを変更しません。確認済みの同じ未使用planを1回だけApplyし、成功した対象Sceneをdirtyにします。Sceneは保存せず、失敗時のApply結果とRollback結果を分けて返します。
+- 導入・更新操作は`Packages/manifest.json`と`Packages/packages-lock.json`へ固定タグのパッケージを追加します。
+- 導入済みのパッケージは再追加しません。
+- 更新対象は、一覧の固定版より古い導入済みパッケージだけです。
+- 同じ版、より新しい版、比較できない独自版は上書きしません。
+- 対象モジュールのソース複製、統合前の旧パッケージ、旧ソース複製を検出した場合は、Package Managerを呼び出す前に停止します。
+- 旧パッケージ、旧フォルダー、アセンブリ定義の参照は自動で移動・削除・書換しません。
+- 用途別セットを導入しただけでは、プロジェクト設定、シーン、プレハブ、アセット取込設定を変更しません。
 
-## 安全条件
+代表的な各モジュールの安全範囲は次のとおりです。
 
-- catalogに無いpackage名は受理しません。
-- URLはrepository、subfolder、公開tagを固定し、任意入力を受けません。
-- 導入済みpackageは追加対象から除外します。
-- 更新対象は、導入済みversionをSemVerとして比較でき、catalogのversionより古いpackageだけです。`preview`などのprereleaseもSemVer順で比較し、新しいversionや解析できない独自versionは上書きしません。
-- `Assets/Modules/<Folder>`が存在するmoduleは、assembly重複を避けるため導入を停止します。
-- 統合した4 packageは旧UPM package IDと`Assets/Modules/<旧Folder>`も検査し、導入・更新ともPackage Managerの変更前に停止します。
-- 1回の操作は1つの`Client.AddAndRemove`要求として実行し、package削除は要求しません。
-- 失敗時はqueueを終了し、同じ要求を無限に再試行しません。
-- workflowと個別packageのbuttonは未導入件数、導入済み、Assets copy競合を表示します。
-- workflow guideはPackage導入自体と、導入後のtool操作が変更する範囲を分けて表示します。
-- 個別README URLはcatalogと同じ公開tagへ固定します。
+- プロジェクト一括設定とテクスチャー取込設定監査は、差分確認と明示的な反映操作の後にだけ選択項目を変更します。
+- ビルド実行アシスタントは、確認済み計画を実行した場合だけ新しい出力フォルダーと件数制限付き履歴を作ります。
+- シーン作業セットは、確認済み計画を実行した場合だけシーン順、読込状態、使用中シーンを変更し、シーンの保存や未保存変更の破棄は行いません。
+- 実行中調整は、再生中に手動記録した選択項目だけを差分確認後に反映します。成功時はシーンを未保存状態にしますが保存せず、失敗時は反映と復元の結果を別々に報告します。
 
-## 状態復元
+## 旧パッケージとの競合
 
-導入・更新対象は`SessionState`へ保存します。domain reload後、全対象が目的versionへ到達していれば完了としてqueueを消去します。対象が残る場合は、同じ固定URL集合でPackage Manager要求を再開できます。
+入力補助、入力コマンド、ゲーム規則、決定論的シミュレーションには、統合前の44パッケージと同じ公開名前空間・型が含まれます。旧パッケージ識別子または`Assets/Modules/<旧フォルダー>`が一件でも残る場合、導入・更新前に停止します。
 
-Unity Editor自体を終了すると`SessionState`は保証されません。再起動後はwindowを開き直し、未導入分を再選択してください。
+移行時は版管理で差分を確認し、アセンブリ定義の参照先を統合先へ書き換えた後、旧パッケージまたは旧ソース複製を手動で取り除きます。競合を解消してから画面を開き直し、対象を再確認してください。
 
-## 非対象
+## 更新の扱い
 
-- packageのdowngrade、削除
-- 任意Git URLやregistryの入力
-- `Assets/Modules` copyの自動移動・削除
-- 統合前のUPM packageの自動Remove、asmdef参照の自動書き換え
-- package間のAPI統合や型名変更
-- custom bundleの保存
+画面上部には、更新対象の日本語名と固定版を表示します。「N件を更新」を押す前に対象を確認してください。
 
-## 検証
+意味的な版番号の順序で比較し、公開前版から安定版への更新は対象に含めます。より新しい版への降格や、独自版の上書きは行いません。処理開始直前とスクリプト再読込後にも、対象が引き続き導入済みか、旧モジュール競合が発生していないかを再確認します。
 
-- 22件のcatalog package名、folder名、tagと、6 bundle（`7 / 7 / 3 / 3 / 1 / 1`）参照の一意性
-- 4統合先に登録した旧44 package ID・folderの完全性と一意性
-- installed packageの除外、選択重複の除外、入力順の保持
-- 現行・統合前のAssets copy競合、統合前のUPM package競合、unknown packageのmutation前停止
-- 複数URLを1要求へまとめること
-- 安定版とprereleaseをSemVer順で比較し、古いversionだけを更新して新しいversionや独自versionを変更しないこと
-- 成功・失敗・domain reload相当のqueue復元
-- Editor windowの更新一覧、4 workflow card、折りたたみ済みの2専門collection、22個の個別導入行とREADME導線
+## 失敗時
+
+Package Managerが失敗した場合は、日本語の失敗案内に続けて、Package Managerから返された原文の詳細を表示します。処理待ち一覧を消去して終了し、自動再試行は行いません。
+
+パッケージ追加に伴うスクリプト再読込で画面が閉じた場合は、`Tools > モジュール管理 > 開く`から再度開いてください。同じUnity起動中であれば処理待ち一覧を復元します。
+
+## 対応環境
+
+- Unity 6000.5.7f1以降
+- エディター専用
+- Gitとネットワーク接続が必要

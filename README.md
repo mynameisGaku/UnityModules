@@ -11,7 +11,7 @@ Unity で繰り返し発生する設定、実装、確認作業を減らすた�
 
 | 困りごと | 推奨モジュール | まずできること |
 |---|---|---|
-| Git URLを1件ずつ追加せず、用途別にモジュールをまとめて導入・更新したい | [モジュール管理（Module Manager）](ModuleInstaller/) | 普段使う4workflowから選び、用途・最初の操作・変更範囲を確認して導入する。専門向けcollectionと個別moduleは折りたたみから選べる。 |
+| Git URLを1件ずつ追加せず、用途別にモジュールをまとめて導入・更新したい | [モジュール管理](ModuleInstaller/) | 四つの一般用途から選び、用途・最初の操作・変更範囲を確認して導入する。二つの専門機能と22件の個別一覧は折りたたみから選べる。 |
 | 新しいProjectごとに基本フォルダー、asmdef、Git設定、Player識別子、build方式、managed code削除強度、IL2CPP最適化、開始Scene、Layer衝突を手作業したくない | [プロジェクト一括設定（Project Setup）](ProjectSetup/) | `Assets`配下の基本フォルダー、Runtime・Editor・test用asmdef、Unity向け`.gitignore`と`.gitattributes`、Project Settings、build target別Application Identifier・Scripting Backend・API Compatibility Level・Managed Stripping Level・IL2CPP Code Generation、Root Namespace、Play Mode開始Scene、条件付きコンパイル記号、Tag・Layer、Physics／Physics 2D Layer Collision、Build Scenesをbackup付きでまとめて適用する。 |
 | asmdefの参照元・参照先、循環、PlayerからEditorへの逆参照とasmref target不備を確認したい | [Assembly依存チェック（Assembly Dependency Audit）](AssemblyDependencyAudit/) | `Assets`と導入済み`Packages`のasmdefをread-onlyで走査して3列graphを表示し、選択asmdef／asmrefに関係するissueは500件ずつ全50,000件まで確認する。選択asmdefでは循環componentの全memberと、宣言順・重複を保ったName／GUID参照の解決詳細も表示する。 |
 | 必須ロケールのテーブル・直接値不足とローカライズキー参照の範囲を安全に確認したい | [ローカライズキー監査](LocalizationKeyAudit/) | 未加工の共有テーブルデータを先に検証し、文字列テーブルとアセットテーブルの所有元を分離して、必須ロケールの直接テーブル・項目・値、テーブルの整合性、1回につき`Assets`または登録済みパッケージ1つだけをルートとするGUIDと項目識別子の参照を読み取り専用で表示する。結果全体の問題を4区分別に確認し、現在の絞り込みに一致する最大100,000件を500件ずつ確認して、表示中のページだけを一括コピーできる。未使用や実行時の翻訳可否は断定しない。 |
@@ -57,7 +57,7 @@ Unity で繰り返し発生する設定、実装、確認作業を減らすた�
 
 | モジュール | 内容 | 依存 |
 |---|---|---|
-| [モジュール管理（Module Manager）](ModuleInstaller/) | Project Maintenance、Scene and UI、Game Services、Input Supportの4workflowを先に示し、`Quick guide`で用途・導入後の最初の操作・変更範囲を確認してから固定公開tagをまとめて追加する。決定論・ゲーム計算は専門向けcollectionへ分離し、個別moduleは公開tagのREADMEを開いてから導入できる。**Unity 6000.5.7f1以降**。 | com.unity.modules.uielements 1.0.0 |
+| [モジュール管理](ModuleInstaller/) | プロジェクト整備、シーンと画面、ゲーム共通機能、入力処理の四つを先に示し、「簡単な案内」で用途・導入後の最初の操作・変更範囲を確認してから固定公開タグをまとめて追加する。決定論とゲーム規則の計算は専門機能へ分離し、個別モジュールは公開タグのREADMEを開いてから導入できる。**Unity 6000.5.7f1以降**。 | com.unity.modules.uielements 1.0.0 |
 | [プロジェクト一括設定（Project Setup）](ProjectSetup/) | `Assets`配下の基本フォルダー、Runtime・Editor・test用asmdef、Unity向け`.gitignore`と`.gitattributes`、Project Settings、build target別Application Identifier・Scripting Backend・API Compatibility Level・Managed Stripping Level・IL2CPP Code Generation、Root Namespace、新規scriptの改行方式、複製時の命名規則、Play Mode Start Scene、条件付きコンパイル記号、Tag・Layer・Sorting Layer、Physics／Physics 2D Layer Collision、Build Scenesをprofile化する。差分Preview、backup、適用、復元を一つのEditor画面で行い、既存fileは上書きしない。**Unity 6000.5.7f1以降**。 | com.unity.modules.uielements / physics / physics2d 1.0.0 |
 | [Assembly依存チェック（Assembly Dependency Audit）](AssemblyDependencyAudit/) | `Assets`と導入済み`Packages`のasmdefをread-onlyで走査し、参照元・assembly・参照先の3列graph、選択asmdefが属する循環componentのmember集合、宣言したName／GUID参照のraw valueと一意な解決先、未解決・曖昧・自己参照、PlayerからEditor専用assemblyへの逆参照、platform指定の矛盾を表示する。選択asmdef／asmrefに関係するissueはresult順の500件pageで全50,000件、component memberはcycle pathではないasset path順の集合として全10,000件、宣言参照は順序と重複を保って全4,096件へ到達できる。asmrefは別一覧でtarget整合性を検査し、同じfolderに複数あるasmdef／asmref owner候補も各assetへ報告する。依存graphへの推測edge、未使用参照やcompile時間の推定は行わないEditor専用module。**Unity 6000.5.7f1以降**。 | なし |
 | [ローカライズキー監査](LocalizationKeyAudit/) | Unity Localizationの共有テーブルデータを型指定の読み込み前に未加工のまま検証し、文字列テーブルとアセットテーブルの所有元を分離して、必須ロケールの直接テーブル・項目・値、重複・孤立の整合性、1回につき`Assets`または登録済みパッケージ1つだけをルートとするGUIDと項目識別子の参照を手動表示する、読み取り専用の助言モジュール。結果全体の問題を絞り込みやページに依存しない4区分別件数でも示し、絞り込み後の最大100,000件へ500件ずつ最大200ページで到達して、現在のページだけを結果内の順序と重複を保ったまま一括コピーできる。同じルート内では複数パスを宣言でき、パッケージ範囲は登録名から安全な物理ルートへ解決して、結果には論理パスだけを残す。アセットテーブルの項目、代替値適用後の実行時翻訳、キーの未使用は断定せず、ビルド停止、自動修正、削除を行わない。**Unity 6000.5.7f1以降**。 | com.unity.localization 1.5.12 |
@@ -106,7 +106,7 @@ Unity で繰り返し発生する設定、実装、確認作業を減らすた�
 
 ## 使い方
 
-新しいProjectでは、まず [モジュール管理（Module Manager）](ModuleInstaller/) をPackage Managerへ追加し、`Tools > Module Manager > Open`から4つの実用workflowを選ぶ。`Quick guide`で用途・最初の操作・変更範囲を確認し、未導入moduleの追加件数を確認してから実行する。専門向けcollectionと22件の個別一覧は初期状態で折りたたまれ、個別行の`Read guide`はcatalogと同じ公開tagのREADMEを開く。更新は公開tagへ固定され、同じversion・より新しいversion・catalog外versionを上書きしない。統合前の旧packageや`Assets/Modules` copyが残る場合は、重複型を避けるためpackage変更前に停止し、削除対象を表示する。Module Manager自身は旧moduleを自動削除しない。
+新しいプロジェクトでは、まず[モジュール管理](ModuleInstaller/)をPackage Managerへ追加し、`Tools > モジュール管理 > 開く`から四つの一般用途を選ぶ。「簡単な案内」で用途・最初の操作・変更範囲を確認し、未導入モジュールの件数を確認してから実行する。二つの専門機能と22件の個別一覧は初期状態で折りたたまれ、個別行の「説明を読む」は一覧と同じ公開タグのREADMEを開く。更新は公開タグへ固定され、同じ版、より新しい版、一覧外の独自版を上書きしない。統合前の旧パッケージや`Assets/Modules`内の複製が残る場合は、重複型を避けるためPackage Manager変更前に停止する。モジュール管理自身は旧モジュールを自動削除しない。
 
 新規Projectの設定をそろえる場合は、[プロジェクト一括設定（Project Setup）](ProjectSetup/) を追加して `Tools > Project Setup > Open` を開く。`New recommended profile`で安全な推奨profileを作り、必要なら基本フォルダー、Runtime・Editor・test用asmdef、Unity向け`.gitignore`と`.gitattributes`、build target別Application Identifier・Scripting Backend・API Compatibility Level・Managed Stripping Level・IL2CPP Code Generation、Root Namespace、新規scriptの改行方式、複製時の命名規則、Play Mode Start Scene、条件付きコンパイル記号、Tag・Layer・Sorting Layer、Physics／Physics 2D Layer Collision、Build Scenesを追加する。`Preview changes`で差分を確認してから`Apply profile`を実行すると、適用直前の設定とツールが自動backupされる。復元時は、ツールが作成した後に内容が変わっていないfileだけを削除する。
 

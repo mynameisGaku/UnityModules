@@ -10,7 +10,10 @@ namespace ModuleInstaller.Editor
 {
     internal sealed class ModuleInstallerWindow : EditorWindow
     {
-        internal const string WindowTitle = "Module Manager";
+        internal const string WindowTitle = "モジュール管理";
+        internal const string MenuPath = "Tools/モジュール管理/開く";
+        internal const string TitleElementName = "module-installer-title";
+        internal const string DescriptionElementName = "module-installer-description";
         internal const string StatusElementName = "module-installer-status";
         internal const string UpdateSummaryElementName = "module-installer-update-summary";
         internal const string UpdateButtonElementName = "module-installer-update-all";
@@ -23,8 +26,7 @@ namespace ModuleInstaller.Editor
         private Button _updateButton;
         private readonly List<InstallButtonBinding> _installButtons = new List<InstallButtonBinding>();
 
-        [MenuItem("Tools/Module Manager/Open", priority = 1200)]
-        [MenuItem("Tools/Module Installer/Open", priority = 1200)]
+        [MenuItem(MenuPath, priority = 1200)]
         internal static void Open()
         {
             var window = GetWindow<ModuleInstallerWindow>();
@@ -41,13 +43,19 @@ namespace ModuleInstaller.Editor
             rootVisualElement.style.paddingTop = 12f;
             rootVisualElement.style.paddingBottom = 12f;
 
-            var title = new Label("Choose a workflow, then install only what it needs");
+            var title = new Label("用途を選び、必要なモジュールだけを導入します")
+            {
+                name = TitleElementName
+            };
             title.style.fontSize = 22f;
             title.style.unityFontStyleAndWeight = FontStyle.Bold;
             rootVisualElement.Add(title);
 
             var description = new Label(
-                "Start with four practical workflows. Each card explains when to use it, the first action after installation, and what can change. Specialized libraries remain available below.");
+                "まず四つの用途別セットから選びます。各項目で、向いている状況、導入後の最初の操作、変更される範囲を確認できます。専門的な計算部品は下部にまとめています。")
+            {
+                name = DescriptionElementName
+            };
             description.style.whiteSpace = WhiteSpace.Normal;
             description.style.marginTop = 4f;
             description.style.marginBottom = 8f;
@@ -74,7 +82,7 @@ namespace ModuleInstaller.Editor
 
             _updateButton = new Button(UpdateInstalled)
             {
-                text = "Check updates",
+                text = "更新を確認",
                 name = UpdateButtonElementName
             };
             _updateButton.style.width = 150f;
@@ -90,7 +98,7 @@ namespace ModuleInstaller.Editor
             scrollView.Add(bundles);
             var specialized = new Foldout
             {
-                text = "Specialized collections: deterministic simulation and game-rule math",
+                text = "専門機能：決定論的シミュレーションとゲーム規則の計算",
                 value = false,
                 name = SpecializedBundleListElementName
             };
@@ -111,7 +119,7 @@ namespace ModuleInstaller.Editor
 
             var advanced = new Foldout
             {
-                text = "Advanced: read about or install one module",
+                text = "個別導入：説明を読む、または一つだけ導入する",
                 value = false,
                 name = PackageListElementName
             };
@@ -164,7 +172,7 @@ namespace ModuleInstaller.Editor
 
             var button = new Button(() => InstallBundle(bundle))
             {
-                text = "Install bundle",
+                text = "一括導入",
                 name = $"install-bundle-{bundle.Id}"
             };
             button.style.width = 118f;
@@ -181,14 +189,14 @@ namespace ModuleInstaller.Editor
 
             var guide = new Foldout
             {
-                text = "Quick guide",
+                text = "簡単な案内",
                 value = false,
                 name = $"guide-bundle-{bundle.Id}"
             };
             guide.style.marginTop = 5f;
-            guide.Add(CreateGuideLine("Use when", bundle.UseWhen));
-            guide.Add(CreateGuideLine("Start here", bundle.FirstStep));
-            guide.Add(CreateGuideLine("Change scope", bundle.ChangeScope));
+            guide.Add(CreateGuideLine("向いている状況", bundle.UseWhen));
+            guide.Add(CreateGuideLine("最初の操作", bundle.FirstStep));
+            guide.Add(CreateGuideLine("変更される範囲", bundle.ChangeScope));
             card.Add(guide);
 
             var packageSummary = new Label(BuildPackageSummary(bundle.PackageNames))
@@ -221,9 +229,9 @@ namespace ModuleInstaller.Editor
 
             var readmeButton = new Button(() => OpenReadme(entry))
             {
-                text = "Read guide",
+                text = "説明を読む",
                 name = $"readme-package-{entry.PackageName}",
-                tooltip = entry.ReadmeUrl
+                tooltip = entry.GuideUrl
             };
             readmeButton.style.width = 88f;
             readmeButton.style.flexShrink = 0f;
@@ -232,7 +240,7 @@ namespace ModuleInstaller.Editor
 
             var button = new Button(() => InstallPackage(entry))
             {
-                text = "Install",
+                text = "導入",
                 name = $"install-package-{entry.PackageName}"
             };
             button.style.width = 82f;
@@ -286,7 +294,7 @@ namespace ModuleInstaller.Editor
 
         private static void OpenReadme(ModuleCatalogEntry entry)
         {
-            Application.OpenURL(entry.ReadmeUrl);
+            Application.OpenURL(entry.GuideUrl);
         }
 
         private void UpdateInstalled()
@@ -314,7 +322,7 @@ namespace ModuleInstaller.Editor
 
             var message = ModuleInstallDriver.LastMessage;
             _status.text = string.IsNullOrEmpty(message)
-                ? "Ready. Missing modules can be installed, and outdated installed modules can be updated to pinned releases."
+                ? "準備できました。未導入のモジュールを追加し、固定版より古い導入済みモジュールを更新できます。"
                 : message;
 
             var updatePlan = ModuleInstallDriver.BuildUpdatePlan();
@@ -322,22 +330,22 @@ namespace ModuleInstaller.Editor
             _updateButton.tooltip = updatePlan.Issues.Count > 0 ? updatePlan.Issues[0].Message : string.Empty;
             if (ModuleInstallDriver.IsBusy)
             {
-                _updateButton.text = "Working...";
+                _updateButton.text = "処理中…";
                 _updateButton.SetEnabled(false);
             }
             else if (updatePlan.Issues.Count > 0)
             {
-                _updateButton.text = "Resolve issue";
+                _updateButton.text = "問題を解消";
                 _updateButton.SetEnabled(false);
             }
             else if (updatePlan.Entries.Count == 0)
             {
-                _updateButton.text = "Up to date";
+                _updateButton.text = "更新不要";
                 _updateButton.SetEnabled(false);
             }
             else
             {
-                _updateButton.text = $"Update {updatePlan.Entries.Count}";
+                _updateButton.text = $"{updatePlan.Entries.Count}件を更新";
                 _updateButton.SetEnabled(true);
             }
 
@@ -348,22 +356,22 @@ namespace ModuleInstaller.Editor
                 binding.Button.tooltip = plan.Issues.Count > 0 ? plan.Issues[0].Message : string.Empty;
                 if (ModuleInstallDriver.IsBusy)
                 {
-                    binding.Button.text = "Installing...";
+                    binding.Button.text = "導入中…";
                     binding.Button.SetEnabled(false);
                 }
                 else if (plan.Issues.Count > 0)
                 {
-                    binding.Button.text = "Resolve conflict";
+                    binding.Button.text = "競合を解消";
                     binding.Button.SetEnabled(false);
                 }
                 else if (plan.Entries.Count == 0)
                 {
-                    binding.Button.text = "Installed";
+                    binding.Button.text = "導入済み";
                     binding.Button.SetEnabled(false);
                 }
                 else
                 {
-                    binding.Button.text = binding.IsBundle ? $"Install {plan.Entries.Count}" : "Install";
+                    binding.Button.text = binding.IsBundle ? $"{plan.Entries.Count}件を導入" : "導入";
                     binding.Button.SetEnabled(true);
                 }
             }
@@ -378,16 +386,16 @@ namespace ModuleInstaller.Editor
 
             if (plan.Entries.Count == 0)
             {
-                return "Installed catalog modules are up to date.";
+                return "導入済みの一覧掲載モジュールは固定版と一致しています。";
             }
 
             var names = new string[plan.Entries.Count];
             for (var index = 0; index < plan.Entries.Count; index++)
             {
-                names[index] = $"{plan.Entries[index].DisplayName} -> {plan.Entries[index].Version}";
+                names[index] = $"{plan.Entries[index].DisplayName} → {plan.Entries[index].Version}";
             }
 
-            return $"Updates available: {string.Join(", ", names)}";
+            return $"更新可能：{string.Join("、", names)}";
         }
 
         private sealed class InstallButtonBinding

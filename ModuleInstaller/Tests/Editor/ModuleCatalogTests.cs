@@ -23,10 +23,33 @@ namespace ModuleInstaller.Editor.Tests
                 Assert.That(entry.GitUrl, Does.Contain($"?path=/{entry.FolderName}#{entry.Tag}"));
                 Assert.That(entry.GitUrl, Does.Not.Contain("#main"));
                 Assert.That(entry.GitUrl, Does.Not.Contain("#dev"));
-                Assert.That(entry.ReadmeUrl, Is.EqualTo($"https://github.com/mynameisGaku/UnityModules/blob/{entry.Tag}/{entry.FolderName}/README.md"));
+                Assert.That(entry.GuideUrl, Is.EqualTo($"https://github.com/mynameisGaku/UnityModules/blob/{entry.Tag}/{entry.FolderName}/{entry.GuideRelativePath}"));
+                Assert.That(entry.GuideRelativePath, Does.Not.StartWith("/"));
+                Assert.That(entry.GuideRelativePath, Does.Not.Contain(".."));
                 Assert.That(entry.Version, Is.Not.Empty);
                 Assert.That(entry.Tag, Does.EndWith($"-v{entry.Version}"));
                 Assert.That(entry.Tag, Does.Match(@"-v\d+\.\d+\.\d+$"));
+            }
+        }
+
+        [Test]
+        public void Catalog_UsesJapaneseVisibleText()
+        {
+            for (var index = 0; index < ModuleCatalog.Entries.Count; index++)
+            {
+                var entry = ModuleCatalog.Entries[index];
+                Assert.That(ContainsJapanese(entry.DisplayName), Is.True, entry.PackageName);
+                Assert.That(ContainsJapanese(entry.Summary), Is.True, entry.PackageName);
+            }
+
+            for (var index = 0; index < ModuleCatalog.Bundles.Count; index++)
+            {
+                var bundle = ModuleCatalog.Bundles[index];
+                Assert.That(ContainsJapanese(bundle.DisplayName), Is.True, bundle.Id);
+                Assert.That(ContainsJapanese(bundle.Summary), Is.True, bundle.Id);
+                Assert.That(ContainsJapanese(bundle.UseWhen), Is.True, bundle.Id);
+                Assert.That(ContainsJapanese(bundle.FirstStep), Is.True, bundle.Id);
+                Assert.That(ContainsJapanese(bundle.ChangeScope), Is.True, bundle.Id);
             }
         }
 
@@ -44,7 +67,7 @@ namespace ModuleInstaller.Editor.Tests
                 Assert.That(bundleIds.Add(bundle.Id), Is.True, bundle.Id);
                 Assert.That(bundle.UseWhen, Is.Not.Empty, bundle.Id);
                 Assert.That(bundle.FirstStep, Is.Not.Empty, bundle.Id);
-                Assert.That(bundle.ChangeScope, Does.Contain("Installation"), bundle.Id);
+                Assert.That(bundle.ChangeScope, Does.Contain("導入操作"), bundle.Id);
                 if (bundle.Tier == ModuleBundleTier.Recommended)
                 {
                     recommendedCount++;
@@ -79,10 +102,10 @@ namespace ModuleInstaller.Editor.Tests
                 "com.studiogaku.input-gate"
             }));
             Assert.That(ModuleCatalog.TryFindEntry("com.studiogaku.input-assist", out var inputAssist), Is.True);
-            Assert.That(inputAssist.DisplayName, Is.EqualTo("Input Assist"));
+            Assert.That(inputAssist.DisplayName, Is.EqualTo("入力補助"));
             Assert.That(ModuleCatalog.TryFindEntry("com.studiogaku.input-command", out var inputCommand), Is.True);
-            Assert.That(inputCommand.DisplayName, Is.EqualTo("Input Command"));
-            Assert.That(inputCommand.Summary, Does.Contain("tick-based sequence").And.Contain("stateless priority selection").And.Contain("sample-based stabilization"));
+            Assert.That(inputCommand.DisplayName, Is.EqualTo("入力コマンド"));
+            Assert.That(inputCommand.Summary, Does.Contain("刻み単位の並び判定").And.Contain("状態を持たない優先選択").And.Contain("入力標本を使う安定化"));
         }
 
         [Test]
@@ -115,9 +138,9 @@ namespace ModuleInstaller.Editor.Tests
                 "com.studiogaku.time-control",
                 "com.studiogaku.startup-flow"
             }));
-            Assert.That(bundle.Summary, Does.Contain("Play Mode tuning").And.Contain("saved Scenes"));
-            Assert.That(bundle.FirstStep, Does.Contain("Tools > Scene Workspace > Open").And.Contain("Tools > Play Mode Tuning > Open").And.Contain("capture manually during Play").And.Contain("Preview After Play"));
-            Assert.That(bundle.ChangeScope, Does.Contain("Installation changes Packages only").And.Contain("Scene order").And.Contain("never saves or discards Scene changes").And.Contain("non-stale reviewed plan").And.Contain("marks the Scene dirty without saving").And.Contain("rollback outcomes separately"));
+            Assert.That(bundle.Summary, Does.Contain("再生中調整").And.Contain("シーン切り替え"));
+            Assert.That(bundle.FirstStep, Does.Contain("Tools > Scene Workspace > Open").And.Contain("Tools > Play Mode Tuning > Open").And.Contain("再生中に手動記録").And.Contain("再生終了後の差分確認"));
+            Assert.That(bundle.ChangeScope, Does.Contain("導入操作が変更するのはパッケージ設定だけ").And.Contain("シーン順").And.Contain("未保存変更の破棄は行いません").And.Contain("有効な同一の確認済み計画").And.Contain("未保存状態").And.Contain("復元結果は別々に報告"));
         }
 
         [Test]
@@ -125,7 +148,9 @@ namespace ModuleInstaller.Editor.Tests
         {
             Assert.That(ModuleCatalog.TryFindEntry("com.studiogaku.project-setup", out var entry), Is.True);
             Assert.That(entry.Tag, Is.EqualTo("project-setup-v1.15.0"));
-            Assert.That(entry.Summary, Does.Contain("project folders").And.Contain("test assembly definitions").And.Contain("version control files").And.Contain("managed stripping levels").And.Contain("code generation defaults").And.Contain("duplicate naming defaults").And.Contain("scripting define symbols").And.Contain("Tags").And.Contain("Layers").And.Contain("Build Scenes").And.Contain("Play Mode Start Scene"));
+            Assert.That(entry.GuideRelativePath, Is.EqualTo("Documentation~/index.md"));
+            Assert.That(entry.GuideUrl, Does.Not.Contain("project-setup-v1.14.0"));
+            Assert.That(entry.Summary, Does.Contain("推奨フォルダー").And.Contain("試験用アセンブリ定義").And.Contain("版管理ファイル").And.Contain("管理コード削減強度").And.Contain("コード生成規則").And.Contain("複製時の命名規則").And.Contain("条件付きコンパイル記号").And.Contain("タグ").And.Contain("レイヤー").And.Contain("ビルド対象シーン").And.Contain("再生開始シーン"));
         }
 
         [Test]
@@ -134,8 +159,8 @@ namespace ModuleInstaller.Editor.Tests
             Assert.That(ModuleCatalog.TryFindEntry("com.studiogaku.asset-import-audit", out var entry), Is.True);
             Assert.That(entry.FolderName, Is.EqualTo("AssetImportAudit"));
             Assert.That(entry.Tag, Is.EqualTo("asset-import-audit-v1.1.0"));
-            Assert.That(entry.DisplayName, Is.EqualTo("Texture Import Settings"));
-            Assert.That(entry.Summary, Does.Contain("shared").And.Contain("Standalone").And.Contain("Android").And.Contain("iOS").And.Contain("reviewed preview"));
+            Assert.That(entry.DisplayName, Is.EqualTo("テクスチャー取込設定監査"));
+            Assert.That(entry.Summary, Does.Contain("共通設定").And.Contain("Standalone").And.Contain("Android").And.Contain("iOS").And.Contain("差分を確認"));
         }
 
         [Test]
@@ -144,8 +169,8 @@ namespace ModuleInstaller.Editor.Tests
             Assert.That(ModuleCatalog.TryFindEntry("com.studiogaku.build-assistant", out var entry), Is.True);
             Assert.That(entry.FolderName, Is.EqualTo("BuildAssistant"));
             Assert.That(entry.Tag, Is.EqualTo("build-assistant-v1.0.0"));
-            Assert.That(entry.DisplayName, Is.EqualTo("Build Assistant"));
-            Assert.That(entry.Summary, Does.Contain("reviewed desktop standalone builds").And.Contain("new output folders").And.Contain("bounded history").And.Contain("size changes").And.Contain("JSON reports"));
+            Assert.That(entry.DisplayName, Is.EqualTo("ビルド実行アシスタント"));
+            Assert.That(entry.Summary, Does.Contain("デスクトップ向けビルド計画").And.Contain("新しい出力フォルダー").And.Contain("件数を制限した履歴").And.Contain("容量差").And.Contain("JSON形式の報告"));
         }
 
         [Test]
@@ -154,8 +179,8 @@ namespace ModuleInstaller.Editor.Tests
             Assert.That(ModuleCatalog.TryFindEntry("com.studiogaku.scene-workspace", out var entry), Is.True);
             Assert.That(entry.FolderName, Is.EqualTo("SceneWorkspace"));
             Assert.That(entry.Tag, Is.EqualTo("scene-workspace-v1.0.0"));
-            Assert.That(entry.DisplayName, Is.EqualTo("Scene Workspace"));
-            Assert.That(entry.Summary, Does.Contain("ordered multi-scene editor workspaces").And.Contain("stale-plan checks").And.Contain("post-verification").And.Contain("rollback reporting"));
+            Assert.That(entry.DisplayName, Is.EqualTo("シーン作業セット"));
+            Assert.That(entry.Summary, Does.Contain("複数シーンの順番").And.Contain("計画の有効性確認").And.Contain("切り替え後の検証").And.Contain("復元報告"));
         }
 
         [Test]
@@ -391,6 +416,21 @@ namespace ModuleInstaller.Editor.Tests
                 Assert.That(allLegacyPackages.Add(entry.LegacyPackageNames[index]), Is.True, entry.LegacyPackageNames[index]);
                 Assert.That(allLegacyFolders.Add(entry.LegacyFolderNames[index]), Is.True, entry.LegacyFolderNames[index]);
             }
+        }
+
+        private static bool ContainsJapanese(string value)
+        {
+            for (var index = 0; index < value.Length; index++)
+            {
+                var character = value[index];
+                if (character >= '\u3040' && character <= '\u30ff'
+                    || character >= '\u3400' && character <= '\u9fff')
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 }

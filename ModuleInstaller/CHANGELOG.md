@@ -1,143 +1,148 @@
-# Changelog
+# 変更履歴
+
+## [1.6.0] - 2026-08-31
+
+- 画面名、メニュー、用途別セット、22件の機能名と概要、操作案内、状態、競合理由を日本語へ統一しました。
+- パッケージ表示名、説明、README、詳細文書、操作画像を日本語へ更新しました。
+- 表示文が日本語であることを一覧と画面の回帰試験で固定しました。
+- 開発ブランチ側の新版へ先行せず、リモートから取得できる公開タグだけを一覧へ固定する方針を明記しました。
+- プロジェクト一括設定 1.15.0のタグ内READMEが旧版URLを含むため、「説明を読む」を同じタグ内の正しい詳細文書へ変更しました。
+- スクリプト再読込後の待機一覧に保存されたURLを信用せず、現在の固定一覧からURLと対象版を再構築してからPackage Managerを呼ぶようにしました。
+- Package Manager開始時の同期例外で待機一覧が残らないようにし、日本語の対処案内とUnityが返した原文詳細を分けて表示しました。
 
 ## [1.5.0] - 2026-08-24
 
-- 65個から統合された24 packageのうち、公開tagを持つ22件を6 bundle（`7 / 7 / 3 / 3 / 1 / 1`）としてcatalogへ整理しました。
-- Input Assist 2.0.0、Input Command 1.0.0、Gameplay Rules 1.0.0、Deterministic Simulation 1.0.0へ、旧44 packageの機能をnamespaceと公開型名を維持したまま集約しました。
-- Scene and UIへPlay Mode Tuning 1.0.0を追加し、7件構成へ更新しました。対象選択、Play Mode中の手動取り込み、非変更Preview、確認、同一・未使用計画の単回反映、Scene dirty、保存は手動、ApplyとRollbackの個別結果を案内します。
-- Input SupportへInput Command 1.0.0を追加し、Input Assist、Input Command、Input Gateの3件構成へ更新しました。
-- 統合前のUPM package IDまたは`Assets/Modules/<旧Folder>`が残る場合、導入・更新ともPackage Managerの変更前に停止する競合検査を追加しました。旧packageやsource copyは自動削除せず、利用者が内容を確認して手動で移行します。
-- 個別一覧を22件へ更新し、bundle、更新一覧、競合表示、README導線の回帰testを新しいcatalogへ合わせました。
+- 統合後の公開タグを持つ22パッケージを、六つの用途別セット（`7 / 7 / 3 / 3 / 1 / 1`）へ整理しました。
+- 入力補助 2.0.0、入力コマンド 1.0.0、ゲーム規則 1.0.0、決定論的シミュレーション 1.0.0へ、旧44パッケージの機能を名前空間と公開型名を維持したまま集約しました。
+- 「シーンと画面」へ実行中調整 1.0.0を追加し、七件構成へ更新しました。
+- 「入力処理」へ入力コマンド 1.0.0を追加し、三件構成へ更新しました。
+- 統合前のパッケージ識別子または`Assets/Modules/<旧フォルダー>`が残る場合、導入・更新ともPackage Manager変更前に停止する競合検査を追加しました。
+- 個別一覧、用途別セット、更新一覧、競合表示、README導線の試験を統合後の一覧へ合わせました。
 
 ## [1.4.9] - 2026-08-23
 
-- 「シーン作業セット」v1.0.0をcatalogとScene and UIへ追加しました。
-- Scene and UIを6件、個別一覧を43件へ拡張し、EditorのScene作業構成をRuntimeのScene遷移より前へ配置しました。
-- package導入、Profile作成・編集・Capture、確認済みScene構成の切り替えが変更する範囲を分けて明記しました。
-- catalog、bundle順、Editor windowの表示順と個別導線を回帰testで固定しました。
-- 導入済みprereleaseをSemVer順で比較し、公開済み安定版への更新を誤って不要扱いしないようにしました。
+- シーン作業セット 1.0.0を一覧と「シーンと画面」へ追加しました。
+- 「シーンと画面」を六件、個別一覧を43件へ拡張しました。
+- パッケージ導入、設定作成・編集・取込、確認済みシーン構成の切り替えが変更する範囲を分けて記載しました。
+- 公開前版を意味的な版番号の順序で比較し、公開済み安定版への更新を誤って不要扱いしないようにしました。
 
 ## [1.4.8] - 2026-08-23
 
-- 「ビルド実行アシスタント」v1.0.0をcatalogとProject Maintenanceへ追加しました。
-- Project Maintenanceを7件、個別一覧を42件へ拡張し、build実行をworkflowの最後に配置しました。
-- package導入だけではProjectや出力先を変更せず、Build Assistantで確認済みbuildを実行した場合だけ新しい出力folderと履歴を作る範囲を明記しました。
-- catalog、bundle順、Editor windowの個別導線を回帰testで固定しました。
+- ビルド実行アシスタント 1.0.0を一覧と「プロジェクト整備」へ追加しました。
+- 「プロジェクト整備」を七件、個別一覧を42件へ拡張しました。
+- 確認済みビルドを実行した場合だけ、新しい出力フォルダーと履歴を作る変更範囲を明記しました。
+- 一覧、並び順、個別導線の回帰試験を追加しました。
 
 ## [1.4.7] - 2026-08-23
 
-- Added Asset Import Audit v1.1.0 to the catalog and Project Maintenance workflow.
-- Moved each workflow install action below its guide and package list so the window reads from selection to confirmation to installation.
-- Clarified that texture importer settings change only after Asset Import Audit's own preview and apply actions.
-- Expanded catalog and Editor window regression coverage to 41 pinned modules.
-- Added real Editor screenshots and a numbered top-to-bottom operation guide.
+- テクスチャー取込設定監査 1.1.0を一覧と「プロジェクト整備」へ追加しました。
+- 各セットの導入操作を案内と対象一覧の下へ移し、確認してから導入する順序へ整えました。
+- テクスチャー取込設定が、対象確認と明示的な反映操作の後にだけ変わることを明記しました。
+- 一覧と画面の回帰試験を41件へ拡張し、実画面画像と番号付き操作案内を追加しました。
 
 ## [1.4.6] - 2026-08-23
 
-- Corrected the documentation heading and pinned package URLs for the v1.4.6 release.
+- 1.4.6公開用の文書見出しと固定パッケージURLを修正しました。
 
 ## [1.4.5] - 2026-08-23
 
-- Updated Project Setup to v1.15.0 for build-target IL2CPP Code Generation preview, backup, apply, and restore.
-- Added speed-versus-size guidance to the Project Maintenance workflow.
+- プロジェクト一括設定を1.15.0へ更新し、対象機種別のIL2CPP生成方針を差分確認、控え、反映、復元の対象へ追加しました。
+- 実行速度重視と容量重視の選択案内を「プロジェクト整備」へ追加しました。
 
 ## [1.4.4] - 2026-08-22
 
-- Updated Project Setup to v1.14.0 for build-target Managed Stripping Level preview, backup, apply, and restore.
-- Added managed code stripping guidance to the Project Maintenance workflow.
+- プロジェクト一括設定を1.14.0へ更新し、管理コード削減強度を差分確認、控え、反映、復元の対象へ追加しました。
+- 管理コード削減の案内を「プロジェクト整備」へ追加しました。
 
 ## [1.4.3] - 2026-08-22
 
-- Updated Project Setup to v1.13.0 for build-target API Compatibility Level preview, backup, apply, and restore.
-- Added .NET Standard and .NET Framework guidance to the Project Maintenance workflow.
+- プロジェクト一括設定を1.13.0へ更新し、対象機種別のAPI互換範囲を差分確認、控え、反映、復元の対象へ追加しました。
+- `.NET Standard`と`.NET Framework`の選択案内を追加しました。
 
 ## [1.4.2] - 2026-08-22
 
-- Updated Project Setup to v1.12.0 for build-target Scripting Backend preview, backup, apply, and restore.
-- Added Scripting Backend guidance to the Project Maintenance workflow.
+- プロジェクト一括設定を1.12.0へ更新し、対象機種別の実行方式を差分確認、控え、反映、復元の対象へ追加しました。
+- MonoとIL2CPPの選択案内を追加しました。
 
 ## [1.4.1] - 2026-08-22
 
-- Updated Project Setup to v1.11.0 for build-target application identifier preview, backup, apply, and restore.
-- Added application identifier guidance to the Project Maintenance workflow.
+- プロジェクト一括設定を1.11.0へ更新し、対象機種別のアプリ識別子を差分確認、控え、反映、復元の対象へ追加しました。
+- アプリ識別子の案内を追加しました。
 
 ## [1.4.0] - 2026-08-22
 
-- Grouped the default window around four practical workflows and moved deterministic and game-rule libraries into a collapsed specialized section.
-- Added a quick guide to every workflow with use cases, the first action after installation, and the possible change scope.
-- Added pinned README links to every individual module row.
+- 初期画面を四つの一般用途中心へ組み直し、決定論とゲーム規則の計算を折りたたみ式の専門機能へ分けました。
+- 各用途別セットへ、向いている状況、導入後の最初の操作、変更される範囲を示す簡単な案内を追加しました。
+- 個別行から固定版READMEを開けるようにしました。
 
 ## [1.3.9] - 2026-08-22
 
-- Updated Project Setup to v1.10.0 for Unity-ready .gitignore and .gitattributes setup.
-- Clarified that existing files are preserved and Restore removes only unchanged files created by Project Setup.
+- プロジェクト一括設定を1.10.0へ更新し、Unity向け`.gitignore`と`.gitattributes`の作成に対応しました。
+- 既存ファイルを維持し、復元時は本ツールが作成して内容が変わっていないファイルだけを削除することを明記しました。
 
 ## [1.3.8] - 2026-08-22
 
-- Updated Project Setup to v1.9.0 for optional EditMode and PlayMode test assembly definition setup.
-- Clarified the generated test assembly names, references, and safe restore behavior.
+- プロジェクト一括設定を1.9.0へ更新し、任意の編集時・再生時試験用アセンブリ定義の作成に対応しました。
+- 作成する試験用アセンブリ名、参照、安全な復元範囲を明記しました。
 
 ## [1.3.7] - 2026-08-22
 
-- Updated Project Setup to v1.8.0 for safe Runtime and Editor assembly definition setup.
-- Clarified that Project Setup never overwrites existing assembly definitions and restores only unchanged files it created.
+- プロジェクト一括設定を1.8.0へ更新し、実行用・エディター用アセンブリ定義の安全な作成に対応しました。
+- 既存アセンブリ定義を上書きせず、本ツールが作成して内容が変わっていないものだけを復元時に削除することを明記しました。
 
 ## [1.3.6] - 2026-08-22
 
-- Updated Project Setup to v1.7.0 for profile-owned recommended project folders.
-- Clarified that restore removes only empty folders created by Project Setup and preserves existing or used folders.
+- プロジェクト一括設定を1.7.0へ更新し、設定が所有する推奨フォルダーの作成に対応しました。
+- 復元時は本ツールが作成した空フォルダーだけを削除し、既存または使用中のフォルダーを維持することを明記しました。
 
 ## [1.3.5] - 2026-08-22
 
-- Updated Project Setup to v1.6.0 for profile-owned duplicate GameObject and Asset naming defaults.
-- Clarified that duplicate naming affects future duplicate operations and does not rename existing objects or assets.
+- プロジェクト一括設定を1.6.0へ更新し、ゲームオブジェクトとアセットの複製時命名規則に対応しました。
+- この規則が今後の複製へだけ作用し、既存物の名前は変えないことを明記しました。
 
 ## [1.3.4] - 2026-08-22
 
-- Updated Project Setup to v1.5.0 for profile-owned C# root namespace and new-script line ending defaults.
-- Clarified that Project Maintenance applies and restores code generation defaults together with existing project settings.
+- プロジェクト一括設定を1.5.0へ更新し、C#の基底名前空間と新規スクリプトの改行方式に対応しました。
+- コード生成規則を他のプロジェクト設定と一緒に反映・復元する案内を追加しました。
 
 ## [1.3.3] - 2026-08-22
 
-- Updated Project Setup to v1.4.0 for additive scripting define symbols with target-aware backup restoration.
-- Clarified that Project Maintenance can configure compile conditions without replacing existing symbols.
+- プロジェクト一括設定を1.4.0へ更新し、対象機種を考慮した条件付きコンパイル記号の追加に対応しました。
+- 既存記号を置換せず追加することを明記しました。
 
 ## [1.3.2] - 2026-08-22
 
-- Updated Project Setup to v1.3.0 for a profile-owned Play Mode Start Scene in addition to ordered Player Build Scenes.
-- Clarified that the two Scene settings serve different workflows and remain independently optional.
+- プロジェクト一括設定を1.3.0へ更新し、エディターの再生開始シーンに対応しました。
+- プレイヤーのビルド対象シーンとは独立して任意設定できることを明記しました。
 
 ## [1.3.1] - 2026-08-22
 
-- Updated Project Setup to v1.2.0 for ordered Build Scenes with enabled-state restoration.
-- Clarified which workflow bundle to choose before opening the compatibility-focused individual list.
-- Simplified the catalog version assertion so future semantic versions remain covered.
+- プロジェクト一括設定を1.2.0へ更新し、有効状態を含む順序付きビルド対象シーンに対応しました。
+- 個別一覧を開く前に用途別セットを選べるよう案内を整理しました。
+- 将来の意味的な版番号も許容するよう、一覧の版検査を簡素化しました。
 
 ## [1.3.0] - 2026-08-22
 
-- Renamed the visible tool to Module Manager while keeping the package ID and legacy menu path compatible.
-- Added an update preview and one-request update for installed catalog packages below the pinned version.
-- Prevented automatic downgrades and overwrites of newer or custom package versions.
-- Added update planning, domain reload recovery, and Editor window regression tests.
+- 表示名を`Module Manager`へ変更し、パッケージ識別子と旧メニュー経路の互換性を維持しました。
+- 導入済みパッケージの更新対象確認と、一回の要求による一括更新を追加しました。
+- より新しい版や独自版の自動降格・上書きを防止しました。
+- 更新計画、スクリプト再読込後の再開、画面の回帰試験を追加しました。
 
 ## [1.2.0] - 2026-08-22
 
-- Updated Project Setup to v1.1.0 for Tags, Layers, and Sorting Layers.
-- Added a catalog regression test for the pinned Project Setup release.
-- Kept individual module descriptions and install buttons inside the minimum window width.
+- プロジェクト一括設定を1.1.0へ更新し、タグ、レイヤー、描画順レイヤーに対応しました。
+- 固定版の一覧回帰試験を追加しました。
+- 最小画面幅でも個別説明と導入ボタンが収まるようにしました。
 
 ## [1.1.0] - 2026-08-22
 
-- Added Project Setup to the catalog and Project Maintenance bundle.
-- Added a catalog regression test for the complete Project Maintenance workflow.
+- プロジェクト一括設定を一覧と「プロジェクト整備」へ追加しました。
+- 「プロジェクト整備」の全構成を固定する一覧回帰試験を追加しました。
 
 ## [1.0.0] - 2026-08-22
 
-### Added
-
-- Added a task-based catalog of 39 pinned UnityModules packages.
-- Added six practical bundles for project maintenance, Scene and UI, game services, input support, deterministic simulation, and game rules.
-- Added installed-package filtering and Assets/Modules copy conflict detection.
-- Added one-request bundle installation with SessionState recovery across domain reloads.
-- Added an Editor window with bundle-first and advanced individual installation views.
-- Added button states for remaining package counts, completed bundles, and Assets copy conflicts.
+- 39件の公開タグ固定モジュール一覧を追加しました。
+- プロジェクト整備、シーンと画面、ゲーム共通機能、入力処理、決定論的シミュレーション、ゲーム規則の六つへ整理しました。
+- 導入済みパッケージの除外と`Assets/Modules`内のソース複製競合検査を追加しました。
+- 一回の要求による一括導入と、スクリプト再読込後の処理再開を追加しました。
+- 用途別セットを優先して表示し、個別導入もできるエディター画面を追加しました。

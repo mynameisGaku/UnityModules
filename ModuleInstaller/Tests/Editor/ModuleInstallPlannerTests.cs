@@ -173,7 +173,7 @@ namespace ModuleInstaller.Editor.Tests
             Assert.That(plan.Issues[0].Value, Is.EqualTo("com.studiogaku.input-command"));
             Assert.That(plan.Issues[0].Message, Does.Contain("com.studiogaku.input-command-buffer"));
             Assert.That(plan.Issues[0].Message, Does.Contain("Assets/Modules/InputStabilizer"));
-            Assert.That(plan.Issues[0].Message, Does.Contain("never removes legacy modules automatically"));
+            Assert.That(plan.Issues[0].Message, Does.Contain("旧モジュールを自動削除しません"));
         }
 
         [Test]

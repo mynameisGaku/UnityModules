@@ -14,6 +14,9 @@ namespace ModuleInstaller.Editor
 
     internal sealed class ModuleInstallCoordinator
     {
+        private const string InvalidStoredQueueMessage =
+            "保存されていた導入処理を確認できないため中止しました。対象を選び直してください。";
+
         private readonly IModulePackageClient _client;
         private readonly IModuleInstallEnvironment _environment;
         private readonly IModuleInstallStateStore _store;
@@ -29,7 +32,7 @@ namespace ModuleInstaller.Editor
             _store = store ?? throw new ArgumentNullException(nameof(store));
         }
 
-        internal bool IsBusy => ReadQueue().Items.Count > 0;
+        internal bool IsBusy => !string.IsNullOrEmpty(_store.QueueJson);
         internal string LastMessage => _store.LastMessage ?? string.Empty;
 
         internal bool TryStart(ModuleInstallPlan plan, out string message)
@@ -54,7 +57,7 @@ namespace ModuleInstaller.Editor
 
             if (IsBusy)
             {
-                message = "Another package operation is already in progress.";
+                message = "別のパッケージ操作を処理しています。完了後にもう一度実行してください。";
                 _store.LastMessage = message;
                 return false;
             }
@@ -69,10 +72,10 @@ namespace ModuleInstaller.Editor
             if (plan.Entries.Count == 0)
             {
                 message = operation == ModuleInstallOperation.Update
-                    ? "Every installed catalog module is up to date."
+                    ? "導入済みの一覧掲載モジュールはすべて固定版と一致しています。"
                     : plan.InstalledCount > 0
-                        ? "Every selected module is already installed."
-                        : "No module was selected.";
+                        ? "選択したモジュールはすべて導入済みです。"
+                        : "モジュールが選択されていません。";
                 _store.LastMessage = message;
                 return false;
             }
@@ -95,11 +98,11 @@ namespace ModuleInstaller.Editor
 
             WriteQueue(state);
             _store.LastMessage = operation == ModuleInstallOperation.Update
-                ? $"Preparing {state.Items.Count} module update(s)."
-                : $"Preparing {state.Items.Count} module installation(s).";
-            message = _store.LastMessage;
+                ? $"{state.Items.Count}件のモジュール更新を準備しています。"
+                : $"{state.Items.Count}件のモジュール導入を準備しています。";
             Tick();
-            return true;
+            message = _store.LastMessage;
+            return IsBusy;
         }
 
         internal void Tick()
@@ -120,19 +123,24 @@ namespace ModuleInstaller.Editor
 
                 if (!_request.Succeeded)
                 {
-                    _store.LastMessage = state.Operation == ModuleInstallOperation.Update
-                        ? $"Update failed: {_request.ErrorMessage}"
-                        : $"Installation failed: {_request.ErrorMessage}";
+                    _store.LastMessage = BuildPackageFailureMessage(state.Operation, _request.ErrorMessage, false);
                     ClearQueue();
                     _request = null;
                     return;
                 }
 
                 _store.LastMessage = state.Operation == ModuleInstallOperation.Update
-                    ? $"Updated {state.Items.Count} module(s)."
-                    : $"Installed {state.Items.Count} module(s).";
+                    ? $"{state.Items.Count}件のモジュールを更新しました。"
+                    : $"{state.Items.Count}件のモジュールを導入しました。";
                 ClearQueue();
                 _request = null;
+                return;
+            }
+
+            if (!TryCanonicalizePendingState(state, out var queueIssueMessage))
+            {
+                _store.LastMessage = queueIssueMessage;
+                ClearQueue();
                 return;
             }
 
@@ -166,8 +174,8 @@ namespace ModuleInstaller.Editor
             if (state.Items.Count == 0)
             {
                 _store.LastMessage = state.Operation == ModuleInstallOperation.Update
-                    ? "Every selected module is up to date."
-                    : "Every selected module is installed.";
+                    ? "選択したモジュールはすべて固定版と一致しています。"
+                    : "選択したモジュールはすべて導入済みです。";
                 ClearQueue();
                 return;
             }
@@ -180,9 +188,67 @@ namespace ModuleInstaller.Editor
             }
 
             _store.LastMessage = state.Operation == ModuleInstallOperation.Update
-                ? $"Updating {state.Items.Count} module(s)..."
-                : $"Installing {state.Items.Count} module(s)...";
-            _request = _client.AddAndRemove(urls);
+                ? $"{state.Items.Count}件のモジュールを更新しています…"
+                : $"{state.Items.Count}件のモジュールを導入しています…";
+            try
+            {
+                _request = _client.AddAndRemove(urls);
+            }
+            catch (Exception exception)
+            {
+                _store.LastMessage = BuildPackageFailureMessage(state.Operation, exception.Message, true);
+                ClearQueue();
+                _request = null;
+            }
+        }
+
+        private static bool TryCanonicalizePendingState(
+            ModuleInstallQueueState state,
+            out string issueMessage)
+        {
+            if (state.Operation != ModuleInstallOperation.Install
+                && state.Operation != ModuleInstallOperation.Update)
+            {
+                issueMessage = "保存されていたパッケージ操作の種類を確認できないため、処理を中止しました。対象を選び直してください。";
+                return false;
+            }
+
+            var canonicalItems = new List<ModuleInstallQueueItem>();
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            for (var index = 0; index < state.Items.Count; index++)
+            {
+                var item = state.Items[index];
+                if (item == null
+                    || string.IsNullOrEmpty(item.PackageName)
+                    || !ModuleCatalog.TryFindEntry(item.PackageName, out var entry))
+                {
+                    issueMessage = "保存されていた導入対象を現在の固定一覧で確認できないため、処理を中止しました。対象を選び直してください。";
+                    return false;
+                }
+
+                if (!seen.Add(entry.PackageName))
+                {
+                    continue;
+                }
+
+                canonicalItems.Add(new ModuleInstallQueueItem(entry.PackageName, entry.GitUrl, entry.Version));
+            }
+
+            state.Items.Clear();
+            state.Items.AddRange(canonicalItems);
+            issueMessage = string.Empty;
+            return true;
+        }
+
+        private static string BuildPackageFailureMessage(
+            ModuleInstallOperation operation,
+            string technicalDetails,
+            bool failedToStart)
+        {
+            var operationName = operation == ModuleInstallOperation.Update ? "更新" : "導入";
+            var failure = failedToStart ? "を開始できませんでした。" : "を完了できませんでした。";
+            var details = string.IsNullOrWhiteSpace(technicalDetails) ? "詳細なし" : technicalDetails;
+            return $"パッケージの{operationName}{failure}通信、権限、Git、競合状態を確認してください。技術詳細（Unity原文）：{details}";
         }
 
         private bool ValidateEntries(
@@ -249,7 +315,7 @@ namespace ModuleInstaller.Editor
                 var packageName = packageNames[index];
                 if (!installedVersions.ContainsKey(packageName))
                 {
-                    issueMessage = $"Update stopped because {packageName} is no longer installed. Refresh the update plan before retrying.";
+                    issueMessage = $"{packageName} が導入済みではなくなったため、更新を中止しました。更新対象を再確認してから、もう一度実行してください。";
                     return false;
                 }
             }
@@ -296,18 +362,34 @@ namespace ModuleInstaller.Editor
 
         private ModuleInstallQueueState ReadQueue()
         {
-            if (string.IsNullOrEmpty(_store.QueueJson))
+            var queueJson = _store.QueueJson;
+            if (string.IsNullOrEmpty(queueJson))
             {
                 return new ModuleInstallQueueState();
             }
 
             try
             {
-                return JsonUtility.FromJson<ModuleInstallQueueState>(_store.QueueJson)
-                    ?? new ModuleInstallQueueState();
+                var state = JsonUtility.FromJson<ModuleInstallQueueState>(queueJson);
+                if (state == null || !state.HasItemList)
+                {
+                    _store.LastMessage = InvalidStoredQueueMessage;
+                    ClearQueue();
+                    return new ModuleInstallQueueState();
+                }
+
+                if (state.Items.Count == 0)
+                {
+                    _store.LastMessage = InvalidStoredQueueMessage;
+                    ClearQueue();
+                    return new ModuleInstallQueueState();
+                }
+
+                return state;
             }
             catch (ArgumentException)
             {
+                _store.LastMessage = InvalidStoredQueueMessage;
                 ClearQueue();
                 return new ModuleInstallQueueState();
             }
@@ -338,7 +420,8 @@ namespace ModuleInstaller.Editor
                 set => operation = value;
             }
 
-            internal List<ModuleInstallQueueItem> Items => items;
+            internal bool HasItemList => items != null;
+            internal List<ModuleInstallQueueItem> Items => items ?? (items = new List<ModuleInstallQueueItem>());
         }
 
         [Serializable]

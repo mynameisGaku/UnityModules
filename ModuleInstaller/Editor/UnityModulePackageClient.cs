@@ -36,7 +36,7 @@ namespace ModuleInstaller.Editor
 
             public bool IsCompleted => _request.IsCompleted;
             public bool Succeeded => _request.Status == StatusCode.Success;
-            public string ErrorMessage => _request.Error?.message ?? "Unknown Package Manager error.";
+            public string ErrorMessage => _request.Error?.message ?? "パッケージ管理機能で原因不明の問題が発生しました。";
         }
     }
 }

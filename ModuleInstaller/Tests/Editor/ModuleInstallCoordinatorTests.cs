@@ -42,7 +42,7 @@ namespace ModuleInstaller.Editor.Tests
 
             Assert.That(coordinator.IsBusy, Is.False);
             Assert.That(store.QueueJson, Is.Empty);
-            Assert.That(coordinator.LastMessage, Does.StartWith("Installed"));
+            Assert.That(coordinator.LastMessage, Does.StartWith("1件のモジュールを導入しました"));
         }
 
         [Test]
@@ -61,7 +61,132 @@ namespace ModuleInstaller.Editor.Tests
 
             Assert.That(coordinator.IsBusy, Is.False);
             Assert.That(client.CallCount, Is.EqualTo(1));
+            Assert.That(coordinator.LastMessage, Does.Contain("パッケージの導入を完了できませんでした"));
+            Assert.That(coordinator.LastMessage, Does.Contain("技術詳細（Unity原文）"));
             Assert.That(coordinator.LastMessage, Does.Contain("network unavailable"));
+        }
+
+        [Test]
+        public void TryStart_SynchronousClientFailureClearsQueueWithoutRetry()
+        {
+            var client = new FakeClient
+            {
+                ExceptionToThrow = new InvalidOperationException("registry unavailable")
+            };
+            var store = new FakeStore();
+            var coordinator = CreateCoordinator(client, new FakeEnvironment(), store);
+
+            Assert.That(coordinator.TryStart(CreateSinglePlan(), out var message), Is.False);
+            Assert.That(coordinator.IsBusy, Is.False);
+            Assert.That(store.QueueJson, Is.Empty);
+            Assert.That(client.CallCount, Is.EqualTo(1));
+            Assert.That(message, Does.Contain("パッケージの導入を開始できませんでした"));
+            Assert.That(message, Does.Contain("技術詳細（Unity原文）：registry unavailable"));
+
+            coordinator.Tick();
+            Assert.That(client.CallCount, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void Tick_RebuildsStoredUrlFromCurrentPinnedCatalog()
+        {
+            var client = new FakeClient();
+            var store = new FakeStore
+            {
+                QueueJson = "{\"operation\":0,\"items\":[{\"packageName\":\"com.studiogaku.scene-flow\",\"url\":\"https://example.invalid/unreviewed\",\"targetVersion\":\"999.0.0\"}]}"
+            };
+            var coordinator = CreateCoordinator(client, new FakeEnvironment(), store);
+
+            coordinator.Tick();
+
+            Assert.That(client.CallCount, Is.EqualTo(1));
+            Assert.That(client.LastUrls.Count, Is.EqualTo(1));
+            Assert.That(ModuleCatalog.TryFindEntry("com.studiogaku.scene-flow", out var entry), Is.True);
+            Assert.That(client.LastUrls[0], Is.EqualTo(entry.GitUrl));
+            Assert.That(client.LastUrls[0], Does.Not.Contain("example.invalid"));
+        }
+
+        [Test]
+        public void Tick_RejectsUnknownStoredTargetBeforePackageMutation()
+        {
+            var client = new FakeClient();
+            var store = new FakeStore
+            {
+                QueueJson = "{\"operation\":0,\"items\":[{\"packageName\":\"com.example.unknown\",\"url\":\"https://example.invalid/unreviewed\",\"targetVersion\":\"1.0.0\"}]}"
+            };
+            var coordinator = CreateCoordinator(client, new FakeEnvironment(), store);
+            var writesBeforeTick = store.QueueWriteCount;
+
+            coordinator.Tick();
+
+            Assert.That(client.CallCount, Is.Zero);
+            Assert.That(coordinator.IsBusy, Is.False);
+            Assert.That(store.QueueJson, Is.Empty);
+            Assert.That(store.QueueWriteCount, Is.EqualTo(writesBeforeTick + 1));
+
+            coordinator.Tick();
+            Assert.That(store.QueueWriteCount, Is.EqualTo(writesBeforeTick + 1));
+            Assert.That(coordinator.LastMessage, Does.Contain("現在の固定一覧で確認できない"));
+        }
+
+        [Test]
+        public void Tick_NormalizesNullStoredItemListWithoutPackageMutation()
+        {
+            var client = new FakeClient();
+            var store = new FakeStore
+            {
+                QueueJson = "{\"operation\":0,\"items\":null}"
+            };
+            var coordinator = CreateCoordinator(client, new FakeEnvironment(), store);
+            var writesBeforeTick = store.QueueWriteCount;
+
+            coordinator.Tick();
+
+            Assert.That(client.CallCount, Is.Zero);
+            Assert.That(coordinator.IsBusy, Is.False);
+            Assert.That(store.QueueJson, Is.Empty);
+            Assert.That(store.QueueWriteCount, Is.EqualTo(writesBeforeTick + 1));
+            Assert.That(coordinator.LastMessage, Does.Contain("保存されていた導入処理を確認できないため中止しました"));
+
+            coordinator.Tick();
+            Assert.That(store.QueueWriteCount, Is.EqualTo(writesBeforeTick + 1));
+        }
+
+        [Test]
+        public void Tick_MalformedStoredQueueClearsOnceWithJapaneseReason()
+        {
+            var client = new FakeClient();
+            var store = new FakeStore
+            {
+                QueueJson = "{not-json"
+            };
+            var coordinator = CreateCoordinator(client, new FakeEnvironment(), store);
+            var writesBeforeTick = store.QueueWriteCount;
+
+            Assert.That(coordinator.IsBusy, Is.True);
+
+            coordinator.Tick();
+
+            Assert.That(client.CallCount, Is.Zero);
+            Assert.That(coordinator.IsBusy, Is.False);
+            Assert.That(store.QueueJson, Is.Empty);
+            Assert.That(store.QueueWriteCount, Is.EqualTo(writesBeforeTick + 1));
+            Assert.That(coordinator.LastMessage, Does.Contain("保存されていた導入処理を確認できないため中止しました"));
+
+            coordinator.Tick();
+            Assert.That(store.QueueWriteCount, Is.EqualTo(writesBeforeTick + 1));
+        }
+
+        [Test]
+        public void Tick_IdleStateDoesNotWriteSessionQueue()
+        {
+            var store = new FakeStore();
+            var coordinator = CreateCoordinator(new FakeClient(), new FakeEnvironment(), store);
+
+            coordinator.Tick();
+            coordinator.Tick();
+
+            Assert.That(store.QueueWriteCount, Is.Zero);
         }
 
         [Test]
@@ -80,7 +205,7 @@ namespace ModuleInstaller.Editor.Tests
 
             Assert.That(resumed.IsBusy, Is.False);
             Assert.That(resumedClient.CallCount, Is.Zero);
-            Assert.That(resumed.LastMessage, Does.Contain("already installed").Or.Contain("Every selected"));
+            Assert.That(resumed.LastMessage, Does.Contain("すべて導入済み"));
         }
 
         [Test]
@@ -103,7 +228,7 @@ namespace ModuleInstaller.Editor.Tests
             client.Request.IsCompletedValue = true;
             client.Request.SucceededValue = true;
             coordinator.Tick();
-            Assert.That(coordinator.LastMessage, Does.StartWith("Updated 1"));
+            Assert.That(coordinator.LastMessage, Does.StartWith("1件のモジュールを更新しました"));
         }
 
         [Test]
@@ -127,7 +252,7 @@ namespace ModuleInstaller.Editor.Tests
 
             Assert.That(resumed.IsBusy, Is.False);
             Assert.That(resumedClient.CallCount, Is.Zero);
-            Assert.That(resumed.LastMessage, Does.Contain("up to date"));
+            Assert.That(resumed.LastMessage, Does.Contain("固定版と一致"));
         }
 
         [Test]
@@ -186,8 +311,8 @@ namespace ModuleInstaller.Editor.Tests
             Assert.That(coordinator.TryStartUpdates(plan, out var message), Is.False);
             Assert.That(client.CallCount, Is.Zero);
             Assert.That(coordinator.IsBusy, Is.False);
-            Assert.That(message, Does.Contain("no longer installed"));
-            Assert.That(coordinator.LastMessage, Does.Contain("no longer installed"));
+            Assert.That(message, Does.Contain("導入済みではなくなった"));
+            Assert.That(coordinator.LastMessage, Does.Contain("導入済みではなくなった"));
         }
 
         [Test]
@@ -210,7 +335,7 @@ namespace ModuleInstaller.Editor.Tests
 
             Assert.That(resumed.IsBusy, Is.False);
             Assert.That(resumedClient.CallCount, Is.Zero);
-            Assert.That(resumed.LastMessage, Does.Contain("no longer installed"));
+            Assert.That(resumed.LastMessage, Does.Contain("導入済みではなくなった"));
         }
 
         [Test]
@@ -280,11 +405,17 @@ namespace ModuleInstaller.Editor.Tests
             internal int CallCount { get; private set; }
             internal IReadOnlyList<string> LastUrls { get; private set; } = Array.Empty<string>();
             internal FakeRequest Request { get; } = new FakeRequest();
+            internal Exception ExceptionToThrow { get; set; }
 
             public IModuleInstallRequest AddAndRemove(IReadOnlyList<string> packageUrls)
             {
                 CallCount++;
                 LastUrls = packageUrls;
+                if (ExceptionToThrow != null)
+                {
+                    throw ExceptionToThrow;
+                }
+
                 return Request;
             }
         }
@@ -311,7 +442,20 @@ namespace ModuleInstaller.Editor.Tests
 
         private sealed class FakeStore : IModuleInstallStateStore
         {
-            public string QueueJson { get; set; } = string.Empty;
+            private string queueJson = string.Empty;
+
+            internal int QueueWriteCount { get; private set; }
+
+            public string QueueJson
+            {
+                get => queueJson;
+                set
+                {
+                    queueJson = value;
+                    QueueWriteCount++;
+                }
+            }
+
             public string LastMessage { get; set; } = string.Empty;
         }
     }
