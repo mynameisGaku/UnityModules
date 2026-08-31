@@ -111,7 +111,7 @@ namespace BuildGuard.Tests
         {
             var result = BuildGuardPrefabOverrideScanResult.Failure(
                 BuildGuardPrefabOverrideScanError.TooManyFindings,
-                "limit",
+                "検出上限を超えました。",
                 10,
                 2);
 

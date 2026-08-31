@@ -126,7 +126,7 @@ GameObject:
   m_Component:
   - component: {fileID: 100001}
   m_Layer: 0
-  m_Name: Build Guard Basics - Valid Scene
+  m_Name: ビルドガード基本例 - 正常シーン
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -158,7 +158,7 @@ GameObject:
   m_Component:
   - component: {fileID: 200001}
   m_Layer: 0
-  m_Name: Inactive objects are scanned too
+  m_Name: 無効なゲームオブジェクトも検査対象
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 1001}
   - component: {fileID: 1002}
   m_Layer: 0
-  m_Name: Broken Prefab Example
+  m_Name: 欠落スクリプト付きプレハブ例
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

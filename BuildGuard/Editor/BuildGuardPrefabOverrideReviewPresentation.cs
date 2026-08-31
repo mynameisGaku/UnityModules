@@ -49,7 +49,7 @@ namespace BuildGuard.Editor
                 case BuildGuardPrefabOverrideScanError.TooManyFindings:
                     return "構造差分数が上限超過";
                 case BuildGuardPrefabOverrideScanError.UnityApiFailure:
-                    return "Unity APIの処理に失敗";
+                    return "Unityの処理に失敗";
                 default:
                     return $"不明な検査エラー（{(int)error}）";
             }

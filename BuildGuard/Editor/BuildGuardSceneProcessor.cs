@@ -8,26 +8,26 @@ using UnityEngine.SceneManagement;
 namespace BuildGuard.Editor
 {
     /// <summary>
-    /// Validates every Scene processed by a Player build and blocks missing references.
+    /// プレイヤービルドが処理する各シーンを検査し、欠落参照があればビルドを停止します。
     /// </summary>
     [BuildCallbackVersion(1)]
     internal sealed class BuildGuardSceneProcessor : IProcessSceneWithReport
     {
         /// <summary>
-        /// Runs before ordinary Scene processing callbacks.
+        /// 通常のシーン処理より前に実行する処理順です。
         /// </summary>
         internal const int CallbackOrder = -10000;
 
         /// <summary>
-        /// Gets the Unity build callback order.
+        /// Unityのビルド処理順を返します。
         /// </summary>
         public int callbackOrder => CallbackOrder;
 
         /// <summary>
-        /// Validates only Player build processing and ignores ordinary Play Mode loads.
+        /// プレイヤービルド中のシーンだけを検査し、通常のプレイモード読込は対象外にします。
         /// </summary>
-        /// <param name="scene">The Scene Unity is processing for a build.</param>
-        /// <param name="report">The Player build report, or null outside a Player build.</param>
+        /// <param name="scene">Unityがビルド用に処理しているシーンです。</param>
+        /// <param name="report">プレイヤービルドの報告情報です。対象外の読込では空です。</param>
         public void OnProcessScene(Scene scene, BuildReport report)
         {
             if (report == null || !BuildPipeline.isBuildingPlayer)
@@ -39,7 +39,7 @@ namespace BuildGuard.Editor
         }
 
         /// <summary>
-        /// Validates one loaded Scene and throws when any build-blocking issue exists.
+        /// 読込済みシーン1件を検査し、ビルドを停止する問題があれば例外を送出します。
         /// </summary>
         internal static void ValidateScene(Scene scene)
         {

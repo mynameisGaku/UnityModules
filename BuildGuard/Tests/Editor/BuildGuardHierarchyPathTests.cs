@@ -8,7 +8,7 @@ using UnityEngine;
 namespace BuildGuard.Tests
 {
     /// <summary>
-    /// Verifies deterministic hierarchy path creation and resolution.
+    /// 一定の階層パスを作成し、そのパスから正確に対象を解決できることを検証します。
     /// </summary>
     [Parallelizable(ParallelScope.None)]
     internal sealed class BuildGuardHierarchyPathTests

@@ -13,7 +13,7 @@ namespace BuildGuard.Editor
     /// </summary>
     internal sealed class BuildGuardPrefabOverrideReviewWindow : EditorWindow
     {
-        /// <summary>Toolsメニューに登録する経路です。</summary>
+        /// <summary>ツールメニューに登録する経路です。</summary>
         internal const string MenuPath = "Tools/ビルドガード/プレハブ構造差分を確認";
 
         /// <summary>画面に保持して表示する差分の最大件数です。</summary>
@@ -83,7 +83,7 @@ namespace BuildGuard.Editor
         /// <summary>現在の状態文を返します。</summary>
         internal string StatusText => _statusText;
 
-        /// <summary>Toolsメニューからプレハブ構造差分画面を開きます。</summary>
+        /// <summary>ツールメニューからプレハブ構造差分画面を開きます。</summary>
         [MenuItem(MenuPath, priority = 2002)]
         private static void ShowWindow()
         {

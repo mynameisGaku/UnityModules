@@ -3,12 +3,14 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text.RegularExpressions;
 using BuildGuard.Editor;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.TestTools;
 
 namespace BuildGuard.Tests
 {
@@ -228,33 +230,58 @@ namespace BuildGuard.Tests
         }
 
         [Test]
+        public void TryGetSelectedScenePaths_SelectionProviderThrows_HidesExceptionDetail()
+        {
+            LogAssert.Expect(LogType.Exception, new Regex("INTERNAL_ENGLISH_DETAIL"));
+
+            var succeeded = BuildGuardManualScanner.TryGetSelectedScenePaths(
+                () => throw new InvalidOperationException("INTERNAL_ENGLISH_DETAIL"),
+                out var scenePaths,
+                out var errorMessage);
+
+            Assert.That(succeeded, Is.False);
+            Assert.That(scenePaths, Is.Empty);
+            Assert.That(errorMessage, Is.EqualTo(
+                "選択シーンを取得できませんでした。Unityのログで原因を確認し、もう一度「現在の選択を使用」を押してください。"));
+            Assert.That(errorMessage, Does.Not.Contain("INTERNAL_ENGLISH_DETAIL"));
+        }
+
+        [Test]
         public void TryResolveSelectedScenePaths_ResolverThrows_ReturnsFailureWithoutPaths()
         {
+            LogAssert.Expect(LogType.Exception, new Regex("INTERNAL_ENGLISH_DETAIL"));
+
             var succeeded = BuildGuardManualScanner.TryResolveSelectedScenePaths(
                 new[] { "scene" },
-                _ => throw new InvalidOperationException("パス解決失敗"),
+                _ => throw new InvalidOperationException("INTERNAL_ENGLISH_DETAIL"),
                 _ => true,
                 out var scenePaths,
                 out var errorMessage);
 
             Assert.That(succeeded, Is.False);
             Assert.That(scenePaths, Is.Empty);
-            Assert.That(errorMessage, Is.EqualTo("選択シーンの取得に失敗しました: パス解決失敗"));
+            Assert.That(errorMessage, Is.EqualTo(
+                "選択シーンを取得できませんでした。Unityのログで原因を確認し、もう一度「現在の選択を使用」を押してください。"));
+            Assert.That(errorMessage, Does.Not.Contain("INTERNAL_ENGLISH_DETAIL"));
         }
 
         [Test]
         public void TryResolveSelectedScenePaths_PredicateThrows_ReturnsFailureWithoutPaths()
         {
+            LogAssert.Expect(LogType.Exception, new Regex("INTERNAL_ENGLISH_DETAIL"));
+
             var succeeded = BuildGuardManualScanner.TryResolveSelectedScenePaths(
                 new[] { "scene" },
                 _ => "Assets/Scene.unity",
-                _ => throw new InvalidOperationException("シーン判定失敗"),
+                _ => throw new InvalidOperationException("INTERNAL_ENGLISH_DETAIL"),
                 out var scenePaths,
                 out var errorMessage);
 
             Assert.That(succeeded, Is.False);
             Assert.That(scenePaths, Is.Empty);
-            Assert.That(errorMessage, Is.EqualTo("選択シーンの取得に失敗しました: シーン判定失敗"));
+            Assert.That(errorMessage, Is.EqualTo(
+                "選択シーンを取得できませんでした。Unityのログで原因を確認し、もう一度「現在の選択を使用」を押してください。"));
+            Assert.That(errorMessage, Does.Not.Contain("INTERNAL_ENGLISH_DETAIL"));
         }
 
         [Test]
@@ -274,6 +301,8 @@ namespace BuildGuard.Tests
         [Test]
         public void TryScanSelectedScenes_SnapshotAccessThrows_ReturnsExactJapaneseError()
         {
+            LogAssert.Expect(LogType.Exception, new Regex("INTERNAL_ENGLISH_DETAIL"));
+
             var succeeded = BuildGuardManualScanner.TryScanSelectedScenes(
                 new ThrowingScenePathList(),
                 null,
@@ -283,12 +312,16 @@ namespace BuildGuard.Tests
             Assert.That(succeeded, Is.False);
             Assert.That(result.ScannedSceneCount, Is.Zero);
             Assert.That(result.Issues, Is.Empty);
-            Assert.That(errorMessage, Is.EqualTo("選択シーンの検査に失敗しました: シーン一覧取得失敗"));
+            Assert.That(errorMessage, Is.EqualTo(
+                "選択シーンを検査できませんでした。Unityのログで原因を確認してください。"));
+            Assert.That(errorMessage, Does.Not.Contain("INTERNAL_ENGLISH_DETAIL"));
         }
 
         [Test]
         public void TryScanSelectedScenes_FailureAfterFirstScene_DiscardsIssuesAndRestoresSceneState()
         {
+            LogAssert.Expect(LogType.Exception, new Regex("INTERNAL_ENGLISH_DETAIL"));
+
             var fixture = new MissingScriptSceneScannerTests();
             fixture.SetUp();
             try
@@ -305,7 +338,7 @@ namespace BuildGuard.Tests
                 var succeeded = BuildGuardManualScanner.TryScanSelectedScenes(
                     new[] { brokenPath, validPath },
                     (index, _, _) => index == 1
-                        ? throw new InvalidOperationException("走査途中失敗")
+                        ? throw new InvalidOperationException("INTERNAL_ENGLISH_DETAIL")
                         : false,
                     out var result,
                     out var errorMessage);
@@ -314,7 +347,9 @@ namespace BuildGuard.Tests
                 Assert.That(result.Cancelled, Is.False);
                 Assert.That(result.ScannedSceneCount, Is.Zero);
                 Assert.That(result.Issues, Is.Empty);
-                Assert.That(errorMessage, Is.EqualTo("選択シーンの検査に失敗しました: 走査途中失敗"));
+                Assert.That(errorMessage, Is.EqualTo(
+                    "選択シーンを検査できませんでした。Unityのログで原因を確認してください。"));
+                Assert.That(errorMessage, Does.Not.Contain("INTERNAL_ENGLISH_DETAIL"));
                 Assert.That(SceneManager.GetActiveScene(), Is.EqualTo(activeScene));
                 Assert.That(SceneManager.GetSceneByPath(brokenPath).isLoaded, Is.False);
                 Assert.That(SceneManager.GetSceneByPath(validPath).isLoaded, Is.False);
@@ -550,7 +585,7 @@ namespace BuildGuard.Tests
             public int Count => 1;
 
             /// <summary>シーンパスの読み取り失敗を発生させます。</summary>
-            public string this[int index] => throw new InvalidOperationException("シーン一覧取得失敗");
+            public string this[int index] => throw new InvalidOperationException("INTERNAL_ENGLISH_DETAIL");
 
             /// <summary>この試験では列挙を使用しないため、未対応として通知します。</summary>
             public IEnumerator<string> GetEnumerator()

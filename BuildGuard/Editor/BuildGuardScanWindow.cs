@@ -37,7 +37,7 @@ namespace BuildGuard.Editor
         /// <summary>再現可能な編集モード試験のため、記録済みの選択シーン数を返します。</summary>
         internal int SelectedSceneCount => _selectedScenePaths.Length;
 
-        /// <summary>UnityのToolsメニューから手動検査画面を開きます。</summary>
+        /// <summary>Unityのツールメニューから手動検査画面を開きます。</summary>
         [MenuItem(ToolMenuPath, priority = 2000)]
         private static void ShowFromTools()
         {
@@ -52,7 +52,7 @@ namespace BuildGuard.Editor
             window.CaptureSelectedScenes();
         }
 
-        /// <summary>選択中のシーンを1件以上記録できる場合だけ、Assetsメニューを有効にします。</summary>
+        /// <summary>選択中のシーンを1件以上記録できる場合だけ、アセットメニューを有効にします。</summary>
         [MenuItem(AssetMenuPath, true)]
         private static bool ValidateShowFromAssets()
         {

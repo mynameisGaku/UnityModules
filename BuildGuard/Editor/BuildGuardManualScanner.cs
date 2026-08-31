@@ -40,10 +40,22 @@ namespace BuildGuard.Editor
             out IReadOnlyList<string> scenePaths,
             out string errorMessage)
         {
+            return TryGetSelectedScenePaths(
+                () => Selection.assetGUIDs,
+                out scenePaths,
+                out errorMessage);
+        }
+
+        /// <summary>決定論的な試験で選択一覧の取得元を差し替えられる、選択シーン取得入口です。</summary>
+        internal static bool TryGetSelectedScenePaths(
+            Func<IReadOnlyList<string>> selectedAssetGuidProvider,
+            out IReadOnlyList<string> scenePaths,
+            out string errorMessage)
+        {
             try
             {
                 return TryResolveSelectedScenePaths(
-                    Selection.assetGUIDs,
+                    selectedAssetGuidProvider(),
                     AssetDatabase.GUIDToAssetPath,
                     path => AssetDatabase.LoadAssetAtPath<SceneAsset>(path) != null,
                     out scenePaths,
@@ -51,8 +63,9 @@ namespace BuildGuard.Editor
             }
             catch (Exception exception)
             {
+                UnityEngine.Debug.LogException(exception);
                 scenePaths = Array.Empty<string>();
-                errorMessage = $"選択シーンの取得に失敗しました: {exception.Message}";
+                errorMessage = "選択シーンを取得できませんでした。Unityのログで原因を確認し、もう一度「現在の選択を使用」を押してください。";
                 return false;
             }
         }
@@ -106,7 +119,8 @@ namespace BuildGuard.Editor
             }
             catch (Exception exception)
             {
-                errorMessage = $"選択シーンの取得に失敗しました: {exception.Message}";
+                UnityEngine.Debug.LogException(exception);
+                errorMessage = "選択シーンを取得できませんでした。Unityのログで原因を確認し、もう一度「現在の選択を使用」を押してください。";
                 return false;
             }
 
@@ -160,7 +174,8 @@ namespace BuildGuard.Editor
             }
             catch (Exception exception)
             {
-                errorMessage = $"選択シーンの検査に失敗しました: {exception.Message}";
+                UnityEngine.Debug.LogException(exception);
+                errorMessage = "選択シーンを検査できませんでした。Unityのログで原因を確認してください。";
                 return false;
             }
         }

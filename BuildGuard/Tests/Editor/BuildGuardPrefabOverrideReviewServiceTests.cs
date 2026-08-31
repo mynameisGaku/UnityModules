@@ -354,7 +354,7 @@ namespace BuildGuard.Tests
         [TestCase(BuildGuardPrefabOverrideScanError.TooManyGameObjects, "ゲームオブジェクト数が上限超過")]
         [TestCase(BuildGuardPrefabOverrideScanError.TooManyPrefabInstances, "プレハブ実体数が上限超過")]
         [TestCase(BuildGuardPrefabOverrideScanError.TooManyFindings, "構造差分数が上限超過")]
-        [TestCase(BuildGuardPrefabOverrideScanError.UnityApiFailure, "Unity APIの処理に失敗")]
+        [TestCase(BuildGuardPrefabOverrideScanError.UnityApiFailure, "Unityの処理に失敗")]
         public void Presentation_FormatsEveryScanErrorInJapanese(
             BuildGuardPrefabOverrideScanError error,
             string expected)

@@ -8,11 +8,11 @@ using UnityEngine.SceneManagement;
 namespace BuildGuard.Editor
 {
     /// <summary>
-    /// Creates and resolves deterministic Scene hierarchy paths.
+    /// 同じシーン状態から常に同じ階層パスを作成し、そのパスから対象を解決します。
     /// </summary>
     internal static class BuildGuardHierarchyPath
     {
-        /// <summary>Returns Scene roots sorted by sibling index and ordinal name.</summary>
+        /// <summary>シーンの根元を兄弟順、同順なら名前の文字順へ並べて返します。</summary>
         internal static GameObject[] GetSortedRoots(Scene scene)
         {
             var roots = scene.GetRootGameObjects();
@@ -20,13 +20,13 @@ namespace BuildGuard.Editor
             return roots;
         }
 
-        /// <summary>Formats one Transform as an escaped name followed by its sibling index.</summary>
+        /// <summary>1階層分を、区切り文字を退避した名前と兄弟順へ整形します。</summary>
         internal static string FormatSegment(Transform transform)
         {
             return $"{MissingScriptSceneScanner.EscapePathText(transform.name)}[{transform.GetSiblingIndex()}]";
         }
 
-        /// <summary>Creates the complete deterministic path for a Transform.</summary>
+        /// <summary>指定した変換要素までの、兄弟順を含む完全な階層パスを作成します。</summary>
         internal static string Create(Transform transform)
         {
             if (transform == null)
@@ -43,7 +43,7 @@ namespace BuildGuard.Editor
             return string.Join("/", segments);
         }
 
-        /// <summary>Finds a loaded Scene GameObject by a previously created path.</summary>
+        /// <summary>作成済みの階層パスから、読込済みシーン内のゲームオブジェクトを探します。</summary>
         internal static GameObject Find(Scene scene, string hierarchyPath)
         {
             if (!scene.IsValid() || !scene.isLoaded || string.IsNullOrEmpty(hierarchyPath))

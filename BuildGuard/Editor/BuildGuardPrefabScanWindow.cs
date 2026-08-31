@@ -20,10 +20,10 @@ namespace BuildGuard.Editor
         /// <summary>1回の取得で記録するプレハブアセットの最大数です。</summary>
         internal const int MaximumSelectedPrefabs = 256;
 
-        /// <summary>Toolsメニューに登録する経路です。</summary>
+        /// <summary>ツールメニューに登録する経路です。</summary>
         private const string ToolMenuPath = "Tools/ビルドガード/選択プレハブを検査";
 
-        /// <summary>Assetsメニューに登録する経路です。</summary>
+        /// <summary>アセットメニューに登録する経路です。</summary>
         private const string AssetMenuPath = "Assets/ビルドガード/選択プレハブを検査";
 
         /// <summary>画面のタイトルです。</summary>
@@ -125,21 +125,21 @@ namespace BuildGuard.Editor
         /// <summary>現在の状態文を返します。</summary>
         internal string StatusText => _statusText;
 
-        /// <summary>Toolsメニューからプレハブ検査画面を開きます。</summary>
+        /// <summary>ツールメニューからプレハブ検査画面を開きます。</summary>
         [MenuItem(ToolMenuPath, priority = 2001)]
         private static void ShowFromTools()
         {
             ShowWindow();
         }
 
-        /// <summary>Assetsメニューからプレハブ検査画面を開きます。</summary>
+        /// <summary>アセットメニューからプレハブ検査画面を開きます。</summary>
         [MenuItem(AssetMenuPath, false, 2001)]
         private static void ShowFromAssets()
         {
             ShowWindow();
         }
 
-        /// <summary>検査できるプレハブが選択されている場合だけ、Assetsメニューを有効にします。</summary>
+        /// <summary>検査できるプレハブが選択されている場合だけ、アセットメニューを有効にします。</summary>
         [MenuItem(AssetMenuPath, true)]
         private static bool ValidateShowFromAssets()
         {

@@ -8,7 +8,7 @@
   "documentationUrl": "https://github.com/mynameisGaku/UnityModules/blob/build-guard-v1.6.0/BuildGuard/Documentation~/index.md",
   "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/build-guard-v1.6.0/BuildGuard/CHANGELOG.md",
   "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/build-guard-v1.6.0/BuildGuard/LICENSE.md",
-  "license": "SEE LICENSE IN LICENSE.md",
+  "license": "LICENSE.md を参照",
   "keywords": [
     "build",
     "validation",
