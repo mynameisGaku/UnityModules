@@ -3,35 +3,35 @@ using System.Collections.Generic;
 
 namespace SceneWorkspace.Editor
 {
-    /// <summary>Applies the fail-closed editor, scene, and profile boundary before preview or mutation.</summary>
+    /// <summary>差分確認または変更の前に、エディター、シーン、設定を安全側で検証します。</summary>
     internal static class SceneWorkspaceValidator
     {
         internal static SceneWorkspaceValidation ValidateCurrent(SceneWorkspaceSnapshot snapshot)
         {
             if (snapshot == null)
-                return Failure(SceneWorkspaceError.CaptureFailed, "The current scene setup could not be captured.");
+                return Failure(SceneWorkspaceError.CaptureFailed, "現在のシーン構成を取得できませんでした。");
             if (snapshot.PlayModeActive)
-                return Failure(SceneWorkspaceError.PlayModeActive, "Exit Play Mode before using Scene Workspace.");
+                return Failure(SceneWorkspaceError.PlayModeActive, "再生モードを終了してから、シーン作業セットを使用してください。");
             if (snapshot.Compiling || snapshot.Updating)
-                return Failure(SceneWorkspaceError.EditorBusy, "Wait for compilation or asset updating to finish.");
+                return Failure(SceneWorkspaceError.EditorBusy, "コンパイルまたはアセット更新が終わるまで待ってください。");
             if (snapshot.PrefabStageOpen)
-                return Failure(SceneWorkspaceError.PrefabStageOpen, "Close Prefab Mode before using Scene Workspace.");
+                return Failure(SceneWorkspaceError.PrefabStageOpen, "プレハブ編集画面を閉じてから、シーン作業セットを使用してください。");
             return ValidateScenes(snapshot.Scenes, true);
         }
 
         internal static SceneWorkspaceValidation ValidateProfile(SceneWorkspaceProfileSnapshot profile)
         {
             if (profile == null || !profile.Exists)
-                return Failure(SceneWorkspaceError.InvalidProfile, "Select a workspace profile.");
+                return Failure(SceneWorkspaceError.InvalidProfile, "作業セット設定を選択してください。");
             if (!IsSupportedAssetPath(profile.Path) || string.IsNullOrEmpty(profile.Guid))
-                return Failure(SceneWorkspaceError.ProfileNotSaved, "Save the workspace profile under Assets before previewing it.");
+                return Failure(SceneWorkspaceError.ProfileNotSaved, "差分を確認する前に、作業セット設定をAssetsフォルダー以下へ保存してください。");
             return ValidateScenes(profile.Scenes, false);
         }
 
         private static SceneWorkspaceValidation ValidateScenes(IReadOnlyList<SceneWorkspaceSceneState> scenes, bool current)
         {
             if (scenes == null || scenes.Count == 0)
-                return Failure(SceneWorkspaceError.NoScenes, current ? "Open at least one saved scene." : "Add at least one saved scene to the profile.");
+                return Failure(SceneWorkspaceError.NoScenes, current ? "保存済みのシーンを一つ以上開いてください。" : "設定へ保存済みのシーンを一つ以上追加してください。");
 
             var guids = new HashSet<string>(StringComparer.Ordinal);
             var paths = new HashSet<string>(StringComparer.Ordinal);
@@ -41,31 +41,31 @@ namespace SceneWorkspace.Editor
             {
                 var scene = scenes[index];
                 if (scene == null || !scene.Exists)
-                    return Failure(SceneWorkspaceError.MissingScene, "A scene reference is missing or no longer exists.");
+                    return Failure(SceneWorkspaceError.MissingScene, "参照先が未指定か、存在しないシーンがあります。");
                 if (string.IsNullOrEmpty(scene.Path))
-                    return Failure(SceneWorkspaceError.UntitledScene, "Save every untitled scene before using Scene Workspace.");
+                    return Failure(SceneWorkspaceError.UntitledScene, "無題のシーンをすべて保存してから、シーン作業セットを使用してください。");
                 if (!IsSupportedScenePath(scene.Path))
-                    return Failure(SceneWorkspaceError.UnsupportedScenePath, "Every scene must be a .unity asset under Assets.");
+                    return Failure(SceneWorkspaceError.UnsupportedScenePath, "すべてのシーンをAssetsフォルダー以下の.unityアセットとして保存してください。");
                 if (string.IsNullOrEmpty(scene.Guid))
-                    return Failure(SceneWorkspaceError.MissingScene, "A scene has no valid asset GUID.");
+                    return Failure(SceneWorkspaceError.MissingScene, "有効なアセットGUIDを取得できないシーンがあります。");
                 if (!guids.Add(scene.Guid) || !paths.Add(scene.Path))
-                    return Failure(SceneWorkspaceError.DuplicateScene, "The scene setup contains a duplicate scene.");
+                    return Failure(SceneWorkspaceError.DuplicateScene, "シーン構成に同じシーンが重複しています。");
                 if (current && scene.Dirty)
-                    return Failure(SceneWorkspaceError.DirtyScene, "Save or revert every modified scene before switching workspaces.");
+                    return Failure(SceneWorkspaceError.DirtyScene, "作業セットを切り替える前に、変更済みのシーンをすべて保存するか変更を元へ戻してください。");
                 if (scene.Loaded)
                     loadedCount++;
                 if (scene.Active)
                 {
                     activeCount++;
                     if (!scene.Loaded)
-                        return Failure(SceneWorkspaceError.InvalidActiveScene, "The active scene must also be loaded.");
+                        return Failure(SceneWorkspaceError.InvalidActiveScene, "使用中にするシーンは、読み込む設定も有効にしてください。");
                 }
             }
 
             if (loadedCount == 0)
-                return Failure(SceneWorkspaceError.NoLoadedScene, "At least one scene must be loaded.");
+                return Failure(SceneWorkspaceError.NoLoadedScene, "読み込むシーンを一つ以上指定してください。");
             if (activeCount != 1)
-                return Failure(SceneWorkspaceError.InvalidActiveScene, "Exactly one loaded scene must be active.");
+                return Failure(SceneWorkspaceError.InvalidActiveScene, "読み込むシーンのうち、使用中にするシーンを一つだけ指定してください。");
             return SceneWorkspaceValidation.Success;
         }
 

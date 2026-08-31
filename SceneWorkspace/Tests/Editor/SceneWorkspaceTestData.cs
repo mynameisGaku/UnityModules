@@ -2,7 +2,7 @@ using System;
 using SceneWorkspace.Editor;
 using UnityEngine;
 
-namespace SceneWorkspace.Tests
+namespace SceneWorkspace.Editor.Tests
 {
     internal static class SceneWorkspaceTestData
     {

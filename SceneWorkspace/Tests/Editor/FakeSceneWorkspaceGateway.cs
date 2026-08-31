@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using SceneWorkspace.Editor;
 
-namespace SceneWorkspace.Tests
+namespace SceneWorkspace.Editor.Tests
 {
     internal sealed class FakeSceneWorkspaceGateway : ISceneWorkspaceGateway
     {

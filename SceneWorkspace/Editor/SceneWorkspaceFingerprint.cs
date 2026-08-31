@@ -5,9 +5,10 @@ using System.Text;
 
 namespace SceneWorkspace.Editor
 {
-    /// <summary>Creates stable length-prefixed hashes for current setups and mutable profile values.</summary>
+    /// <summary>現在構成と変更可能な設定値から、長さ付きで安定した指紋値を作成します。</summary>
     internal static class SceneWorkspaceFingerprint
     {
+        /// <summary>現在構成の順番、識別情報、状態をSHA-256指紋値へ変換します。</summary>
         internal static string ComputeCurrent(IReadOnlyList<SceneWorkspaceSceneState> scenes)
         {
             var builder = new StringBuilder();
@@ -16,6 +17,7 @@ namespace SceneWorkspace.Editor
             return Hash(builder.ToString());
         }
 
+        /// <summary>設定の識別情報、名前、目標構成をSHA-256指紋値へ変換します。</summary>
         internal static string ComputeProfile(SceneWorkspaceProfileSnapshot profile)
         {
             var builder = new StringBuilder();
@@ -27,6 +29,7 @@ namespace SceneWorkspace.Editor
             return Hash(builder.ToString());
         }
 
+        /// <summary>シーン数と各シーンの順序付き値を長さ付きで追記します。</summary>
         private static void AppendScenes(StringBuilder builder, IReadOnlyList<SceneWorkspaceSceneState> scenes, bool includeDirty)
         {
             Append(builder, (scenes?.Count ?? 0).ToString(CultureInfo.InvariantCulture));
@@ -46,6 +49,7 @@ namespace SceneWorkspace.Editor
             }
         }
 
+        /// <summary>文字数と値を区切り付きで追記し、値内の区切り文字との衝突を防ぎます。</summary>
         private static void Append(StringBuilder builder, string value)
         {
             var safe = value ?? string.Empty;
@@ -55,6 +59,7 @@ namespace SceneWorkspace.Editor
             builder.Append('|');
         }
 
+        /// <summary>文字列を小文字の十六進SHA-256指紋値へ変換します。</summary>
         private static string Hash(string value)
         {
             using (var sha256 = SHA256.Create())

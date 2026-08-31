@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using NUnit.Framework;
 using SceneWorkspace.Editor;
 using UnityEngine;
+using UnityEngine.TestTools;
 
-namespace SceneWorkspace.Tests
+namespace SceneWorkspace.Editor.Tests
 {
     [TestFixture]
     internal sealed class SceneWorkspaceOperationsTests
@@ -33,6 +34,35 @@ namespace SceneWorkspace.Tests
             Assert.That(result.Succeeded, Is.True);
             Assert.That(result.Fingerprint, Has.Length.EqualTo(64));
             Assert.That(result.Scenes.Count, Is.EqualTo(1));
+            Assert.That(gateway.RestoreCalls, Is.Empty);
+        }
+
+        [Test]
+        public void CaptureExceptionKeepsDetailsOutOfUserMessage()
+        {
+            var gateway = new FakeSceneWorkspaceGateway();
+            LogAssert.Expect(LogType.Exception, "InvalidOperationException: No current snapshot was configured.");
+
+            var result = new SceneWorkspaceOperations(gateway).CaptureCurrentSetup();
+
+            Assert.That(result.Error, Is.EqualTo(SceneWorkspaceError.CaptureFailed));
+            Assert.That(result.Message, Does.Contain("コンソール"));
+            Assert.That(result.Message, Does.Not.Contain("No current snapshot was configured."));
+            Assert.That(gateway.RestoreCalls, Is.Empty);
+        }
+
+        [Test]
+        public void PreviewExceptionKeepsDetailsOutOfUserMessage()
+        {
+            var gateway = new FakeSceneWorkspaceGateway();
+            var operations = new SceneWorkspaceOperations(gateway);
+            LogAssert.Expect(LogType.Exception, "InvalidOperationException: No current snapshot was configured.");
+
+            var plan = operations.Preview(NewProfile());
+
+            Assert.That(plan.Error, Is.EqualTo(SceneWorkspaceError.CaptureFailed));
+            Assert.That(plan.Message, Does.Contain("コンソール"));
+            Assert.That(plan.Message, Does.Not.Contain("No current snapshot was configured."));
             Assert.That(gateway.RestoreCalls, Is.Empty);
         }
 
@@ -95,6 +125,57 @@ namespace SceneWorkspace.Tests
         }
 
         [Test]
+        public void ApplyInProgressDoesNotConsumePlan()
+        {
+            var original = Original();
+            var target = Target();
+            var gateway = ConfiguredGateway(original, target);
+            gateway.EnqueueCurrent(original);
+            gateway.EnqueueProfile(Profile(target));
+            var operations = new SceneWorkspaceOperations(gateway);
+            var plan = operations.Preview(NewProfile());
+            Assert.That(SceneWorkspaceExecutionGuard.TryEnter(out var lease), Is.True);
+
+            SceneWorkspaceApplyResult blocked;
+            using (lease)
+            {
+                blocked = operations.Apply(plan);
+            }
+
+            Assert.That(blocked.ApplyError, Is.EqualTo(SceneWorkspaceError.ApplyInProgress));
+            Assert.That(blocked.ApplyAttempted, Is.False);
+            Assert.That(gateway.RestoreCalls, Is.Empty);
+
+            gateway.EnqueueCurrent(original, Snapshot(target));
+            gateway.EnqueueProfile(Profile(target));
+            var retried = operations.Apply(plan);
+
+            Assert.That(retried.Succeeded, Is.True);
+            Assert.That(retried.ApplyAttempted, Is.True);
+            Assert.That(gateway.RestoreCalls.Count, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void ApplyPreflightExceptionKeepsDetailsOutOfUserMessage()
+        {
+            var original = Original();
+            var target = Target();
+            var gateway = new FakeSceneWorkspaceGateway();
+            gateway.EnqueueCurrent(original);
+            gateway.EnqueueProfile(Profile(target));
+            var operations = new SceneWorkspaceOperations(gateway);
+            var plan = operations.Preview(NewProfile());
+            LogAssert.Expect(LogType.Exception, "InvalidOperationException: No current snapshot was configured.");
+
+            var result = operations.Apply(plan);
+
+            Assert.That(result.ApplyError, Is.EqualTo(SceneWorkspaceError.CaptureFailed));
+            Assert.That(result.ApplyMessage, Does.Contain("コンソール"));
+            Assert.That(result.ApplyMessage, Does.Not.Contain("No current snapshot was configured."));
+            Assert.That(gateway.RestoreCalls, Is.Empty);
+        }
+
+        [Test]
         public void ChangedProfileRevisionIsStaleWithoutRestore()
         {
             var original = Original();
@@ -149,6 +230,7 @@ namespace SceneWorkspace.Tests
             };
             var operations = new SceneWorkspaceOperations(gateway);
             var plan = operations.Preview(NewProfile());
+            LogAssert.Expect(LogType.Exception, "InvalidOperationException: partial apply");
 
             var result = operations.Apply(plan);
 
@@ -156,6 +238,31 @@ namespace SceneWorkspace.Tests
             Assert.That(result.RollbackAttempted, Is.True);
             Assert.That(result.RollbackSucceeded, Is.True);
             Assert.That(result.RollbackError, Is.EqualTo(SceneWorkspaceError.None));
+            Assert.That(result.ApplyMessage, Does.Not.Contain("partial apply"));
+            Assert.That(gateway.RestoreCalls.Count, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void PostApplyAndRollbackCaptureExceptionsKeepDetailsOutOfUserMessages()
+        {
+            var original = Original();
+            var target = Target();
+            var gateway = new FakeSceneWorkspaceGateway();
+            gateway.EnqueueCurrent(original, original);
+            gateway.EnqueueProfile(Profile(target), Profile(target));
+            var operations = new SceneWorkspaceOperations(gateway);
+            var plan = operations.Preview(NewProfile());
+            LogAssert.Expect(LogType.Exception, "InvalidOperationException: No current snapshot was configured.");
+            LogAssert.Expect(LogType.Exception, "InvalidOperationException: No current snapshot was configured.");
+
+            var result = operations.Apply(plan);
+
+            Assert.That(result.ApplyError, Is.EqualTo(SceneWorkspaceError.VerificationFailed));
+            Assert.That(result.RollbackError, Is.EqualTo(SceneWorkspaceError.RollbackFailed));
+            Assert.That(result.ApplyMessage, Does.Contain("コンソール"));
+            Assert.That(result.RollbackMessage, Does.Contain("コンソール"));
+            Assert.That(result.ApplyMessage, Does.Not.Contain("No current snapshot was configured."));
+            Assert.That(result.RollbackMessage, Does.Not.Contain("No current snapshot was configured."));
             Assert.That(gateway.RestoreCalls.Count, Is.EqualTo(2));
         }
 
@@ -189,6 +296,8 @@ namespace SceneWorkspace.Tests
             gateway.RestoreHandler = (call, scenes) => throw new InvalidOperationException(call == 1 ? "apply failed" : "rollback failed");
             var operations = new SceneWorkspaceOperations(gateway);
             var plan = operations.Preview(NewProfile());
+            LogAssert.Expect(LogType.Exception, "InvalidOperationException: apply failed");
+            LogAssert.Expect(LogType.Exception, "InvalidOperationException: rollback failed");
 
             var result = operations.Apply(plan);
 
@@ -196,6 +305,8 @@ namespace SceneWorkspace.Tests
             Assert.That(result.RollbackError, Is.EqualTo(SceneWorkspaceError.RollbackFailed));
             Assert.That(result.RollbackAttempted, Is.True);
             Assert.That(result.RollbackSucceeded, Is.False);
+            Assert.That(result.ApplyMessage, Does.Not.Contain("apply failed"));
+            Assert.That(result.RollbackMessage, Does.Not.Contain("rollback failed"));
         }
 
         [TestCase(SceneWorkspaceError.PlayModeActive)]

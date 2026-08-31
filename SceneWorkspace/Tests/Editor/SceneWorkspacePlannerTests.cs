@@ -3,7 +3,7 @@ using System.Linq;
 using NUnit.Framework;
 using SceneWorkspace.Editor;
 
-namespace SceneWorkspace.Tests
+namespace SceneWorkspace.Editor.Tests
 {
     [TestFixture]
     internal sealed class SceneWorkspacePlannerTests
@@ -54,6 +54,27 @@ namespace SceneWorkspace.Tests
             }));
         }
 
+        [Test]
+        public void ActiveSceneTransferReportsClearAndSetWithoutKeepRows()
+        {
+            var current = SceneWorkspaceTestData.Current(
+                SceneWorkspaceTestData.Scene("Main", 0, true, true),
+                SceneWorkspaceTestData.Scene("Lighting", 1, true, false));
+            var target = SceneWorkspaceTestData.Profile(
+                SceneWorkspaceTestData.Scene("Main", 0, true, false),
+                SceneWorkspaceTestData.Scene("Lighting", 1, true, true));
+
+            var plan = SceneWorkspacePlanner.Create(current, target, 12L);
+
+            Assert.That(plan.IsReady, Is.True);
+            Assert.That(plan.Changes.Select(change => change.Kind), Is.EqualTo(new[]
+            {
+                SceneWorkspaceChangeKind.ClearActive,
+                SceneWorkspaceChangeKind.SetActive
+            }));
+            Assert.That(plan.Changes, Has.None.Matches<SceneWorkspaceChange>(change => change.Kind == SceneWorkspaceChangeKind.Keep));
+        }
+
         [TestCase(SceneWorkspaceError.PlayModeActive)]
         [TestCase(SceneWorkspaceError.EditorBusy)]
         [TestCase(SceneWorkspaceError.PrefabStageOpen)]
@@ -65,7 +86,7 @@ namespace SceneWorkspace.Tests
                     ? SceneWorkspaceTestData.WithFlags(prefab: true)
                     : SceneWorkspaceTestData.WithFlags(compiling: true);
 
-            var plan = SceneWorkspacePlanner.Create(current, SceneWorkspaceTestData.Profile(SceneWorkspaceTestData.Scene("Main", 0, true, true)), 12L);
+            var plan = SceneWorkspacePlanner.Create(current, SceneWorkspaceTestData.Profile(SceneWorkspaceTestData.Scene("Main", 0, true, true)), 13L);
 
             Assert.That(plan.Error, Is.EqualTo(expected));
             Assert.That(plan.Generation, Is.Zero);
@@ -74,7 +95,7 @@ namespace SceneWorkspace.Tests
         [Test]
         public void UpdatingRejectsAsEditorBusy()
         {
-            var plan = SceneWorkspacePlanner.Create(SceneWorkspaceTestData.WithFlags(updating: true), SceneWorkspaceTestData.Profile(SceneWorkspaceTestData.Scene("Main", 0, true, true)), 13L);
+            var plan = SceneWorkspacePlanner.Create(SceneWorkspaceTestData.WithFlags(updating: true), SceneWorkspaceTestData.Profile(SceneWorkspaceTestData.Scene("Main", 0, true, true)), 14L);
             Assert.That(plan.Error, Is.EqualTo(SceneWorkspaceError.EditorBusy));
         }
 

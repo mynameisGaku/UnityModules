@@ -16,7 +16,7 @@ Unity で繰り返し発生する設定、実装、確認作業を減らすた�
 | asmdefの参照元・参照先、循環、PlayerからEditorへの逆参照とasmref target不備を確認したい | [Assembly依存チェック（Assembly Dependency Audit）](AssemblyDependencyAudit/) | `Assets`と導入済み`Packages`のasmdefをread-onlyで走査して3列graphを表示し、選択asmdef／asmrefに関係するissueは500件ずつ全50,000件まで確認する。選択asmdefでは循環componentの全memberと、宣言順・重複を保ったName／GUID参照の解決詳細も表示する。 |
 | 必須ロケールのテーブル・直接値不足とローカライズキー参照の範囲を安全に確認したい | [ローカライズキー監査](LocalizationKeyAudit/) | 未加工の共有テーブルデータを先に検証し、文字列テーブルとアセットテーブルの所有元を分離して、必須ロケールの直接テーブル・項目・値、テーブルの整合性、1回につき`Assets`または登録済みパッケージ1つだけをルートとするGUIDと項目識別子の参照を読み取り専用で表示する。結果全体の問題を4区分別に確認し、現在の絞り込みに一致する最大100,000件を500件ずつ確認して、表示中のページだけを一括コピーできる。未使用や実行時の翻訳可否は断定しない。 |
 | ビルドプロファイル・シーン・出力先を毎回確認し、ビルド結果や容量差を手作業で残したくない | [ビルド実行アシスタント（Build Assistant）](BuildAssistant/README.md) | ①プロファイル、②出力先、③差分確認、④最終確認、⑤ビルドの順に確認し、既存結果を上書きせずデスクトップ向け単体ビルドと最大20件の履歴を残す。ビルドガード併用時は実際のビルド処理から壊れたシーンも検査する。 |
-| 複数Sceneの順番・読込状態・Active Sceneを用途ごとに毎回戻したくない | [シーン作業セット（Scene Workspace）](SceneWorkspace/) | ProfileへSceneの順番・Loaded・Activeを保存し、Previewと確認後に安全に切り替える。 |
+| 複数シーンの順番・読込状態・使用中のシーンを用途ごとに毎回戻したくない | [シーン作業セット](SceneWorkspace/) | 設定アセットへシーンの順番・読込状態・使用中状態を保存し、差分と内容を確認してから安全に切り替える。 |
 | Play Mode中に調整したInspectorの値を終了後も残すため、メモして入力し直したくない | [プレイ中の調整を反映（Play Mode Tuning）](PlayModeTuning/) | 残したいComponentの項目を先に選び、Play中に手動で取り込み、終了後のPreviewと確認を経てSceneへ反映する。 |
 | Scene の読込順、Additive、Unload を安全に扱いたい | [シーン切り替え（SceneFlow）](SceneFlow/) | 4 種類の Scene 操作を直列化し、失敗理由を結果で受け取る。 |
 | Scene 切り替え中に画面を隠したい | [画面フェード（ScreenTransition）](ScreenTransition/) | UI Toolkit の全画面 Cover・Reveal を実行する。 |
@@ -62,7 +62,7 @@ Unity で繰り返し発生する設定、実装、確認作業を減らすた�
 | [Assembly依存チェック（Assembly Dependency Audit）](AssemblyDependencyAudit/) | `Assets`と導入済み`Packages`のasmdefをread-onlyで走査し、参照元・assembly・参照先の3列graph、選択asmdefが属する循環componentのmember集合、宣言したName／GUID参照のraw valueと一意な解決先、未解決・曖昧・自己参照、PlayerからEditor専用assemblyへの逆参照、platform指定の矛盾を表示する。選択asmdef／asmrefに関係するissueはresult順の500件pageで全50,000件、component memberはcycle pathではないasset path順の集合として全10,000件、宣言参照は順序と重複を保って全4,096件へ到達できる。asmrefは別一覧でtarget整合性を検査し、同じfolderに複数あるasmdef／asmref owner候補も各assetへ報告する。依存graphへの推測edge、未使用参照やcompile時間の推定は行わないEditor専用module。**Unity 6000.5.7f1以降**。 | なし |
 | [ローカライズキー監査](LocalizationKeyAudit/) | Unity Localizationの共有テーブルデータを型指定の読み込み前に未加工のまま検証し、文字列テーブルとアセットテーブルの所有元を分離して、必須ロケールの直接テーブル・項目・値、重複・孤立の整合性、1回につき`Assets`または登録済みパッケージ1つだけをルートとするGUIDと項目識別子の参照を手動表示する、読み取り専用の助言モジュール。結果全体の問題を絞り込みやページに依存しない4区分別件数でも示し、絞り込み後の最大100,000件へ500件ずつ最大200ページで到達して、現在のページだけを結果内の順序と重複を保ったまま一括コピーできる。同じルート内では複数パスを宣言でき、パッケージ範囲は登録名から安全な物理ルートへ解決して、結果には論理パスだけを残す。アセットテーブルの項目、代替値適用後の実行時翻訳、キーの未使用は断定せず、ビルド停止、自動修正、削除を行わない。**Unity 6000.5.7f1以降**。 | com.unity.localization 1.5.12 |
 | [ビルド実行アシスタント（Build Assistant）](BuildAssistant/README.md) | 有効なビルドプロファイル・シーン・出力先を事前確認し、実行直前に差分を再確認して新規フォルダーへデスクトップ向け単体ビルドを実行する。結果、容量内訳、前回差分を最大20件保存し、新しいJSONへ書き出すエディター専用モジュール。ビルドガードが導入済みなら、通常の`BuildPipeline.BuildPlayer`コールバックにより実際のビルド対象シーンの停止要因検査も自動適用される。事前確認には他モジュールの方針判定を混在させない。**Unity 6000.5.7f1以降**。 | なし |
-| [シーン作業セット（Scene Workspace）](SceneWorkspace/) | 複数Sceneの順番・Loaded・ActiveをProfile化し、差分Preview、古くなった計画の拒否、適用後検証、失敗時の復元結果を1つのEditor画面で扱うEditor専用module。**Unity 6000.5.7f1以降**。 | なし |
+| [シーン作業セット](SceneWorkspace/) | 複数シーンの順番・読込状態・使用中状態を設定アセットへ保存し、差分確認、古くなった計画の拒否、切り替え後確認、失敗時の復元結果を一つの画面で扱うエディター専用モジュール。**Unity 6000.5.7f1以降**。 | なし |
 | [プレイ中の調整を反映（Play Mode Tuning）](PlayModeTuning/) | 保存済みSceneのMonoBehaviourから残したい最上位serialized propertyを選び、Play Mode中に手動で取り込み、終了後の差分Preview、古くなった計画の拒否、適用後検証、失敗時の復元結果を1つのEditor画面で扱うEditor専用module。**Unity 6000.5.7f1以降**。 | なし |
 | [汎用データ構造（Containers）](Containers/) | コンテナ / データ構造 66 種。GC フリーのコレクション、Inspector に出せるシリアライズ対応型、空間分割、Unity のライフサイクルに耐えるコンテナ。**Unity 6000.0以降**。 | なし |
 | [オブジェクト再利用（Object Pool）](ObjectPool/) | 1つのprefabをidle上限・active上限・reuse順序(Lifo/Fifo)付きで再利用する。spawn・release・preload・trimをTry+error enumで扱い、生成／再利用／破壊の統計を持つ。外部破壊検知と他pool混線拒否を備える。**Unity 6000.5.7f1以降**。 | なし |
@@ -110,7 +110,7 @@ Unity で繰り返し発生する設定、実装、確認作業を減らすた�
 
 新規Projectの設定をそろえる場合は、[プロジェクト一括設定（Project Setup）](ProjectSetup/) を追加して `Tools > Project Setup > Open` を開く。`New recommended profile`で安全な推奨profileを作り、必要なら基本フォルダー、Runtime・Editor・test用asmdef、Unity向け`.gitignore`と`.gitattributes`、build target別Application Identifier・Scripting Backend・API Compatibility Level・Managed Stripping Level・IL2CPP Code Generation、Root Namespace、新規scriptの改行方式、複製時の命名規則、Play Mode Start Scene、条件付きコンパイル記号、Tag・Layer・Sorting Layer、Physics／Physics 2D Layer Collision、Build Scenesを追加する。`Preview changes`で差分を確認してから`Apply profile`を実行すると、適用直前の設定とツールが自動backupされる。復元時は、ツールが作成した後に内容が変わっていないfileだけを削除する。
 
-複数Sceneの編集構成を用途ごとに切り替える場合は、[シーン作業セット（Scene Workspace）](SceneWorkspace/) を個別に追加して `Tools > Scene Workspace > Open` を開く。① `Workspace Profile`、② `Scene Setup/Capture`、③ `Preview Changes`、④ `Review and Confirm`、⑤ `Switch Workspace/Result` の順に確認し、Sceneを変更する前に差分と安全条件を確定する。
+複数シーンの編集構成を用途ごとに切り替える場合は、[シーン作業セット](SceneWorkspace/)を個別に追加して`Tools > シーン作業セット > 開く`を開く。①「作業セットを選ぶ」、②「シーン構成を設定」、③「差分を確認」、④「内容を確認」、⑤「作業セットを切り替える」の順に進み、シーンを変更する前に差分と安全条件を確定する。
 
 Play Mode中の調整値を残す場合は、[プレイ中の調整を反映（Play Mode Tuning）](PlayModeTuning/) を個別に追加して `Tools > Play Mode Tuning > Open` を開く。① `Targets`、② `Capture During Play`、③ `Preview After Play`、④ `Review and Confirm`、⑤ `Apply Tuning / Result` の順に確認し、選択項目だけを手動で取り込んでから差分を反映する。
 
@@ -143,7 +143,7 @@ Assets/
     │   └── Tests/           BuildAssistant.Tests
     ├── SceneWorkspace/
     │   ├── Editor/          SceneWorkspace.Editor
-    │   ├── Tests/           SceneWorkspace.Tests
+    │   ├── Tests/Editor/    SceneWorkspace.Editor.Tests
     │   └── Documentation~/  操作順と実画面
     ├── PlayModeTuning/
     │   ├── Editor/          PlayModeTuning.Editor

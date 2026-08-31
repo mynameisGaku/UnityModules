@@ -2,10 +2,11 @@ using UnityEditor;
 
 namespace SceneWorkspace.Editor
 {
-    /// <summary>Adds one intuitive Tools menu entry for the Scene Workspace window.</summary>
+    /// <summary>シーン作業セット画面を開くためのメニュー項目を追加します。</summary>
     internal static class SceneWorkspaceMenu
     {
-        [MenuItem("Tools/Scene Workspace/Open")]
+        /// <summary>シーン作業セット画面を一つ開きます。</summary>
+        [MenuItem("Tools/シーン作業セット/開く")]
         private static void Open()
         {
             SceneWorkspaceWindow.Open();

@@ -8,9 +8,10 @@ using UnityEngine.SceneManagement;
 
 namespace SceneWorkspace.Editor
 {
-    /// <summary>Reads and restores only the Unity Editor scene-manager setup owned by this module.</summary>
+    /// <summary>このモジュールが所有するUnityエディターのシーン管理構成だけを読み取り、復元します。</summary>
     internal sealed class UnitySceneWorkspaceGateway : ISceneWorkspaceGateway
     {
+        /// <summary>エディター状態、シーン順、読込状態、使用中状態、未保存状態を取得します。</summary>
         public SceneWorkspaceSnapshot CaptureCurrentSetup()
         {
             var dirtyScenes = CaptureLoadedScenesByPath();
@@ -33,6 +34,7 @@ namespace SceneWorkspace.Editor
                 scenes);
         }
 
+        /// <summary>設定アセットの識別情報と順序付き目標構成を独立した値へ変換します。</summary>
         public SceneWorkspaceProfileSnapshot CaptureProfile(SceneWorkspaceProfile profile)
         {
             if (profile == null)
@@ -55,10 +57,11 @@ namespace SceneWorkspace.Editor
             return new SceneWorkspaceProfileSnapshot(true, profileGuid, profilePath, profile.name, scenes);
         }
 
+        /// <summary>指定構成の順番、読込状態、使用中状態をUnityエディターへ復元します。</summary>
         public void RestoreSetup(IReadOnlyList<SceneWorkspaceSceneState> scenes)
         {
             if (scenes == null)
-                throw new ArgumentNullException(nameof(scenes));
+                throw new ArgumentNullException(nameof(scenes), "復元するシーン構成を指定してください。");
 
             var setup = scenes.Select(scene => new SceneSetup
             {
@@ -69,6 +72,7 @@ namespace SceneWorkspace.Editor
             EditorSceneManager.RestoreSceneManagerSetup(setup);
         }
 
+        /// <summary>開いているシーンをパスごとの取得順に保持し、未保存状態の照合に使います。</summary>
         private static Dictionary<string, Queue<Scene>> CaptureLoadedScenesByPath()
         {
             var result = new Dictionary<string, Queue<Scene>>(StringComparer.Ordinal);
@@ -86,6 +90,7 @@ namespace SceneWorkspace.Editor
             return result;
         }
 
+        /// <summary>指定パスで次の開いているシーンを取り出します。見つからない場合は失敗します。</summary>
         private static bool TryTakeDirtyScene(Dictionary<string, Queue<Scene>> scenesByPath, string path, out Scene scene)
         {
             if (scenesByPath.TryGetValue(path, out var scenes) && scenes.Count > 0)

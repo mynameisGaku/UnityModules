@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace SceneWorkspace.Editor
 {
-    /// <summary>Builds one deterministic scene-switch plan from validated immutable snapshots.</summary>
+    /// <summary>検証済みで変更不能な状態記録から、順序が一定の切り替え計画を作成します。</summary>
     internal static class SceneWorkspacePlanner
     {
         internal static SceneWorkspacePlan Create(SceneWorkspaceSnapshot current, SceneWorkspaceProfileSnapshot profile, long generation)
@@ -89,9 +89,10 @@ namespace SceneWorkspace.Editor
                     changes.Add(new SceneWorkspaceChange(SceneWorkspaceChangeKind.Reorder, targetScene.Path, currentScene.Index, targetScene.Index, currentScene.Loaded, targetScene.Loaded, currentScene.Active, targetScene.Active));
                     changed = true;
                 }
-                if (!currentScene.Active && targetScene.Active)
+                if (currentScene.Active != targetScene.Active)
                 {
-                    changes.Add(new SceneWorkspaceChange(SceneWorkspaceChangeKind.SetActive, targetScene.Path, currentScene.Index, targetScene.Index, currentScene.Loaded, targetScene.Loaded, false, true));
+                    var kind = targetScene.Active ? SceneWorkspaceChangeKind.SetActive : SceneWorkspaceChangeKind.ClearActive;
+                    changes.Add(new SceneWorkspaceChange(kind, targetScene.Path, currentScene.Index, targetScene.Index, currentScene.Loaded, targetScene.Loaded, currentScene.Active, targetScene.Active));
                     changed = true;
                 }
                 if (!changed)

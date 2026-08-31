@@ -1,98 +1,107 @@
-# シーン作業セット（Scene Workspace）
+# シーン作業セット
 
-## 30 秒で分かる説明
+## 30秒で分かる説明
 
-複数の Scene を毎回開き直し、読み込み状態と Active Scene を手作業で戻す手間を減らす Editor 専用モジュールです。
+複数のシーンを毎回開き直し、順番、読込状態、使用中のシーンを手作業で戻す手間を減らすエディター専用ツールです。
 
-たとえば「ゲームプレイ編集用」「ライティング確認用」「UI 調整用」の Scene 構成を Profile として保存できます。設定後に `Preview Changes` で変更内容を確認し、同じ計画だけを `Switch Workspace` で一度だけ適用します。
+たとえば「ゲームプレイ編集用」「照明確認用」「画面調整用」の構成を設定アセットとして保存できます。差分を確認し、内容確認欄を有効にした同じ計画だけを一度だけ適用します。
 
-Scene の未保存変更を勝手に保存・破棄しません。Dirty Scene、無題 Scene、欠損 Scene などが 1 件でもあれば、Scene を開閉する前に停止します。
+未保存のシーン変更を勝手に保存・破棄しません。未保存変更、無題、欠損、重複などを一つでも検出すると、シーンを開閉する前に停止します。
 
-## 画面で見る操作順
+## できること
 
-設定は ① Profile、② Scene 構成、③ Preview、④ 確認、⑤ 切り替えの順です。Preview は Scene 構成を設定した後、実際の切り替えは確認した後にあります。
+- 複数シーンの順番、読込状態、使用中のシーンを一つの設定アセットへ保存する。
+- 現在開いている構成を明示的に取り込み、Unityの「元に戻す」で取り消す。
+- 閉じる、開く、読み込む、読み込みを解除する、並べ替える、使用中にする・解除する差分を切り替え前に確認する。
+- 差分確認後に現在構成または設定が変わった場合は、古い計画を適用しない。
+- 切り替え後に順番、シーン、読込状態、使用中状態、未保存状態を再確認する。
+- 途中失敗時は元のシーン構成への復元を試み、切り替え結果と復元結果を別々に表示する。
 
-![Scene Workspace の操作順](Documentation~/scene-workspace-guide.png)
+## 3分で試す
+
+1. Package Managerの`Add package from git URL...`へ次を入力します。
+
+   ```text
+   https://github.com/mynameisGaku/UnityModules.git?path=/SceneWorkspace#scene-workspace-v1.1.0
+   ```
+
+2. `Tools > シーン作業セット > 開く`を開きます。
+3. ①「作業セットを選ぶ」で、既存の設定アセットを選ぶか「新しい設定を作成」を押します。
+4. ②「シーン構成を設定」でシーンを希望順に並べ、「読み込む」と「使用中にする」を設定します。
+5. ③「差分を確認」を押し、現在構成から変わる内容を確認します。
+6. ④「内容を確認」で確認欄を有効にします。
+7. ⑤「作業セットを切り替える」を押し、切り替え結果と復元結果を確認します。
+
+![シーン作業セットの操作順](Documentation~/scene-workspace-guide.png)
 
 <details>
-<summary>注釈なしの実画面を確認する</summary>
+<summary>注釈を加える前の実際のエディター画面</summary>
 
-`Main`、`Gameplay`、`Lighting` の 3 Scene を使い、現在との差分を Preview した実際の Editor Window です。
+`Main`、`Gameplay`、`Lighting`の3シーンを使い、現在との差分を表示した実際の画面です。
 
-![Scene Workspace の実画面](Documentation~/scene-workspace-window.png)
+![実際のシーン作業セット画面](Documentation~/scene-workspace-window.png)
 
 </details>
 
-## 何が便利になるか
+## 五段階の操作
 
-- 複数 Scene の順番、Loaded、Active を 1 つの Profile にまとめられます。
-- 現在の Scene 構成を Profile へ明示的に取り込めます。
-- 閉じる、開く、読み込む、読み込み解除、並べ替える、Active にする変更を適用前に一覧で確認できます。
-- Preview 後に現在の構成または Profile が変わった場合は、古い計画を適用しません。
-- 適用後に順番、Scene、Loaded、Active、Dirty を再確認します。
-- 途中失敗時は元の Scene 構成への復元を試み、適用結果と復元結果を別々に表示します。
+### ①「作業セットを選ぶ」
 
-## 使い方
+既存の`SceneWorkspaceProfile`を選ぶか、「新しい設定を作成」で新しく作ります。設定アセットは`Assets`フォルダー以下へ保存してください。
 
-Unity メニューの `Tools > Scene Workspace > Open` を開き、必ず上から順に設定します。
+### ②「シーン構成を設定」
 
-### ① `Workspace Profile`
+シーンを上から希望順に並べ、各シーンの「読み込む」と「使用中にする」を設定します。使用中にできるのは、読み込むシーンのうち一つだけです。
 
-既存の `SceneWorkspaceProfile` を選ぶか、`Create New Profile` で新しく作ります。
+現在開いている構成を使う場合は「現在の構成を設定へ取り込む」を押します。この操作は設定アセットを変更済みにしますが、自動保存しません。内容を確認してから通常のUnity操作で保存してください。取り込み直後はUnityの「元に戻す」で以前の設定へ戻せます。
 
-### ② `Scene Setup/Capture`
+### ③「差分を確認」
 
-Profile の Scene を上から希望順に並べ、各 Scene の `Loaded` と `Active` を設定します。Active にできるのは Loaded の Scene 1 件だけです。
+すべての設定が終わってから「差分を確認」を押します。この段階ではシーンを変更せず、現在構成と設定の差だけを表示します。画面上の位置は一始まりで表示します。
 
-現在開いている構成を使う場合は `Capture Current Setup Into Profile` を押します。この操作は Profile を変更済みにしますが、自動保存はしません。内容を確認してから通常の Unity 操作で Profile を保存してください。
+### ④「内容を確認」
 
-### ③ `Preview Changes`
+シーンの順番、読込状態、使用中のシーン、閉じるシーンを確認し、確認欄を有効にします。設定を編集すると差分計画と確認状態を破棄するため、③からやり直します。
 
-すべての設定が終わってから `Preview Changes` を押します。この段階では Scene を開閉せず、現在と Profile の差だけを表示します。
+### ⑤「作業セットを切り替える」
 
-### ④ `Review and Confirm`
+実行直前に現在構成と設定を再取得し、③の記録と一致した場合だけ切り替えます。結果欄では「切り替え」と「復元」を分けて確認できます。復元が「失敗」の場合は自動操作を続けず、階層画面と各シーンの状態を手動で確認してください。
 
-Scene の順番、Loaded、Active、閉じる Scene を確認し、確認欄をオンにします。Profile を編集した場合は Preview が無効になるため、③からやり直します。
-
-### ⑤ `Switch Workspace/Result`
-
-`Switch Workspace` を押します。実行直前に現在の構成と Profile を再取得し、③と一致した場合だけ切り替えます。
-
-結果欄では `Apply` と `Rollback` を分けて確認できます。`Rollback: Failed` の場合は自動操作を続けず、Unity の Hierarchy と Scene の状態を手動で確認してください。
+切り替え操作そのものはUnityの「元に戻す」履歴へ登録しません。切り替え途中で失敗した場合は、このモジュールが適用前の構成を一度だけ自動復元し、その結果を検証します。
 
 ## 利用できない状態
 
-次の場合は Preview または Apply を Scene 変更前に停止します。
+次の場合は差分確認または切り替えを、シーン変更前に停止します。
 
-- Play Mode 中、または Play Mode へ切り替え中
-- コンパイル中、Asset 更新中
-- Prefab Mode を開いている
-- Dirty Scene、無題 Scene、欠損 Scene、重複 Scene がある
-- `Assets` 以下の `.unity` ではない Scene がある
-- Loaded Scene が 0 件
-- Active Scene が 1 件ではない、または Active Scene が Unloaded
-- Profile が Project の `Assets` 以下へ保存されていない
-- Preview 後に現在の構成または Profile が変わった
-- 同じ Preview 計画を既に使用した、または古い世代の計画になった
+- 再生モード中、または再生モードへ切り替え中
+- コンパイル中、アセット更新中
+- プレハブ編集画面を開いている
+- 未保存変更、無題、欠損、重複のあるシーンがある
+- `Assets`フォルダー以下の`.unity`ではないシーンがある
+- 読み込むシーンが0件
+- 使用中にするシーンが一つではない、または読み込まない設定になっている
+- 設定アセットが`Assets`フォルダー以下へ保存されていない
+- 差分確認後に現在構成または設定が変わった
+- 同じ差分計画をすでに使用した、または古い世代の計画になった
 
 ## 自動では行わないこと
 
-- Scene の保存または変更破棄
-- Scene Asset、GameObject、Component の作成・削除・置換
-- Runtime の Scene 遷移
-- Build Profile、Build Settings、Player Settings の変更
-- Profile Asset の自動保存
+- シーンの保存または変更破棄
+- シーンアセット、ゲームオブジェクト、コンポーネントの作成・削除・置換
+- 実行時のシーン遷移
+- ビルドプロファイル、ビルド設定、プレイヤー設定の変更
+- 設定アセットの自動保存
 
-このモジュールは Editor 専用 assembly です。Mono と IL2CPP のどちらの Player にも Runtime code を追加しません。
+このモジュールには実行時アセンブリがありません。MonoとIL2CPPのどちらのプレイヤーにも実行時コードを追加しません。
 
 ## スクリプトから使う場合
 
-公開入口は `SceneWorkspace.Editor.SceneWorkspaceService` です。
+公開入口は`SceneWorkspace.Editor.SceneWorkspaceService`です。
 
-- `CaptureCurrentSetup()`
-- `Preview(SceneWorkspaceProfile profile)`
-- `Apply(SceneWorkspacePlan plan)`
+- `CaptureCurrentSetup()`: 現在構成を変更せずに取得する。
+- `Preview(SceneWorkspaceProfile profile)`: 現在構成と設定の単回使用計画を作る。
+- `Apply(SceneWorkspacePlan plan)`: 同一の計画オブジェクトを再検証して一度だけ適用する。
 
-`SceneWorkspaceCaptureResult`、`SceneWorkspacePlan`、`SceneWorkspaceApplyResult` とその公開 collection は、呼び出し側から内容を書き換えられません。`SceneWorkspacePlan` は 1 回だけ使用できます。Domain Reload または古い計画の上限超過後は安全側で `StalePlan` になります。
+`SceneWorkspaceCaptureResult`、`SceneWorkspacePlan`、`SceneWorkspaceApplyResult`と公開一覧は、呼び出し側から内容を書き換えられません。領域再読込前の計画や、保持上限64件を超えた古い計画は`StalePlan`として安全側で拒否します。
 
-失敗条件、検証範囲、復元結果の読み方は [詳しい仕様](Documentation~/index.md) を参照してください。
+対応版はUnity 6000.5.7f1以降、追加依存パッケージはありません。失敗条件、検証範囲、復元結果の読み方は[詳しい仕様](Documentation~/index.md)を参照してください。

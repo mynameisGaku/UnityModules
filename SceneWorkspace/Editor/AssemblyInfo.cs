@@ -1,3 +1,3 @@
 using System.Runtime.CompilerServices;
 
-[assembly: InternalsVisibleTo("SceneWorkspace.Tests")]
+[assembly: InternalsVisibleTo("SceneWorkspace.Editor.Tests")]

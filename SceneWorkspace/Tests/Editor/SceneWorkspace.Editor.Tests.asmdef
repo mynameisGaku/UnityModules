@@ -1,6 +1,6 @@
 {
-    "name": "SceneWorkspace.Tests",
-    "rootNamespace": "SceneWorkspace.Tests",
+    "name": "SceneWorkspace.Editor.Tests",
+    "rootNamespace": "SceneWorkspace.Editor.Tests",
     "references": [
         "SceneWorkspace.Editor",
         "UnityEngine.TestRunner",
