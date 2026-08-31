@@ -40,6 +40,7 @@ namespace ModuleInstaller.Editor.Tests
                 var entry = ModuleCatalog.Entries[index];
                 Assert.That(ContainsJapanese(entry.DisplayName), Is.True, entry.PackageName);
                 Assert.That(ContainsJapanese(entry.Summary), Is.True, entry.PackageName);
+                AssertDoesNotContainReplaceableEnglish(entry.Summary, entry.PackageName);
             }
 
             for (var index = 0; index < ModuleCatalog.Bundles.Count; index++)
@@ -50,6 +51,10 @@ namespace ModuleInstaller.Editor.Tests
                 Assert.That(ContainsJapanese(bundle.UseWhen), Is.True, bundle.Id);
                 Assert.That(ContainsJapanese(bundle.FirstStep), Is.True, bundle.Id);
                 Assert.That(ContainsJapanese(bundle.ChangeScope), Is.True, bundle.Id);
+                AssertDoesNotContainReplaceableEnglish(bundle.Summary, bundle.Id);
+                AssertDoesNotContainReplaceableEnglish(bundle.UseWhen, bundle.Id);
+                AssertDoesNotContainReplaceableEnglish(bundle.FirstStep, bundle.Id);
+                AssertDoesNotContainReplaceableEnglish(bundle.ChangeScope, bundle.Id);
             }
         }
 
@@ -122,6 +127,7 @@ namespace ModuleInstaller.Editor.Tests
                 "com.studiogaku.reference-finder",
                 "com.studiogaku.build-assistant"
             }));
+            Assert.That(bundle.FirstStep, Does.Contain("Tools > ビルド実行アシスタント > 開く"));
         }
 
         [Test]
@@ -168,7 +174,7 @@ namespace ModuleInstaller.Editor.Tests
         {
             Assert.That(ModuleCatalog.TryFindEntry("com.studiogaku.build-assistant", out var entry), Is.True);
             Assert.That(entry.FolderName, Is.EqualTo("BuildAssistant"));
-            Assert.That(entry.Tag, Is.EqualTo("build-assistant-v1.0.0"));
+            Assert.That(entry.Tag, Is.EqualTo("build-assistant-v1.1.0"));
             Assert.That(entry.DisplayName, Is.EqualTo("ビルド実行アシスタント"));
             Assert.That(entry.Summary, Does.Contain("デスクトップ向けビルド計画").And.Contain("新しい出力フォルダー").And.Contain("件数を制限した履歴").And.Contain("容量差").And.Contain("JSON形式の報告"));
         }
@@ -431,6 +437,16 @@ namespace ModuleInstaller.Editor.Tests
             }
 
             return false;
+        }
+
+        // 画面説明に置換可能な英語が再混入していないことを検査します。
+        // 第一引数は表示文、第二引数は失敗時に示す対象識別子です。
+        private static void AssertDoesNotContainReplaceableEnglish(string value, string context)
+        {
+            Assert.That(value, Does.Not.Contain("Input System"), context);
+            Assert.That(value, Does.Not.Contain("Library履歴"), context);
+            Assert.That(value, Does.Not.Contain("Package Manager"), context);
+            Assert.That(value, Does.Not.Contain("README"), context);
         }
     }
 }

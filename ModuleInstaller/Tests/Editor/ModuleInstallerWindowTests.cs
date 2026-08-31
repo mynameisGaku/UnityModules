@@ -105,7 +105,7 @@ namespace ModuleInstaller.Editor.Tests
                 var buildAssistantReadmeButton = buildAssistantRow.Q<Button>("readme-package-com.studiogaku.build-assistant");
                 var buildAssistantInstallButton = buildAssistantRow.Q<Button>("install-package-com.studiogaku.build-assistant");
                 Assert.That(buildAssistantLabel.text, Does.Contain("ビルド実行アシスタント").And.Contain("デスクトップ向けビルド計画").And.Contain("件数を制限した履歴"));
-                Assert.That(buildAssistantReadmeButton.tooltip, Does.Contain("build-assistant-v1.0.0/BuildAssistant/README.md"));
+                Assert.That(buildAssistantReadmeButton.tooltip, Does.Contain("build-assistant-v1.1.0/BuildAssistant/README.md"));
                 Assert.That(buildAssistantInstallButton, Is.Not.Null);
                 Assert.That(packages.contentContainer.hierarchy.IndexOf(buildAssistantRow), Is.EqualTo(packages.contentContainer.hierarchy.IndexOf(assetImportRow) + 1));
 

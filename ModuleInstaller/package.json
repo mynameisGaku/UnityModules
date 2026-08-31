@@ -1,13 +1,13 @@
 {
   "name": "com.studiogaku.module-installer",
-  "version": "1.6.0",
+  "version": "1.6.1",
   "displayName": "モジュール管理",
   "description": "六つの用途別セットから必要なUnityモジュールを選び、公開済みの固定版22件を導入・更新します。旧パッケージやAssets内の複製との競合は、パッケージ設定を変更する前に検出して停止します。",
   "unity": "6000.5",
   "unityRelease": "7f1",
-  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/blob/module-installer-v1.6.0/ModuleInstaller/Documentation~/index.md",
-  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/module-installer-v1.6.0/ModuleInstaller/CHANGELOG.md",
-  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/module-installer-v1.6.0/ModuleInstaller/LICENSE.md",
+  "documentationUrl": "https://github.com/mynameisGaku/UnityModules/blob/module-installer-v1.6.1/ModuleInstaller/Documentation~/index.md",
+  "changelogUrl": "https://github.com/mynameisGaku/UnityModules/blob/module-installer-v1.6.1/ModuleInstaller/CHANGELOG.md",
+  "licensesUrl": "https://github.com/mynameisGaku/UnityModules/blob/module-installer-v1.6.1/ModuleInstaller/LICENSE.md",
   "license": "LICENSE.md を参照",
   "keywords": [
     "package-manager",
