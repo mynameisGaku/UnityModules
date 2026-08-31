@@ -1,35 +1,37 @@
 namespace BuildAssistant.Editor
 {
-    /// <summary>Identifies a bounded failure reported by Build Assistant.</summary>
+    /// <summary>ビルド実行アシスタントが報告する定義済みの失敗理由を表します。</summary>
     public enum BuildAssistantError
     {
-        /// <summary>No error occurred.</summary>
+        /// <summary>エラーは発生していません。</summary>
         None = 0,
-        /// <summary>The output root was empty, relative, a file, or more than one missing directory deep.</summary>
+        /// <summary>出力先の基準フォルダーが空、相対パス、ファイル、または2階層以上未作成のパスです。</summary>
         InvalidOutputRoot = 1,
-        /// <summary>The output root escaped its boundary, used a reparse point, or overlapped a Unity-managed directory.</summary>
+        /// <summary>出力先が許可範囲を外れた、再解析ポイントを通った、またはUnity管理フォルダーと重なっています。</summary>
         UnsafeOutputPath = 2,
-        /// <summary>The selected build target or build options are outside the supported desktop standalone contract.</summary>
+        /// <summary>選択した対象機種またはビルド設定が、対応するデスクトップ単体実行形式の範囲外です。</summary>
         UnsupportedBuildTarget = 3,
-        /// <summary>The editor is compiling, updating, entering play mode, or otherwise unable to start a build.</summary>
+        /// <summary>エディターがコンパイル中、更新中、再生モードへの移行中などで、ビルドを開始できません。</summary>
         EditorBusy = 4,
-        /// <summary>The effective build profile contains no enabled scenes.</summary>
+        /// <summary>実際に使われるビルドプロファイルに、有効なシーンがありません。</summary>
         NoEnabledScenes = 5,
-        /// <summary>The build inputs changed after the plan was created.</summary>
+        /// <summary>計画を作成した後にビルド入力が変わりました。</summary>
         StalePlan = 6,
-        /// <summary>Build Assistant or Unity is already building a player.</summary>
+        /// <summary>ビルド実行アシスタントまたはUnityが、すでにプレイヤーをビルドしています。</summary>
         BuildAlreadyRunning = 7,
-        /// <summary>The planned run directory or reservation already exists.</summary>
+        /// <summary>計画した実行フォルダーまたは予約情報が、すでに存在します。</summary>
         OutputAlreadyExists = 8,
-        /// <summary>The output directory or durable run state could not be reserved.</summary>
+        /// <summary>出力フォルダーまたは永続化する実行状態を予約できませんでした。</summary>
         OutputReservationFailed = 9,
-        /// <summary>Unity failed or refused to invoke the planned player build.</summary>
+        /// <summary>Unityが、計画したプレイヤービルドを開始できなかったか、開始を拒否しました。</summary>
         BuildInvocationFailed = 10,
-        /// <summary>Unity returned no BuildReport for the invoked build.</summary>
+        /// <summary>開始したビルドについて、Unityからビルド報告が返されませんでした。</summary>
         BuildReportUnavailable = 11,
-        /// <summary>The returned BuildReport could not be reduced to detached data.</summary>
+        /// <summary>返されたビルド報告を、Unityオブジェクトに依存しない結果へ変換できませんでした。</summary>
         ReportReadFailed = 12,
-        /// <summary>The build history or explicit JSON export could not be written durably.</summary>
-        HistoryWriteFailed = 13
+        /// <summary>ビルド履歴または明示的に書き出すJSONを永続保存できませんでした。</summary>
+        HistoryWriteFailed = 13,
+        /// <summary>独自のビルドプロファイルと、現在コンパイル済みの対象機種または種別が一致しません。</summary>
+        BuildTargetMismatch = 14
     }
 }

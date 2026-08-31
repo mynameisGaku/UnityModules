@@ -6,7 +6,7 @@ using UnityEditor;
 
 namespace BuildAssistant.Editor
 {
-    /// <summary>Describes one immutable, stale-checkable desktop standalone build.</summary>
+    /// <summary>作成後の入力変更を検出できる、変更不能なデスクトップ単体実行形式のビルド計画を表します。</summary>
     public sealed class BuildAssistantPlan
     {
         private readonly ReadOnlyCollection<string> extraScriptingDefines;
@@ -43,79 +43,79 @@ namespace BuildAssistant.Editor
             PreviousComparableSuccess = previousComparableSuccess;
         }
 
-        /// <summary>Gets the preview error, or None when the plan is ready.</summary>
+        /// <summary>計画作成時の定義済みエラーを取得します。実行可能な計画ではエラーなしを示します。</summary>
         public BuildAssistantError Error { get; }
 
-        /// <summary>Gets a diagnostic message suitable for an editor UI.</summary>
+        /// <summary>エディター画面へ表示できる診断文を取得します。</summary>
         public string Message { get; }
 
-        /// <summary>Gets whether the plan passed preview validation.</summary>
+        /// <summary>計画作成時の検査に合格し、実行可能かどうかを取得します。</summary>
         public bool IsReady => Error == BuildAssistantError.None;
 
-        /// <summary>Gets the stable run identifier generated during preview.</summary>
+        /// <summary>計画作成時に生成された安定した実行識別子を取得します。</summary>
         public string RunId { get; }
 
-        /// <summary>Gets the UTC time supplied to deterministic plan creation.</summary>
+        /// <summary>再現可能な計画作成へ渡された協定世界時を取得します。</summary>
         public DateTime CreatedAtUtc { get; }
 
-        /// <summary>Gets the normalized absolute output root.</summary>
+        /// <summary>正規化された出力先基準フォルダーの絶対パスを取得します。</summary>
         public string OutputRoot { get; }
 
-        /// <summary>Gets the normalized absolute directory reserved exclusively for this run.</summary>
+        /// <summary>この実行専用に予約された、正規化済みフォルダーの絶対パスを取得します。</summary>
         public string RunDirectory { get; }
 
-        /// <summary>Gets the platform-specific player artifact path.</summary>
+        /// <summary>対象機種に応じたプレイヤー成果物のパスを取得します。</summary>
         public string ArtifactPath { get; }
 
-        /// <summary>Gets whether the plan uses the platform profile or a custom BuildProfile asset.</summary>
+        /// <summary>計画が機種別プロファイルと独自ビルドプロファイル素材のどちらを使うかを取得します。</summary>
         public BuildAssistantProfileKind ProfileKind { get; }
 
-        /// <summary>Gets the custom BuildProfile asset GUID, or an empty string for the platform profile.</summary>
+        /// <summary>独自ビルドプロファイル素材のGUIDを取得します。機種別プロファイルでは空文字列です。</summary>
         public string ProfileGuid { get; }
 
-        /// <summary>Gets the captured profile display name.</summary>
+        /// <summary>記録したプロファイル表示名を取得します。</summary>
         public string ProfileName { get; }
 
-        /// <summary>Gets the custom BuildProfile asset path, or an empty string for the platform profile.</summary>
+        /// <summary>独自ビルドプロファイル素材のパスを取得します。機種別プロファイルでは空文字列です。</summary>
         public string ProfilePath { get; }
 
-        /// <summary>Gets the effective fingerprint for settings, classic profiles, imported content, package manifests, StreamingAssets, and any custom profile dependency.</summary>
+        /// <summary>設定、従来形式のプロファイル、取り込み済みの内容、パッケージ目録、ストリーミング用素材、独自プロファイルの依存関係をまとめた照合用要約値を取得します。</summary>
         public string ProfileDependencyHash { get; }
 
-        /// <summary>Gets the stable profile identity used for compatible history comparisons.</summary>
+        /// <summary>互換性のある履歴を比較するための、安定したプロファイル識別値を取得します。</summary>
         public string ProfileStableId { get; }
 
-        /// <summary>Gets the captured desktop standalone build target.</summary>
+        /// <summary>記録したデスクトップ単体実行形式の対象機種を取得します。</summary>
         public BuildTarget Target { get; }
 
-        /// <summary>Gets the captured build target group.</summary>
+        /// <summary>記録した対象機種群を取得します。</summary>
         public BuildTargetGroup TargetGroup { get; }
 
-        /// <summary>Gets the captured NamedBuildTarget name.</summary>
+        /// <summary>記録したUnityの名前付き対象機種名を取得します。</summary>
         public string NamedBuildTarget { get; }
 
-        /// <summary>Gets the captured standalone subtarget value.</summary>
+        /// <summary>記録した単体実行形式の対象種別値を取得します。</summary>
         public int Subtarget { get; }
 
-        /// <summary>Gets the captured scripting backend.</summary>
+        /// <summary>記録したスクリプト処理方式を取得します。</summary>
         public ScriptingImplementation ScriptingBackend { get; }
 
-        /// <summary>Gets effective normalized BuildOptions, including custom-profile build mode and compression flags.</summary>
+        /// <summary>独自プロファイルのビルド方式と圧縮指定を含む、実際に使われる正規化済みのビルド選択肢を取得します。</summary>
         public BuildOptions Options { get; }
 
-        /// <summary>Gets the optional captured AssetBundle manifest path.</summary>
+        /// <summary>指定されている場合、記録したアセットバンドル目録のパスを取得します。</summary>
         public string AssetBundleManifestPath { get; }
 
-        /// <summary>Gets a defensive read-only copy of additional build-only scripting defines.</summary>
+        /// <summary>ビルド時だけ追加するスクリプト定義の、保護された読み取り専用一覧を取得します。</summary>
         public IReadOnlyList<string> ExtraScriptingDefines => extraScriptingDefines;
 
-        /// <summary>Gets a defensive read-only copy of the effective global, profile, and build-only defines.</summary>
+        /// <summary>全体設定、プロファイル、ビルド時限定の定義を統合した、保護された読み取り専用一覧を取得します。</summary>
         public IReadOnlyList<string> EffectiveDefines => effectiveDefines;
 
-        /// <summary>Gets a defensive read-only copy of every ordered scene snapshot, including disabled scenes.</summary>
+        /// <summary>無効なシーンも含め、順序どおりに記録した全シーンの保護された読み取り専用一覧を取得します。</summary>
         public IReadOnlyList<BuildAssistantScene> Scenes => scenes;
 
-        /// <summary>Gets the latest successful compatible history entry captured at preview time, when available.</summary>
+        /// <summary>計画作成時に互換性のある成功履歴が存在した場合、その最新項目を取得します。</summary>
         public BuildAssistantHistoryEntry PreviousComparableSuccess { get; }
 
         internal OutputRootMode OutputRootMode { get; }

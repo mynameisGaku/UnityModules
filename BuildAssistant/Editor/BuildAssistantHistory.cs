@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace BuildAssistant.Editor
 {
-    /// <summary>Provides the newest-first, bounded Build Assistant history detached from Unity objects.</summary>
+    /// <summary>Unityオブジェクトに依存しない、件数制限付きのビルド履歴を新しい順で提供します。</summary>
     public sealed class BuildAssistantHistory
     {
         private readonly ReadOnlyCollection<BuildAssistantHistoryEntry> entries;
@@ -17,13 +17,13 @@ namespace BuildAssistant.Editor
             Message = message ?? string.Empty;
         }
 
-        /// <summary>Gets a defensive read-only copy of entries in newest-first order.</summary>
+        /// <summary>履歴項目を新しい順に並べた、保護された読み取り専用一覧を取得します。</summary>
         public IReadOnlyList<BuildAssistantHistoryEntry> Entries => entries;
 
-        /// <summary>Gets whether a valid backup was used because the primary history was missing or corrupt.</summary>
+        /// <summary>主履歴が存在しないか壊れていたため、有効な予備履歴を使ったかどうかを取得します。</summary>
         public bool RecoveredFromBackup { get; }
 
-        /// <summary>Gets a non-fatal history load or recovery diagnostic.</summary>
+        /// <summary>処理を中断しない履歴読込または復旧の診断文を取得します。</summary>
         public string Message { get; }
     }
 }

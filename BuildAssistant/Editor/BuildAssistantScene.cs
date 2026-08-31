@@ -2,15 +2,16 @@ using System;
 
 namespace BuildAssistant.Editor
 {
-    /// <summary>Captures one ordered build-scene input without retaining a Unity object.</summary>
+    /// <summary>Unityオブジェクトを保持せず、順序付きビルドシーン入力を1件記録します。</summary>
     public sealed class BuildAssistantScene
     {
-        /// <summary>Creates an immutable scene snapshot.</summary>
-        /// <param name="order">The zero-based order in the effective profile scene list.</param>
-        /// <param name="guid">The Unity asset GUID, or an empty string when the path cannot be resolved.</param>
-        /// <param name="assetPath">The project-relative scene asset path.</param>
-        /// <param name="enabled">Whether the scene is included in the player build.</param>
-        /// <param name="dependencyHash">The Unity dependency hash captured during preview.</param>
+        /// <summary>変更不能なシーンの記録を作成します。</summary>
+        /// <param name="order">実際に使われるプロファイルのシーン一覧における、0から始まる順番。</param>
+        /// <param name="guid">Unity素材のGUID。パスを解決できない場合は空文字列。</param>
+        /// <param name="assetPath">プロジェクトからの相対シーン素材パス。</param>
+        /// <param name="enabled">プレイヤービルドへシーンを含めるかどうか。</param>
+        /// <param name="dependencyHash">計画作成時に記録したUnity依存関係のハッシュ値。</param>
+        /// <exception cref="ArgumentOutOfRangeException"><paramref name="order"/>が0未満の場合に発生します。</exception>
         public BuildAssistantScene(int order, string guid, string assetPath, bool enabled, string dependencyHash)
         {
             if (order < 0)
@@ -23,19 +24,19 @@ namespace BuildAssistant.Editor
             DependencyHash = dependencyHash ?? string.Empty;
         }
 
-        /// <summary>Gets the zero-based order in the effective profile scene list.</summary>
+        /// <summary>実際に使われるプロファイルのシーン一覧における、0から始まる順番を取得します。</summary>
         public int Order { get; }
 
-        /// <summary>Gets the Unity asset GUID.</summary>
+        /// <summary>Unity素材のGUIDを取得します。</summary>
         public string Guid { get; }
 
-        /// <summary>Gets the project-relative scene asset path.</summary>
+        /// <summary>プロジェクトからの相対シーン素材パスを取得します。</summary>
         public string AssetPath { get; }
 
-        /// <summary>Gets whether the scene is included in the player build.</summary>
+        /// <summary>プレイヤービルドへシーンを含めるかどうかを取得します。</summary>
         public bool Enabled { get; }
 
-        /// <summary>Gets the dependency hash captured during preview.</summary>
+        /// <summary>計画作成時に記録した依存関係のハッシュ値を取得します。</summary>
         public string DependencyHash { get; }
     }
 }

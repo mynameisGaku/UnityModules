@@ -1,1 +1,1 @@
-Build Assistant does not include third-party source code.
+このパッケージには、第三者が著作権を持つソースコードを含めていません。

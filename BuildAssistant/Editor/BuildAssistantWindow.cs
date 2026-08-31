@@ -8,18 +8,19 @@ using UnityEngine;
 
 namespace BuildAssistant.Editor
 {
-    /// <summary>Provides a strict top-to-bottom workflow for one safe desktop standalone build.</summary>
+    /// <summary>安全なデスクトップ向けビルドを、上から順に確認して一度だけ実行する画面です。</summary>
     internal sealed class BuildAssistantWindow : EditorWindow
     {
-        internal const string ProfileHeading = "\u2460 Profile";
-        internal const string OutputHeading = "\u2461 Output";
-        internal const string PreviewHeading = "\u2462 Preview";
-        internal const string ConfirmHeading = "\u2463 Confirm";
-        internal const string BuildHeading = "\u2464 Build / Result / Export";
-        internal const string OutputHelpText = "Use a local-drive absolute folder outside Assets, Packages, ProjectSettings, Library, Temp, Logs, and obj. UNC, network, and mapped-drive paths are not supported. An existing folder or exactly one missing child is accepted.";
-        internal const string EditorTargetLabel = "Editor Active Target";
-        internal const string ProfileHelpText = "This is Unity's editor target. For a custom Build Profile, the authoritative profile target appears under Confirm after Preview. Build Assistant does not switch either setting.";
-        internal const string InputFingerprintLabel = "Captured Input Fingerprint";
+        internal const string WindowTitle = "ビルド実行アシスタント";
+        internal const string ProfileHeading = "\u2460 ビルド設定";
+        internal const string OutputHeading = "\u2461 出力先";
+        internal const string PreviewHeading = "\u2462 計画作成";
+        internal const string ConfirmHeading = "\u2463 実行確認";
+        internal const string BuildHeading = "\u2464 実行結果と書き出し";
+        internal const string OutputHelpText = "Assets、Packages、ProjectSettings、Library、Temp、Logs、objの外にある、ローカルドライブの絶対フォルダーを指定してください。UNC、ネットワーク、割り当てドライブは使えません。既存フォルダー、または既存フォルダー直下の未作成フォルダー一つだけを指定できます。";
+        internal const string EditorTargetLabel = "エディターで選択中の対象機種";
+        internal const string ProfileHelpText = "ここにはUnityエディターの対象機種を表示します。独自のビルドプロファイルを使う場合は、そのプロファイルと対象機種・種別が一致している必要があります。一致しない場合はUnityのビルドプロファイル画面で切り替え、コンパイル完了後に計画を作り直してください。この画面は設定を切り替えません。";
+        internal const string InputFingerprintLabel = "取得した入力照合値";
         internal const int SectionCardCount = 5;
         internal const float MinimumWidth = 620f;
         internal const float MinimumHeight = 480f;
@@ -31,12 +32,14 @@ namespace BuildAssistant.Editor
         private bool _showScenes = true;
         private bool _showDefines;
         private bool _showLargestAssets = true;
+        // 同じ描画中に重ねてビルド要求を登録しないための状態です。
+        private bool _buildQueued;
         private GUIStyle _wordWrapStyle;
 
-        /// <summary>Opens or focuses the Build Assistant editor window.</summary>
+        /// <summary>ビルド実行アシスタントを開くか、既存の画面へ移動します。</summary>
         internal static void Open()
         {
-            GetWindow<BuildAssistantWindow>("Build Assistant");
+            GetWindow<BuildAssistantWindow>(WindowTitle);
         }
 
         private void OnEnable()
@@ -47,6 +50,13 @@ namespace BuildAssistant.Editor
             _presenter.RefreshHistory();
         }
 
+        /// <summary>画面を閉じた場合は、まだ開始していないビルド要求を取り消します。</summary>
+        private void OnDisable()
+        {
+            EditorApplication.delayCall -= ExecuteQueuedBuild;
+            _buildQueued = false;
+        }
+
         private void OnGUI()
         {
             EnsurePresenter();
@@ -54,7 +64,7 @@ namespace BuildAssistant.Editor
             using (var scroll = new EditorGUILayout.ScrollViewScope(_scrollPosition))
             {
                 _scrollPosition = scroll.scrollPosition;
-                EditorGUILayout.HelpBox("Work from top to bottom. Preview captures the active build inputs; Build stays disabled until that exact plan is confirmed.", MessageType.Info);
+                EditorGUILayout.HelpBox("上から順に確認してください。計画作成時にビルド入力を取得し、その計画を明示的に確認するまで実行ボタンは有効になりません。", MessageType.Info);
                 for (var sectionIndex = 0; sectionIndex < SectionCardCount; sectionIndex++)
                     DrawSection(sectionIndex);
                 EditorGUILayout.Space(8f);
@@ -112,10 +122,10 @@ namespace BuildAssistant.Editor
         private void DrawProfile()
         {
             var activeProfile = BuildProfile.GetActiveBuildProfile();
-            DrawValue("Active Profile", activeProfile == null ? "Platform Profile" : activeProfile.name);
-            DrawValue(EditorTargetLabel, EditorUserBuildSettings.activeBuildTarget.ToString());
+            DrawValue("有効なビルドプロファイル", activeProfile == null ? "プラットフォーム設定" : activeProfile.name);
+            DrawValue(EditorTargetLabel, BuildAssistantPresenter.FormatTarget(EditorUserBuildSettings.activeBuildTarget));
             EditorGUILayout.HelpBox(ProfileHelpText, MessageType.None);
-            if (GUILayout.Button("Open Build Profiles", GUILayout.Width(150f)))
+            if (GUILayout.Button("ビルドプロファイルを開く", GUILayout.Width(190f)))
             {
                 if (!EditorApplication.ExecuteMenuItem("File/Build Profiles..."))
                     EditorApplication.ExecuteMenuItem("File/Build Profiles");
@@ -125,15 +135,15 @@ namespace BuildAssistant.Editor
         private void DrawOutput()
         {
             EditorGUI.BeginChangeCheck();
-            var nextOutputRoot = EditorGUILayout.TextField("Output Root", _outputRoot);
+            var nextOutputRoot = EditorGUILayout.TextField("出力先ルート", _outputRoot);
             if (EditorGUI.EndChangeCheck())
                 SetOutputRoot(nextOutputRoot);
 
             using (new EditorGUILayout.HorizontalScope())
             {
-                if (GUILayout.Button("Browse", GUILayout.Width(90f)))
+                if (GUILayout.Button("参照", GUILayout.Width(90f)))
                 {
-                    var selected = EditorUtility.OpenFolderPanel("Select Build Output Root", GetBrowseStartDirectory(), string.Empty);
+                    var selected = EditorUtility.OpenFolderPanel("ビルド出力先ルートを選択", GetBrowseStartDirectory(), string.Empty);
                     if (!string.IsNullOrEmpty(selected))
                         SetOutputRoot(selected);
                 }
@@ -144,7 +154,7 @@ namespace BuildAssistant.Editor
 
         private void DrawPreview()
         {
-            if (GUILayout.Button("Preview Build", GUILayout.Height(26f)))
+            if (GUILayout.Button("ビルド計画を作成", GUILayout.Height(26f)))
             {
                 GUI.FocusControl(null);
                 _presenter.Preview();
@@ -159,120 +169,141 @@ namespace BuildAssistant.Editor
             var plan = _presenter.Plan;
             if (plan == null)
             {
-                EditorGUILayout.HelpBox("A ready Preview appears here before confirmation.", MessageType.None);
+                EditorGUILayout.HelpBox("実行確認の前に、準備済みの計画をここへ表示します。", MessageType.None);
                 return;
             }
             if (!plan.IsReady)
             {
-                EditorGUILayout.HelpBox("Fix the Preview error above, then create a new plan.", MessageType.Warning);
+                EditorGUILayout.HelpBox("上に表示された計画の問題を直し、新しい計画を作成してください。", MessageType.Warning);
                 return;
             }
 
-            DrawValue("Profile", plan.ProfileName + " (" + plan.ProfileKind + ")");
+            DrawValue("ビルドプロファイル", plan.ProfileName + "（" + BuildAssistantPresenter.FormatProfileKind(plan.ProfileKind) + "）");
             DrawValue(InputFingerprintLabel, plan.ProfileDependencyHash);
-            DrawValue("Target", plan.Target.ToString());
-            DrawValue("Scripting Backend", plan.ScriptingBackend.ToString());
-            DrawValue("Build Options", plan.Options.ToString());
-            DrawValue("Enabled Scenes", plan.Scenes.Count(scene => scene.Enabled) + " / " + plan.Scenes.Count);
-            DrawValue("Output Root", plan.OutputRoot);
-            DrawValue("Run Directory", plan.RunDirectory);
-            DrawValue("Player Artifact", plan.ArtifactPath);
+            DrawValue("対象機種", BuildAssistantPresenter.FormatTarget(plan.Target));
+            DrawValue("コード生成方式", BuildAssistantPresenter.FormatScriptingBackend(plan.ScriptingBackend));
+            DrawValue("ビルド選択肢", BuildAssistantPresenter.FormatBuildOptions(plan.Options));
+            DrawValue("有効なシーン", plan.Scenes.Count(scene => scene.Enabled) + " / " + plan.Scenes.Count);
+            DrawValue("出力先ルート", plan.OutputRoot);
+            DrawValue("今回の実行フォルダー", plan.RunDirectory);
+            DrawValue("プレイヤー出力", plan.ArtifactPath);
             if (plan.PreviousComparableSuccess != null)
-                DrawValue("Comparison Baseline", plan.PreviousComparableSuccess.RunId);
+                DrawValue("比較元", plan.PreviousComparableSuccess.RunId);
 
-            _showScenes = EditorGUILayout.Foldout(_showScenes, "Captured Scenes", true);
+            _showScenes = EditorGUILayout.Foldout(_showScenes, "取得したシーン", true);
             if (_showScenes)
             {
                 foreach (var scene in plan.Scenes)
-                    EditorGUILayout.LabelField((scene.Enabled ? "[Build] " : "[Skip] ") + scene.AssetPath, _wordWrapStyle);
+                    EditorGUILayout.LabelField((scene.Enabled ? "［対象］" : "［除外］") + scene.AssetPath, _wordWrapStyle);
             }
 
-            _showDefines = EditorGUILayout.Foldout(_showDefines, "Effective Scripting Defines", true);
+            _showDefines = EditorGUILayout.Foldout(_showDefines, "有効なコンパイル記号", true);
             if (_showDefines)
-                EditorGUILayout.LabelField(plan.EffectiveDefines.Count == 0 ? "None" : string.Join(", ", plan.EffectiveDefines), _wordWrapStyle);
+                EditorGUILayout.LabelField(plan.EffectiveDefines.Count == 0 ? "なし" : string.Join("、", plan.EffectiveDefines), _wordWrapStyle);
 
             EditorGUILayout.Space(4f);
-            var confirmed = EditorGUILayout.ToggleLeft("I reviewed the profile, scenes, options, and output paths.", _presenter.ConfirmationAccepted);
+            var confirmed = EditorGUILayout.ToggleLeft("ビルド設定、シーン、選択肢、出力先を確認しました。", _presenter.ConfirmationAccepted);
             if (confirmed != _presenter.ConfirmationAccepted)
                 _presenter.SetConfirmation(confirmed);
         }
 
         private void DrawBuildResultAndExport()
         {
-            EditorGUILayout.HelpBox("Build creates one new run directory. Existing files and previous run directories are never overwritten or deleted.", MessageType.None);
-            using (new EditorGUI.DisabledScope(!_presenter.CanBuild))
+            EditorGUILayout.HelpBox("実行ごとに新しいフォルダーを一つ作成します。既存ファイルと過去の実行フォルダーは上書きも削除もしません。", MessageType.None);
+            using (new EditorGUI.DisabledScope(!_presenter.CanBuild || _buildQueued))
             {
-                if (GUILayout.Button("Build Confirmed Plan", GUILayout.Height(30f)))
+                if (GUILayout.Button("確認済みの計画を実行", GUILayout.Height(30f)))
                 {
                     GUI.FocusControl(null);
-                    _presenter.Build();
+                    QueueBuild();
                 }
             }
 
             EditorGUILayout.Space(6f);
-            EditorGUILayout.LabelField("Result", EditorStyles.miniBoldLabel);
+            EditorGUILayout.LabelField("実行結果", EditorStyles.miniBoldLabel);
             if (_presenter.Result == null)
             {
-                EditorGUILayout.HelpBox("The latest build result appears here.", MessageType.None);
+                EditorGUILayout.HelpBox("最新のビルド結果をここへ表示します。", MessageType.None);
             }
             else
             {
                 EditorGUILayout.HelpBox(_presenter.Message, _presenter.Result.BuildSucceeded ? MessageType.Info : MessageType.Error);
-                var selectedIsResult = _presenter.Result.Entry != null && StringComparer.Ordinal.Equals(_presenter.SelectedHistoryEntry?.RunId, _presenter.Result.Entry.RunId);
+                var selectedIsResult = IsPersistedResultSelected(_presenter.Result, _presenter.SelectedHistoryEntry);
                 if (_presenter.Result.Entry != null && !selectedIsResult)
                     DrawHistoryEntry(_presenter.Result.Entry, false);
             }
 
             EditorGUILayout.Space(6f);
-            EditorGUILayout.LabelField("History and JSON Export", EditorStyles.miniBoldLabel);
+            EditorGUILayout.LabelField("履歴とJSON書き出し", EditorStyles.miniBoldLabel);
             using (new EditorGUILayout.HorizontalScope())
             {
                 DrawHistorySelector();
 
-                if (GUILayout.Button("Refresh", GUILayout.Width(75f)))
+                if (GUILayout.Button("再読込", GUILayout.Width(75f)))
                     _presenter.RefreshHistory();
             }
 
-            if (!string.IsNullOrEmpty(_presenter.History.Message))
-                EditorGUILayout.HelpBox(_presenter.History.Message, MessageType.Warning);
+            var historyNotice = BuildAssistantPresenter.FormatHistoryNotice(_presenter.History);
+            if (!string.IsNullOrEmpty(historyNotice))
+                EditorGUILayout.HelpBox(historyNotice, MessageType.Warning);
             if (_presenter.SelectedHistoryEntry != null)
                 DrawHistoryEntry(_presenter.SelectedHistoryEntry, true);
 
             using (new EditorGUI.DisabledScope(_presenter.ExportEntry == null))
             {
-                if (GUILayout.Button("Export Selected Result as New JSON"))
+                if (GUILayout.Button("選択した結果を新しいJSONへ書き出す"))
                     ExportSelectedResult();
             }
             if (!string.IsNullOrEmpty(_presenter.ExportMessage))
                 EditorGUILayout.HelpBox(_presenter.ExportMessage, _presenter.LastExportError == BuildAssistantError.None ? MessageType.Info : MessageType.Error);
         }
 
+        /// <summary>現在の画面描画が終わった後に、一度だけビルドを始めるよう登録します。</summary>
+        private void QueueBuild()
+        {
+            if (_buildQueued || !_presenter.CanBuild)
+                return;
+            _buildQueued = true;
+            EditorApplication.delayCall += ExecuteQueuedBuild;
+            Repaint();
+        }
+
+        /// <summary>画面描画の開始・終了状態を持ち越さず、登録済みのビルドを実行します。</summary>
+        private void ExecuteQueuedBuild()
+        {
+            _buildQueued = false;
+            EnsurePresenter();
+            _presenter.Build();
+            Repaint();
+        }
+
         private void DrawHistoryEntry(BuildAssistantHistoryEntry entry, bool includeLargestAssets)
         {
-            DrawValue("Profile", entry.ProfileName + " (" + entry.ProfileKind + ")");
-            DrawValue("Target", entry.Target.ToString());
-            DrawValue("Scripting Backend", entry.ScriptingBackend.ToString());
-            DrawValue("Build Options", entry.Options.ToString());
-            DrawValue("Status", entry.Status.ToString());
-            DrawValue("Run ID", entry.RunId);
-            DrawValue("Completed", entry.CompletedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture));
-            DrawValue("Duration", entry.Duration.TotalSeconds.ToString("0.0", CultureInfo.InvariantCulture) + " s");
-            DrawValue("Total Output", BuildAssistantPresenter.FormatBytes(entry.TotalOutputBytes));
-            DrawValue("Packed Content", BuildAssistantPresenter.FormatBytes(entry.PackedContentBytes));
-            DrawValue("Packed Overhead", BuildAssistantPresenter.FormatBytes(entry.PackedOverheadBytes));
+            DrawValue("ビルドプロファイル", entry.ProfileName + "（" + BuildAssistantPresenter.FormatProfileKind(entry.ProfileKind) + "）");
+            DrawValue("対象機種", BuildAssistantPresenter.FormatTarget(entry.Target));
+            DrawValue("コード生成方式", BuildAssistantPresenter.FormatScriptingBackend(entry.ScriptingBackend));
+            DrawValue("ビルド選択肢", BuildAssistantPresenter.FormatBuildOptions(entry.Options));
+            DrawValue("状態", BuildAssistantPresenter.FormatHistoryStatus(entry.Status));
+            DrawValue("実行識別子", entry.RunId);
+            DrawValue("完了日時", entry.CompletedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture));
+            DrawValue("所要時間", entry.Duration.TotalSeconds.ToString("0.0", CultureInfo.InvariantCulture) + " 秒");
+            DrawValue("出力全体", BuildAssistantPresenter.FormatBytes(entry.TotalOutputBytes));
+            DrawValue("格納内容", BuildAssistantPresenter.FormatBytes(entry.PackedContentBytes));
+            DrawValue("格納付加分", BuildAssistantPresenter.FormatBytes(entry.PackedOverheadBytes));
             if (!string.IsNullOrEmpty(entry.PreviousRunId))
             {
-                DrawValue("Output Delta", BuildAssistantPresenter.FormatDelta(entry.TotalOutputDeltaBytes));
-                DrawValue("Packed Delta", BuildAssistantPresenter.FormatDelta(entry.PackedContentDeltaBytes));
+                DrawValue("出力全体の差", BuildAssistantPresenter.FormatDelta(entry.TotalOutputDeltaBytes));
+                DrawValue("格納内容の差", BuildAssistantPresenter.FormatDelta(entry.PackedContentDeltaBytes));
             }
-            DrawValue("Errors / Warnings", entry.TotalErrors + " / " + entry.TotalWarnings);
-            DrawValue("Artifact", entry.ArtifactPath);
-            if (!string.IsNullOrEmpty(entry.Message))
-                EditorGUILayout.HelpBox(entry.Message, entry.Status == BuildAssistantHistoryStatus.Succeeded ? MessageType.Info : MessageType.Warning);
+            DrawValue("エラー数 / 警告数", entry.TotalErrors + " / " + entry.TotalWarnings);
+            DrawValue("プレイヤー出力", entry.ArtifactPath);
+            var historyMessage = BuildAssistantPresenter.FormatHistoryMessage(entry);
+            if (!string.IsNullOrEmpty(historyMessage))
+                EditorGUILayout.HelpBox(historyMessage, entry.Status == BuildAssistantHistoryStatus.Succeeded ? MessageType.Info : MessageType.Warning);
 
             if (!includeLargestAssets || entry.Assets.Count == 0)
                 return;
-            _showLargestAssets = EditorGUILayout.Foldout(_showLargestAssets, "Largest Packed Assets", true);
+            _showLargestAssets = EditorGUILayout.Foldout(_showLargestAssets, "格納容量が大きいアセット", true);
             if (_showLargestAssets)
             {
                 foreach (var asset in entry.Assets.Take(5))
@@ -286,17 +317,17 @@ namespace BuildAssistant.Editor
             if (entry == null)
                 return;
             var directory = Directory.Exists(entry.OutputRoot) ? entry.OutputRoot : GetBrowseStartDirectory();
-            var path = EditorUtility.SaveFilePanel("Export Build Assistant JSON", directory, "BuildAssistant-" + entry.RunId, "json");
+            var path = EditorUtility.SaveFilePanel("ビルド結果をJSONへ書き出す", directory, "BuildAssistant-" + entry.RunId, "json");
             if (!string.IsNullOrEmpty(path))
                 _presenter.Export(path);
         }
 
         private void DrawHistorySelector()
         {
-            var currentResultNotSaved = _presenter.Result?.Entry != null && !_presenter.History.Entries.Any(entry => StringComparer.Ordinal.Equals(entry.RunId, _presenter.Result.Entry.RunId));
+            var currentResultNotSaved = IsCurrentResultNotSaved(_presenter.Result);
             if (currentResultNotSaved)
             {
-                var labels = new[] { "Current result (not saved)" }.Concat(_presenter.History.Entries.Select(BuildAssistantPresenter.FormatHistoryLabel)).ToArray();
+                var labels = new[] { "現在の結果（履歴未保存）" }.Concat(_presenter.History.Entries.Select(BuildAssistantPresenter.FormatHistoryLabel)).ToArray();
                 var current = _presenter.SelectedHistoryIndex < 0 ? 0 : _presenter.SelectedHistoryIndex + 1;
                 var next = EditorGUILayout.Popup(current, labels);
                 if (next != current)
@@ -306,7 +337,7 @@ namespace BuildAssistant.Editor
 
             if (_presenter.History.Entries.Count == 0)
             {
-                EditorGUILayout.LabelField("No saved history.");
+                EditorGUILayout.LabelField("保存済み履歴はありません。");
                 return;
             }
 
@@ -314,6 +345,15 @@ namespace BuildAssistant.Editor
             var historyIndex = EditorGUILayout.Popup(Mathf.Max(_presenter.SelectedHistoryIndex, 0), historyLabels);
             if (historyIndex != _presenter.SelectedHistoryIndex)
                 _presenter.SetHistoryIndex(historyIndex);
+        }
+
+        /// <summary>履歴保存に失敗した現在の結果を、保存済み履歴とは別に表示するか判定します。</summary>
+        internal static bool IsCurrentResultNotSaved(BuildAssistantBuildResult result) => result?.Entry != null && !result.HistoryPersisted;
+
+        /// <summary>現在の結果と同じ保存済み履歴が選択されているか判定します。</summary>
+        internal static bool IsPersistedResultSelected(BuildAssistantBuildResult result, BuildAssistantHistoryEntry selectedEntry)
+        {
+            return result?.Entry != null && result.HistoryPersisted && StringComparer.Ordinal.Equals(selectedEntry?.RunId, result.Entry.RunId);
         }
 
         private void SetOutputRoot(string value)

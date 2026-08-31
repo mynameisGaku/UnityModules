@@ -2,17 +2,19 @@ using System;
 
 namespace BuildAssistant.Editor
 {
-    /// <summary>Reports the checked sum of every packed occurrence attributed to one source asset.</summary>
+    /// <summary>1つの元の素材に属する全格納項目について、検査済みの合計容量を表します。</summary>
     public sealed class BuildAssistantAssetSize
     {
-        /// <summary>Creates an immutable per-asset packed-size row.</summary>
-        /// <param name="assetPath">The source asset path or a stable generated key.</param>
-        /// <param name="packedBytes">The checked sum of packed occurrence bytes.</param>
-        /// <param name="occurrenceCount">The number of packed occurrences included in the sum.</param>
+        /// <summary>素材ごとの格納容量を表す変更不能な行を作成します。</summary>
+        /// <param name="assetPath">元の素材のパス、または安定して生成される識別キー。</param>
+        /// <param name="packedBytes">各格納項目の容量を検査しながら合計したバイト数。</param>
+        /// <param name="occurrenceCount">合計に含めた格納項目の数。</param>
+        /// <exception cref="ArgumentException"><paramref name="assetPath"/>が空の場合に発生します。</exception>
+        /// <exception cref="ArgumentOutOfRangeException"><paramref name="occurrenceCount"/>が0未満の場合に発生します。</exception>
         public BuildAssistantAssetSize(string assetPath, ulong packedBytes, int occurrenceCount)
         {
             if (string.IsNullOrEmpty(assetPath))
-                throw new ArgumentException("An asset path or stable key is required.", nameof(assetPath));
+                throw new ArgumentException("元の素材のパスまたは安定した識別キーが必要です。", nameof(assetPath));
             if (occurrenceCount < 0)
                 throw new ArgumentOutOfRangeException(nameof(occurrenceCount));
 
@@ -21,13 +23,13 @@ namespace BuildAssistant.Editor
             OccurrenceCount = occurrenceCount;
         }
 
-        /// <summary>Gets the source asset path or stable generated key.</summary>
+        /// <summary>元の素材のパス、または安定して生成された識別キーを取得します。</summary>
         public string AssetPath { get; }
 
-        /// <summary>Gets the sum of all packed occurrence bytes.</summary>
+        /// <summary>全格納項目の合計バイト数を取得します。</summary>
         public ulong PackedBytes { get; }
 
-        /// <summary>Gets the number of packed occurrences included in the sum.</summary>
+        /// <summary>合計に含まれる格納項目の数を取得します。</summary>
         public int OccurrenceCount { get; }
     }
 }

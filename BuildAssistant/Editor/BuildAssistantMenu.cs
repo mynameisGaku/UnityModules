@@ -2,12 +2,12 @@ using UnityEditor;
 
 namespace BuildAssistant.Editor
 {
-    /// <summary>Registers the stable Tools menu entry for Build Assistant.</summary>
+    /// <summary>ビルド実行アシスタントを開くメニューを登録します。</summary>
     internal static class BuildAssistantMenu
     {
-        internal const string MenuPath = "Tools/Build Assistant/Open";
+        internal const string MenuPath = "Tools/ビルド実行アシスタント/開く";
 
-        /// <summary>Opens or focuses the Build Assistant editor window.</summary>
+        /// <summary>ビルド実行アシスタントを開くか、既存の画面へ移動します。</summary>
         [MenuItem(MenuPath)]
         internal static void Open()
         {

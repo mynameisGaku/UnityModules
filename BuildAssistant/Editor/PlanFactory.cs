@@ -16,7 +16,7 @@ namespace BuildAssistant.Editor
             var runDirectory = Path.Combine(context.OutputRoot, runId);
             var artifactPath = Path.Combine(runDirectory, GetArtifactName(context.Environment.Target));
             if (context.RunPathBusy)
-                return CreateFailure(context.Environment, BuildAssistantError.OutputAlreadyExists, "The planned run directory or reservation already exists.", context.OutputRoot, context.OutputRootMode, runId, context.CreatedAtUtc, runDirectory, artifactPath);
+                return CreateFailure(context.Environment, BuildAssistantError.OutputAlreadyExists, "今回の実行フォルダーまたは予約が既に存在します。", context.OutputRoot, context.OutputRootMode, runId, context.CreatedAtUtc, runDirectory, artifactPath);
 
             var environment = context.Environment;
             return new BuildAssistantPlan(BuildAssistantError.None, string.Empty, runId, context.CreatedAtUtc, context.OutputRoot, runDirectory, artifactPath, context.OutputRootMode, environment.Profile, environment.Target, environment.TargetGroup, environment.NamedBuildTarget, environment.Subtarget, environment.ScriptingBackend, environment.Options, environment.InvocationOptions, environment.AssetBundleManifestPath, environment.ExtraScriptingDefines, environment.EffectiveDefines, environment.Scenes, context.PreviousComparableSuccess);
@@ -50,20 +50,20 @@ namespace BuildAssistant.Editor
                 case BuildTarget.StandaloneLinux64:
                     return "Player.x86_64";
                 default:
-                    throw new ArgumentOutOfRangeException(nameof(target), target, "Only desktop standalone targets are supported.");
+                    throw new ArgumentOutOfRangeException(nameof(target), target, "デスクトップ向けの通常プレイヤーだけに対応しています。");
             }
         }
 
         private static string NormalizeEntropy(string entropy)
         {
             if (entropy == null || entropy.Length != 8)
-                throw new ArgumentException("Entropy must contain exactly eight hexadecimal characters.", nameof(entropy));
+                throw new ArgumentException("実行識別子の乱数部には16進数8文字が必要です。", nameof(entropy));
             for (var index = 0; index < entropy.Length; index++)
             {
                 var character = entropy[index];
                 var hexadecimal = character >= '0' && character <= '9' || character >= 'a' && character <= 'f' || character >= 'A' && character <= 'F';
                 if (!hexadecimal)
-                    throw new ArgumentException("Entropy must contain exactly eight hexadecimal characters.", nameof(entropy));
+                    throw new ArgumentException("実行識別子の乱数部には16進数8文字が必要です。", nameof(entropy));
             }
 
             return entropy.ToLowerInvariant();

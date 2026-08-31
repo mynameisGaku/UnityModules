@@ -24,13 +24,13 @@ namespace BuildAssistant.Editor
 
         internal BuildAssistantError Error { get; }
         internal string Message { get; }
-        internal bool IsReserved => Error == BuildAssistantError.None;
+        internal bool IsReserved => !disposed && Error == BuildAssistantError.None;
 
         internal BuildAssistantError Revalidate(BuildAssistantPlan plan, out string message)
         {
             if (!IsReserved || plan == null || fileSystem == null || rootLease == null || runLease == null)
             {
-                message = "The output reservation is unavailable.";
+                message = "出力先の予約を利用できません。";
                 return BuildAssistantError.OutputReservationFailed;
             }
 
@@ -38,24 +38,24 @@ namespace BuildAssistant.Editor
             {
                 if (!fileSystem.FileExists(reservationPath) || !StringComparer.Ordinal.Equals(fileSystem.ReadAllText(reservationPath), plan.RunId + Environment.NewLine))
                 {
-                    message = "The output reservation marker changed before build invocation.";
+                    message = "ビルド開始前に出力先の予約情報が変更されました。";
                     return BuildAssistantError.OutputReservationFailed;
                 }
                 if ((fileSystem.GetAttributes(plan.OutputRoot) & FileAttributes.ReparsePoint) != 0 || (fileSystem.GetAttributes(plan.RunDirectory) & FileAttributes.ReparsePoint) != 0)
                 {
-                    message = "The output root or reserved run directory became a reparse point.";
+                    message = "出力先または予約済み実行フォルダーが再解析点へ変更されました。";
                     return BuildAssistantError.UnsafeOutputPath;
                 }
                 var canonicalRoot = fileSystem.GetCanonicalDirectoryPath(plan.OutputRoot);
                 var canonicalRun = fileSystem.GetCanonicalDirectoryPath(plan.RunDirectory);
                 if (!LocationPolicy.CanonicalEquals(rootLease.CanonicalPath, canonicalRoot) || !LocationPolicy.CanonicalEquals(runLease.CanonicalPath, canonicalRun) || !LocationPolicy.CanonicalContains(canonicalRoot, canonicalRun))
                 {
-                    message = "The leased output identity changed before build invocation.";
+                    message = "ビルド開始前に保持中の出力先の物理識別子が変更されました。";
                     return BuildAssistantError.UnsafeOutputPath;
                 }
                 if (fileSystem.FileExists(plan.ArtifactPath) || fileSystem.DirectoryExists(plan.ArtifactPath) || !fileSystem.IsDirectoryEmpty(plan.RunDirectory))
                 {
-                    message = "The fresh run directory received content before build invocation.";
+                    message = "ビルド開始前に新規実行フォルダーへ内容が追加されました。";
                     return BuildAssistantError.OutputAlreadyExists;
                 }
 
@@ -64,7 +64,7 @@ namespace BuildAssistant.Editor
             }
             catch (Exception exception) when (exception is IOException || exception is UnauthorizedAccessException || exception is SecurityException || exception is ArgumentException || exception is NotSupportedException)
             {
-                message = "The leased output identity could not be revalidated: " + exception.Message;
+                message = "保持中の出力先の物理識別子を再確認できませんでした。";
                 return BuildAssistantError.OutputReservationFailed;
             }
         }
@@ -124,29 +124,29 @@ namespace BuildAssistant.Editor
                 if (!inspection.IsValid)
                     return new OutputReservation(inspection.Error, inspection.Message);
                 if (!PathEquals(inspection.NormalizedPath, plan.OutputRoot))
-                    return new OutputReservation(BuildAssistantError.UnsafeOutputPath, "The normalized output root no longer matches the plan.");
+                    return new OutputReservation(BuildAssistantError.UnsafeOutputPath, "正規化後の出力先が計画と一致しません。覚えのない変更がないか確認してください。");
 
                 var expectedRunDirectory = Path.Combine(plan.OutputRoot, plan.RunId);
                 var expectedArtifactPath = Path.Combine(expectedRunDirectory, PlanFactory.GetArtifactName(plan.Target));
                 if (!PathEquals(expectedRunDirectory, plan.RunDirectory) || !PathEquals(expectedArtifactPath, plan.ArtifactPath) || !IsContained(plan.OutputRoot, plan.RunDirectory) || !IsContained(plan.RunDirectory, plan.ArtifactPath))
-                    return new OutputReservation(BuildAssistantError.UnsafeOutputPath, "The planned run or artifact path escaped its output boundary.");
+                    return new OutputReservation(BuildAssistantError.UnsafeOutputPath, "実行フォルダーまたは成果物の経路が出力先の範囲外です。");
                 if (IsRunPathBusy(plan.OutputRoot, plan.RunId))
-                    return new OutputReservation(BuildAssistantError.OutputAlreadyExists, "The planned run directory or reservation already exists.");
+                    return new OutputReservation(BuildAssistantError.OutputAlreadyExists, "今回の実行フォルダーまたは予約が既に存在します。");
 
                 reservationPath = GetReservationPath(plan.OutputRoot, plan.RunId);
                 if (!fileSystem.DirectoryExists(plan.OutputRoot))
                     fileSystem.CreateDirectory(plan.OutputRoot);
                 var createdRootInspection = Inspect(plan.OutputRoot);
                 if (!createdRootInspection.IsValid || createdRootInspection.Mode != OutputRootMode.ExistingDirectory || !LocationPolicy.CanonicalEquals(inspection.CanonicalPath, createdRootInspection.CanonicalPath))
-                    return new OutputReservation(BuildAssistantError.UnsafeOutputPath, "The output root changed while it was being reserved.");
+                    return new OutputReservation(BuildAssistantError.UnsafeOutputPath, "出力先の予約中に出力先が変更されました。");
                 rootLease = fileSystem.AcquireDirectoryIdentityLease(plan.OutputRoot);
                 if (!LocationPolicy.CanonicalEquals(createdRootInspection.CanonicalPath, rootLease.CanonicalPath))
-                    return new OutputReservation(BuildAssistantError.UnsafeOutputPath, "The output root identity changed while its lease was acquired.");
+                    return new OutputReservation(BuildAssistantError.UnsafeOutputPath, "出力先を保持する間に物理識別子が変更されました。");
                 fileSystem.WriteAllTextFlushed(reservationPath, plan.RunId + Environment.NewLine, FileMode.CreateNew);
                 if (fileSystem.DirectoryExists(plan.RunDirectory) || fileSystem.FileExists(plan.RunDirectory))
                 {
                     TryDeleteReservation(reservationPath);
-                    return new OutputReservation(BuildAssistantError.OutputAlreadyExists, "The planned run directory already exists.");
+                    return new OutputReservation(BuildAssistantError.OutputAlreadyExists, "今回の実行フォルダーが既に存在します。");
                 }
 
                 fileSystem.CreateDirectoryNew(plan.RunDirectory);
@@ -154,46 +154,46 @@ namespace BuildAssistant.Editor
                 if ((fileSystem.GetAttributes(plan.RunDirectory) & FileAttributes.ReparsePoint) != 0)
                 {
                     TryDeleteReservation(reservationPath);
-                    return new OutputReservation(BuildAssistantError.UnsafeOutputPath, "The reserved run directory is a reparse point.");
+                    return new OutputReservation(BuildAssistantError.UnsafeOutputPath, "予約済み実行フォルダーが再解析点です。");
                 }
                 var finalRootInspection = Inspect(plan.OutputRoot);
                 var canonicalRunDirectory = runLease.CanonicalPath;
                 if (!finalRootInspection.IsValid || !LocationPolicy.CanonicalEquals(rootLease.CanonicalPath, finalRootInspection.CanonicalPath) || LocationPolicy.CanonicalEquals(rootLease.CanonicalPath, canonicalRunDirectory) || !LocationPolicy.CanonicalContains(rootLease.CanonicalPath, canonicalRunDirectory))
                 {
                     TryDeleteReservation(reservationPath);
-                    return new OutputReservation(BuildAssistantError.UnsafeOutputPath, "The reserved run directory changed or escaped its physical output boundary.");
+                    return new OutputReservation(BuildAssistantError.UnsafeOutputPath, "予約済み実行フォルダーが変更されたか、物理的な出力範囲外へ移動しました。");
                 }
                 var reservation = new OutputReservation(BuildAssistantError.None, string.Empty, fileSystem, reservationPath, rootLease, runLease);
                 leasesTransferred = true;
                 return reservation;
             }
-            catch (CreateNewFileCollisionException exception)
+            catch (CreateNewFileCollisionException)
             {
-                return new OutputReservation(BuildAssistantError.OutputAlreadyExists, exception.Message);
+                return new OutputReservation(BuildAssistantError.OutputAlreadyExists, "出力先の予約が別の処理によって先に作成されました。");
             }
-            catch (CreateNewDirectoryCollisionException exception)
+            catch (CreateNewDirectoryCollisionException)
             {
                 TryDeleteReservation(reservationPath);
-                return new OutputReservation(BuildAssistantError.OutputAlreadyExists, exception.Message);
+                return new OutputReservation(BuildAssistantError.OutputAlreadyExists, "実行フォルダーが別の処理によって先に作成されました。");
             }
-            catch (IOException exception)
+            catch (IOException)
             {
                 TryDeleteReservation(reservationPath);
-                return new OutputReservation(BuildAssistantError.OutputReservationFailed, exception.Message);
+                return new OutputReservation(BuildAssistantError.OutputReservationFailed, "出力先を予約できませんでした。アクセス権と空き容量を確認してください。");
             }
-            catch (UnauthorizedAccessException exception)
+            catch (UnauthorizedAccessException)
             {
                 TryDeleteReservation(reservationPath);
-                return new OutputReservation(BuildAssistantError.OutputReservationFailed, exception.Message);
+                return new OutputReservation(BuildAssistantError.OutputReservationFailed, "出力先を予約する権限がありません。");
             }
-            catch (SecurityException exception)
+            catch (SecurityException)
             {
                 TryDeleteReservation(reservationPath);
-                return new OutputReservation(BuildAssistantError.OutputReservationFailed, exception.Message);
+                return new OutputReservation(BuildAssistantError.OutputReservationFailed, "安全制限により出力先を予約できませんでした。");
             }
             catch (Exception exception) when (exception is ArgumentException || exception is NotSupportedException || exception is PathTooLongException)
             {
-                return new OutputReservation(BuildAssistantError.UnsafeOutputPath, exception.Message);
+                return new OutputReservation(BuildAssistantError.UnsafeOutputPath, "出力先の経路を安全に解決できませんでした。");
             }
             finally
             {
@@ -216,7 +216,7 @@ namespace BuildAssistant.Editor
             return normalizedCandidate.StartsWith(normalizedBoundary + Path.DirectorySeparatorChar, PathComparison);
         }
 
-        private static StringComparison PathComparison => StringComparison.OrdinalIgnoreCase;
+        private static StringComparison PathComparison => BuildAssistantFileSystem.GetPathComparison(Path.DirectorySeparatorChar);
         private static bool PathEquals(string left, string right) => string.Equals(left, right, PathComparison);
 
         private void TryDeleteReservation(string path)

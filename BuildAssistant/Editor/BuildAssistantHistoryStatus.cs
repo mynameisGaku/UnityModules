@@ -1,13 +1,13 @@
 namespace BuildAssistant.Editor
 {
-    /// <summary>Identifies the terminal state recorded for a Build Assistant run.</summary>
+    /// <summary>ビルド実行アシスタントの1回の実行について、記録された終了状態を表します。</summary>
     public enum BuildAssistantHistoryStatus
     {
-        /// <summary>The Unity build completed successfully.</summary>
+        /// <summary>Unityのビルドが正常に完了しました。</summary>
         Succeeded = 0,
-        /// <summary>The Unity build failed, was cancelled, or produced no readable report.</summary>
+        /// <summary>Unityのビルドが失敗または中止されたか、読み取れる報告を取得できませんでした。</summary>
         Failed = 1,
-        /// <summary>A durable running record remained after a reload or process interruption.</summary>
+        /// <summary>再読込または処理中断の後に、永続化された実行中記録が残っていました。</summary>
         Interrupted = 2
     }
 }

@@ -6,7 +6,7 @@ using UnityEditor;
 
 namespace BuildAssistant.Editor
 {
-    /// <summary>Stores a detached, immutable terminal record for one Build Assistant run.</summary>
+    /// <summary>ビルド実行アシスタントの1回の実行について、Unityオブジェクトに依存しない変更不能な終了記録を保持します。</summary>
     public sealed class BuildAssistantHistoryEntry
     {
         private readonly ReadOnlyCollection<string> effectiveDefines;
@@ -52,109 +52,109 @@ namespace BuildAssistant.Editor
             PackedContentDeltaBytes = packedContentDeltaBytes;
         }
 
-        /// <summary>Gets the run identifier.</summary>
+        /// <summary>実行識別子を取得します。</summary>
         public string RunId { get; }
 
-        /// <summary>Gets the UTC preview time.</summary>
+        /// <summary>計画を作成した協定世界時を取得します。</summary>
         public DateTime CreatedAtUtc { get; }
 
-        /// <summary>Gets the UTC build invocation start time.</summary>
+        /// <summary>ビルド呼び出しを開始した協定世界時を取得します。</summary>
         public DateTime StartedAtUtc { get; }
 
-        /// <summary>Gets the UTC terminal time recorded by Build Assistant.</summary>
+        /// <summary>ビルド実行アシスタントが終了を記録した協定世界時を取得します。</summary>
         public DateTime CompletedAtUtc { get; }
 
-        /// <summary>Gets the non-negative elapsed duration represented by the stored UTC timestamps.</summary>
+        /// <summary>記録した協定世界時から求めた、0以上の経過時間を取得します。</summary>
         public TimeSpan Duration => CompletedAtUtc >= StartedAtUtc ? CompletedAtUtc - StartedAtUtc : TimeSpan.Zero;
 
-        /// <summary>Gets the terminal run status.</summary>
+        /// <summary>実行の終了状態を取得します。</summary>
         public BuildAssistantHistoryStatus Status { get; }
 
-        /// <summary>Gets the bounded terminal error.</summary>
+        /// <summary>終了時の定義済みエラーを取得します。</summary>
         public BuildAssistantError Error { get; }
 
-        /// <summary>Gets the detached terminal diagnostic.</summary>
+        /// <summary>Unityオブジェクトに依存しない終了時の診断文を取得します。</summary>
         public string Message { get; }
 
-        /// <summary>Gets the output root used by the run.</summary>
+        /// <summary>実行に使った出力先基準フォルダーを取得します。</summary>
         public string OutputRoot { get; }
 
-        /// <summary>Gets the exclusive run directory.</summary>
+        /// <summary>この実行専用のフォルダーを取得します。</summary>
         public string RunDirectory { get; }
 
-        /// <summary>Gets the platform-specific player artifact path.</summary>
+        /// <summary>対象機種に応じたプレイヤー成果物のパスを取得します。</summary>
         public string ArtifactPath { get; }
 
-        /// <summary>Gets the profile kind used by the run.</summary>
+        /// <summary>実行に使ったプロファイルの種類を取得します。</summary>
         public BuildAssistantProfileKind ProfileKind { get; }
 
-        /// <summary>Gets the custom profile GUID, or an empty string for a platform profile.</summary>
+        /// <summary>独自プロファイルのGUIDを取得します。機種別プロファイルでは空文字列です。</summary>
         public string ProfileGuid { get; }
 
-        /// <summary>Gets the profile display name.</summary>
+        /// <summary>プロファイルの表示名を取得します。</summary>
         public string ProfileName { get; }
 
-        /// <summary>Gets the custom profile asset path, or an empty string for a platform profile.</summary>
+        /// <summary>独自プロファイル素材のパスを取得します。機種別プロファイルでは空文字列です。</summary>
         public string ProfilePath { get; }
 
-        /// <summary>Gets the effective fingerprint for settings, classic profiles, imported content, package manifests, StreamingAssets, and any custom profile dependency.</summary>
+        /// <summary>設定、従来形式のプロファイル、取り込み済みの内容、パッケージ目録、ストリーミング用素材、独自プロファイルの依存関係をまとめた照合用要約値を取得します。</summary>
         public string ProfileDependencyHash { get; }
 
-        /// <summary>Gets the stable profile identity used by comparison matching.</summary>
+        /// <summary>比較対象を対応付けるための、安定したプロファイル識別値を取得します。</summary>
         public string ProfileStableId { get; }
 
-        /// <summary>Gets the desktop standalone target.</summary>
+        /// <summary>デスクトップ単体実行形式の対象機種を取得します。</summary>
         public BuildTarget Target { get; }
 
-        /// <summary>Gets the target group.</summary>
+        /// <summary>対象機種群を取得します。</summary>
         public BuildTargetGroup TargetGroup { get; }
 
-        /// <summary>Gets the NamedBuildTarget name.</summary>
+        /// <summary>Unityの名前付き対象機種名を取得します。</summary>
         public string NamedBuildTarget { get; }
 
-        /// <summary>Gets the standalone subtarget value.</summary>
+        /// <summary>単体実行形式の対象種別値を取得します。</summary>
         public int Subtarget { get; }
 
-        /// <summary>Gets the scripting backend.</summary>
+        /// <summary>スクリプト処理方式を取得します。</summary>
         public ScriptingImplementation ScriptingBackend { get; }
 
-        /// <summary>Gets the effective normalized build options recorded for comparison.</summary>
+        /// <summary>比較用に記録した、実際に使われた正規化済みのビルド選択肢を取得します。</summary>
         public BuildOptions Options { get; }
 
-        /// <summary>Gets a defensive read-only copy of the effective scripting defines.</summary>
+        /// <summary>実際に使われたスクリプト定義の、保護された読み取り専用一覧を取得します。</summary>
         public IReadOnlyList<string> EffectiveDefines => effectiveDefines;
 
-        /// <summary>Gets a defensive read-only copy of the ordered scene snapshot.</summary>
+        /// <summary>順序どおりに記録したシーンの、保護された読み取り専用一覧を取得します。</summary>
         public IReadOnlyList<BuildAssistantScene> Scenes => scenes;
 
-        /// <summary>Gets the build-report error count.</summary>
+        /// <summary>ビルド報告に含まれるエラー数を取得します。</summary>
         public int TotalErrors { get; }
 
-        /// <summary>Gets the build-report warning count.</summary>
+        /// <summary>ビルド報告に含まれる警告数を取得します。</summary>
         public int TotalWarnings { get; }
 
-        /// <summary>Gets Unity's total output size, kept separate from packed content and overhead.</summary>
+        /// <summary>格納内容と付加情報の容量とは分けて記録した、Unityによる出力全体のバイト数を取得します。</summary>
         public ulong TotalOutputBytes { get; }
 
-        /// <summary>Gets the checked sum of all packed asset occurrences.</summary>
+        /// <summary>全素材の各格納項目を検査しながら合計したバイト数を取得します。</summary>
         public ulong PackedContentBytes { get; }
 
-        /// <summary>Gets the checked sum of all packed-file overhead values.</summary>
+        /// <summary>全格納ファイルの付加情報容量を検査しながら合計したバイト数を取得します。</summary>
         public ulong PackedOverheadBytes { get; }
 
-        /// <summary>Gets packed asset rows ordered by bytes descending and asset key ordinal ascending.</summary>
+        /// <summary>格納済み素材の行を、容量の降順、同容量では素材識別キーの文字順で取得します。</summary>
         public IReadOnlyList<BuildAssistantAssetSize> Assets => assets;
 
-        /// <summary>Gets packed type rows ordered by bytes descending and type key ordinal ascending.</summary>
+        /// <summary>格納済み型の行を、容量の降順、同容量では型識別キーの文字順で取得します。</summary>
         public IReadOnlyList<BuildAssistantTypeSize> Types => types;
 
-        /// <summary>Gets the previous compatible successful run identifier, or an empty string.</summary>
+        /// <summary>直前の互換性がある成功実行の識別子を取得します。該当しない場合は空文字列です。</summary>
         public string PreviousRunId { get; }
 
-        /// <summary>Gets total output bytes minus the previous comparable run's total output bytes.</summary>
+        /// <summary>出力全体のバイト数から、直前の比較可能な実行における出力全体のバイト数を引いた差分を取得します。</summary>
         public long TotalOutputDeltaBytes { get; }
 
-        /// <summary>Gets packed content bytes minus the previous comparable run's packed content bytes.</summary>
+        /// <summary>格納内容のバイト数から、直前の比較可能な実行における格納内容のバイト数を引いた差分を取得します。</summary>
         public long PackedContentDeltaBytes { get; }
     }
 }

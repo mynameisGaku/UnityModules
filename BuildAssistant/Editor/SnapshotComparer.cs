@@ -12,17 +12,17 @@ namespace BuildAssistant.Editor
 
             var profile = current.Profile;
             if (plan.ProfileKind != profile.Kind || !Equal(plan.ProfileGuid, profile.Guid) || !Equal(plan.ProfileName, profile.Name) || !Equal(plan.ProfilePath, profile.AssetPath) || !Equal(plan.ProfileDependencyHash, profile.DependencyHash) || !Equal(plan.ProfileStableId, profile.StableId))
-                return Different("The active build profile changed.", out difference);
+                return Different("有効なビルドプロファイルが変更されました。", out difference);
             if (plan.Target != current.Target || plan.TargetGroup != current.TargetGroup || !Equal(plan.NamedBuildTarget, current.NamedBuildTarget) || plan.Subtarget != current.Subtarget)
-                return Different("The active build target or subtarget changed.", out difference);
+                return Different("対象機種または種別が変更されました。", out difference);
             if (plan.ScriptingBackend != current.ScriptingBackend)
-                return Different("The scripting backend changed.", out difference);
+                return Different("コード生成方式が変更されました。", out difference);
             if (plan.Options != current.Options || plan.InvocationOptions != current.InvocationOptions || !Equal(plan.AssetBundleManifestPath, current.AssetBundleManifestPath))
-                return Different("The normalized build options changed.", out difference);
+                return Different("正規化後のビルド選択肢が変更されました。", out difference);
             if (!SequenceEqual(plan.ExtraScriptingDefines, current.ExtraScriptingDefines) || !SequenceEqual(plan.EffectiveDefines, current.EffectiveDefines))
-                return Different("The effective scripting defines changed.", out difference);
+                return Different("有効な条件付きコンパイル定義が変更されました。", out difference);
             if (!ScenesEqual(plan.Scenes, current.Scenes))
-                return Different("The ordered scene list or a scene dependency changed.", out difference);
+                return Different("シーンの順序、有効状態、または依存内容が変更されました。", out difference);
 
             difference = string.Empty;
             return true;

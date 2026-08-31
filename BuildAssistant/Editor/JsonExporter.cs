@@ -73,7 +73,7 @@ namespace BuildAssistant.Editor
                 if ((fileSystem.GetAttributes(current) & FileAttributes.ReparsePoint) != 0)
                     return true;
                 var parent = Path.GetDirectoryName(current);
-                if (string.IsNullOrEmpty(parent) || StringComparer.OrdinalIgnoreCase.Equals(parent, current))
+                if (string.IsNullOrEmpty(parent) || string.Equals(parent, current, BuildAssistantFileSystem.GetPathComparison(Path.DirectorySeparatorChar)))
                     break;
                 current = parent;
             }

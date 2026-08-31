@@ -1,6 +1,6 @@
 namespace BuildAssistant.Editor
 {
-    /// <summary>Reports build success independently from durable history persistence.</summary>
+    /// <summary>履歴を永続保存できたかどうかとは別に、ビルドの成否を表します。</summary>
     public sealed class BuildAssistantBuildResult
     {
         internal BuildAssistantBuildResult(bool buildSucceeded, bool historyPersisted, BuildAssistantError error, string message, BuildAssistantHistoryEntry entry)
@@ -12,19 +12,19 @@ namespace BuildAssistant.Editor
             Entry = entry;
         }
 
-        /// <summary>Gets whether Unity reported a successful player build.</summary>
+        /// <summary>Unityがプレイヤーのビルド成功を報告したかどうかを取得します。</summary>
         public bool BuildSucceeded { get; }
 
-        /// <summary>Gets whether the terminal entry was written to bounded history.</summary>
+        /// <summary>終了結果が件数制限付きの履歴へ保存されたかどうかを取得します。</summary>
         public bool HistoryPersisted { get; }
 
-        /// <summary>Gets the primary bounded error. A successful player build can report analytics or history persistence errors.</summary>
+        /// <summary>主となる定義済みエラーを取得します。プレイヤーのビルドが成功していても、解析や履歴保存のエラーを示す場合があります。</summary>
         public BuildAssistantError Error { get; }
 
-        /// <summary>Gets a detached diagnostic suitable for an editor UI.</summary>
+        /// <summary>Unityオブジェクトに依存せず、エディター画面へ表示できる診断文を取得します。</summary>
         public string Message { get; }
 
-        /// <summary>Gets the detached terminal entry when build invocation began.</summary>
+        /// <summary>ビルド呼び出しを開始した場合、その終了記録をUnityオブジェクトに依存しない形で取得します。</summary>
         public BuildAssistantHistoryEntry Entry { get; }
     }
 }

@@ -1,11 +1,11 @@
 namespace BuildAssistant.Editor
 {
-    /// <summary>Identifies whether Unity is using its platform profile or an explicit custom BuildProfile asset.</summary>
+    /// <summary>Unityが機種別プロファイルと明示的な独自ビルドプロファイル素材のどちらを使っているかを表します。</summary>
     public enum BuildAssistantProfileKind
     {
-        /// <summary>The platform profile is active because no custom profile is active.</summary>
+        /// <summary>独自プロファイルが有効でないため、機種別プロファイルを使っています。</summary>
         Platform = 0,
-        /// <summary>An explicit custom BuildProfile asset is active.</summary>
+        /// <summary>明示的に指定された独自ビルドプロファイル素材を使っています。</summary>
         Custom = 1
     }
 }

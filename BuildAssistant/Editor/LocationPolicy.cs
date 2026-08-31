@@ -35,20 +35,20 @@ namespace BuildAssistant.Editor
             this.fileSystem = fileSystem ?? new BuildAssistantFileSystem();
             this.projectRoot = NormalizeExistingProjectRoot(projectRoot);
             if (this.fileSystem.IsNetworkDrive(this.projectRoot))
-                throw new ArgumentException("A local project root is required.", nameof(projectRoot));
+                throw new ArgumentException("ローカル固定領域にあるプロジェクトの絶対パスが必要です。", nameof(projectRoot));
             canonicalProjectRoot = TrimEndingSeparators(this.fileSystem.GetCanonicalDirectoryPath(this.projectRoot));
         }
 
         internal LocationInspection Inspect(string outputRoot)
         {
             if (!IsFullyQualifiedPath(outputRoot))
-                return Invalid(BuildAssistantError.InvalidOutputRoot, "The output root must be an absolute path.");
+                return Invalid(BuildAssistantError.InvalidOutputRoot, "出力先には絶対パスが必要です。");
 
             try
             {
                 var normalized = TrimEndingSeparators(fileSystem.GetFullPath(outputRoot.Trim()));
                 if (fileSystem.FileExists(normalized))
-                    return Invalid(BuildAssistantError.InvalidOutputRoot, "The output root points to a file.", normalized);
+                    return Invalid(BuildAssistantError.InvalidOutputRoot, "出力先がファイルを指しています。", normalized);
 
                 var exists = fileSystem.DirectoryExists(normalized);
                 var existingPath = normalized;
@@ -56,31 +56,31 @@ namespace BuildAssistant.Editor
                 {
                     existingPath = Path.GetDirectoryName(normalized);
                     if (string.IsNullOrEmpty(existingPath) || !fileSystem.DirectoryExists(existingPath))
-                        return Invalid(BuildAssistantError.InvalidOutputRoot, "Only one missing child directory is allowed.", normalized);
+                        return Invalid(BuildAssistantError.InvalidOutputRoot, "未作成の直下フォルダーは1階層だけ指定できます。", normalized);
                 }
 
                 if (fileSystem.IsNetworkDrive(existingPath))
-                    return Invalid(BuildAssistantError.UnsafeOutputPath, "Network and mapped-drive output roots are not supported.", normalized);
+                    return Invalid(BuildAssistantError.UnsafeOutputPath, "ネットワーク領域と割り当てドライブは出力先にできません。", normalized);
                 if (ContainsReparsePoint(existingPath))
-                    return Invalid(BuildAssistantError.UnsafeOutputPath, "The output root or an existing ancestor is a reparse point.", normalized);
+                    return Invalid(BuildAssistantError.UnsafeOutputPath, "出力先または既存の親フォルダーに再解析点があります。", normalized);
 
                 var canonical = ResolveCanonicalCandidate(normalized, existingPath, exists);
-                if (OverlapsManagedDirectory(normalized, canonical))
-                    return Invalid(BuildAssistantError.UnsafeOutputPath, "The output root overlaps a Unity-managed project directory.", normalized);
+                if (OverlapsManagedDirectory(normalized, canonical, existingPath, exists))
+                    return Invalid(BuildAssistantError.UnsafeOutputPath, "出力先がUnity管理フォルダーと重なっています。", normalized);
 
                 return new LocationInspection(BuildAssistantError.None, string.Empty, normalized, canonical, exists ? OutputRootMode.ExistingDirectory : OutputRootMode.MissingChild);
             }
             catch (Exception exception) when (exception is ArgumentException || exception is NotSupportedException || exception is PathTooLongException)
             {
-                return Invalid(BuildAssistantError.InvalidOutputRoot, "The output root is not a valid absolute path.");
+                return Invalid(BuildAssistantError.InvalidOutputRoot, "出力先は有効な絶対パスではありません。");
             }
             catch (Exception exception) when (exception is IOException || exception is UnauthorizedAccessException || exception is SecurityException)
             {
-                return Invalid(BuildAssistantError.UnsafeOutputPath, "The output root could not be verified safely: " + exception.Message);
+                return Invalid(BuildAssistantError.UnsafeOutputPath, "出力先の安全性を確認できませんでした。アクセス権と経路を確認してください。");
             }
         }
 
-        private bool OverlapsManagedDirectory(string candidate, string canonicalCandidate)
+        private bool OverlapsManagedDirectory(string candidate, string canonicalCandidate, string existingCandidate, bool candidateExists)
         {
             foreach (var name in ManagedDirectoryNames)
             {
@@ -90,6 +90,50 @@ namespace BuildAssistant.Editor
                 var canonicalManaged = fileSystem.DirectoryExists(managed) ? TrimEndingSeparators(fileSystem.GetCanonicalDirectoryPath(managed)) : TrimEndingSeparators(Path.Combine(canonicalProjectRoot, name));
                 if (CanonicalContains(canonicalManaged, canonicalCandidate) || CanonicalContains(canonicalCandidate, canonicalManaged))
                     return true;
+                if (fileSystem.DirectoryExists(managed) && OverlapsByPhysicalLocation(existingCandidate, candidateExists, managed))
+                    return true;
+                if (fileSystem.DirectoryExists(managed) && OverlapsByDirectoryIdentity(existingCandidate, candidateExists, managed))
+                    return true;
+            }
+
+            return false;
+        }
+
+        private bool OverlapsByPhysicalLocation(string existingCandidate, bool candidateExists, string managed)
+        {
+            if (!fileSystem.TryGetPhysicalDirectoryLocation(managed, out var managedFileSystem, out var managedInternalPath))
+                return false;
+            if (!fileSystem.TryGetPhysicalDirectoryLocation(existingCandidate, out var candidateFileSystem, out var candidateInternalPath))
+                return false;
+            if (!StringComparer.Ordinal.Equals(managedFileSystem, candidateFileSystem))
+                return false;
+            if (CanonicalUnixContains(managedInternalPath, candidateInternalPath))
+                return true;
+            return candidateExists && CanonicalUnixContains(candidateInternalPath, managedInternalPath);
+        }
+
+        private bool OverlapsByDirectoryIdentity(string existingCandidate, bool candidateExists, string managed)
+        {
+            var managedIdentity = fileSystem.GetDirectoryIdentity(managed);
+            if (AncestorHasIdentity(existingCandidate, managedIdentity))
+                return true;
+            if (!candidateExists)
+                return false;
+            var candidateIdentity = fileSystem.GetDirectoryIdentity(existingCandidate);
+            return AncestorHasIdentity(managed, candidateIdentity);
+        }
+
+        private bool AncestorHasIdentity(string start, string expectedIdentity)
+        {
+            var current = start;
+            while (!string.IsNullOrEmpty(current))
+            {
+                if (StringComparer.Ordinal.Equals(fileSystem.GetDirectoryIdentity(current), expectedIdentity))
+                    return true;
+                var parent = Path.GetDirectoryName(current);
+                if (string.IsNullOrEmpty(parent) || string.Equals(parent, current, PathComparison))
+                    break;
+                current = parent;
             }
 
             return false;
@@ -102,7 +146,7 @@ namespace BuildAssistant.Editor
                 return canonicalExisting;
             var childName = Path.GetFileName(normalized);
             if (string.IsNullOrEmpty(childName))
-                throw new IOException("The missing output child name could not be resolved.");
+                throw new IOException("未作成の出力先フォルダー名を解決できませんでした。");
             return TrimEndingSeparators(Path.Combine(canonicalExisting, childName));
         }
 
@@ -114,7 +158,7 @@ namespace BuildAssistant.Editor
                 if ((fileSystem.GetAttributes(current) & FileAttributes.ReparsePoint) != 0)
                     return true;
                 var parent = Path.GetDirectoryName(current);
-                if (string.IsNullOrEmpty(parent) || StringComparer.OrdinalIgnoreCase.Equals(parent, current))
+                if (string.IsNullOrEmpty(parent) || string.Equals(parent, current, PathComparison))
                     break;
                 current = parent;
             }
@@ -125,7 +169,7 @@ namespace BuildAssistant.Editor
         private static string NormalizeExistingProjectRoot(string value)
         {
             if (!IsFullyQualifiedPath(value))
-                throw new ArgumentException("An absolute project root is required.", nameof(value));
+                throw new ArgumentException("プロジェクトの絶対パスが必要です。", nameof(value));
             return TrimEndingSeparators(Path.GetFullPath(value));
         }
 
@@ -205,7 +249,20 @@ namespace BuildAssistant.Editor
 
         internal static bool CanonicalEquals(string left, string right) => string.Equals(TrimEndingSeparators(left ?? string.Empty), TrimEndingSeparators(right ?? string.Empty), PathComparison);
 
-        private static StringComparison PathComparison => StringComparison.OrdinalIgnoreCase;
+        private static bool CanonicalUnixContains(string boundary, string candidate)
+        {
+            var normalizedBoundary = (boundary ?? string.Empty).TrimEnd('/');
+            var normalizedCandidate = (candidate ?? string.Empty).TrimEnd('/');
+            if (normalizedBoundary.Length == 0)
+                normalizedBoundary = "/";
+            if (normalizedCandidate.Length == 0)
+                normalizedCandidate = "/";
+            if (StringComparer.Ordinal.Equals(normalizedBoundary, normalizedCandidate))
+                return true;
+            return normalizedBoundary == "/" ? normalizedCandidate.StartsWith("/", StringComparison.Ordinal) : normalizedCandidate.StartsWith(normalizedBoundary + "/", StringComparison.Ordinal);
+        }
+
+        private static StringComparison PathComparison => BuildAssistantFileSystem.GetPathComparison(Path.DirectorySeparatorChar);
 
         private static LocationInspection Invalid(BuildAssistantError error, string message, string path = "") => new LocationInspection(error, message, path, string.Empty, OutputRootMode.ExistingDirectory);
     }

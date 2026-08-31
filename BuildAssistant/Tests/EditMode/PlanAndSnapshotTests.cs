@@ -136,7 +136,7 @@ namespace BuildAssistant.Tests
             var plan = BuildAssistantTestData.Plan(BuildAssistantTestData.Environment(profileHash: before));
 
             Assert.That(SnapshotComparer.AreEquivalent(plan, BuildAssistantTestData.Environment(profileHash: after), out var difference), Is.False);
-            Assert.That(difference, Does.Contain("profile"));
+            Assert.That(difference, Does.Contain("プロファイル"));
         }
 
         [Test]
@@ -208,12 +208,35 @@ namespace BuildAssistant.Tests
         }
 
         [Test]
-        public void BuildAuthority_UsesTheCustomProfileTargetInsteadOfDivergentGlobals()
+        public void BuildAuthority_RejectsAProfileTargetThatDiffersFromTheCompiledTarget()
         {
-            UnityBuildEnvironment.ResolveBuildAuthority(true, BuildTarget.StandaloneWindows64, StandaloneBuildSubtarget.Player, BuildTarget.StandaloneOSX, StandaloneBuildSubtarget.Default, out var target, out var subtarget);
+            var exception = Assert.Throws<EnvironmentCaptureException>(() => UnityBuildEnvironment.ResolveBuildAuthority(true, BuildTarget.StandaloneWindows64, StandaloneBuildSubtarget.Player, BuildTarget.StandaloneOSX, StandaloneBuildSubtarget.Player, out _, out _));
 
-            Assert.That(target, Is.EqualTo(BuildTarget.StandaloneOSX));
-            Assert.That(subtarget, Is.EqualTo(StandaloneBuildSubtarget.Default));
+            Assert.That(exception.Error, Is.EqualTo(BuildAssistantError.BuildTargetMismatch));
+            Assert.That(exception.Message, Does.Contain("一致しません"));
+        }
+
+        [Test]
+        public void BuildAuthority_RejectsAProfileSubtargetThatDiffersFromTheCompiledSubtarget()
+        {
+            var exception = Assert.Throws<EnvironmentCaptureException>(() => UnityBuildEnvironment.ResolveBuildAuthority(true, BuildTarget.StandaloneWindows64, StandaloneBuildSubtarget.Server, BuildTarget.StandaloneWindows64, StandaloneBuildSubtarget.Player, out _, out _));
+
+            Assert.That(exception.Error, Is.EqualTo(BuildAssistantError.BuildTargetMismatch));
+        }
+
+        [Test]
+        public void BuildAuthority_AcceptsAMatchingCustomProfileWithoutChangingTheSelection()
+        {
+            UnityBuildEnvironment.ResolveBuildAuthority(true, BuildTarget.StandaloneWindows64, StandaloneBuildSubtarget.Player, BuildTarget.StandaloneWindows64, StandaloneBuildSubtarget.Player, out var target, out var subtarget);
+
+            Assert.That(target, Is.EqualTo(BuildTarget.StandaloneWindows64));
+            Assert.That(subtarget, Is.EqualTo(StandaloneBuildSubtarget.Player));
+        }
+
+        [Test]
+        public void BuildAuthority_TreatsDefaultAndPlayerAsTheSameClientSubtarget()
+        {
+            Assert.DoesNotThrow(() => UnityBuildEnvironment.ResolveBuildAuthority(true, BuildTarget.StandaloneWindows64, StandaloneBuildSubtarget.Default, BuildTarget.StandaloneWindows64, StandaloneBuildSubtarget.Player, out _, out _));
         }
 
         [Test]

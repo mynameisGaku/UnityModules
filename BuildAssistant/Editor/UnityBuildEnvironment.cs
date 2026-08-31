@@ -47,7 +47,7 @@ namespace BuildAssistant.Editor
                 var profile = CaptureProfile(activeProfile, namedBuildTarget.TargetName, effectiveSettingsFingerprint);
                 var scenes = CaptureScenes(activeProfile);
                 if (!scenes.Any(scene => scene.Enabled))
-                    throw new EnvironmentCaptureException(BuildAssistantError.NoEnabledScenes, "The effective build profile contains no enabled scenes.");
+                    throw new EnvironmentCaptureException(BuildAssistantError.NoEnabledScenes, "有効なビルドプロファイルに、ビルド対象のシーンがありません。");
 
                 var extraDefines = Array.Empty<string>();
                 var effectivePlayerSettings = CaptureEffectivePlayerSettings(activeProfile);
@@ -64,14 +64,14 @@ namespace BuildAssistant.Editor
             }
             catch (Exception exception)
             {
-                throw new EnvironmentCaptureException(BuildAssistantError.UnsupportedBuildTarget, "The active build environment could not be captured without changing project settings.", exception);
+                throw new EnvironmentCaptureException(BuildAssistantError.UnsupportedBuildTarget, "プロジェクト設定を変更せずに、現在のビルド環境を取得できませんでした。", exception);
             }
         }
 
         private static ProfileSnapshot CaptureProfile(BuildProfile activeProfile, string namedBuildTarget, string projectSettingsFingerprint)
         {
             if (activeProfile == null)
-                return new ProfileSnapshot(BuildAssistantProfileKind.Platform, string.Empty, namedBuildTarget + " Platform", string.Empty, projectSettingsFingerprint, "platform:" + namedBuildTarget);
+                return new ProfileSnapshot(BuildAssistantProfileKind.Platform, string.Empty, "デスクトップ向けプラットフォーム設定", string.Empty, projectSettingsFingerprint, "platform:" + namedBuildTarget);
 
             var assetPath = AssetDatabase.GetAssetPath(activeProfile) ?? string.Empty;
             var guid = assetPath.Length == 0 ? string.Empty : AssetDatabase.AssetPathToGUID(assetPath);
@@ -85,13 +85,13 @@ namespace BuildAssistant.Editor
         internal static void ValidateCustomProfileIdentity(string assetPath, string guid, string dependencyHash)
         {
             if (string.IsNullOrWhiteSpace(assetPath) || !IsUsableHexIdentity(guid) || !IsUsableHexIdentity(dependencyHash))
-                throw new EnvironmentCaptureException(BuildAssistantError.UnsupportedBuildTarget, "The active custom BuildProfile must be a saved project asset with a stable GUID and dependency hash.");
+                throw new EnvironmentCaptureException(BuildAssistantError.UnsupportedBuildTarget, "有効な独自ビルドプロファイルは、安定したGUIDと依存関係照合値を持つ保存済みプロジェクトアセットである必要があります。");
         }
 
         internal static void ValidateProfilerConnectionId(string customConnectionId)
         {
             if (!string.IsNullOrEmpty(customConnectionId))
-                throw new EnvironmentCaptureException(BuildAssistantError.UnsupportedBuildTarget, "Custom profiler connection targets are not supported in version 1.");
+                throw new EnvironmentCaptureException(BuildAssistantError.UnsupportedBuildTarget, "独自の性能測定接続先には対応していません。接続先を標準設定へ戻してください。");
         }
 
         private static string CaptureProfilerConnectionId()
@@ -99,7 +99,7 @@ namespace BuildAssistant.Editor
             var type = typeof(BuildProfile).Assembly.GetType("UnityEditor.Profiling.ProfilerUserSettings");
             var property = type?.GetProperty("customConnectionID", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
             if (property == null || property.GetIndexParameters().Length != 0)
-                throw new EnvironmentCaptureException(BuildAssistantError.UnsupportedBuildTarget, "The custom profiler connection setting is unavailable.");
+                throw new EnvironmentCaptureException(BuildAssistantError.UnsupportedBuildTarget, "独自の性能測定接続先設定を確認できませんでした。");
             return property.GetValue(null, null) as string ?? string.Empty;
         }
 
@@ -122,7 +122,7 @@ namespace BuildAssistant.Editor
         {
             var projectRoot = Directory.GetParent(UnityEngine.Application.dataPath)?.FullName;
             if (string.IsNullOrEmpty(projectRoot))
-                throw new EnvironmentCaptureException(BuildAssistantError.UnsupportedBuildTarget, "The project root could not be resolved.");
+                throw new EnvironmentCaptureException(BuildAssistantError.UnsupportedBuildTarget, "プロジェクトの基準フォルダーを解決できませんでした。");
             return projectRoot;
         }
 
@@ -130,7 +130,7 @@ namespace BuildAssistant.Editor
         {
             var settingsRoot = Path.Combine(projectRoot, "ProjectSettings");
             if (!Directory.Exists(settingsRoot))
-                throw new EnvironmentCaptureException(BuildAssistantError.UnsupportedBuildTarget, "The ProjectSettings directory is unavailable.");
+                throw new EnvironmentCaptureException(BuildAssistantError.UnsupportedBuildTarget, "ProjectSettingsフォルダーを読み取れませんでした。");
 
             var files = Directory.GetFiles(settingsRoot, "*", SearchOption.AllDirectories).Select(path => new KeyValuePair<string, byte[]>(path.Substring(settingsRoot.Length).TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar).Replace('\\', '/'), File.ReadAllBytes(path)));
             return ComputeProjectSettingsFingerprint(files);
@@ -257,7 +257,7 @@ namespace BuildAssistant.Editor
             var supportedRoot = normalizedPath.StartsWith("Assets/", StringComparison.Ordinal) || normalizedPath.StartsWith("Packages/", StringComparison.Ordinal);
             var validPath = supportedRoot && normalizedPath.EndsWith(".unity", StringComparison.OrdinalIgnoreCase) && !normalizedPath.Split('/').Any(segment => segment == "." || segment == ".." || segment.Length == 0);
             if (!validPath || !loadableSceneAsset || !IsUsableHexIdentity(guid) || !IsUsableHexIdentity(dependencyHash))
-                throw new EnvironmentCaptureException(BuildAssistantError.NoEnabledScenes, "An enabled build scene is missing, is not a loadable SceneAsset, or has no stable GUID and dependency hash: " + normalizedPath);
+                throw new EnvironmentCaptureException(BuildAssistantError.NoEnabledScenes, "有効なシーンが存在しない、シーンアセットとして読み込めない、または安定したGUIDと依存関係照合値を持ちません: " + normalizedPath);
         }
 
         private static string[] NormalizeDefines(IEnumerable<string> values)
@@ -268,7 +268,7 @@ namespace BuildAssistant.Editor
         private static BuildOptions CaptureReadOnlyInvocationOptions(BuildTarget target, BuildTargetGroup targetGroup, bool platformProfile, ScriptingImplementation scriptingBackend)
         {
             if (EditorUserBuildSettings.buildScriptsOnly)
-                throw new EnvironmentCaptureException(BuildAssistantError.UnsupportedBuildTarget, "Scripts-only builds are not supported.");
+                throw new EnvironmentCaptureException(BuildAssistantError.UnsupportedBuildTarget, "スクリプトだけを更新するビルドには対応していません。");
             ValidateGlobalInstallInBuildFolder(platformProfile, EditorUserBuildSettings.installInBuildFolder);
 
             var options = BuildOptions.DetailedBuildReport;
@@ -285,7 +285,7 @@ namespace BuildAssistant.Editor
         internal static void ValidateGlobalInstallInBuildFolder(bool platformProfile, bool globalInstallInBuildFolder)
         {
             if (platformProfile && globalInstallInBuildFolder)
-                throw new EnvironmentCaptureException(BuildAssistantError.UnsupportedBuildTarget, "Install-in-build-folder output is not supported.");
+                throw new EnvironmentCaptureException(BuildAssistantError.UnsupportedBuildTarget, "ビルドフォルダー内へ直接配置する設定には対応していません。");
         }
 
         private static BuildOptions CaptureCustomProfileOptions(BuildProfile activeProfile, BuildTarget target, ScriptingImplementation scriptingBackend)
@@ -304,7 +304,7 @@ namespace BuildAssistant.Editor
             var method = utility?.GetMethod("GetBuildProfileOrGlobalPlayerSettings", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic, null, new[] { typeof(BuildProfile) }, null);
             var playerSettings = method?.Invoke(null, new object[] { activeProfile }) as PlayerSettings;
             if (playerSettings == null)
-                throw new EnvironmentCaptureException(BuildAssistantError.UnsupportedBuildTarget, "The effective custom BuildProfile PlayerSettings are unavailable.");
+                throw new EnvironmentCaptureException(BuildAssistantError.UnsupportedBuildTarget, "独自ビルドプロファイルで有効なプレイヤー設定を取得できませんでした。");
             return playerSettings;
         }
 
@@ -314,7 +314,7 @@ namespace BuildAssistant.Editor
                 return PlayerSettings.GetScriptingDefineSymbols(namedBuildTarget);
             var method = typeof(PlayerSettings).GetMethod("GetScriptingDefineSymbols_Internal", BindingFlags.Static | BindingFlags.NonPublic, null, new[] { typeof(PlayerSettings), typeof(string) }, null);
             if (method == null)
-                throw new EnvironmentCaptureException(BuildAssistantError.UnsupportedBuildTarget, "The effective custom BuildProfile scripting defines are unavailable.");
+                throw new EnvironmentCaptureException(BuildAssistantError.UnsupportedBuildTarget, "独自ビルドプロファイルで有効な条件付きコンパイル定義を取得できませんでした。");
             return method.Invoke(null, new object[] { effectivePlayerSettings, namedBuildTarget.TargetName }) as string ?? string.Empty;
         }
 
@@ -324,14 +324,14 @@ namespace BuildAssistant.Editor
                 return PlayerSettings.GetScriptingBackend(namedBuildTarget);
             var method = typeof(PlayerSettings).GetMethod("GetScriptingBackend_Internal", BindingFlags.Static | BindingFlags.NonPublic, null, new[] { typeof(PlayerSettings), typeof(string) }, null);
             if (method == null)
-                throw new EnvironmentCaptureException(BuildAssistantError.UnsupportedBuildTarget, "The effective custom BuildProfile scripting backend is unavailable.");
+                throw new EnvironmentCaptureException(BuildAssistantError.UnsupportedBuildTarget, "独自ビルドプロファイルで有効なコード生成方式を取得できませんでした。");
             return (ScriptingImplementation)method.Invoke(null, new object[] { effectivePlayerSettings, namedBuildTarget.TargetName });
         }
 
         internal static BuildOptions ComposeProfileOptions(string configuredCompression, string defaultCompression, bool development, bool connectProfiler, bool allowDebugging, bool waitForPlayerConnection, bool codeCoverage, bool deepProfiling, bool installInBuildFolder, ScriptingImplementation scriptingBackend)
         {
             if (installInBuildFolder)
-                throw new EnvironmentCaptureException(BuildAssistantError.UnsupportedBuildTarget, "Install-in-build-folder output is not supported by Build Assistant.");
+                throw new EnvironmentCaptureException(BuildAssistantError.UnsupportedBuildTarget, "ビルドフォルダー内へ直接配置する設定には対応していません。");
             return ResolveCompressionOption(configuredCompression, defaultCompression) | ComposeDevelopmentOptions(development, connectProfiler, allowDebugging, waitForPlayerConnection, codeCoverage, deepProfiling, scriptingBackend);
         }
 
@@ -356,7 +356,7 @@ namespace BuildAssistant.Editor
         private static object GetRequiredProperty(object instance, string propertyName)
         {
             if (instance == null)
-                throw new EnvironmentCaptureException(BuildAssistantError.UnsupportedBuildTarget, "The active custom BuildProfile settings are unavailable.");
+                throw new EnvironmentCaptureException(BuildAssistantError.UnsupportedBuildTarget, "有効な独自ビルドプロファイルの設定を取得できませんでした。");
             for (var type = instance.GetType(); type != null; type = type.BaseType)
             {
                 var property = type.GetProperty(propertyName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly);
@@ -364,7 +364,7 @@ namespace BuildAssistant.Editor
                     return property.GetValue(instance, null);
             }
 
-            throw new EnvironmentCaptureException(BuildAssistantError.UnsupportedBuildTarget, "The active custom BuildProfile property is unavailable: " + propertyName + ".");
+            throw new EnvironmentCaptureException(BuildAssistantError.UnsupportedBuildTarget, "有効な独自ビルドプロファイルから必要な設定項目を取得できませんでした。");
         }
 
         private static bool ReadRequiredBoolean(object instance, string propertyName)
@@ -372,14 +372,14 @@ namespace BuildAssistant.Editor
             var value = GetRequiredProperty(instance, propertyName);
             if (value is bool result)
                 return result;
-            throw new EnvironmentCaptureException(BuildAssistantError.UnsupportedBuildTarget, "The active custom BuildProfile property has an unsupported value: " + propertyName + ".");
+            throw new EnvironmentCaptureException(BuildAssistantError.UnsupportedBuildTarget, "有効な独自ビルドプロファイルの設定値に対応していません。");
         }
 
         private static BuildOptions CaptureCompressionOption(BuildTarget target, BuildTargetGroup targetGroup)
         {
             var method = typeof(EditorUserBuildSettings).GetMethod("GetCompressionType", BindingFlags.Static | BindingFlags.NonPublic, null, new[] { typeof(BuildTargetGroup) }, null);
             if (method == null)
-                throw new EnvironmentCaptureException(BuildAssistantError.UnsupportedBuildTarget, "The active standalone compression setting is unavailable.");
+                throw new EnvironmentCaptureException(BuildAssistantError.UnsupportedBuildTarget, "現在の通常プレイヤー圧縮設定を取得できませんでした。");
             var value = method.Invoke(null, new object[] { targetGroup });
             var configuredName = value?.ToString() ?? string.Empty;
             var defaultName = string.Empty;
@@ -394,7 +394,7 @@ namespace BuildAssistant.Editor
             var defaultType = typeof(EditorUserBuildSettings).Assembly.GetType("UnityEditor.PostprocessBuildPlayer");
             var defaultMethod = defaultType?.GetMethod("GetDefaultCompression", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic, null, new[] { typeof(BuildTarget) }, null);
             if (defaultMethod == null)
-                throw new EnvironmentCaptureException(BuildAssistantError.UnsupportedBuildTarget, "The default standalone compression setting is unavailable.");
+                throw new EnvironmentCaptureException(BuildAssistantError.UnsupportedBuildTarget, "通常プレイヤーの標準圧縮設定を取得できませんでした。");
             return defaultMethod.Invoke(null, new object[] { target })?.ToString() ?? string.Empty;
         }
 
@@ -403,7 +403,7 @@ namespace BuildAssistant.Editor
             var type = typeof(EditorUserBuildSettings).Assembly.GetType("UnityEditor.PostprocessBuildPlayer");
             var method = type?.GetMethod("GetStreamingAssetsBundleManifestPath", BindingFlags.Static | BindingFlags.NonPublic, null, Type.EmptyTypes, null);
             if (method == null)
-                throw new EnvironmentCaptureException(BuildAssistantError.UnsupportedBuildTarget, "The active AssetBundle manifest setting is unavailable.");
+                throw new EnvironmentCaptureException(BuildAssistantError.UnsupportedBuildTarget, "現在のアセットバンドル目録設定を取得できませんでした。");
             return method.Invoke(null, null) as string ?? string.Empty;
         }
 
@@ -421,31 +421,48 @@ namespace BuildAssistant.Editor
                 case "Lz4HC":
                     return BuildOptions.CompressWithLz4HC;
                 default:
-                    throw new EnvironmentCaptureException(BuildAssistantError.UnsupportedBuildTarget, "The active standalone compression setting is unsupported.");
+                    throw new EnvironmentCaptureException(BuildAssistantError.UnsupportedBuildTarget, "現在の通常プレイヤー圧縮設定には対応していません。");
             }
         }
 
         internal static void ResolveBuildAuthority(bool customProfileActive, BuildTarget globalTarget, StandaloneBuildSubtarget globalSubtarget, BuildTarget profileTarget, StandaloneBuildSubtarget profileSubtarget, out BuildTarget target, out StandaloneBuildSubtarget subtarget)
         {
+            if (customProfileActive && (globalTarget != profileTarget || !AreEquivalentPlayerSubtargets(globalSubtarget, profileSubtarget)))
+            {
+                throw new EnvironmentCaptureException(
+                    BuildAssistantError.BuildTargetMismatch,
+                    "独自のビルドプロファイルが指定する対象機種または種別と、エディターで選択中の内容が一致しません。Unityのビルドプロファイル画面で対象を切り替え、コンパイル完了後に計画を作り直してください。"
+                );
+            }
+
             target = customProfileActive ? profileTarget : globalTarget;
             subtarget = customProfileActive ? profileSubtarget : globalSubtarget;
+        }
+
+        private static bool AreEquivalentPlayerSubtargets(StandaloneBuildSubtarget left, StandaloneBuildSubtarget right)
+        {
+            if (left == right)
+                return true;
+            var leftIsPlayer = left == StandaloneBuildSubtarget.Default || left == StandaloneBuildSubtarget.Player;
+            var rightIsPlayer = right == StandaloneBuildSubtarget.Default || right == StandaloneBuildSubtarget.Player;
+            return leftIsPlayer && rightIsPlayer;
         }
 
         internal static void ValidateTarget(BuildTarget target, BuildTargetGroup targetGroup, StandaloneBuildSubtarget subtarget)
         {
             var desktop = target == BuildTarget.StandaloneWindows64 || target == BuildTarget.StandaloneOSX || target == BuildTarget.StandaloneLinux64;
             if (!desktop || targetGroup != BuildTargetGroup.Standalone)
-                throw new EnvironmentCaptureException(BuildAssistantError.UnsupportedBuildTarget, "Only desktop standalone build targets are supported.");
+                throw new EnvironmentCaptureException(BuildAssistantError.UnsupportedBuildTarget, "デスクトップ向けの通常プレイヤーだけに対応しています。");
             if (subtarget == StandaloneBuildSubtarget.Server)
-                throw new EnvironmentCaptureException(BuildAssistantError.UnsupportedBuildTarget, "Dedicated Server builds are not supported in version 1.");
+                throw new EnvironmentCaptureException(BuildAssistantError.UnsupportedBuildTarget, "専用サーバーのビルドには対応していません。");
             if (subtarget != StandaloneBuildSubtarget.Default && subtarget != StandaloneBuildSubtarget.Player)
-                throw new EnvironmentCaptureException(BuildAssistantError.UnsupportedBuildTarget, "The active standalone subtarget is unsupported.");
+                throw new EnvironmentCaptureException(BuildAssistantError.UnsupportedBuildTarget, "現在の通常プレイヤー種別には対応していません。");
         }
 
         internal static void ValidateBuildTargetSupport(BuildTargetGroup targetGroup, BuildTarget target, bool isSupported)
         {
             if (!isSupported)
-                throw new EnvironmentCaptureException(BuildAssistantError.UnsupportedBuildTarget, "The active desktop standalone target has no supported local playback module: " + targetGroup + "/" + target + ".");
+                throw new EnvironmentCaptureException(BuildAssistantError.UnsupportedBuildTarget, "現在のデスクトップ対象に必要なプラットフォームモジュールがありません: " + targetGroup + "/" + target + "。");
         }
     }
 }

@@ -17,13 +17,15 @@ namespace BuildAssistant.Tests
             var failedNewer = BuildAssistantTestData.Entry("failed", BuildAssistantHistoryStatus.Failed, new DateTime(2026, 8, 23, 4, 0, 0, DateTimeKind.Utc));
             var wrongProfile = BuildAssistantTestData.Entry("profile", completedAtUtc: new DateTime(2026, 8, 23, 5, 0, 0, DateTimeKind.Utc), profileStableId: "other");
             var wrongTarget = BuildAssistantTestData.Entry("target", completedAtUtc: new DateTime(2026, 8, 23, 5, 0, 0, DateTimeKind.Utc), target: BuildTarget.StandaloneWindows);
+            var wrongTargetGroup = BuildAssistantTestData.Entry("target-group", completedAtUtc: new DateTime(2026, 8, 23, 5, 0, 0, DateTimeKind.Utc), targetGroup: BuildTargetGroup.Android);
+            var wrongNamedTarget = BuildAssistantTestData.Entry("named-target", completedAtUtc: new DateTime(2026, 8, 23, 5, 0, 0, DateTimeKind.Utc), namedBuildTarget: "Android");
             var wrongBackend = BuildAssistantTestData.Entry("backend", completedAtUtc: new DateTime(2026, 8, 23, 5, 0, 0, DateTimeKind.Utc), backend: ScriptingImplementation.IL2CPP);
             var wrongOptions = BuildAssistantTestData.Entry("options", completedAtUtc: new DateTime(2026, 8, 23, 5, 0, 0, DateTimeKind.Utc), options: BuildOptions.Development | BuildOptions.DetailedBuildReport);
             var snapshot = BuildAssistantTestData.Environment(scenes: oldScene);
 
-            var result = HistoryComparer.FindLatestComparable(new[] { oldMatch, newestMatch, failedNewer, wrongProfile, wrongTarget, wrongBackend, wrongOptions }, snapshot);
+            var result = HistoryComparer.FindLatestComparable(new[] { newestMatch, oldMatch, failedNewer, wrongProfile, wrongTarget, wrongTargetGroup, wrongNamedTarget, wrongBackend, wrongOptions }, snapshot);
 
-            Assert.That(result.RunId, Is.EqualTo("newest-match"), "Scene identity is intentionally not part of the comparison compatibility key.");
+            Assert.That(result.RunId, Is.EqualTo("newest-match"), "シーンの識別情報は、比較可能性を決める条件へ意図的に含めていません。");
         }
 
         [Test]

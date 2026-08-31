@@ -4,8 +4,8 @@ namespace BuildAssistant.Editor
     {
         internal PackedAssetRow(string assetKey, string typeName, ulong packedBytes)
         {
-            AssetKey = string.IsNullOrEmpty(assetKey) ? "[generated]" : assetKey;
-            TypeName = string.IsNullOrEmpty(typeName) ? "[unknown]" : typeName;
+            AssetKey = string.IsNullOrEmpty(assetKey) ? "[生成物]" : assetKey;
+            TypeName = string.IsNullOrEmpty(typeName) ? "[不明]" : typeName;
             PackedBytes = packedBytes;
         }
 
