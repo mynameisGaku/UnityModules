@@ -1,4 +1,4 @@
-# プロジェクト不備確認・修復（Build Guard）
+# プロジェクト不備確認・修復
 
 ## 30秒で分かる
 
@@ -28,7 +28,7 @@
 Unity 6000.5.7f1以降で、パッケージ管理画面の **Add package from git URL...** へ次を指定します。
 
 ```text
-https://github.com/mynameisGaku/UnityModules.git?path=/BuildGuard#build-guard-v1.6.0
+https://github.com/mynameisGaku/UnityModules.git?path=/BuildGuard#build-guard-v1.7.0
 ```
 
 または`BuildGuard`フォルダーをプロジェクトの`Assets/Modules/`へ配置します。追加パッケージへの依存はありません。設定アセットの作成も不要です。

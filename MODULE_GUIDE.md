@@ -33,7 +33,7 @@ README、モジュール一覧、Unityのパッケージ管理画面に出す`di
 | 画面フェード | ScreenTransition | 画面を覆う・戻す演出を扱う。 |
 | ゲーム時間制御 | TimeControl | 一時停止・スロー・倍速を扱う。 |
 | 入力の一時停止 | InputGate | Gameplay の入力を一時的に止める。 |
-| プロジェクト不備確認・修復 | BuildGuard | build対象・直接選択したSceneと選択PrefabのMissing Scriptなどを見つけ、Prefabの構造変更を別flowでreviewする。 |
+| プロジェクト不備確認・修復 | BuildGuard | ビルド対象シーン・直接選択したシーンと選択プレハブの欠落スクリプトなどを見つけ、プレハブの構造差分を別画面で確認する。 |
 | 不具合レポート保存 | DiagnosticsContext | 調査用の状態とログを JSON に残す。 |
 | Player設定 | Player Options | 音量・表示・品質・frame rateの保存とUnityへの適用を分けて扱う。 |
 | 入力補助 | Input Assist | スティック値の補正とbutton gestureをまとめて扱う。 |
@@ -164,4 +164,4 @@ GameplayRulesのstatistics群は値列だけを受け取る純粋計算であり
 - 毎回同じ MonoBehaviour や Editor script を書く作業。
 - 実機や Player build まで進まないと発見しにくい問題。
 
-Project SettingsとTag・Layer・Sorting Layer・Physics／Physics 2D Layer Collisionの反復作業は「プロジェクト初期設定」へまとめる。Build Guardの壊れた参照検査・修復とPrefab構造変更review、Module Installerのpackage導入とは責務を分け、設定の差分Preview・backup・適用・復元を一つの作業単位として提供する。
+プロジェクト設定とタグ・レイヤー・描画順レイヤー・3D／2D物理レイヤー衝突の反復作業は「プロジェクト初期設定」へまとめる。ビルドガードの壊れた参照検査・修復とプレハブ構造差分の確認、モジュール管理のパッケージ導入とは責務を分け、設定の差分確認・バックアップ・適用・復元を一つの作業単位として提供する。
